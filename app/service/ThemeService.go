@@ -264,8 +264,22 @@ func (this *ThemeService) GetDefaultThemes() (themes []info.Theme) {
 	return
 }
 
+
+func validateFilename(filename string) bool {
+	// 防止用"../../来获取其它文件"
+	if (strings.Contains(filename, "..")) {
+		return false
+	}
+	return true
+}
+
+
 // 得到模板内容
 func (this *ThemeService) GetTplContent(userId, themeId, filename string) string {
+	if (!validateFilename(filename)) {
+		return ""
+	}
+	
 	path := this.GetThemeAbsolutePath(userId, themeId) + "/" + filename
 	return GetFileStrContent(path)
 }
@@ -290,10 +304,14 @@ func (this *ThemeService) GetThemePath(userId, themeId string) string {
 
 // 更新模板内容
 func (this *ThemeService) UpdateTplContent(userId, themeId, filename, content string) (ok bool, msg string) {
+	if (!validateFilename(filename)) {
+		return 
+	}
+
 	basePath := this.GetThemeAbsolutePath(userId, themeId)
 	path := basePath + "/" + filename
 	if strings.Contains(filename, ".html") {
-		Log(">>")
+		// Log(">>")
 		if ok, msg = this.ValidateTheme(basePath, filename, content); ok {
 			// 模板
 			if ok, msg = this.mustTpl(filename, content); ok {
@@ -326,6 +344,10 @@ func (this *ThemeService) UpdateTplContent(userId, themeId, filename, content st
 }
 
 func (this *ThemeService) DeleteTpl(userId, themeId, filename string) (ok bool) {
+	if (!validateFilename(filename)) {
+		return
+	}
+
 	path := this.GetThemeAbsolutePath(userId, themeId) + "/" + filename
 	ok = DeleteFile(path)
 	return
@@ -337,7 +359,7 @@ func (this *ThemeService) mustTpl(filename, content string) (ok bool, msg string
 	defer func() {
 		if err := recover(); err != nil {
 			ok = false
-			Log(err)
+			// Log(err)
 			msg = fmt.Sprintf("%v", err)
 		}
 	}()
@@ -383,7 +405,7 @@ func (this *ThemeService) ExportTheme(userId, themeId string) (ok bool, path str
 	theme := this.GetThemeById(themeId)
 	// 打包
 	// 验证路径, 别把整个项目打包了
-	Log(theme.Path)
+	// Log(theme.Path)
 	if theme.Path == "" ||
 		(!strings.HasPrefix(theme.Path, "public/upload") &&
 			!strings.HasPrefix(theme.Path, "public/blog/themes")) ||
@@ -395,12 +417,12 @@ func (this *ThemeService) ExportTheme(userId, themeId string) (ok bool, path str
 	targetPath := revel.BasePath + "/public/upload/" + userId + "/tmp"
 	err := os.MkdirAll(targetPath, 0755)
 	if err != nil {
-		Log(err)
+		// Log(err)
 		return
 	}
 	targetName := targetPath + "/" + theme.Name + ".zip"
-	Log(sourcePath)
-	Log(targetName)
+	// Log(sourcePath)
+	// Log(targetName)
 	ok = archive.Zip(sourcePath, targetName)
 	if !ok {
 		return
@@ -423,7 +445,7 @@ func (this *ThemeService) ImportTheme(userId, path string) (ok bool, msg string)
 	}
 	if ok, msg = archive.Unzip(path, targetPath); !ok {
 		DeleteFile(targetPath)
-		Log("oh no")
+		// Log("oh no")
 		return
 	}
 
@@ -536,8 +558,8 @@ func (this *ThemeService) InstallTheme(userId, themeId string) (ok bool) {
 // 验证主题是否全法, 存在循环引用?
 // filename, newContent 表示在修改模板时要判断模板修改时是否有错误
 func (this *ThemeService) ValidateTheme(path string, filename, newContent string) (ok bool, msg string) {
-	Log("theme Path")
-	Log(path)
+	// Log("theme Path")
+	// Log(path)
 	// 建立一个有向图
 	// 将该path下的所有文件提出, 得到文件的引用情况
 	files := ListDir(path)
@@ -591,9 +613,9 @@ func (this *ThemeService) ValidateTheme(path string, filename, newContent string
 			for _, includes := range finds {
 				include := includes[1]
 				includeIndex, has := fileIndexMap[include]
-				Log(includeIndex)
-				Log("??")
-				Log(has)
+				// Log(includeIndex)
+				// Log("??")
+				// Log(has)
 				if has {
 					vector[thisIndex][includeIndex] = 1
 				}

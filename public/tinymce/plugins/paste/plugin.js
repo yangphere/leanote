@@ -80,7 +80,7 @@
 		}
 	}
 
-// Included from: /Users/life/leanote2/public/tinymce/plugins/paste/classes/Utils.js
+// Included from: js/tinymce/plugins/paste/classes/Utils.js
 
 /**
  * Utils.js
@@ -181,7 +181,7 @@ define("tinymce/pasteplugin/Utils", [
 	};
 });
 
-// Included from: /Users/life/leanote2/public/tinymce/plugins/paste/classes/Clipboard.js
+// Included from: js/tinymce/plugins/paste/classes/Clipboard.js
 
 // Included from: js/tinymce/plugins/paste/classes/Clipboard.js
 
@@ -233,7 +233,7 @@ define("tinymce/pasteplugin/Clipboard", [
 				if(reIsOk(ret)) {
 					// 将图片替换之
 					// var src = urlPrefix + "/" + ret.Item;
-					var src = urlPrefix + "/file/outputImage?fileId=" + ret.Id;
+					var src = urlPrefix + "/api/file/getImage?fileId=" + ret.Id;
 					var dom = editor.dom;
 					for(var i in ids) {
 						var id = ids[i];
@@ -681,7 +681,7 @@ define("tinymce/pasteplugin/Clipboard", [
 	};
 });
 
-// Included from: /Users/life/leanote2/public/tinymce/plugins/paste/classes/WordFilter.js
+// Included from: js/tinymce/plugins/paste/classes/WordFilter.js
 
 /**
  * WordFilter.js
@@ -947,7 +947,7 @@ define("tinymce/pasteplugin/WordFilter", [
 	return WordFilter;
 });
 
-// Included from: /Users/life/leanote2/public/tinymce/plugins/paste/classes/Quirks.js
+// Included from: js/tinymce/plugins/paste/classes/Quirks.js
 
 /**
  * Quirks.js
@@ -1073,7 +1073,7 @@ define("tinymce/pasteplugin/Quirks", [
 	};
 });
 
-// Included from: /Users/life/leanote2/public/tinymce/plugins/paste/classes/Plugin.js
+// Included from: js/tinymce/plugins/paste/classes/Plugin.js
 
 /**
  * Plugin.js

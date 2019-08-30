@@ -1,5 +1,5 @@
 language: go
-go: 1.3
+go: 1.7
 
 services:
   - mongodb # 2.4.12
@@ -16,9 +16,7 @@ install:
 
 script:
   - mongo --version
-  - mongorestore -h localhost -d leanote --directoryperdb ./mongodb_backup/leanote_install_data/
-
-  - go test github.com/leanote/leanote/app/tests
+  - mongorestore -h localhost -d leanote --dir ./mongodb_backup/leanote_install_data/
 
   # gen tmp/main.go, routes/routes.go
   - go run app/cmd/main.go

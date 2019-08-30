@@ -49,7 +49,8 @@ func (this *ConfigService) InitGlobalConfigs() bool {
 	this.adminUserId = userInfo.UserId.Hex()
 
 	configs := []info.Config{}
-	db.ListByQ(db.Configs, bson.M{"UserId": userInfo.UserId}, &configs)
+	// db.ListByQ(db.Configs, bson.M{"UserId": userInfo.UserId}, &configs)
+	db.ListByQ(db.Configs, bson.M{}, &configs)
 
 	for _, config := range configs {
 		if config.IsArr {
@@ -67,10 +68,20 @@ func (this *ConfigService) InitGlobalConfigs() bool {
 		}
 	}
 
+	// site URL
+	if s, ok := this.GlobalStringConfigs["siteUrl"]; !ok || s != "" {
+		this.GlobalStringConfigs["siteUrl"] = this.siteUrl
+	}
+
 	return true
 }
 
 func (this *ConfigService) GetSiteUrl() string {
+	s := this.GetGlobalStringConfig("siteUrl")
+	if s != "" {
+		return s
+	}
+
 	return this.siteUrl
 }
 func (this *ConfigService) GetAdminUsername() string {
@@ -86,7 +97,7 @@ func (this *ConfigService) updateGlobalConfig(userId, key string, value interfac
 	if _, ok := this.GlobalAllConfigs[key]; !ok {
 		// 需要添加
 		config := info.Config{ConfigId: bson.NewObjectId(),
-			UserId:      bson.ObjectIdHex(userId),
+			UserId:      bson.ObjectIdHex(userId), // 没用
 			Key:         key,
 			IsArr:       isArr,
 			IsMap:       isMap,
@@ -131,7 +142,8 @@ func (this *ConfigService) updateGlobalConfig(userId, key string, value interfac
 			i["ValueStr"] = v
 			this.GlobalStringConfigs[key] = v
 		}
-		return db.UpdateByQMap(db.Configs, bson.M{"UserId": bson.ObjectIdHex(userId), "Key": key}, i)
+		// return db.UpdateByQMap(db.Configs, bson.M{"UserId": bson.ObjectIdHex(userId), "Key": key}, i)
+		return db.UpdateByQMap(db.Configs, bson.M{"Key": key}, i)
 	}
 }
 
@@ -498,42 +510,25 @@ func (this *ConfigService) GetDefaultDomain() string {
 	return defaultDomain
 }
 
-// 包含http://
-func (this *ConfigService) GetDefaultUrl() string {
-	return schema + defaultDomain
-}
-
 // note
 func (this *ConfigService) GetNoteDomain() string {
-	subDomain := this.GetGlobalStringConfig("noteSubDomain")
-	if subDomain != "" {
-		return subDomain + port
-	}
-	return this.GetDefaultDomain() + "/note"
+	return "/note"
 }
 func (this *ConfigService) GetNoteUrl() string {
-	return schema + this.GetNoteDomain()
+	return this.GetNoteDomain()
 }
 
 // blog
 func (this *ConfigService) GetBlogDomain() string {
-	subDomain := this.GetGlobalStringConfig("blogSubDomain")
-	if subDomain != "" {
-		return subDomain + port
-	}
-	return this.GetDefaultDomain() + "/blog"
+	return "/blog"
 }
 func (this *ConfigService) GetBlogUrl() string {
-	return schema + this.GetBlogDomain()
+	return this.GetBlogDomain()
 }
 
 // lea
 func (this *ConfigService) GetLeaDomain() string {
-	subDomain := this.GetGlobalStringConfig("leaSubDomain")
-	if subDomain != "" {
-		return subDomain + port
-	}
-	return this.GetDefaultDomain() + "/lea"
+	return "/lea"
 }
 func (this *ConfigService) GetLeaUrl() string {
 	return schema + this.GetLeaDomain()
@@ -611,5 +606,5 @@ func (this *ConfigService) HomePageIsAdminsBlog() bool {
 }
 
 func (this *ConfigService) GetVersion() string {
-	return "1.4.2"
+	return "2.6.1"
 }

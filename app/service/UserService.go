@@ -110,7 +110,7 @@ func (this *UserService) setUserLogo(user *info.User) {
 	}
 	if user.Logo != "" && !strings.HasPrefix(user.Logo, "http") {
 		user.Logo = strings.Trim(user.Logo, "/")
-		user.Logo = configService.GetSiteUrl() + "/" + user.Logo
+		user.Logo = "/" + user.Logo
 	}
 }
 
@@ -485,7 +485,7 @@ func (this *UserService) GetAllUserByFilter(userFilterEmail, userFilterWhiteList
 	users := []info.User{}
 	q := db.Users.Find(query)
 	q.All(&users)
-	Log(len(users))
+	// Log(len(users))
 
 	return users
 }
