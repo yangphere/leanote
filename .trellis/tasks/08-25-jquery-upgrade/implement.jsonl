@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-25-jquery-upgrade/prd.md", "reason": "jQuery 3.7.1、migrate 开发诊断和插件兼容范围。"}
+{"file": ".trellis/tasks/08-25-jquery-upgrade/design.md", "reason": "单一 runtime、废弃 API 盘点和第三方插件适配边界。"}
+{"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "前端库顺序、浏览器支持和零 diff 共享门禁。"}
+{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "生成资源唯一事实来源与 jquery-migrate 不进入生产。"}

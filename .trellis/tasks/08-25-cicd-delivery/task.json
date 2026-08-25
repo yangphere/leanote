@@ -1,0 +1,38 @@
+{
+  "id": "cicd-delivery",
+  "name": "cicd-delivery",
+  "title": "CI/CD 与可复现交付",
+  "description": "建立 PR/push 质量门与 v* 标签的 GitHub Release、GHCR Linux/amd64 发布，不自动部署。",
+  "status": "planning",
+  "dev_type": "devops",
+  "scope": "CI, release packaging and container delivery",
+  "package": null,
+  "priority": "P1",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-08-25",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "dev",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-25-tech-stack-modernization",
+  "relatedFiles": [
+    ".github/workflows",
+    ".travis.yml",
+    "Dockerfile",
+    ".dockerignore",
+    "sh/package.sh",
+    "docs/modernization-backlog.md"
+  ],
+  "notes": "首发只支持 Linux/amd64 且必须保留完整 PDF；arm64 后续工作为 MOD-002。",
+  "meta": {
+    "depends_on": [
+      "08-25-revel-migration",
+      "08-25-frontend-libs"
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "三个前端库子任务、浏览器矩阵、零 diff 和编辑器内容共享契约。"}
+{"file": ".trellis/tasks/08-25-frontend-libs/design.md", "reason": "jQuery → Bootstrap → TinyMCE 顺序与独立回滚边界。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/prd.md", "reason": "父级不变量、前端轨道和 F 的依赖关系。"}
+{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "前端生成物、浏览器门禁与单一事实来源决策。"}

@@ -1,0 +1,37 @@
+{
+  "id": "tinymce-upgrade",
+  "name": "tinymce-upgrade",
+  "title": "TinyMCE 8 升级",
+  "description": "升级到自托管 TinyMCE 8.8.2，迁移四个第一方插件并保护存量 HTML 语义。",
+  "status": "planning",
+  "dev_type": "frontend",
+  "scope": "editor runtime, plugins, paste and stored HTML contracts",
+  "package": null,
+  "priority": "P1",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-08-25",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "dev",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-25-frontend-libs",
+  "relatedFiles": [
+    "package.json",
+    "public/tinymce",
+    "public/js/app/page.js",
+    "public/js/common.js",
+    "public/js/app/note.js",
+    "tests/js/paste-plugin.test.js"
+  ],
+  "notes": "未编辑不保存且 DB 字节不变；实际入口是 leaui_mindmap。",
+  "meta": {
+    "depends_on": [
+      "08-25-bootstrap-upgrade"
+    ]
+  }
+}

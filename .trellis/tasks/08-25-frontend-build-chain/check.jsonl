@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-25-frontend-build-chain/prd.md", "reason": "检查 Node 24、构建产物覆盖面、稳定路径和生成物漂移门禁。"}
+{"file": ".trellis/tasks/08-25-frontend-build-chain/design.md", "reason": "检查 manifest 是否是唯一事实来源，是否仍遗漏 i18n、TinyMCE language 或 note HTML。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/prd.md", "reason": "核对 D 完成后才允许前端库升级。"}
+{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "核对生成资源不手工修 bundle 且零 diff 可审计。"}

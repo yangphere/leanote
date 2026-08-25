@@ -1,0 +1,45 @@
+{
+  "id": "tech-stack-modernization",
+  "name": "tech-stack-modernization",
+  "title": "技术栈现代化",
+  "description": "以契约优先 DAG 协调 Go、MongoDB、HTTP、前端构建与可复现交付现代化。",
+  "status": "planning",
+  "dev_type": "fullstack",
+  "scope": "repository",
+  "package": null,
+  "priority": "P1",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-08-25",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "dev",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "08-25-regression-baseline",
+    "08-25-go-toolchain",
+    "08-25-revel-1-1-upgrade",
+    "08-25-mongo-driver-migration",
+    "08-25-revel-migration",
+    "08-25-frontend-build-chain",
+    "08-25-frontend-libs",
+    "08-25-cicd-delivery"
+  ],
+  "parent": null,
+  "relatedFiles": [
+    "go.mod",
+    "package.json",
+    "conf/routes",
+    "app/db/Mgo.go",
+    "Gulpfile.js",
+    ".travis.yml",
+    "docs/modernization-backlog.md"
+  ],
+  "notes": "架构决策见 docs/adr/0001 至 0004；延期重构只记录在 docs/modernization-backlog.md。",
+  "meta": {
+    "depends_on": []
+  }
+}

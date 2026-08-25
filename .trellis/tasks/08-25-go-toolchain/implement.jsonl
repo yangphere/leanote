@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-25-go-toolchain/prd.md", "reason": "Go 1.26 minimum, 1.26/1.27 matrix and direct dependency ownership boundaries。"}
+{"file": ".trellis/tasks/08-25-go-toolchain/design.md", "reason": "vet 分类、struct tag 序列化契约和依赖升级策略。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/research/external-facts.md", "reason": "Go 支持周期和已核验版本事实。"}
+{"file": "docs/adr/0001-stage-modernization-as-contract-first-dag.md", "reason": "工具链任务在 G 后执行且不提前修改 Revel/Mongo。"}
