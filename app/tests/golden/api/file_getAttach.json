@@ -1,0 +1,1 @@
+{"request":{"method":"GET","path":"/api/file/getAttach","query":{"fileId":["OID_TOKEN"]},"auth":"admin","binary":true},"response":{"status":200,"headers":{"Accept-Ranges":"bytes","Content-Disposition":"attachment; filename=\"attach.txt\"","Content-Type":"text/plain; charset=utf-8"},"body":"BINARY_BODY"}}

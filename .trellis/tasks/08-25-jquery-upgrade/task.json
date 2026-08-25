@@ -1,0 +1,36 @@
+{
+  "id": "jquery-upgrade",
+  "name": "jquery-upgrade",
+  "title": "jQuery 3.7 升级",
+  "description": "升级到 jQuery 3.7.1，消除旧 API 与重复核心；migrate 仅开发诊断且最终零 warning。",
+  "status": "planning",
+  "dev_type": "frontend",
+  "scope": "jQuery runtime and dependent plugins",
+  "package": null,
+  "priority": "P2",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-08-25",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "dev",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-25-frontend-libs",
+  "relatedFiles": [
+    "package.json",
+    "public/js/jquery-1.9.0.min.js",
+    "public/js/app",
+    "public/js/plugins",
+    "app/views"
+  ],
+  "notes": "不升级 jQuery 4，不在生产保留 jquery-migrate。",
+  "meta": {
+    "depends_on": [
+      "08-25-frontend-build-chain"
+    ]
+  }
+}

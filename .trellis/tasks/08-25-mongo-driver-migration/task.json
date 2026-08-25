@@ -1,0 +1,36 @@
+{
+  "id": "mongo-driver-migration",
+  "name": "mongo-driver-migration",
+  "title": "MongoDB 官方驱动迁移",
+  "description": "以 app/db 兼容边界把 mgo.v2 迁移到 mongo-driver/v2，支持 MongoDB 7.0–8.0。",
+  "status": "planning",
+  "dev_type": "backend",
+  "scope": "app/db and BSON contracts",
+  "package": null,
+  "priority": "P1",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-08-25",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "dev",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-25-tech-stack-modernization",
+  "relatedFiles": [
+    "app/db",
+    "app/info",
+    "app/service",
+    "go.mod",
+    "docs/modernization-backlog.md"
+  ],
+  "notes": "全调用链 context 传播延期为 MOD-001；不得宣称本任务已完成该重构。",
+  "meta": {
+    "depends_on": [
+      "08-25-revel-1-1-upgrade"
+    ]
+  }
+}

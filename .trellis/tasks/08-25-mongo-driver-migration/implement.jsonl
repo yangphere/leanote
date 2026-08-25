@@ -1,0 +1,5 @@
+{"file": ".trellis/tasks/08-25-mongo-driver-migration/prd.md", "reason": "官方 driver/v2、MongoDB 7.0–8.0、零迁移和 context 技术债需求。"}
+{"file": ".trellis/tasks/08-25-mongo-driver-migration/design.md", "reason": "app/db 兼容 wrapper、查询映射、ObjectID 和 timeout 设计。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/research/external-facts.md", "reason": "mgo opcode 限制、ObjectID 行为和 driver 版本事实。"}
+{"file": "docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md", "reason": "驱动迁移必须收敛在单一 app/db 边界。"}
+{"file": "docs/modernization-backlog.md", "reason": "记录未在本任务完成的全调用链 context 传播 MOD-001。"}

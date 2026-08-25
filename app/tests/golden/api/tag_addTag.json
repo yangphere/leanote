@@ -1,0 +1,1 @@
+{"request":{"method":"POST","path":"/api/tag/addTag","form":{"tag":["golden-tag"]},"auth":"admin"},"response":{"status":200,"headers":{"Content-Type":"application/json; charset=utf-8"},"body":"{\"TagId\":\"OID_TOKEN\",\"UserId\":\"OID_TOKEN\",\"Tag\":\"golden-tag\",\"Usn\":200050,\"Count\":1,\"CreatedTime\":\"TIME_TOKEN\",\"UpdatedTime\":\"TIME_TOKEN\",\"IsDeleted\":false}"}}

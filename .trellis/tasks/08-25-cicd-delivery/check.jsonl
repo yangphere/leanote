@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-25-cicd-delivery/prd.md", "reason": "检查 Go/Node/Mongo/Chromium/漂移/打包/Docker 全部是阻塞门，非 tag 不发布。"}
+{"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "检查权限、tag 版本一致性、非 root、外部 Mongo、持久化和 PDF smoke。"}
+{"file": "docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md", "reason": "核对 release workflow 没有生产部署职责或长期凭据。"}
+{"file": "docs/modernization-backlog.md", "reason": "核对 arm64/PDF 技术债已登记而没有变成隐藏 fallback。"}

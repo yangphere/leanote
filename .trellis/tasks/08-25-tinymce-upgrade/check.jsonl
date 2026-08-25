@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/prd.md", "reason": "检查 TinyMCE 8.8.2、四个插件、leaui_mind 删除证据和内容不变量。"}
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/design.md", "reason": "检查没有 TinyMCE 4、双 runtime、CDN、宽泛 HTML 清洗或静默失败。"}
+{"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "核对 TinyMCE 是前端库串行链的最后叶子。"}
+{"file": "docs/modernization-backlog.md", "reason": "确认未编辑不保存与内容语义约束没有被延期项稀释。"}

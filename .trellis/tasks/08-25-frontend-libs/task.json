@@ -1,0 +1,40 @@
+{
+  "id": "frontend-libs",
+  "name": "frontend-libs",
+  "title": "前端核心库升级协调",
+  "description": "按 jQuery、Bootstrap、TinyMCE 顺序协调版本升级与浏览器整体验收，不直接混合生产改动。",
+  "status": "planning",
+  "dev_type": "frontend",
+  "scope": "frontend library coordination",
+  "package": null,
+  "priority": "P2",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-08-25",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "dev",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "08-25-jquery-upgrade",
+    "08-25-bootstrap-upgrade",
+    "08-25-tinymce-upgrade"
+  ],
+  "parent": "08-25-tech-stack-modernization",
+  "relatedFiles": [
+    "package.json",
+    "public/js",
+    "public/css",
+    "public/tinymce",
+    "app/views"
+  ],
+  "notes": "协调父任务；生产修改分别归属三个叶子任务。",
+  "meta": {
+    "depends_on": [
+      "08-25-frontend-build-chain"
+    ]
+  }
+}

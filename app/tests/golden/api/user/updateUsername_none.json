@@ -1,0 +1,1 @@
+{"request":{"method":"GET","path":"/api/user/updateUsername","auth":"none"},"response":{"status":200,"headers":{"Content-Type":"application/json; charset=utf-8"},"body":"{\"Ok\":false,\"Msg\":\"NOTLOGIN\"}"}}

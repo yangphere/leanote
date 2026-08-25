@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/prd.md", "reason": "TinyMCE 8.8.2、自托管、四个第一方插件和存量 HTML 语义契约。"}
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/design.md", "reason": "初始化 API、粘贴、插件边界、未编辑不保存和浏览器验证设计。"}
+{"file": ".trellis/tasks/08-25-bootstrap-upgrade/prd.md", "reason": "前序 leaui_image iframe Bootstrap 适配完成后才进入 TinyMCE。"}
+{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "TinyMCE 自托管资源和生成物契约决策。"}

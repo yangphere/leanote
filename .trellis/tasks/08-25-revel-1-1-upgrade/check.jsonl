@@ -1,0 +1,3 @@
+{"file": ".trellis/tasks/08-25-revel-1-1-upgrade/prd.md", "reason": "检查只做版本升级，不提前迁出 Revel 或改变路由/session。"}
+{"file": ".trellis/tasks/08-25-revel-1-1-upgrade/design.md", "reason": "检查三条执行路径和可回滚边界。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/prd.md", "reason": "核对 C-a 与 B/C-b 的依赖顺序。"}

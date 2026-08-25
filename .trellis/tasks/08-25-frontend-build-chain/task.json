@@ -1,0 +1,37 @@
+{
+  "id": "frontend-build-chain",
+  "name": "frontend-build-chain",
+  "title": "Node 24 前端构建链",
+  "description": "用 esbuild 与 Node 脚本替换 Gulp 3，并建立源码到受跟踪产物的可复现 manifest。",
+  "status": "planning",
+  "dev_type": "frontend",
+  "scope": "frontend build and generated assets",
+  "package": null,
+  "priority": "P1",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-08-25",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "dev",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-25-tech-stack-modernization",
+  "relatedFiles": [
+    "package.json",
+    "package-lock.json",
+    "Gulpfile.js",
+    "app/views/note/note-dev.html",
+    "app/views/note/note.html",
+    "public"
+  ],
+  "notes": "生成物继续跟踪；源码与 manifest 是唯一事实来源。",
+  "meta": {
+    "depends_on": [
+      "08-25-regression-baseline"
+    ]
+  }
+}

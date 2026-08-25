@@ -1,0 +1,6 @@
+{"file": ".trellis/tasks/08-25-regression-baseline/prd.md", "reason": "逐条核对 G-AC1 至 G-AC10：29 action 清单、失败路径、USN 映射表、Mongo 5.0、record/replay、无 Mongo 跳过、不修改生产代码。"}
+{"file": ".trellis/tasks/08-25-regression-baseline/design.md", "reason": "检查：[test] results.pretty=false 与 site.url 固定端口、字段路径限定归一化（含 canary）、header 闭合集、record/replay 分离与写保护、Mongo 5.0 fixture、C-b 后可复用 harness。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/research/external-facts.md", "reason": "核对 mgo legacy opcode 限制（G 用 5.0 的依据）与 ObjectID 24 字符小写 hex、时间格式事实。"}
+{"file": ".trellis/tasks/08-25-regression-baseline/implement.jsonl", "reason": "核对实现上下文清单与需求一致性（29 action、僵尸方法证据、USN 偏差证据、ExportPdf 平台边界）。"}
+{"file": "app/tests", "type": "directory", "reason": "核对清理结果：config/note_content/db/reg_test.go 与 tmp.go 已删除，auth_test.go 的 init 可跳过，无 /Users/life 路径残留；golden 目录无 record 之外的改写。"}
+{"file": "conf/app.conf", "reason": "核对仅追加 [test] section（含 site.url 固定端口），既有键零改动。"}
