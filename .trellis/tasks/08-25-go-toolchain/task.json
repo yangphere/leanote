@@ -3,7 +3,7 @@
   "name": "go-toolchain",
   "title": "Go 1.26 工具链与通用依赖",
   "description": "将最低 Go 版本升到 1.26，建立 1.26/1.27 矩阵并逐项升级非 Revel/Mongo 直接依赖。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "backend",
   "scope": "Go toolchain and shared direct dependencies",
   "package": null,
@@ -23,10 +23,18 @@
   "relatedFiles": [
     "go.mod",
     "go.sum",
+    ".github/workflows",
+    ".travis.yml",
     "app/info",
-    "app/tests"
+    "app/lea",
+    "app/service",
+    "app/controllers",
+    "app/cmd",
+    "app/tests",
+    "docs/modernization-backlog.md",
+    "sh"
   ],
-  "notes": "Revel 与 MongoDB 依赖由后续专属任务拥有。",
+  "notes": "Revel 与 MongoDB 版本由后续专属任务拥有；robfig/config 在 A 保持当前版本，替换延期为 MOD-003。G 实现资产已交付（2dc85af：workflow/golden/harness）；G-AC8 已由 PR #3 的 pull_request 运行 32871393901 完成真实取证并回填 G 归档。用户于 2026-08-26 明确批准解决该门禁并启动 A。",
   "meta": {
     "depends_on": [
       "08-25-regression-baseline"

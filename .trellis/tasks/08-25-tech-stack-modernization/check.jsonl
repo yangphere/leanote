@@ -1,3 +1,3 @@
-{"file": "docs/modernization-backlog.md", "reason": "核对 context 传播和 arm64/PDF 延期项是否被正确记录并链接。"}
+{"file": "docs/modernization-backlog.md", "reason": "核对 context 传播、arm64/PDF 和消息配置解析器延期项是否被正确记录并链接。"}
 {"file": "docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md", "reason": "检查驱动与 HTTP 迁移是否仍遵守单一兼容边界和明确路由 registry。"}
 {"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "检查前端库顺序、生成物唯一事实来源和浏览器门禁。"}

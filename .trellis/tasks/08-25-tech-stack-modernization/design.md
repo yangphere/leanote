@@ -88,7 +88,7 @@ Docker 使用 Node/Go/运行时多阶段构建，最终为非 root Linux/amd64�
 - Mongo/Revel 兼容边界：`docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md`。
 - 前端生成物与顺序升级：`docs/adr/0003-modernize-frontend-with-generated-asset-contract.md`。
 - Release/GHCR、无自动部署：`docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md`。
-- 允许延期且必须后续重构的项目只进入 `docs/modernization-backlog.md`；当前为 context 传播 `MOD-001` 与 arm64/PDF `MOD-002`。
+- 允许延期且必须后续重构的项目只进入 `docs/modernization-backlog.md`；当前为 context 传播 `MOD-001`、arm64/PDF `MOD-002` 与消息配置解析器替换 `MOD-003`。
 
 ## 8. 回滚策略
 

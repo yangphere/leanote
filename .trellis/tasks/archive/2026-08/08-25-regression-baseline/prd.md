@@ -196,8 +196,13 @@ USN 断言**只针对有 `GetSync*` 语义的 mutation**，按下列映射表逐
 - [ ] **G-AC6** `go test ./app/tests/ -run TestAuth` 在**无** MongoDB 时不 panic（跳过而非崩溃）。
 - [ ] **G-AC7** `config_test.go`、`note_content_test.go`、`db_test.go`、`tmp.go`、`reg_test.go` 已删除；
       仓库内不再有 `/Users/life/` 硬编码路径，也不再有会真实发邮件或无断言的调试测试。
-- [ ] **G-AC8** GitHub Actions 在 PR 上以 MongoDB 5.0 + fixture 实际跑通 Go 测试（含 golden replay），
+- [x] **G-AC8** GitHub Actions 在 PR 上以 MongoDB 5.0 + fixture 实际跑通 Go 测试（含 golden replay），
       并在 Node 24.x 跑通 `npm test`；证据为真实 workflow 运行记录（已裁决选 (a)，静态校验不算完成）。
+      2026-08-26 已由 draft PR [#3](https://github.com/yangphere/leanote/pull/3) 的 `pull_request`
+      运行 [32871393901](https://github.com/yangphere/leanote/actions/runs/32871393901) 完成取证
+      （head `0fce6e7b933166412142ad8b109edcdef414163a`）：`go-replay` 在 Ubuntu 22.04 上恢复
+      MongoDB 5.0 fixture 后通过 `TestAuth` 与 Golden/USN replay；`node-tests` 使用 Node 24.19.0，
+      `npm test` 发现并通过 10/10 个测试、失败 0 个。PR/push 事件中的 `record-export-pdf` 按设计跳过。
 - [ ] **G-AC9** 一条文档化的本地命令即可起 Mongo + 恢复 fixture + 录制/回放基线。
 - [ ] **G-AC10** 本子任务**未修改任何生产代码**（`app/` 下除 `app/tests/` 外零改动），
       可用 `git diff --stat` 证明。
