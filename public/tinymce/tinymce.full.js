@@ -41522,7 +41522,7 @@ define("tinymce/pasteplugin/Clipboard", [
 				items = event.clipboardData.items;
 			}
 			else if(event.originalEvent && event.originalEvent.clipboardData) {
-				items = event.originalEvent.clipboardData;
+				items = event.originalEvent.clipboardData.items;
 			}
 			if (!items) {
 				return false;
@@ -41608,6 +41608,8 @@ define("tinymce/pasteplugin/Clipboard", [
 			
 			if (hasImage(e)) {
 				removePasteBin();
+				// 不然会在内容中插入一个图片,
+				e.preventDefault();
 				return;
 			}
 

@@ -26,3 +26,6 @@ target/
 package/leanote.tar.gz
 package/leanote/
 leanote.log
+
+# 排除所有以 . 开头的目录
+.*/
