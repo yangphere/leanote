@@ -145,3 +145,13 @@ workflow in `.trellis/workflow.md`: ask for task-creation consent, write plannin
 `task.py start` before implementing. Note that `.trellis/spec/{backend,frontend}/*` are still
 unedited scaffolding templates (and describe a React/ORM stack that does not exist here) — do not
 treat them as this project's conventions.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues for `yangphere/leanote`. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+This repository uses a single-context domain documentation layout. See `docs/agents/domain.md`.
