@@ -1,0 +1,1 @@
+{"request":{"method":"GET","path":"/api/user/info","auth":"admin"},"response":{"status":200,"headers":{"Content-Type":"application/json; charset=utf-8"},"body":"{\"UserId\":\"OID_TOKEN\",\"Username\":\"admin\",\"Email\":\"admin@leanote.com\",\"Verified\":false,\"Logo\":\"/images/blog/default_avatar.png\"}"}}

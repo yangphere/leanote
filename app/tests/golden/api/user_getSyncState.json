@@ -1,0 +1,1 @@
+{"request":{"method":"GET","path":"/api/user/getSyncState","auth":"admin"},"response":{"status":200,"headers":{"Content-Type":"application/json; charset=utf-8"},"body":"{\"LastSyncTime\":\"UNIX_TIME_TOKEN\",\"LastSyncUsn\":200044}"}}

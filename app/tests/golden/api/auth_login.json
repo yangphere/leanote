@@ -1,0 +1,1 @@
+{"request":{"method":"GET","path":"/api/auth/login","query":{"email":["admin@leanote.com"],"pwd":["abc123"]}},"response":{"status":200,"headers":{"Content-Type":"application/json; charset=utf-8"},"body":"{\"Ok\":true,\"Token\":\"AUTH_TOKEN\",\"UserId\":\"OID_TOKEN\",\"Email\":\"admin@leanote.com\",\"Username\":\"admin\"}"}}

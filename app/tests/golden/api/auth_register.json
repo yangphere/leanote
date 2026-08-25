@@ -1,0 +1,1 @@
+{"request":{"method":"POST","path":"/api/auth/register","form":{"email":["golden-regression@example.test"],"pwd":["golden-pass"]}},"response":{"status":200,"headers":{"Content-Type":"application/json; charset=utf-8"},"body":"{\"Ok\":true,\"Msg\":\"\"}"}}

@@ -1,23 +1,32 @@
 package tests
 
 import (
-	"github.com/leanote/leanote/app/db"
+	"net"
+	"os"
 	"testing"
-	//	. "github.com/leanote/leanote/app/lea"
+	"time"
+
+	"github.com/leanote/leanote/app/db"
 	"github.com/leanote/leanote/app/service"
-	//	"gopkg.in/mgo.v2"
-	//	"fmt"
 )
 
-func init() {
-	db.Init("mongodb://localhost:27017/leanote", "leanote")
-	service.InitService()
-}
-
-// 测试登录
 func TestAuth(t *testing.T) {
-	_, err := service.AuthS.Login("admin", "abc123")
+	connection, err := net.DialTimeout("tcp", "127.0.0.1:27017", time.Second)
 	if err != nil {
-		t.Error("Admin User Auth Error")
+		if os.Getenv("LEANOTE_REQUIRE_MONGO") == "1" {
+			t.Fatalf("MongoDB fixture is required at 127.0.0.1:27017: %v", err)
+		}
+		t.Skipf("MongoDB fixture is unavailable at 127.0.0.1:27017: %v", err)
+	}
+	if err := connection.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	db.Init("mongodb://127.0.0.1:27017/leanote_test", "leanote_test")
+	service.InitService()
+
+	_, err = service.AuthS.Login("admin", "abc123")
+	if err != nil {
+		t.Fatalf("admin fixture authentication failed: %v", err)
 	}
 }

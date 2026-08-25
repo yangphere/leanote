@@ -30,3 +30,8 @@ leanote.log
 # 排除根目录下所有以 . 开头的目录，但保留 .trellis 目录
 /.*/
 !/.trellis/
+!/.github/
+/.github/*
+!/.github/workflows/
+/.github/workflows/*
+!/.github/workflows/*.yml

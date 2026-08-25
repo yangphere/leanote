@@ -1,0 +1,1 @@
+{"request":{"method":"POST","path":"/api/note/deleteTrash","form":{"noteId":["OID_TOKEN"],"usn":["200045"]},"auth":"admin"},"response":{"status":200,"headers":{"Content-Type":"application/json; charset=utf-8"},"body":"{\"Ok\":false,\"Msg\":\"conflict\",\"Usn\":0}"}}

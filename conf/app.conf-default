@@ -80,3 +80,16 @@ log.trace.output = off
 log.info.output  = off
 log.warn.output  = %(app.name)s.log
 log.error.output = %(app.name)s.log
+
+[test]
+mode.dev=false
+results.pretty=false
+watch=false
+http.addr=127.0.0.1
+db.dbname=leanote_test
+site.url=http://127.0.0.1:28017
+
+log.trace.output = stderr
+log.info.output  = stderr
+log.warn.output  = stderr
+log.error.output = stderr
