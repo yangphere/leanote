@@ -48,7 +48,7 @@ func (this *FileService) ListImagesWithPage(userId, albumId, key string, pageNum
 		q["IsDefaultAlbum"] = true
 	}
 	if key != "" {
-		q["Title"] = bson.M{"$regex": bson.RegEx{".*?" + key + ".*", "i"}}
+		q["Title"] = bson.M{"$regex": bson.RegEx{Pattern: ".*?" + key + ".*", Options: "i"}}
 	}
 
 	//	LogJ(q)

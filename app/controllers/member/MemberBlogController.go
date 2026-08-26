@@ -380,7 +380,6 @@ func (c MemberBlog) uploadImage(themeId string) (re info.Re) {
 		return re
 	}
 
-	filename = filename
 	// data, err := ioutil.ReadAll(file)
 	// if err != nil {
 	// 	LogJ(err)
@@ -480,7 +479,6 @@ func (c MemberBlog) ImportTheme() revel.Result {
 		return c.RenderJSON(re)
 	}
 
-	filename = filename
 	// data, err := ioutil.ReadAll(file)
 	// if err != nil {
 	// 	return c.RenderJSON(re)

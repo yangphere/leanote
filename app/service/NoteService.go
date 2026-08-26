@@ -59,7 +59,7 @@ func (this *NoteService) GetNoteContent(noteContentId, userId string) (noteConte
 func (this *NoteService) GetNoteAndContent(noteId, userId string) (noteAndContent info.NoteAndContent) {
 	note := this.GetNote(noteId, userId)
 	noteContent := this.GetNoteContent(noteId, userId)
-	return info.NoteAndContent{note, noteContent}
+	return info.NoteAndContent{Note: note, NoteContent: noteContent}
 }
 
 func (this *NoteService) GetNoteBySrc(src, userId string) (note info.Note) {
@@ -86,7 +86,7 @@ func (this *NoteService) GetNoteAndContentBySrc(src, userId string) (noteId stri
 	if (note.NoteId != "") {
 		noteId = note.NoteId.Hex()
 		noteContent := this.GetNoteContent(note.NoteId.Hex(), userId)
-		return noteId, info.NoteAndContentSep{note, noteContent}
+		return noteId, info.NoteAndContentSep{NoteInfo: note, NoteContentInfo: noteContent}
 	}
 	return
 }
@@ -826,8 +826,8 @@ func (this *NoteService) SearchNote(key, userId string, pageNumber, pageSize int
 
 	// 利用标题和desc, 不用content
 	orQ := []bson.M{
-		bson.M{"Title": bson.M{"$regex": bson.RegEx{".*?" + key + ".*", "i"}}},
-		bson.M{"Desc": bson.M{"$regex": bson.RegEx{".*?" + key + ".*", "i"}}},
+		bson.M{"Title": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + key + ".*", Options: "i"}}},
+		bson.M{"Desc": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + key + ".*", Options: "i"}}},
 	}
 	// 不是trash的
 	query := bson.M{"UserId": bson.ObjectIdHex(userId),
@@ -866,7 +866,7 @@ func (this *NoteService) searchNoteFromContent(notes []info.Note, userId, key st
 	query := bson.M{
 		"_id":     bson.M{"$nin": noteIds},
 		"UserId":  bson.ObjectIdHex(userId),
-		"Content": bson.M{"$regex": bson.RegEx{".*?" + key + ".*", "i"}},
+		"Content": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + key + ".*", Options: "i"}},
 	}
 	if isBlog {
 		query["IsBlog"] = true
@@ -969,7 +969,6 @@ func (this *NoteService) UpdateNoteToDeleteTag(userId string, targetTag string) 
 		}
 		for i, tag := range tags {
 			if tag == targetTag {
-				tags = tags
 				tags = append(tags[:i], tags[i+1:]...)
 				break
 			}

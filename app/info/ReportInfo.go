@@ -8,12 +8,12 @@ import (
 // 举报
 type Report struct {
 	ReportId bson.ObjectId `bson:"_id"`
-	NoteId   bson.ObjectId `NoteId`
+	NoteId   bson.ObjectId `bson:"NoteId"`
 
-	UserId bson.ObjectId `UserId` // UserId回复ToUserId
-	Reason string        `Reason` // 评论内容
+	UserId bson.ObjectId `bson:"UserId"` // UserId回复ToUserId
+	Reason string        `bson:"Reason"` // 评论内容
 
-	CommentId bson.ObjectId `CommendId,omitempty` // 对某条评论进行回复
+	CommentId bson.ObjectId `bson:"CommendId,omitempty"` // 对某条评论进行回复
 
-	CreatedTime time.Time `CreatedTime`
+	CreatedTime time.Time `bson:"CreatedTime"`
 }

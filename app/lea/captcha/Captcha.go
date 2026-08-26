@@ -385,7 +385,6 @@ func NewLenChars(length int, chars []byte) string {
 			}
 		}
 	}
-	panic("unreachable")
 }
 
 func Fetch() (*Image, string) {

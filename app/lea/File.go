@@ -144,7 +144,6 @@ func IsDirExists(path string) bool {
 	} else {
 		return fi.IsDir()
 	}
-	return false
 }
 
 // 获得文件str内容

@@ -97,7 +97,6 @@ func (c Auth) Demo() revel.Result {
 		c.SetSession(userInfo)
 		return c.Redirect("/note")
 	}
-	return nil
 }
 
 //--------

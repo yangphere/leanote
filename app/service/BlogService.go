@@ -35,7 +35,7 @@ type BlogService struct {
 // ReadNum, LikeNum, CommentNum
 func (this *BlogService) GetBlogStat(noteId string) (stat info.BlogStat) {
 	note := noteService.GetBlogNote(noteId)
-	stat = info.BlogStat{note.NoteId, note.ReadNum, note.LikeNum, note.CommentNum}
+	stat = info.BlogStat{NoteId: note.NoteId, ReadNum: note.ReadNum, LikeNum: note.LikeNum, CommentNum: note.CommentNum}
 	return
 }
 
@@ -65,7 +65,7 @@ func (this *BlogService) GetBlogItem(note info.Note) (blog info.BlogItem) {
 	noteContent := noteService.GetNoteContent(note.NoteId.Hex(), note.UserId.Hex())
 
 	// 组装成blogItem
-	blog = info.BlogItem{note, noteContent.Abstract, noteContent.Content, false, info.User{}}
+	blog = info.BlogItem{Note: note, Abstract: noteContent.Abstract, Content: noteContent.Content, HasMore: false, User: info.User{}}
 
 	return
 }
@@ -116,7 +116,7 @@ func (this *BlogService) ListBlogs(userId, notebookId string, page, pageSize int
 			abstract = noteContent.Abstract
 			content = noteContent.Content
 		}
-		blogs[i] = info.BlogItem{note, abstract, content, hasMore, info.User{}}
+		blogs[i] = info.BlogItem{Note: note, Abstract: abstract, Content: content, HasMore: hasMore, User: info.User{}}
 	}
 
 	pageInfo := info.NewPage(page, pageSize, count, nil)
@@ -272,7 +272,7 @@ func (this *BlogService) ListBlogsArchive(userId, notebookId string, year, month
 		// month
 		lm := len(arcsMonth)
 		if lm == 0 || arcsMonth[lm-1].Month != month {
-			arcsMonth = append(arcsMonth, info.ArchiveMonth{month, []*info.Post{p}})
+			arcsMonth = append(arcsMonth, info.ArchiveMonth{Month: month, Posts: []*info.Post{p}})
 		} else {
 			arcsMonth[lm-1].Posts = append(arcsMonth[lm-1].Posts, p)
 		}
@@ -343,7 +343,7 @@ func (this *BlogService) notes2BlogItems(notes []info.Note) []info.BlogItem {
 			abstract = noteContent.Abstract
 			content = noteContent.Content
 		}
-		blogs[i] = info.BlogItem{note, abstract, content, hasMore, info.User{}}
+		blogs[i] = info.BlogItem{Note: note, Abstract: abstract, Content: content, HasMore: hasMore, User: info.User{}}
 	}
 	return blogs
 }
@@ -453,7 +453,7 @@ func (this *BlogService) ListAllBlogs(userId, tag string, keywords string, isRec
 		query["IsRecommend"] = isRecommend
 	}
 	if keywords != "" {
-		query["Title"] = bson.M{"$regex": bson.RegEx{".*?" + keywords + ".*", "i"}}
+		query["Title"] = bson.M{"$regex": bson.RegEx{Pattern: ".*?" + keywords + ".*", Options: "i"}}
 	}
 	q := db.Notes.Find(query)
 
@@ -505,7 +505,7 @@ func (this *BlogService) ListAllBlogs(userId, tag string, keywords string, isRec
 		if len(note.Tags) == 1 && note.Tags[0] == "" {
 			note.Tags = nil
 		}
-		blogs[i] = info.BlogItem{note, "", content, hasMore, userMap[note.UserId]}
+		blogs[i] = info.BlogItem{Note: note, Abstract: "", Content: content, HasMore: hasMore, User: userMap[note.UserId]}
 	}
 	pageInfo = info.NewPage(page, pageSize, count, nil)
 

@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-//---------
+// ---------
 // 数据结构
-//---------
+// ---------
 type NoteFile struct {
 	FileId      string // 服务器端Id
 	LocalFileId string // 客户端Id
@@ -43,7 +43,7 @@ type ApiNoteContent struct {
 	NoteId bson.ObjectId `bson:"_id,omitempty"`
 	UserId bson.ObjectId `bson:"UserId"`
 
-	Content string `Content`
+	Content string `bson:"Content"`
 
 	//	CreatedTime   time.Time     `CreatedTime`
 	//	UpdatedTime   time.Time     `UpdatedTime`
@@ -67,21 +67,21 @@ type ApiUser struct {
 	Logo     string
 }
 
-//----------
+// ----------
 // Notebook
-//----------
+// ----------
 type ApiNotebook struct {
 	NotebookId       bson.ObjectId `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
 	UserId           bson.ObjectId `bson:"UserId"`
 	ParentNotebookId bson.ObjectId `bson:"ParentNotebookId,omitempty"` // 上级
-	Seq              int           `Seq`                               // 排序
-	Title            string        `Title`                             // 标题
-	UrlTitle         string        `UrlTitle`                          // Url标题 2014/11.11加
-	IsBlog           bool          `IsBlog,omitempty`                  // 是否是Blog 2013/12/29 新加
-	CreatedTime      time.Time     `CreatedTime,omitempty`
-	UpdatedTime      time.Time     `UpdatedTime,omitempty`
-	Usn              int           `Usn` // UpdateSequenceNum
-	IsDeleted        bool          `IsDeleted`
+	Seq              int           `bson:"Seq"`                        // 排序
+	Title            string        `bson:"Title"`                      // 标题
+	UrlTitle         string        `bson:"UrlTitle"`                   // Url标题 2014/11.11加
+	IsBlog           bool          `bson:"IsBlog,omitempty"`           // 是否是Blog 2013/12/29 新加
+	CreatedTime      time.Time     `bson:"CreatedTime,omitempty"`
+	UpdatedTime      time.Time     `bson:"UpdatedTime,omitempty"`
+	Usn              int           `bson:"Usn"` // UpdateSequenceNum
+	IsDeleted        bool          `bson:"IsDeleted"`
 }
 
 //---------

@@ -25,8 +25,8 @@ const (
 
 type Token struct {
 	UserId      bson.ObjectId `bson:"_id"`
-	Email       string        `Email`
-	Token       string        `Token`
-	Type        int           `Type`
-	CreatedTime time.Time     `CreatedTime`
+	Email       string        `bson:"Email"`
+	Token       string        `bson:"Token"`
+	Type        int           `bson:"Type"`
+	CreatedTime time.Time     `bson:"CreatedTime"`
 }

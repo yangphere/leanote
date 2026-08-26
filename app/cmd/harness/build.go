@@ -9,14 +9,11 @@ import (
 	"go/build"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/leanote/leanote/app/cmd/parser2"
 	"github.com/revel/cmd/model"
@@ -96,149 +93,6 @@ func Build(c *model.CommandConfig, paths *model.RevelContainer) (_ *App, err err
 
 	return // 改了这里
 
-	// Read build config.
-	buildTags := paths.Config.StringDefault("build.tags", "")
-
-	// Build the user program (all code under app).
-	// It relies on the user having "go" installed.
-	goPath, err := exec.LookPath("go")
-	if err != nil {
-		utils.Logger.Fatal("Go executable not found in PATH.")
-	}
-
-	// Binary path is a combination of target/app directory, app's import path and its name.
-	binName := filepath.Join("target", "app", paths.ImportPath, filepath.Base(paths.BasePath))
-
-	// Change binary path for Windows build
-	goos := runtime.GOOS
-	if goosEnv := os.Getenv("GOOS"); goosEnv != "" {
-		goos = goosEnv
-	}
-	if goos == "windows" {
-		binName += ".exe"
-	}
-
-	gotten := make(map[string]struct{})
-	contains := func(s []string, e string) bool {
-		for _, a := range s {
-			if a == e {
-				return true
-			}
-		}
-		return false
-	}
-
-	if len(c.GoModFlags) > 0 {
-		for _, gomod := range c.GoModFlags {
-			goModCmd := exec.Command(goPath, append([]string{"mod"}, strings.Split(gomod, " ")...)...)
-			utils.CmdInit(goModCmd, !c.Vendored, c.AppPath)
-			output, err := goModCmd.CombinedOutput()
-			utils.Logger.Info("Gomod applied ", "output", string(output))
-
-			// If the build succeeded, we're done.
-			if err != nil {
-				utils.Logger.Error("Gomod Failed continuing ", "error", err, "output", string(output))
-			}
-		}
-	}
-
-	for {
-		appVersion := getAppVersion(paths)
-		if appVersion == "" {
-			appVersion = "noVersionProvided"
-		}
-
-		buildTime := time.Now().UTC().Format(time.RFC3339)
-		versionLinkerFlags := fmt.Sprintf("-X '%s/app.AppVersion=%s' -X '%s/app.BuildTime=%s'",
-			paths.ImportPath, appVersion, paths.ImportPath, buildTime)
-
-		// Append any build flags specified, they will override existing flags
-		flags := []string{}
-		if len(c.BuildFlags) == 0 {
-			flags = []string{
-				"build",
-				"-ldflags", versionLinkerFlags,
-				"-tags", buildTags,
-				"-o", binName}
-		} else {
-			if !contains(c.BuildFlags, "build") {
-				flags = []string{"build"}
-			}
-			if !contains(flags, "-ldflags") {
-				ldflags := "-ldflags= " + versionLinkerFlags
-				// Add user defined build flags
-				for i := range c.BuildFlags {
-					ldflags += " -X '" + c.BuildFlags[i] + "'"
-				}
-				flags = append(flags, ldflags)
-			}
-			if !contains(flags, "-tags") && buildTags != "" {
-				flags = append(flags, "-tags", buildTags)
-			}
-			if !contains(flags, "-o") {
-				flags = append(flags, "-o", binName)
-			}
-		}
-
-		// Note: It's not applicable for filepath.* usage
-		flags = append(flags, path.Join(paths.ImportPath, "app", "tmp"))
-
-		buildCmd := exec.Command(goPath, flags...)
-		if !c.Vendored {
-			// This is Go main path
-			gopath := c.GoPath
-			for _, o := range paths.ModulePathMap {
-				gopath += string(filepath.ListSeparator) + o.Path
-			}
-
-			buildCmd.Env = append(os.Environ(),
-				"GOPATH=" + gopath,
-			)
-		}
-		utils.CmdInit(buildCmd, !c.Vendored, c.AppPath)
-
-		utils.Logger.Info("Exec:", "args", buildCmd.Args, "working dir", buildCmd.Dir)
-		output, err := buildCmd.CombinedOutput()
-
-		// If the build succeeded, we're done.
-		if err == nil {
-			utils.Logger.Info("Build successful continuing")
-			return NewApp(binName, paths, sourceInfo.PackageMap), nil
-		}
-
-		// Since there was an error, capture the output in case we need to report it
-		stOutput := string(output)
-		utils.Logger.Infof("Got error on build of app %s", stOutput)
-
-		// See if it was an import error that we can go get.
-		matches := importErrorPattern.FindAllStringSubmatch(stOutput, -1)
-		utils.Logger.Info("Build failed checking for missing imports", "message", stOutput, "missing_imports", len(matches))
-		if matches == nil {
-			utils.Logger.Info("Build failed no missing imports", "message", stOutput)
-			return nil, newCompileError(paths, output)
-		}
-		utils.Logger.Warn("Detected missing packages, importing them", "packages", len(matches))
-		for _, match := range matches {
-			// Ensure we haven't already tried to go get it.
-			pkgName := match[1]
-			utils.Logger.Info("Trying to import ", "package", pkgName)
-			if _, alreadyTried := gotten[pkgName]; alreadyTried {
-				utils.Logger.Error("Failed to import ", "package", pkgName)
-				return nil, newCompileError(paths, output)
-			}
-			gotten[pkgName] = struct{}{}
-			if err := c.PackageResolver(pkgName); err != nil {
-				utils.Logger.Error("Unable to resolve package", "package", pkgName, "error", err)
-				return nil, newCompileError(paths, []byte(err.Error()))
-			}
-		}
-
-		// Success getting the import, attempt to build again.
-	}
-
-	// TODO remove this unreachable code and document it
-	utils.Logger.Fatal("Not reachable")
-	return nil, nil
 }
 
 // Try to define a version string for the compiled app

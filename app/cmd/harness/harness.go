@@ -330,7 +330,7 @@ func (h *Harness) Run() {
 	}
 
 	// Make a new channel to listen for the interrupt event
-	ch := make(chan os.Signal)
+	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt, os.Kill)
 	<-ch
 	// Kill the app and exit

@@ -11,11 +11,11 @@ type Session struct {
 
 	SessionId string `bson:"SessionId"` // SessionId
 
-	LoginTimes int    `LoginTimes` // 登录错误时间
-	Captcha    string `Captcha`    // 验证码
+	LoginTimes int    `bson:"LoginTimes"` // 登录错误时间
+	Captcha    string `bson:"Captcha"`    // 验证码
 
-	UserId string `UserId` // API时有值UserId
+	UserId string `bson:"UserId"` // API时有值UserId
 
-	CreatedTime time.Time `CreatedTime`
-	UpdatedTime time.Time `UpdatedTime` // 更新时间, expire这个时间会自动清空
+	CreatedTime time.Time `bson:"CreatedTime"`
+	UpdatedTime time.Time `bson:"UpdatedTime"` // 更新时间, expire这个时间会自动清空
 }

@@ -487,11 +487,11 @@ func (c Note) ExportPdf(noteId string) revel.Result {
 	}
 	_, err := cmd.Output()
 	if err != nil {
-		return c.RenderText("export pdf error. " + fmt.Sprintf("%v", err))
+		return c.RenderText("export pdf error. %v", err)
 	}
 	file, err := os.Open(path)
 	if err != nil {
-		return c.RenderText("export pdf error. " + fmt.Sprintf("%v", err))
+		return c.RenderText("export pdf error. %v", err)
 	}
 	// http://stackoverflow.com/questions/8588818/chrome-pdf-display-duplicate-headers-received-from-the-server
 	//	filenameReturn = strings.Replace(filenameReturn, ",", "-", -1)

@@ -530,7 +530,7 @@ func (this *EmailService) ListEmailLogs(pageNumber, pageSize int, sortField stri
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 	query := bson.M{}
 	if email != "" {
-		query["Email"] = bson.M{"$regex": bson.RegEx{".*?" + email + ".*", "i"}}
+		query["Email"] = bson.M{"$regex": bson.RegEx{Pattern: ".*?" + email + ".*", Options: "i"}}
 	}
 	q := db.EmailLogs.Find(query)
 	// 总记录数

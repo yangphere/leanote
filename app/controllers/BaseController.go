@@ -160,7 +160,7 @@ func (c BaseController) GetTotalPage(page, count int) int {
 //-------------
 func (c BaseController) E404() revel.Result {
 	c.ViewArgs["title"] = "404"
-	return c.NotFound("", nil)
+	return c.NotFound("")
 }
 
 // 设置本地

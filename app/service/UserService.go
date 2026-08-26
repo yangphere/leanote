@@ -434,8 +434,8 @@ func (this *UserService) ListUsers(pageNumber, pageSize int, sortField string, i
 	query := bson.M{}
 	if email != "" {
 		orQ := []bson.M{
-			bson.M{"Email": bson.M{"$regex": bson.RegEx{".*?" + email + ".*", "i"}}},
-			bson.M{"Username": bson.M{"$regex": bson.RegEx{".*?" + email + ".*", "i"}}},
+			bson.M{"Email": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + email + ".*", Options: "i"}}},
+			bson.M{"Username": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + email + ".*", Options: "i"}}},
 		}
 		query["$or"] = orQ
 	}
@@ -460,8 +460,8 @@ func (this *UserService) GetAllUserByFilter(userFilterEmail, userFilterWhiteList
 
 	orQ := []bson.M{}
 	if userFilterEmail != "" {
-		orQ = append(orQ, bson.M{"Email": bson.M{"$regex": bson.RegEx{".*?" + userFilterEmail + ".*", "i"}}},
-			bson.M{"Username": bson.M{"$regex": bson.RegEx{".*?" + userFilterEmail + ".*", "i"}}},
+		orQ = append(orQ, bson.M{"Email": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + userFilterEmail + ".*", Options: "i"}}},
+			bson.M{"Username": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + userFilterEmail + ".*", Options: "i"}}},
 		)
 	}
 	if userFilterWhiteList != "" {

@@ -243,7 +243,7 @@ func (r ErrorResult) Apply(req *revel.Request, resp *revel.Response) {
 	// This func shows a plaintext error message, in case the template rendering
 	// doesn't work.
 	showPlaintext := func(err error) {
-		revel.PlaintextErrorResult{fmt.Errorf("Server Error:\n%s\n\n"+
+		revel.PlaintextErrorResult{Error: fmt.Errorf("Server Error:\n%s\n\n"+
 			"Additionally, an error occurred when rendering the error page:\n%s",
 			r.Error, err)}.Apply(req, resp)
 	}

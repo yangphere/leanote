@@ -21,7 +21,7 @@ func RouterFilter(c *revel.Controller, fc []revel.Filter) {
 	route := revel.MainRouter.Route(c.Request)
 
 	if route == nil {
-		c.Result = c.NotFound("No matching route found: " + c.Request.GetRequestURI())
+		c.Result = c.NotFound("No matching route found: %s", c.Request.GetRequestURI())
 		return
 	}
 
@@ -74,7 +74,7 @@ func RouterFilter(c *revel.Controller, fc []revel.Filter) {
 
 	// Set the action.
 	if err := c.SetAction(route.ControllerName, route.MethodName); err != nil {
-		c.Result = c.NotFound(err.Error())
+		c.Result = c.NotFound("%s", err.Error())
 		return
 	}
 

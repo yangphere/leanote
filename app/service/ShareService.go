@@ -220,7 +220,7 @@ func (this *ShareService) ListShareNotesByNotebookId(notebookId, myUserId, share
 			thisPerm = selfPerm
 		}
 
-		notesWithPerm[i] = info.ShareNoteWithPerm{each, thisPerm}
+		notesWithPerm[i] = info.ShareNoteWithPerm{Note: each, Perm: thisPerm}
 	}
 	return notesWithPerm
 }
@@ -282,7 +282,7 @@ func (this *ShareService) ListShareNotes(myUserId, sharedUserId string,
 	for _, each := range shareNotes {
 		if !hasAdded[each.NoteId] {
 			// 待优化
-			notesWithPerm = append(notesWithPerm, info.ShareNoteWithPerm{notesMap[each.NoteId], each.Perm})
+			notesWithPerm = append(notesWithPerm, info.ShareNoteWithPerm{Note: notesMap[each.NoteId], Perm: each.Perm})
 			hasAdded[each.NoteId] = true
 		}
 	}

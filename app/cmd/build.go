@@ -80,7 +80,7 @@ func buildApp(c *model.CommandConfig) (err error) {
 	}
 
 	// Ensure the application can be built, this generates the main file
-	app, err := harness.Build(c, revel_paths)
+	_, err = harness.Build(c, revel_paths)
 	if err != nil {
 		return err
 	}
@@ -92,20 +92,6 @@ func buildApp(c *model.CommandConfig) (err error) {
 	// - app
 
 	return // 改了这里
-
-	packageFolders, err := buildCopyFiles(c, app, revel_paths)
-	if err != nil {
-		return
-	}
-	err = buildCopyModules(c, revel_paths, packageFolders, app)
-	if err != nil {
-		return
-	}
-	err = buildWriteScripts(c, app)
-	if err != nil {
-		return
-	}
-	return
 }
 
 // Copy the files to the target

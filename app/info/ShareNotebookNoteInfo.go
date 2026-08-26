@@ -78,19 +78,21 @@ type ShareNotebook struct {
 	UserId          bson.ObjectId `bson:"UserId"`
 	ToUserId        bson.ObjectId `bson:"ToUserId,omitempty"`
 	ToGroupId       bson.ObjectId `bson:"ToGroupId,omitempty"` // 分享给的用户组
-	ToGroup         Group         `ToGroup,omitempty`          // 仅仅为了显示, 不存储, 分组信息
+	ToGroup         Group         `bson:"ToGroup,omitempty"`   // 仅仅为了显示, 不存储, 分组信息
 	NotebookId      bson.ObjectId `bson:"NotebookId"`
 	Seq             int           `bson:"Seq"`  // 排序
 	Perm            int           `bson:"Perm"` // 权限, 其下所有notes 0只读, 1可修改
-	CreatedTime     time.Time     `CreatedTime,omitempty`
+	CreatedTime     time.Time     `bson:"CreatedTime,omitempty"`
 	//	IsDefault       bool          `IsDefault` // 是否是默认共享notebook, perm seq=-9999999, NotebookId=null
 }
 
 /*
 [
+
 	ShareNotebooks,
 		Subs: [ShareNotebooks, ]
 	ShareNotebooks
+
 ]
 */
 type SubShareNotebooks []ShareNotebooks
@@ -138,10 +140,10 @@ type ShareNote struct {
 	UserId      bson.ObjectId `bson:"UserId"`
 	ToUserId    bson.ObjectId `bson:"ToUserId,omitempty"`
 	ToGroupId   bson.ObjectId `bson:"ToGroupId,omitempty"` // 分享给的用户组
-	ToGroup     Group         `ToGroup,omitempty`          // 仅仅为了显示, 不存储, 分组信息
+	ToGroup     Group         `bson:"ToGroup,omitempty"`   // 仅仅为了显示, 不存储, 分组信息
 	NoteId      bson.ObjectId `bson:"NoteId"`
 	Perm        int           `bson:"Perm"` // 权限, 0只读, 1可修改
-	CreatedTime time.Time     `CreatedTime`
+	CreatedTime time.Time     `bson:"CreatedTime"`
 }
 
 // 谁共享给了谁note
