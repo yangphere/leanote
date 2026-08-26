@@ -1,12 +1,16 @@
 # Regression test environment
 
-The legacy Revel route generator must run with **Go 1.20.14**. Go 1.26 and
-1.27 currently panic in the pinned `golang.org/x/tools` type checker while
-generating the legacy entrypoint. Install Go 1.20.14, then point the harness
-at that executable before running HTTP integration tests:
+The harness generates the legacy Revel entrypoint with the **default `go` on
+PATH** and enforces a floor of **Go 1.26.7**: a missing, older, or unreadable
+default toolchain fails before any file is generated. Generation and build
+subprocesses always run with `GOTOOLCHAIN=local`, so toolchains are never
+downloaded automatically.
+
+Pointing the harness at a specific toolchain executable is an optional
+override and bypasses the version check:
 
 ```powershell
-$env:LEANOTE_TEST_GO = 'C:\path\to\go1.20.14\bin\go.exe'
+$env:LEANOTE_TEST_GO = 'C:\path\to\go\bin\go.exe'
 ```
 
 Run the following command from the repository root to start MongoDB 5.0 and

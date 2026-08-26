@@ -1,5 +1,5 @@
 language: go
-go: 1.15
+go: 1.26.x
 
 services:
   - mongodb # 2.4.12
@@ -7,11 +7,13 @@ services:
 install:
   - go version
   - export PATH=$PATH:$HOME/gopath/bin
+  - mkdir -p "$HOME/gopath/bin"
+  - export GOTOOLCHAIN=local
   # - go get -v github.com/leanote/leanote/app
-  - go get -u github.com/revel/cmd/revel
+  - go build -o "$HOME/gopath/bin/revel" github.com/revel/cmd/revel
+  - go version -m "$HOME/gopath/bin/revel" | grep -E 'golang.org/x/tools[[:space:]]+v0\.49\.0'
   # - ls $GOPATH/src/github.com/revel/
   # - go get github.com/revel/moudle/revel
-  # - go install github.com/revel/cmd/revel
   - revel version
   - pwd
   - ls

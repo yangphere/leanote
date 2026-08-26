@@ -52,9 +52,11 @@ Questions to answer:
   controller directly.
 - Keep `LEANOTE_GOLDEN=replay` read-only and fail on a missing or mismatched
   snapshot. Only an explicit `LEANOTE_GOLDEN=record` may write snapshots.
-- Run the legacy Revel generator with the explicitly selected Go 1.20.14
-  executable through `LEANOTE_TEST_GO`; newer Go versions can panic in the
-  pinned `x/tools` type checker.
+- Run the legacy Revel generator with a Go toolchain of at least 1.26.7. The
+  harness resolves `go` from PATH by default and fails closed below that floor;
+  `LEANOTE_TEST_GO` is an optional explicit override, and every generation or
+  build subprocess runs with `GOTOOLCHAIN=local` (no automatic toolchain
+  downloads).
 - Use MongoDB 5.0 for the `mgo.v2` baseline fixture. Restore the fixture before
   integration tests and remove the named container afterward.
 - Treat `Content-Type` and `Location` as the only comparable HTTP headers for
@@ -76,7 +78,7 @@ or Mongo fixture harness under `app/tests/harness`.
 
 - `go run ./app/tests/harness/cmd/env up|down`
 - `LEANOTE_GOLDEN=record|replay go test -p 1 ./app/tests/... -count=1 -timeout 30m`
-- `LEANOTE_TEST_GO=<Go 1.20.14 executable>` for generated Revel server entrypoints
+- Generated Revel server entrypoints use the default `go` on PATH, enforced to be at least 1.26.7 (fail closed); `LEANOTE_TEST_GO` is an optional explicit override that bypasses the floor check
 
 ### 3. Contracts
 
@@ -105,7 +107,7 @@ or Mongo fixture harness under `app/tests/harness`.
 |---|---|
 | Missing/invalid `LEANOTE_GOLDEN` | replay by default; invalid value fails |
 | Missing or mismatched replay file | test failure; no write |
-| Missing `LEANOTE_TEST_GO` for server generation | explicit failure |
+| Missing, older, or unreadable default `go` for server generation | explicit failure before any generation; `LEANOTE_TEST_GO` overrides |
 | Port 28017 occupied | explicit failure; no random fallback |
 | Unknown response header | normalization failure |
 | Missing ExportPdf golden or unavailable wkhtmltopdf in replay | explicit skip with a message to run the Linux record job; record mode fails |
@@ -134,4 +136,63 @@ or Mongo fixture harness under `app/tests/harness`.
 ```text
 Wrong: LEANOTE_GOLDEN is unset and a missing snapshot is generated.
 Correct: unset means replay; a missing snapshot fails and asks for explicit record.
+```
+
+## Scenario: Go 1.26 Travis Revel CLI
+
+### 1. Scope / Trigger
+
+When a Travis job running Go 1.26+ invokes `sh/run.sh` or `sh/package.sh`, the
+Revel executable must be built from Leanote's main module graph. A versioned
+`go install github.com/revel/cmd/revel@v1.0.3` instead resolves Revel's frozen
+2020 `x/tools` dependency and panics during type checking.
+
+### 2. Signatures
+
+```sh
+export PATH="$PATH:$HOME/gopath/bin"
+export GOTOOLCHAIN=local
+go build -o "$HOME/gopath/bin/revel" github.com/revel/cmd/revel
+go version -m "$HOME/gopath/bin/revel" | grep -E 'golang.org/x/tools[[:space:]]+v0\.49\.0'
+```
+
+### 3. Contracts
+
+- The executable path is `$HOME/gopath/bin/revel`, the same PATH entry used by
+  `sh/run.sh` and `sh/package.sh`.
+- The main `go.mod` selects `github.com/revel/cmd v1.0.3` and
+  `golang.org/x/tools v0.49.0`; the binary metadata check proves that selected
+  dependency graph reached the executable.
+- `GOTOOLCHAIN=local` prohibits the CLI build from silently downloading a
+  different Go toolchain.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|---|---|
+| Module-aware build fails | Travis install fails with the original non-zero exit |
+| Metadata lacks x/tools v0.49.0 | `grep` fails and scripts do not start |
+| `revel version` fails | Travis install fails before Mongo restore or smoke requests |
+| `revel run` or `revel package` fails | Keep the command failure; do not fall back to stock install |
+
+### 5. Good / Base / Bad Cases
+
+- Good: build the CLI from the checked-out Leanote module, inspect its build
+  metadata, then let both shell entrypoints resolve that binary through PATH.
+- Base: run `revel version` after metadata validation.
+- Bad: append `@v1.0.3` to `go install`, use a separate temporary module, or
+  ignore a CLI failure and continue to curl the server.
+
+### 6. Tests Required
+
+- Build `github.com/revel/cmd/revel` with `GOTOOLCHAIN=local` from the repository
+  root and assert `go version -m` contains `golang.org/x/tools v0.49.0`.
+- Run `revel version`; Linux entrypoint validation must exercise the same binary
+  with `sh/run.sh` and `sh/package.sh`.
+
+### 7. Wrong vs Correct
+
+```text
+Wrong:   go install github.com/revel/cmd/revel@v1.0.3
+Correct: go build -o "$HOME/gopath/bin/revel" github.com/revel/cmd/revel
 ```

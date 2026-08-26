@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -21,6 +22,11 @@ const (
 	appImportPath   = "github.com/leanote/leanote"
 	revelImportPath = "github.com/revel/revel"
 )
+
+// minGeneratorVersion is the lowest Go toolchain accepted when the harness
+// resolves the generator from PATH. LEANOTE_TEST_GO bypasses this floor
+// because it is always an explicit maintainer decision.
+var minGeneratorVersion = goVersion{major: 1, minor: 26, patch: 7}
 
 type Server struct {
 	BaseURL   string
@@ -75,7 +81,11 @@ func startServer(repoRoot string) (*Server, error) {
 		return nil, err
 	}
 
-	goExecutable := goBinary()
+	goExecutable, err := goBinary()
+	if err != nil {
+		cleanup()
+		return nil, err
+	}
 	revelPath, err := moduleDirectory(goExecutable, revelImportPath, repoRoot)
 	if err != nil {
 		cleanup()
@@ -149,9 +159,9 @@ func (s *Server) waitForReady(logPath string) error {
 }
 
 func buildServerBinary(repoRoot string) (string, func(), error) {
-	goExecutable := goBinary()
-	if goExecutable == "" {
-		return "", nil, fmt.Errorf("LEANOTE_TEST_GO is required for legacy Revel source generation; set it to a Go 1.20.x executable")
+	goExecutable, err := goBinary()
+	if err != nil {
+		return "", nil, err
 	}
 	if err := prepareGeneratedPaths(repoRoot); err != nil {
 		return "", nil, err
@@ -161,7 +171,7 @@ func buildServerBinary(repoRoot string) (string, func(), error) {
 		_ = os.RemoveAll(filepath.Join(repoRoot, "app", "tmp"))
 		_ = os.RemoveAll(filepath.Join(repoRoot, "app", "routes"))
 	}
-	generator := exec.Command(goExecutable, "run", ".", "build", "-v", "../../", "./tmptmp")
+	generator := goCommand(goExecutable, "run", ".", "build", "-v", "../../", "./tmptmp")
 	generator.Dir = filepath.Join(repoRoot, "app", "cmd")
 	if output, err := generator.CombinedOutput(); err != nil {
 		cleanupGenerated()
@@ -180,7 +190,7 @@ func buildServerBinary(repoRoot string) (string, func(), error) {
 	if strings.EqualFold(filepath.Ext(goExecutable), ".exe") {
 		binary += ".exe"
 	}
-	build := exec.Command(goExecutable, "build", "-o", binary, appImportPath+"/app/tmp")
+	build := goCommand(goExecutable, "build", "-o", binary, appImportPath+"/app/tmp")
 	build.Dir = repoRoot
 	if output, err := build.CombinedOutput(); err != nil {
 		cleanupGenerated()
@@ -258,12 +268,96 @@ func ensureTestPortAvailable() error {
 	return listener.Close()
 }
 
-func goBinary() string {
-	return os.Getenv("LEANOTE_TEST_GO")
+// goBinary resolves the Go executable used for legacy Revel source generation
+// and server builds. LEANOTE_TEST_GO is an explicit override honored verbatim;
+// otherwise PATH must provide "go" with a version at or above the minimum,
+// verified before anything is generated (fail closed). Unreadable versions are
+// rejected instead of assumed compatible.
+func goBinary() (string, error) {
+	if override := os.Getenv("LEANOTE_TEST_GO"); override != "" {
+		return override, nil
+	}
+	executable, err := exec.LookPath("go")
+	if err != nil {
+		return "", fmt.Errorf("no default Go toolchain found on PATH for legacy Revel source generation; install Go %s or newer and make sure 'go' is on PATH, or set LEANOTE_TEST_GO to a Go toolchain executable: %w", minGeneratorVersion, err)
+	}
+	output, err := goCommand(executable, "env", "GOVERSION").CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("query version of default Go toolchain %s: %w\n%s", executable, err, strings.TrimSpace(string(output)))
+	}
+	version, parseErr := parseGoVersion(string(output))
+	if parseErr != nil {
+		return "", fmt.Errorf("default Go toolchain %s reported unreadable version %q; install Go %s or newer, or set LEANOTE_TEST_GO to a known Go toolchain executable: %v", executable, strings.TrimSpace(string(output)), minGeneratorVersion, parseErr)
+	}
+	if !version.atLeast(minGeneratorVersion) {
+		return "", fmt.Errorf("default Go toolchain %s is go%s, but legacy Revel source generation requires Go %s or newer; upgrade the Go on PATH or set LEANOTE_TEST_GO to a suitable toolchain executable", executable, version, minGeneratorVersion)
+	}
+	return executable, nil
+}
+
+// goCommand wraps exec.Command for every harness-spawned Go subprocess and pins
+// GOTOOLCHAIN=local so an old or mismatched toolchain can never satisfy itself
+// by downloading another one.
+func goCommand(goExecutable string, args ...string) *exec.Cmd {
+	command := exec.Command(goExecutable, args...)
+	env := make([]string, 0, len(os.Environ())+1)
+	for _, entry := range os.Environ() {
+		if strings.HasPrefix(entry, "GOTOOLCHAIN=") {
+			continue
+		}
+		env = append(env, entry)
+	}
+	command.Env = append(env, "GOTOOLCHAIN=local")
+	return command
+}
+
+type goVersion struct {
+	major int
+	minor int
+	patch int
+}
+
+func (v goVersion) String() string {
+	return strconv.Itoa(v.major) + "." + strconv.Itoa(v.minor) + "." + strconv.Itoa(v.patch)
+}
+
+func (v goVersion) atLeast(floor goVersion) bool {
+	if v.major != floor.major {
+		return v.major > floor.major
+	}
+	if v.minor != floor.minor {
+		return v.minor > floor.minor
+	}
+	return v.patch >= floor.patch
+}
+
+// parseGoVersion extracts the toolchain version from `go env GOVERSION` output
+// such as "go1.27.0". Development builds ("devel ...") and pre-releases
+// ("go1.26rc1") fail closed because their generator compatibility is unknown.
+func parseGoVersion(text string) (goVersion, error) {
+	fields := strings.Fields(strings.TrimSpace(text))
+	if len(fields) == 0 {
+		return goVersion{}, fmt.Errorf("empty version output")
+	}
+	original := fields[0]
+	version := strings.TrimPrefix(original, "go")
+	parts := strings.Split(version, ".")
+	if len(parts) < 2 || len(parts) > 3 {
+		return goVersion{}, fmt.Errorf("unsupported version format %q", original)
+	}
+	numbers := [3]int{}
+	for index, part := range parts {
+		value, err := strconv.Atoi(part)
+		if err != nil {
+			return goVersion{}, fmt.Errorf("unsupported version format %q", original)
+		}
+		numbers[index] = value
+	}
+	return goVersion{major: numbers[0], minor: numbers[1], patch: numbers[2]}, nil
 }
 
 func moduleDirectory(goExecutable, modulePath, repoRoot string) (string, error) {
-	command := exec.Command(goExecutable, "list", "-m", "-f={{.Dir}}", modulePath)
+	command := goCommand(goExecutable, "list", "-m", "-f={{.Dir}}", modulePath)
 	command.Dir = repoRoot
 	output, err := command.CombinedOutput()
 	if err != nil {
