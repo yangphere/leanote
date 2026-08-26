@@ -85,7 +85,7 @@ G-AC8 硬阻塞已解除；A 仍不得补造简化 Golden、跳过集成测试�
 - `go.mod` 精确声明 `go 1.26`，不添加 `toolchain` directive，不依赖 `GOTOOLCHAIN=auto` 隐式选择编译器。
 - 阻断 CI 分别固定 Go 1.26.7 与 1.27.0，并对两个版本运行相同的 build、vet 和 Go tests；未来补丁更新必须通过可审查的 workflow diff，不使用 `stable`、`latest` 或未锁定的 `1.x`。
 - 生产代码和测试不得使用 Go 1.27 独有语法或仅在 1.27 提供的标准库 API。
-- `.travis.yml` 不在本任务删除或重构，但必须停止使用 Go 1.15 和浮动 `go get -u`；最终删除/替换由 F 负责。
+- `.travis.yml` 不在本任务删除或重构，但必须停止使用 Go 1.15 和浮动 `go get -u`，Go 版本选择器显式限定到 minor 或 patch 且不低于 1.26（如 `1.26.x` 或 `1.26.7`），仅禁止 `stable`/`latest`/`tip` 等跨 minor 滚动别名。Travis 属非阻断遗留入口，不受 R-A1 阻断 CI 的补丁级锁定约束；最终删除/替换由 F 负责。
 
 ### R-A2 直接依赖所有权与目标
 
@@ -114,8 +114,8 @@ G-AC8 硬阻塞已解除；A 仍不得补造简化 Golden、跳过集成测试�
 - 205 条 struct tag 按 R-A4 处理。
 - 21 条 unkeyed literal 全部改为具名字段，包括本项目模型、`mgo/bson.RegEx` 和 `revel.PlaintextErrorResult`；字段值、正则 pattern/options、错误文本和 Apply 行为不得变化。
 - 6 条 unreachable 只删除不可达语句；3 条 self-assignment 只删除无效赋值。不得借机改变相邻业务分支。
-- `BaseController.NotFound` 的格式化修复必须保持客户端实际可见的状态码与响应文本；当前 `E404` 传入 `("", nil)`，Revel 会执行 `fmt.Sprintf`，不能假定额外参数被无声忽略，必须以 G replay/聚焦测试锁定实际正文。
-- signal channel 只改为容量 1，保持当前 signal 订阅集合与中断后的 kill 流程，不在 A 新增 SIGTERM 语义；SIGTERM 属于 C-a 的 Revel 1.1 入口验收。
+- `BaseController.NotFound` 的格式化修复必须保持客户端实际可见的状态码与响应文本；当前 `E404` 位于 `app/controllers/BaseController.go:161-163` 并传入 `("", nil)`，Revel 会执行 `fmt.Sprintf`，不能假定额外参数被无声忽略，必须以 G replay/聚焦测试锁定实际正文。（2026-08-26 复核确认该位置与调用形态不变。）
+- signal channel 只改为容量 1（2026-08-26 复核定位：`app/cmd/harness/harness.go:333` 的 `make(chan os.Signal)`，`:334` 订阅 `os.Interrupt`、`os.Kill`），保持当前 signal 订阅集合与中断后的 kill 流程，不在 A 新增 SIGTERM 语义；SIGTERM 属于 C-a 的 Revel 1.1 入口验收。
 - 不通过 analyzer 关闭、`//nolint`、缩小包范围、构建标签排除、吞错或宽泛 fallback 获得绿灯。
 
 ### R-A4 Struct Tag 与数据契约

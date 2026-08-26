@@ -1,0 +1,237 @@
+app\info\AlbumInfo.go:11:2: struct field tag `Name` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\AlbumInfo.go:12:2: struct field tag `Type` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\AlbumInfo.go:13:2: struct field tag `Seq` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\AlbumInfo.go:14:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Api.go:46:2: struct field tag `Content` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Api.go:77:2: struct field tag `Seq` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Api.go:78:2: struct field tag `Title` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Api.go:79:2: struct field tag `UrlTitle` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Api.go:80:2: struct field tag `IsBlog,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Api.go:81:2: struct field tag `CreatedTime,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Api.go:82:2: struct field tag `UpdatedTime,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Api.go:83:2: struct field tag `Usn` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Api.go:84:2: struct field tag `IsDeleted` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\AttachInfo.go:13:2: struct field tag `Name` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\AttachInfo.go:14:2: struct field tag `Title` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\AttachInfo.go:15:2: struct field tag `Size` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\AttachInfo.go:16:2: struct field tag `Type` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\AttachInfo.go:17:2: struct field tag `Path` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\AttachInfo.go:18:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:19:2: struct field tag `Logo` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:20:2: struct field tag `Title` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:21:2: struct field tag `SubTitle` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:26:2: struct field tag `CanComment` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:27:2: struct field tag `CommentType` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:28:2: struct field tag `DisqusId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:32:2: struct field tag `Style` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:33:2: struct field tag `Css` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:39:2: struct field tag `Logo` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:40:2: struct field tag `Title` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:41:2: struct field tag `SubTitle` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:42:2: struct field tag `AboutMe` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:44:2: struct field tag `CanComment` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:46:2: struct field tag `CommentType` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:47:2: struct field tag `DisqusId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:49:2: struct field tag `Style` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:50:2: struct field tag `Css` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:52:2: struct field tag `ThemeId,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:55:2: struct field tag `CateIds,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:56:2: struct field tag `Singles,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:58:2: struct field tag `PerPageSize,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:59:2: struct field tag `SortField` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:60:2: struct field tag `IsAsc,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:62:2: struct field tag `SubDomain` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:63:2: struct field tag `Domain` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:70:2: struct field tag `ReadNum,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:71:2: struct field tag `LikeNum,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:72:2: struct field tag `CommentNum,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:78:2: struct field tag `UserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:79:2: struct field tag `Title` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:80:2: struct field tag `UrlTitle` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:81:2: struct field tag `Content` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:82:2: struct field tag `UpdatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:83:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:92:2: struct field tag `NoteId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:93:2: struct field tag `UserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:94:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:100:2: struct field tag `NoteId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:102:2: struct field tag `UserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:103:2: struct field tag `Content` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:105:2: struct field tag `ToCommendId,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:106:2: struct field tag `ToUserId,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:108:2: struct field tag `LikeNum` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:109:2: struct field tag `LikeUserIds` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\BlogInfo.go:111:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Configinfo.go:11:2: struct field tag `UserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Configinfo.go:12:2: struct field tag `Key` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Configinfo.go:13:2: struct field tag `ValueStr,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Configinfo.go:14:2: struct field tag `ValueArr,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Configinfo.go:15:2: struct field tag `ValueMap,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Configinfo.go:16:2: struct field tag `ValueArrMap,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Configinfo.go:17:2: struct field tag `IsArr` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Configinfo.go:18:2: struct field tag `IsMap` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Configinfo.go:19:2: struct field tag `IsArrMap` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\Configinfo.go:24:2: struct field tag `UpdatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\EmailLogInfo.go:12:2: struct field tag `Email` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\EmailLogInfo.go:13:2: struct field tag `Subject` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\EmailLogInfo.go:14:2: struct field tag `Body` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\EmailLogInfo.go:15:2: struct field tag `Msg` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\EmailLogInfo.go:16:2: struct field tag `Ok` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\EmailLogInfo.go:18:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\FileInfo.go:12:2: struct field tag `Name` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\FileInfo.go:13:2: struct field tag `Title` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\FileInfo.go:14:2: struct field tag `Size` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\FileInfo.go:15:2: struct field tag `Type` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\FileInfo.go:16:2: struct field tag `Path` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\FileInfo.go:17:2: struct field tag `IsDefaultAlbum` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\FileInfo.go:18:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\GroupInfo.go:11:2: struct field tag `UserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\GroupInfo.go:12:2: struct field tag `Title` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\GroupInfo.go:13:2: struct field tag `UserCount` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\GroupInfo.go:14:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\GroupInfo.go:16:2: struct field tag `Users,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\GroupInfo.go:22:2: struct field tag `GroupId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\GroupInfo.go:23:2: struct field tag `UserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\GroupInfo.go:24:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:15:2: struct field tag `Title` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:16:2: struct field tag `Desc` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:18:2: struct field tag `Src,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:20:2: struct field tag `ImgSrc` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:21:2: struct field tag `Tags,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:23:2: struct field tag `IsTrash` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:25:2: struct field tag `IsBlog,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:26:2: struct field tag `UrlTitle,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:27:2: struct field tag `IsRecommend,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:28:2: struct field tag `IsTop,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:29:2: struct field tag `HasSelfDefined` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:32:2: struct field tag `ReadNum,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:33:2: struct field tag `LikeNum,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:34:2: struct field tag `CommentNum,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:36:2: struct field tag `IsMarkdown` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:38:2: struct field tag `AttachNum` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:40:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:41:2: struct field tag `UpdatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:42:2: struct field tag `RecommendTime,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:43:2: struct field tag `PublicTime,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:47:2: struct field tag `Usn` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:49:2: struct field tag `IsDeleted` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:57:2: struct field tag `IsBlog,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:59:2: struct field tag `Content` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:60:2: struct field tag `Abstract` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:62:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:63:2: struct field tag `UpdatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:76:2: struct field tag `UpdatedUserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:77:2: struct field tag `UpdatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:78:2: struct field tag `Content` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NoteInfo.go:83:2: struct field tag `Histories` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NotebookInfo.go:14:2: struct field tag `Seq` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NotebookInfo.go:15:2: struct field tag `Title` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NotebookInfo.go:16:2: struct field tag `UrlTitle` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NotebookInfo.go:17:2: struct field tag `NumberNotes` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NotebookInfo.go:18:2: struct field tag `IsTrash,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NotebookInfo.go:19:2: struct field tag `IsBlog,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NotebookInfo.go:20:2: struct field tag `CreatedTime,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NotebookInfo.go:21:2: struct field tag `UpdatedTime,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NotebookInfo.go:24:2: struct field tag `Usn` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\NotebookInfo.go:25:2: struct field tag `IsDeleted` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ReportInfo.go:11:2: struct field tag `NoteId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ReportInfo.go:13:2: struct field tag `UserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ReportInfo.go:14:2: struct field tag `Reason` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ReportInfo.go:16:2: struct field tag `CommendId,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ReportInfo.go:18:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\SessionInfo.go:14:2: struct field tag `LoginTimes` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\SessionInfo.go:15:2: struct field tag `Captcha` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\SessionInfo.go:17:2: struct field tag `UserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\SessionInfo.go:19:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\SessionInfo.go:20:2: struct field tag `UpdatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ShareNotebookNoteInfo.go:81:2: struct field tag `ToGroup,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ShareNotebookNoteInfo.go:85:2: struct field tag `CreatedTime,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ShareNotebookNoteInfo.go:141:2: struct field tag `ToGroup,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ShareNotebookNoteInfo.go:144:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\SuggestionInfo.go:10:2: struct field tag `UserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\SuggestionInfo.go:11:2: struct field tag `Addr` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\SuggestionInfo.go:12:2: struct field tag `Suggestion` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TagInfo.go:22:2: struct field tag `Tags` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TagInfo.go:28:2: struct field tag `UserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TagInfo.go:29:2: struct field tag `Tag` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TagInfo.go:30:2: struct field tag `Usn` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TagInfo.go:31:2: struct field tag `Count` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TagInfo.go:32:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TagInfo.go:33:2: struct field tag `UpdatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TagInfo.go:34:2: struct field tag `IsDeleted` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TagInfo.go:39:2: struct field tag `UserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TagInfo.go:40:2: struct field tag `Tag` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TagInfo.go:41:2: struct field tag `IsBlog` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TagInfo.go:42:2: struct field tag `Count` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ThemeInfo.go:12:2: struct field tag `UserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ThemeInfo.go:13:2: struct field tag `Name` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ThemeInfo.go:14:2: struct field tag `Version` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ThemeInfo.go:15:2: struct field tag `Author` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ThemeInfo.go:16:2: struct field tag `AuthorUrl` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ThemeInfo.go:17:2: struct field tag `Path` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ThemeInfo.go:18:2: struct field tag `Info` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ThemeInfo.go:19:2: struct field tag `IsActive` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ThemeInfo.go:21:2: struct field tag `IsDefault` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ThemeInfo.go:22:2: struct field tag `Style,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ThemeInfo.go:24:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\ThemeInfo.go:25:2: struct field tag `UpdatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TokenInfo.go:28:2: struct field tag `Email` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TokenInfo.go:29:2: struct field tag `Token` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TokenInfo.go:30:2: struct field tag `Type` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\TokenInfo.go:31:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:16:2: struct field tag `Email` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:17:2: struct field tag `Verified` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:18:2: struct field tag `Username` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:19:2: struct field tag `UsernameRaw` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:21:2: struct field tag `CreatedTime` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:23:2: struct field tag `Logo` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:25:2: struct field tag `Theme` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:28:2: struct field tag `NotebookWidth` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:29:2: struct field tag `NoteListWidth` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:30:2: struct field tag `MdEditorWidth` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:31:2: struct field tag `LeftIsMin` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:34:2: struct field tag `ThirdUserId` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:35:2: struct field tag `ThirdUsername` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:36:2: struct field tag `ThirdType` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:44:2: struct field tag `FromUserId,omitempty` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:57:2: struct field tag `Usn` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:76:2: struct field tag `BlogUrl` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:77:2: struct field tag `PostUrl` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:83:2: struct field tag `Email` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:84:2: struct field tag `Username` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:85:2: struct field tag `Logo` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\lea\captcha\Captcha.go:388:2: unreachable code
+app\info\UserInfo.go:86:2: struct field tag `BlogTitle` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:87:2: struct field tag `BlogLogo` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\info\UserInfo.go:88:2: struct field tag `BlogUrl` not compatible with reflect.StructTag.Get: bad syntax for struct tag pair
+app\cmd\harness\harness.go:334:2: misuse of unbuffered os.Signal channel as argument to signal.Notify
+app\cmd\harness\build.go:100:2: unreachable code
+app\cmd\harness\build.go:240:2: unreachable code
+app\cmd\build.go:96:2: unreachable code
+app\lea\File.go:147:2: unreachable code
+app\lea\blog\Template.go:246:3: github.com/revel/revel.PlaintextErrorResult struct literal uses unkeyed fields
+app\service\BlogService.go:38:9: github.com/leanote/leanote/app/info.BlogStat struct literal uses unkeyed fields
+app\service\BlogService.go:68:9: github.com/leanote/leanote/app/info.BlogItem struct literal uses unkeyed fields
+app\service\BlogService.go:119:14: github.com/leanote/leanote/app/info.BlogItem struct literal uses unkeyed fields
+app\service\BlogService.go:275:34: github.com/leanote/leanote/app/info.ArchiveMonth struct literal uses unkeyed fields
+app\service\BlogService.go:346:14: github.com/leanote/leanote/app/info.BlogItem struct literal uses unkeyed fields
+app\service\BlogService.go:456:37: gopkg.in/mgo.v2/bson.RegEx struct literal uses unkeyed fields
+app\service\BlogService.go:508:14: github.com/leanote/leanote/app/info.BlogItem struct literal uses unkeyed fields
+app\service\EmailService.go:533:37: gopkg.in/mgo.v2/bson.RegEx struct literal uses unkeyed fields
+app\service\FileService.go:51:33: gopkg.in/mgo.v2/bson.RegEx struct literal uses unkeyed fields
+app\service\NoteService.go:62:9: github.com/leanote/leanote/app/info.NoteAndContent struct literal uses unkeyed fields
+app\service\NoteService.go:89:18: github.com/leanote/leanote/app/info.NoteAndContentSep struct literal uses unkeyed fields
+app\service\NoteService.go:829:36: gopkg.in/mgo.v2/bson.RegEx struct literal uses unkeyed fields
+app\service\NoteService.go:830:35: gopkg.in/mgo.v2/bson.RegEx struct literal uses unkeyed fields
+app\service\NoteService.go:869:31: gopkg.in/mgo.v2/bson.RegEx struct literal uses unkeyed fields
+app\service\ShareService.go:223:22: github.com/leanote/leanote/app/info.ShareNoteWithPerm struct literal uses unkeyed fields
+app\service\ShareService.go:285:42: github.com/leanote/leanote/app/info.ShareNoteWithPerm struct literal uses unkeyed fields
+app\service\UserService.go:437:37: gopkg.in/mgo.v2/bson.RegEx struct literal uses unkeyed fields
+app\service\UserService.go:438:40: gopkg.in/mgo.v2/bson.RegEx struct literal uses unkeyed fields
+app\service\UserService.go:463:54: gopkg.in/mgo.v2/bson.RegEx struct literal uses unkeyed fields
+app\service\UserService.go:464:40: gopkg.in/mgo.v2/bson.RegEx struct literal uses unkeyed fields
+app\service\NoteService.go:972:5: self-assignment of tags
+app\controllers\BaseController.go:163:24: (*github.com/revel/revel.Controller).NotFound call has arguments but no formatting directives
+app\controllers\AuthController.go:100:2: unreachable code
+app\controllers\member\MemberBlogController.go:383:2: self-assignment of filename
+app\controllers\member\MemberBlogController.go:483:2: self-assignment of filename

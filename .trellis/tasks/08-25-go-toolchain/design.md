@@ -19,7 +19,7 @@ G 的实现资产已提交（`2dc85af`），G-AC8 也已由 PR #3 的真实 `pul
 
 `go.mod` 使用最低语言版本 `go 1.26`，不写 `toolchain`。GitHub Actions 使用显式矩阵值 `1.26.7`、`1.27.0`，两个值运行相同 build/vet/tests，避免假矩阵。
 
-G 应先拥有 MongoDB 5.0 replay workflow；A 只扩展 Go 版本矩阵和加入本任务门禁，不创建缩水版替代流程。遗留 `.travis.yml` 仅对齐最低 Go 版本并移除浮动 `go get -u`，不在 A 删除；最终 CI 收口由 F 负责。
+G 应先拥有 MongoDB 5.0 replay workflow；A 只扩展 Go 版本矩阵和加入本任务门禁，不创建缩水版替代流程。遗留 `.travis.yml` 仅对齐最低 Go 版本（选择器限定 minor 或 patch、不低于 1.26，如 `1.26.x` 或 `1.26.7`；禁止 1.15 及以下和 `stable`/`latest`/`tip` 等跨 minor 滚动别名）并移除浮动 `go get -u`，不在 A 删除；最终 CI 收口由 F 负责。
 
 Go 1.26 是编译兼容下限。所有选定依赖的 `GoVersion` 必须 <= 1.26；当前候选 goquery v1.12.0、go-flags v1.6.1、x/crypto v0.55.0、x/tools v0.49.0 均满足。
 
@@ -82,8 +82,8 @@ Go 1.26 是编译兼容下限。所有选定依赖的 `GoVersion` 必须 <= 1.26
 | unkeyed literal | 21 | 补字段名，值与顺序语义不变；包括 10 个 `bson.RegEx`、Revel result 和项目模型 |
 | unreachable | 6 | 只删除编译器已证明不可达的语句 |
 | self-assignment | 3 | 只删除无效赋值，保护相邻输出/文件名逻辑 |
-| printf misuse | 1 | `E404` 当前 `("", nil)` 会进入 Revel 的 `fmt.Sprintf`；先锁定实际 404 正文，再用 vet-clean 表达保持它 |
-| signal channel | 1 | channel 容量改为 1，保持现有订阅和 interrupt 后的 kill 流程；不提前增加 SIGTERM |
+| printf misuse | 1 | `E404`（`app/controllers/BaseController.go:161-163`）当前 `("", nil)` 会进入 Revel 的 `fmt.Sprintf`；先锁定实际 404 正文，再用 vet-clean 表达保持它 |
+| signal channel | 1 | `app/cmd/harness/harness.go:333` 的 channel 容量改为 1，保持现有订阅（`os.Interrupt`、`os.Kill`）和 interrupt 后的 kill 流程；不提前增加 SIGTERM |
 
 修复按类别分批，批次之间运行 `go vet ./app/...` 和拥有该行为的测试。外部类型 keyed literal 仍属于 A 的语法/静态检查修复，但不授权改变外部模块版本。
 

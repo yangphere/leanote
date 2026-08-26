@@ -1,0 +1,258 @@
+go/types.(*Config).sizeof(...)
+	/usr/local/go/src/go/types/sizes.go:334
+go/types.representableConst.func1(...)
+	/usr/local/go/src/go/types/const.go:77
+go/types.representableConst({0xadb860, 0xaee7e0}, 0x385f50d54200, 0xf80000, 0x385f50e5b000)
+	/usr/local/go/src/go/types/const.go:93 +0x1e9
+go/types.(*Checker).representation(0x385f50d54200, 0x385f51131bc0, 0xf80000)
+	/usr/local/go/src/go/types/const.go:257 +0x5f
+go/types.(*Checker).implicitTypeAndValue(0x385f50d54200, 0x385f51131bc0, {0xad96a8?, 0xf80000?})
+	/usr/local/go/src/go/types/expr.go:404 +0x3ed
+go/types.(*Checker).assignment(0x385f50d54200, 0x385f51131bc0, {0xad96a8, 0xf80000}, {0xa9f5f7, 0x10})
+	/usr/local/go/src/go/types/assignments.go:70 +0x445
+go/types.(*Checker).initVar(0x385f50d54200?, 0xf80000?, 0x385f51131bc0?, {0xa9f5f7?, 0x385f5171cc90?})
+	/usr/local/go/src/go/types/assignments.go:181 +0x385
+go/types.(*Checker).initVars(0x385f50d54200, {0x385f51128228, 0x1, 0x0?}, {0x385f513ba1b0, 0x72996c?, 0x737ffd?}, {0xada368, 0x385f516508c0})
+	/usr/local/go/src/go/types/assignments.go:413 +0x612
+go/types.(*Checker).stmt(0x385f50d54200, 0x0, {0xada368, 0x385f516508c0})
+	/usr/local/go/src/go/types/stmt.go:565 +0x6b7
+go/types.(*Checker).stmtList(0x385f50d54200, 0x0, {0x385f513ba1c0?, 0xa957c6?, 0x5?})
+	/usr/local/go/src/go/types/stmt.go:125 +0x85
+go/types.(*Checker).stmt(0x385f50d54200, 0x0, {0xada3c8, 0x385f5171ccc0})
+	/usr/local/go/src/go/types/stmt.go:603 +0x56e
+go/types.(*Checker).stmt(0x385f50d54200, 0x0, {0xada3f8, 0x385f511305c0})
+	/usr/local/go/src/go/types/stmt.go:615 +0x25fd
+go/types.(*Checker).stmtList(0x385f50d54200, 0x0, {0x385f51650920?, 0xa957c6?, 0x5?})
+	/usr/local/go/src/go/types/stmt.go:125 +0x85
+go/types.(*Checker).stmt(0x385f50d54200, 0x0, {0xada3c8, 0x385f5171cd20})
+	/usr/local/go/src/go/types/stmt.go:603 +0x56e
+go/types.(*Checker).stmt(0x385f50d54200, 0x0, {0xada3f8, 0x385f51130600})
+	/usr/local/go/src/go/types/stmt.go:615 +0x25fd
+go/types.(*Checker).stmtList(0x385f50d54200, 0x0, {0x385f50df0200?, 0x0?, 0x10?})
+	/usr/local/go/src/go/types/stmt.go:125 +0x85
+go/types.(*Checker).funcBody(0x385f50d54200, 0xad9ca8?, {0x385f5170c2c0?, 0x385f514d7a98?}, 0x385f511310c0, 0x385f5171cf00, {0x0?, 0x0?})
+	/usr/local/go/src/go/types/stmt.go:42 +0x37b
+go/types.(*Checker).funcDecl.func1()
+	/usr/local/go/src/go/types/decl.go:838 +0x3a
+go/types.(*Checker).processDelayed(0x385f50d54200, 0x0)
+	/usr/local/go/src/go/types/check.go:595 +0x1e2
+go/types.(*Checker).checkFiles(0x385f50d54200, {0x385f515a4000?, 0x6cd145?, 0xa768c0?})
+	/usr/local/go/src/go/types/check.go:537 +0x3f9
+go/types.(*Checker).Files(0x385f50dc8480?, {0x385f515a4000?, 0x385f515a2060?, 0x3?})
+	/usr/local/go/src/go/types/check.go:491 +0x75
+golang.org/x/tools/go/packages.(*loader).loadPackage(0x385f50dc8480, 0x385f50e70200)
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:862 +0x6fa
+golang.org/x/tools/go/packages.(*loader).loadRecursive.func1()
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:709 +0x1a7
+sync.(*Once).doSlow(0x0?, 0x0?)
+	/usr/local/go/src/sync/once.go:78 +0xac
+sync.(*Once).Do(...)
+	/usr/local/go/src/sync/once.go:69
+golang.org/x/tools/go/packages.(*loader).loadRecursive(0x0?, 0x0?)
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:697 +0x3b
+golang.org/x/tools/go/packages.(*loader).loadRecursive.func1.1(0x0?)
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:704 +0x26
+created by golang.org/x/tools/go/packages.(*loader).loadRecursive.func1 in goroutine 466
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:703 +0x8c
+panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked]
+[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x7133f2]
+
+goroutine 372 [running]:
+go/types.(*Checker).handleBailout(0x385f50e00600, 0x385f5110bc88)
+	/usr/local/go/src/go/types/check.go:473 +0x91
+panic({0x9f0f80?, 0xf772d0?})
+	/usr/local/go/src/runtime/panic.go:860 +0x13a
+go/types.(*Checker).objDecl.func1()
+	/usr/local/go/src/go/types/decl.go:55 +0x5c
+panic({0x9f0f80?, 0xf772d0?})
+	/usr/local/go/src/runtime/panic.go:860 +0x13a
+go/types.(*StdSizes).Sizeof(0x0, {0xad96a8, 0xf800a0})
+	/usr/local/go/src/go/types/sizes.go:229 +0x312
+go/types.(*Config).sizeof(...)
+	/usr/local/go/src/go/types/sizes.go:334
+go/types.representableConst.func1(...)
+	/usr/local/go/src/go/types/const.go:77
+go/types.representableConst({0xadb860, 0xaee818}, 0x385f50e00600, 0xf800a0, 0x385f5110af50)
+	/usr/local/go/src/go/types/const.go:107 +0x387
+go/types.(*Checker).representation(0x385f50e00600, 0x385f50e51d00, 0xf800a0)
+	/usr/local/go/src/go/types/const.go:257 +0x5f
+go/types.(*Checker).representable(0x385f50e00600, 0x385f50e51d00, 0xf800a0)
+	/usr/local/go/src/go/types/const.go:240 +0x26
+go/types.(*Checker).shift(0x385f50e00600, 0x385f50e51c80, 0x385f50e51d00, {0xada248, 0x385f512a8450}, 0x14)
+	/usr/local/go/src/go/types/expr.go:653 +0x1e5
+go/types.(*Checker).binary(0x385f50e00600, 0x385f50e51c80, {0xada248, 0x385f512a8450}, {0xad9c18, 0x385f512a83f0}, {0xad9c18, 0x385f512a8420}, 0x14, 0x43f0)
+	/usr/local/go/src/go/types/expr.go:795 +0x645
+go/types.(*Checker).exprInternal(0x385f50e00600, 0x0, 0x385f50e51c80, {0xada248, 0x385f512a8450}, {0x0?, 0x0?})
+	/usr/local/go/src/go/types/expr.go:1179 +0x745
+go/types.(*Checker).rawExpr(0x385f50e00600, 0x0, 0x385f50e51c80, {0xada248?, 0x385f512a8450?}, {0x0?, 0x0?}, 0x0)
+	/usr/local/go/src/go/types/expr.go:982 +0x18c
+go/types.(*Checker).expr(0x385f50e00600, 0x385f512ac140?, 0x385f50e51c80, {0xada248?, 0x385f512a8450?})
+	/usr/local/go/src/go/types/expr.go:1276 +0x30
+go/types.(*Checker).binary(0x385f50e00600, 0x385f50e51c80, {0xada248, 0x385f512a84b0}, {0xada248, 0x385f512a8450}, {0xad9c18, 0x385f512a8480}, 0xd, 0x43f4)
+	/usr/local/go/src/go/types/expr.go:782 +0xa5
+go/types.(*Checker).exprInternal(0x385f50e00600, 0x0, 0x385f50e51c80, {0xada248, 0x385f512a84b0}, {0x0?, 0x0?})
+	/usr/local/go/src/go/types/expr.go:1179 +0x745
+go/types.(*Checker).rawExpr(0x385f50e00600, 0x0, 0x385f50e51c80, {0xada248?, 0x385f512a84b0?}, {0x0?, 0x0?}, 0x0)
+	/usr/local/go/src/go/types/expr.go:982 +0x18c
+go/types.(*Checker).expr(0x385f50e00600, 0x415872?, 0x385f50e51c80, {0xada248?, 0x385f512a84b0?})
+	/usr/local/go/src/go/types/expr.go:1276 +0x30
+go/types.(*Checker).constDecl(0x385f50e00600, 0x385f510df5c0, {0x0, 0x0}, {0xada248, 0x385f512a84b0}, 0x0)
+	/usr/local/go/src/go/types/decl.go:449 +0x2c8
+go/types.(*Checker).objDecl(0x385f50e00600, {0xae3f10, 0x385f510df5c0})
+	/usr/local/go/src/go/types/decl.go:153 +0xa0f
+go/types.(*Checker).packageObjects(0x385f50e00600)
+	/usr/local/go/src/go/types/resolver.go:690 +0x412
+go/types.(*Checker).checkFiles(0x385f50e00600, {0x385f51440000?, 0x6cd145?, 0xa768c0?})
+	/usr/local/go/src/go/types/check.go:534 +0x385
+go/types.(*Checker).Files(0x385f50dc8480?, {0x385f51440000?, 0x385f5143e060?, 0x4?})
+	/usr/local/go/src/go/types/check.go:491 +0x75
+golang.org/x/tools/go/packages.(*loader).loadPackage(0x385f50dc8480, 0x385f510c20c0)
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:862 +0x6fa
+golang.org/x/tools/go/packages.(*loader).loadRecursive.func1()
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:709 +0x1a7
+sync.(*Once).doSlow(0x0?, 0x0?)
+	/usr/local/go/src/sync/once.go:78 +0xac
+sync.(*Once).Do(...)
+	/usr/local/go/src/sync/once.go:69
+golang.org/x/tools/go/packages.(*loader).loadRecursive(0x0?, 0x0?)
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:697 +0x3b
+golang.org/x/tools/go/packages.(*loader).loadRecursive.func1.1(0x0?)
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:704 +0x26
+created by golang.org/x/tools/go/packages.(*loader).loadRecursive.func1 in goroutine 149
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:703 +0x8c
+--- revel-run log tail ---
+	/usr/local/go/src/go/types/expr.go:1276 +0x30
+go/types.(*Checker).constDecl(0x385f50e00600, 0x385f510df5c0, {0x0, 0x0}, {0xada248, 0x385f512a84b0}, 0x0)
+	/usr/local/go/src/go/types/decl.go:449 +0x2c8
+go/types.(*Checker).objDecl(0x385f50e00600, {0xae3f10, 0x385f510df5c0})
+	/usr/local/go/src/go/types/decl.go:153 +0xa0f
+go/types.(*Checker).packageObjects(0x385f50e00600)
+	/usr/local/go/src/go/types/resolver.go:690 +0x412
+go/types.(*Checker).checkFiles(0x385f50e00600, {0x385f51440000?, 0x6cd145?, 0xa768c0?})
+	/usr/local/go/src/go/types/check.go:534 +0x385
+go/types.(*Checker).Files(0x385f50dc8480?, {0x385f51440000?, 0x385f5143e060?, 0x4?})
+	/usr/local/go/src/go/types/check.go:491 +0x75
+golang.org/x/tools/go/packages.(*loader).loadPackage(0x385f50dc8480, 0x385f510c20c0)
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:862 +0x6fa
+golang.org/x/tools/go/packages.(*loader).loadRecursive.func1()
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:709 +0x1a7
+sync.(*Once).doSlow(0x0?, 0x0?)
+	/usr/local/go/src/sync/once.go:78 +0xac
+sync.(*Once).Do(...)
+	/usr/local/go/src/sync/once.go:69
+golang.org/x/tools/go/packages.(*loader).loadRecursive(0x0?, 0x0?)
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:697 +0x3b
+golang.org/x/tools/go/packages.(*loader).loadRecursive.func1.1(0x0?)
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:704 +0x26
+created by golang.org/x/tools/go/packages.(*loader).loadRecursive.func1 in goroutine 149
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:703 +0x8c
+
+===== B4 revel package via canonical sh/package.sh =====
+/work
+Revel executing: package a Revel application (e.g. for deployment)
+Parsing packages, (may require download if not cached)...The following panic happened checking types near:
+	/usr/local/go/src/math/bits/bits.go:17:7
+PACKAGE FAILED
+TARBALL MISSING/EMPTY
+panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked]
+[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x7133f2]
+
+goroutine 156 [running]:
+go/types.(*Checker).handleBailout(0x3a8b5c0f4000, 0x3a8b5c847c88)
+	/usr/local/go/src/go/types/check.go:473 +0x91
+panic({0x9f0f80?, 0xf772d0?})
+	/usr/local/go/src/runtime/panic.go:860 +0x13a
+go/types.(*Checker).objDecl.func1()
+	/usr/local/go/src/go/types/decl.go:55 +0x5c
+panic({0x9f0f80?, 0xf772d0?})
+	/usr/local/go/src/runtime/panic.go:860 +0x13a
+go/types.(*StdSizes).Sizeof(0x0, {0xad96a8, 0xf800a0})
+	/usr/local/go/src/go/types/sizes.go:229 +0x312
+go/types.(*Config).sizeof(...)
+	/usr/local/go/src/go/types/sizes.go:334
+go/types.representableConst.func1(...)
+	/usr/local/go/src/go/types/const.go:77
+go/types.representableConst({0xadb860, 0xaee7e0}, 0x3a8b5c0f4000, 0xf800a0, 0x3a8b5cd2f068)
+	/usr/local/go/src/go/types/const.go:107 +0x387
+go/types.(*Checker).conversion.func1(...)
+	/usr/local/go/src/go/types/conversions.go:27
+go/types.(*Checker).conversion(0x3a8b5c0f4000, 0x3a8b5cd2f040, {0xad96a8, 0xf800a0})
+	/usr/local/go/src/go/types/conversions.go:47 +0x145
+go/types.(*Checker).callExpr(0x3a8b5c0f4000, 0x3a8b5cd2f040, 0x3a8b5c1e0940)
+	/usr/local/go/src/go/types/call.go:220 +0x1089
+go/types.(*Checker).exprInternal(0x3a8b5c0f4000, 0x0, 0x3a8b5cd2f040, {0xada278, 0x3a8b5c1e0940}, {0x0?, 0x0?})
+	/usr/local/go/src/go/types/expr.go:1137 +0x870
+go/types.(*Checker).rawExpr(0x3a8b5c0f4000, 0x0, 0x3a8b5cd2f040, {0xada278?, 0x3a8b5c1e0940?}, {0x0?, 0x0?}, 0x0)
+	/usr/local/go/src/go/types/expr.go:982 +0x18c
+go/types.(*Checker).expr(0x3a8b5c0f4000, 0x1000000?, 0x3a8b5cd2f040, {0xada278?, 0x3a8b5c1e0940?})
+	/usr/local/go/src/go/types/expr.go:1276 +0x30
+go/types.(*Checker).unary(0x3a8b5c0f4000, 0x3a8b5cd2f040, 0x3a8b5c7b8240)
+	/usr/local/go/src/go/types/expr.go:130 +0x45
+go/types.(*Checker).exprInternal(0x3a8b5c0f4000, 0x0, 0x3a8b5cd2f040, {0xada218, 0x3a8b5c7b8240}, {0x0?, 0x0?})
+	/usr/local/go/src/go/types/expr.go:1169 +0x115
+go/types.(*Checker).rawExpr(0x3a8b5c0f4000, 0x0, 0x3a8b5cd2f040, {0xada218?, 0x3a8b5c7b8240?}, {0x0?, 0x0?}, 0x0)
+	/usr/local/go/src/go/types/expr.go:982 +0x18c
+go/types.(*Checker).expr(0x3a8b5c0f4000, 0x77e16c05d848?, 0x3a8b5cd2f040, {0xada218?, 0x3a8b5c7b8240?})
+	/usr/local/go/src/go/types/expr.go:1276 +0x30
+go/types.(*Checker).binary(0x3a8b5c0f4000, 0x3a8b5cd2f040, {0xada248, 0x3a8b5c309e90}, {0xada218, 0x3a8b5c7b8240}, {0xad9c18, 0x3a8b5c309e60}, 0x15, 0x5d27)
+	/usr/local/go/src/go/types/expr.go:782 +0xa5
+go/types.(*Checker).exprInternal(0x3a8b5c0f4000, 0x0, 0x3a8b5cd2f040, {0xada248, 0x3a8b5c309e90}, {0x0?, 0x0?})
+	/usr/local/go/src/go/types/expr.go:1179 +0x745
+go/types.(*Checker).rawExpr(0x3a8b5c0f4000, 0x0, 0x3a8b5cd2f040, {0xada248?, 0x3a8b5c309e90?}, {0x0?, 0x0?}, 0x0)
+	/usr/local/go/src/go/types/expr.go:982 +0x18c
+go/types.(*Checker).exprInternal(0x3a8b5c0f4000, 0x0, 0x3a8b5cd2f040, {0xada038, 0x3a8b5c7b8260}, {0x0?, 0x0?})
+	/usr/local/go/src/go/types/expr.go:1083 +0x7a5
+go/types.(*Checker).rawExpr(0x3a8b5c0f4000, 0x0, 0x3a8b5cd2f040, {0xada038?, 0x3a8b5c7b8260?}, {0x0?, 0x0?}, 0x0)
+	/usr/local/go/src/go/types/expr.go:982 +0x18c
+go/types.(*Checker).expr(0x3a8b5c0f4000, 0x5?, 0x3a8b5cd2f040, {0xada038?, 0x3a8b5c7b8260?})
+	/usr/local/go/src/go/types/expr.go:1276 +0x30
+go/types.(*Checker).binary(0x3a8b5c0f4000, 0x3a8b5cd2f000, {0xada248, 0x3a8b5c309ec0}, {0xad9c18, 0x3a8b5c309e00}, {0xada038, 0x3a8b5c7b8260}, 0x14, 0x5d1a)
+	/usr/local/go/src/go/types/expr.go:783 +0xcc
+go/types.(*Checker).exprInternal(0x3a8b5c0f4000, 0x0, 0x3a8b5cd2f000, {0xada248, 0x3a8b5c309ec0}, {0x0?, 0x0?})
+	/usr/local/go/src/go/types/expr.go:1179 +0x745
+go/types.(*Checker).rawExpr(0x3a8b5c0f4000, 0x0, 0x3a8b5cd2f000, {0xada248?, 0x3a8b5c309ec0?}, {0x0?, 0x0?}, 0x0)
+	/usr/local/go/src/go/types/expr.go:982 +0x18c
+go/types.(*Checker).expr(0x3a8b5c0f4000, 0x10?, 0x3a8b5cd2f000, {0xada248?, 0x3a8b5c309ec0?})
+	/usr/local/go/src/go/types/expr.go:1276 +0x30
+go/types.(*Checker).constDecl(0x3a8b5c0f4000, 0x3a8b5c31e360, {0x0, 0x0}, {0xada248, 0x3a8b5c309ec0}, 0x0)
+	/usr/local/go/src/go/types/decl.go:449 +0x2c8
+go/types.(*Checker).objDecl(0x3a8b5c0f4000, {0xae3f10, 0x3a8b5c31e360})
+	/usr/local/go/src/go/types/decl.go:153 +0xa0f
+go/types.(*Checker).packageObjects(0x3a8b5c0f4000)
+	/usr/local/go/src/go/types/resolver.go:690 +0x412
+go/types.(*Checker).checkFiles(0x3a8b5c0f4000, {0x3a8b5c526048?, 0x6cd145?, 0xa768c0?})
+	/usr/local/go/src/go/types/check.go:534 +0x385
+go/types.(*Checker).Files(0x3a8b5c5280c0?, {0x3a8b5c526048?, 0x3a8b5c54e060?, 0x4?})
+	/usr/local/go/src/go/types/check.go:491 +0x75
+golang.org/x/tools/go/packages.(*loader).loadPackage(0x3a8b5c5280c0, 0x3a8b5c4a1ea0)
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:862 +0x6fa
+golang.org/x/tools/go/packages.(*loader).loadRecursive.func1()
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:709 +0x1a7
+sync.(*Once).doSlow(0x616e676973220909?, 0x6e69777261645f6c?)
+	/usr/local/go/src/sync/once.go:78 +0xac
+sync.(*Once).Do(...)
+	/usr/local/go/src/sync/once.go:69
+golang.org/x/tools/go/packages.(*loader).loadRecursive(0x616e676973220909?, 0x6e6f676172645f6c?)
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:697 +0x3b
+golang.org/x/tools/go/packages.(*loader).loadRecursive.func1.1(0x646d615f796c666e?)
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:704 +0x26
+created by golang.org/x/tools/go/packages.(*loader).loadRecursive.func1 in goroutine 155
+	/go/pkg/mod/golang.org/x/tools@v0.0.0-20200219054238-753a1d49df85/go/packages/packages.go:703 +0x8c
+ls: cannot access '/work/sh/leanote.tar.gz': No such file or directory
+tar (child): /work/sh/leanote.tar.gz: Cannot open: No such file or directory
+tar (child): Error is not recoverable: exiting now
+tar: Child returned status 2
+tar: Error is not recoverable: exiting now
+tar (child): /work/sh/leanote.tar.gz: Cannot open: No such file or directory
+tar (child): Error is not recoverable: exiting now
+tar: Child returned status 2
+tar: Error is not recoverable: exiting now
+tarball entries: 0
+tar (child): /work/sh/leanote.tar.gz: Cannot open: No such file or directory
+tar (child): Error is not recoverable: exiting now
+tar: Child returned status 2
+tar: Error is not recoverable: exiting now
+
+===== RESULT =====
+LINUX ENTRYPOINT VALIDATION: FAILURES PRESENT
+container exit: 1

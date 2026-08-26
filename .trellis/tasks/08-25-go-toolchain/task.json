@@ -18,7 +18,9 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "08-26-go-toolchain-review-fixes"
+  ],
   "parent": "08-25-tech-stack-modernization",
   "relatedFiles": [
     "go.mod",
