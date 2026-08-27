@@ -9,13 +9,13 @@
 ### Task 1：建立模板/交互基线
 
 **Files:**
-- Create: `tests/e2e/bootstrap-components.spec.js`
+- Create: `tests/e2e/business/bootstrap-components.spec.js`
 - Create: `.trellis/tasks/08-25-bootstrap-upgrade/research/bootstrap3-usage.md`
 - Read: `app/views/`、`public/css/`、`public/admin/`、`public/member/`、`public/blog/`、`public/album/`、`public/tinymce/plugins/leaui_image/public/`
 
 - [ ] 用源码搜索生成 Bootstrap 3 class、data attribute、jQuery plugin 调用和自定义覆盖清单，逐项给出 5.3 去向。
 - [ ] 为 modal/tab/dropdown/alert/form/navbar 与 leaui_image 写 Chromium 交互测试。
-- [ ] 保存关键页面桌面/窄屏基线截图。
+- [ ] 保存关键页面桌面/窄屏基线截图（仅本地人工证据，不上传 CI artifact；使用脱敏测试数据，不得包含账号、Cookie、认证头或真实用户内容）。
 
 ### Task 2：切换单一 Bootstrap 5.3.8 资源
 

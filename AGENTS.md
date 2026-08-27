@@ -17,7 +17,7 @@ npm test                           # 运行 tests/js/*.test.js
 cd sh && sh package.sh             # 生成 sh/leanote.tar.gz
 ```
 
-`npx gulp` 会运行旧版 Gulp 3 前端流水线；仅在兼容的 Node 环境及依赖完整时使用，并检查生成文件差异。
+前端生成统一使用 Node 24 构建链：`npm ci && npm run build && npm test`。`scripts/build/manifest.mjs` 与 `app/views/note/note-dev.html` 是唯一来源，生成的受跟踪资源不得手工修改。
 
 ## 编码风格与命名
 
@@ -56,4 +56,3 @@ If you're using Codex or another agent-capable tool, additional project-scoped h
 Managed by Trellis. Edits outside this block are preserved; edits inside may be overwritten by a future `trellis update`.
 
 <!-- TRELLIS:END -->
-

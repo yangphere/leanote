@@ -8,7 +8,7 @@ jQuery 是基础运行时，Bootstrap 影响模板与交互，TinyMCE 影响数�
 
 | 维度 | 不变量 | 证据 |
 |---|---|---|
-| 浏览器 | 四类现代浏览器当前及前一主版本 | Chromium E2E + Firefox/Safari 冒烟 |
+| 浏览器 | 四类现代浏览器当前及前一主版本 | D 的 Chromium 资源 smoke + E 的完整 Chromium E2E + Firefox/Safari 冒烟 |
 | 资源 | 源码唯一事实源，生成物继续入库 | `npm run build` 后零 diff |
 | 后端 | API/USN/所有权不变 | G 的回归套件 |
 | 页面 | URL、服务端模板、博客主题不变 | 页面与主题 smoke |
@@ -16,7 +16,9 @@ jQuery 是基础运行时，Bootstrap 影响模板与交互，TinyMCE 影响数�
 
 ## 3. 集成方式
 
-每个子任务在自己的分支完成并回放整套前端 smoke。后一个子任务只基于前一个已验收状态开始。`frontend-libs` 最终集成不再改库版本，只运行组合门禁和修正文档/生成资源清单中的不一致；若需要生产代码修复，应回到拥有该代码的子任务。
+每个子任务在自己的分支完成并回放整套前端 smoke。后一个子任务只基于前一个已验收状态开始。`frontend-libs` 复用 D 的 `playwright.config.mjs`、Chromium 安装步骤和 G 兼容服务/账号环境：D 的 `test:e2e:build` 通过 `--project=build-smoke` 先验证生成资源与页面加载，E 的 `test:e2e` 通过 `--project=business` 从 `tests/e2e/business/**/*.spec.{js,mjs}` 发现完整业务流程。最终集成不再改库版本，只运行组合门禁和修正文档/生成资源清单中的不一致；若需要生产代码修复，应回到拥有该代码的子任务。
+
+E 不创建第二套 Playwright 配置或锁文件。E 必须在 `package.json` 增加 `test:e2e`，其命令固定为 `playwright test --config=playwright.config.mjs --project=business`；完整业务测试放在 `tests/e2e/business/`，继承 D 的 Chromium project、`LEANOTE_BASE_URL`/fixture 生命周期和脱敏报告约束。D 的 `build-smoke` 选择不应发现或执行 E 的业务用例。
 
 ## 4. 回滚
 

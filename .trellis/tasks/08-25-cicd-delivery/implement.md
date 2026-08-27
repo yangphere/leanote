@@ -28,7 +28,7 @@
 - [ ] 配置 PR 与目标分支 push 触发、最小只读权限、concurrency cancel 和 job timeout。
 - [ ] 建立 Go 1.26/1.27 矩阵与 MongoDB 8.0 集成 job，导入最小夹具并运行 Golden/USN。
 - [ ] 用 Node 24.x + `npm ci` 运行 build、JS 测试、Chromium E2E，再执行 `git diff --exit-code`。
-- [ ] 失败时上传测试报告、浏览器 trace/screenshot 和服务日志，成功时不上传无意义的大型中间物。
+- [ ] 失败时只生成并上传 allowlisted 脱敏测试摘要和脱敏服务健康摘要（工具版本、阶段、页面 URL、资源路径、状态码、错误类别、readiness/exit code）；明确删除且禁止上传原始 Playwright trace/HTML report、截图/视频、storage state、cookie、认证头、页面正文和未脱敏服务日志，artifact 保留期不超过 7 天。唯一受控例外是手工 `record-export-pdf` 上传单一 Golden JSON，保留期同样不超过 7 天。成功时不上传无意义的大型中间物。
 
 ### Task 3：重建 tarball 交付路径
 

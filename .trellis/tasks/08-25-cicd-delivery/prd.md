@@ -19,7 +19,7 @@
 - **R-F4** `v*` tag 触发发布：验证 tag/应用版本一致，复用已通过的质量门，生成可复现 tarball、校验和与变更说明，并上传 GitHub Release。
 - **R-F5** 同一 tag 构建并发布 `ghcr.io/yangphere/leanote` 镜像，首期只支持 `linux/amd64`。镜像必须非 root 运行、外置 MongoDB、声明持久化目录，并包含可工作的完整 PDF 功能。
 - **R-F6** 发布工作流只使用最小权限的 `GITHUB_TOKEN`；不得写入真实数据库、SMTP、Cookie、`app.secret` 或生产部署凭据。
-- **R-F7** 失败必须阻止发布并保留日志/测试产物；不自动跳过 Mongo、E2E、PDF 或生成物校验，不生成“成功”占位制品。
+- **R-F7** 失败必须阻止发布并保留可定位问题的脱敏日志/测试摘要；禁止上传原始 Playwright trace/report、截图/视频、storage state、cookie、认证头、页面正文或未脱敏服务日志。手工 `record-export-pdf` 仅可上传单一 Golden JSON 供审核，最长保留 7 天。不得自动跳过 Mongo、E2E、PDF 或生成物校验，不生成“成功”占位制品。
 - **R-F8** 删除或替换 `.travis.yml` 与依赖旧 Gulp/Revel CLI 的交付路径；`sh/package.sh` 保留为可从锁定工具链调用的跨环境打包入口。
 
 ## Acceptance Criteria
@@ -30,7 +30,7 @@
 - [ ] CI 构建 Linux/amd64 镜像，以非 root 用户启动，连接外部 MongoDB 8.0，通过健康检查、上传持久化和真实 PDF 生成 smoke。
 - [ ] 一个测试 `v*` tag 可创建 GitHub Release，附带 tarball 和 SHA-256 校验文件，并把同版本镜像推到 GHCR。
 - [ ] 非 tag 的 PR/push 不发布 Release/镜像；任何工作流都不执行生产部署。
-- [ ] 工作流权限、缓存键、并发取消、超时和 artifact 保留期显式配置，失败日志足以定位阶段。
+- [ ] 工作流权限、缓存键、并发取消、超时和 artifact 保留期显式配置；Playwright 与服务失败只上传 allowlisted 脱敏摘要和脱敏服务健康摘要，最长保留 7 天，且失败摘要足以定位阶段。
 - [ ] `.travis.yml` 和旧交付假设已移除，README/部署文档说明版本矩阵、镜像架构、外部配置、卷和手工部署边界。
 
 ## Out of Scope

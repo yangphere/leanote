@@ -16,7 +16,7 @@ CI 按可并行 job 拆为 Go 单元/静态检查矩阵、MongoDB 8.0 集成、N
 - MongoDB：官方 8.0 service/container，等待真实 ping 后导入最小测试数据。
 - 浏览器：`@playwright/test` 的 Chromium 是阻塞 E2E。Firefox/Safari 当前及前一主版本属于发布前 smoke 证据，Safari 必须在真实 Safari 环境验证。
 
-所有 job 有超时、取消同分支旧 run 的 concurrency group，并在失败时上传测试报告、浏览器 trace/screenshot 与服务日志。
+所有 job 有超时和取消同分支旧 run 的 concurrency group。失败时只上传 allowlisted 脱敏测试摘要与脱敏服务健康摘要，最长保留 7 天；禁止上传原始 Playwright trace/HTML report、浏览器 screenshot/video、storage state、cookie、认证头、页面正文或未脱敏服务日志。摘要只包含工具/运行版本、阶段、页面 URL、资源路径、状态码、错误类别、服务 readiness/exit code 等可定位字段。唯一受控例外是手工 `record-export-pdf` 的 Golden JSON：仅在 `workflow_dispatch` 上传该单一文件，最长保留 7 天，不得包含账号、Cookie、认证头或页面正文。
 
 ## 3. 生成物和 tarball
 

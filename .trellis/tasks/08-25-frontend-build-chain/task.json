@@ -3,7 +3,7 @@
   "name": "frontend-build-chain",
   "title": "Node 24 前端构建链",
   "description": "用 esbuild 与 Node 脚本替换 Gulp 3，并建立源码到受跟踪产物的可复现 manifest。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "frontend",
   "scope": "frontend build and generated assets",
   "package": null,

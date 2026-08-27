@@ -11,7 +11,7 @@
 **Files:**
 - Create: `tests/fixtures/editor-html/*.html`
 - Create: `tests/js/editor-content-compat.test.js`
-- Create: `tests/e2e/editor-flows.spec.js`
+- Create: `tests/e2e/business/editor-flows.spec.js`
 - Modify: `tests/js/paste-plugin.test.js`
 - Read: `public/js/app/page.js`、`public/js/common.js`、`public/js/app/note.js`、`public/tinymce/plugins/`
 
@@ -52,7 +52,7 @@
 ### Task 4：验证持久化与跨浏览器行为
 
 **Files:**
-- Modify: `tests/e2e/editor-flows.spec.js`
+- Modify: `tests/e2e/business/editor-flows.spec.js`
 - Modify: editor save/autosave tests under `tests/js/`
 - Modify: release smoke documentation selected by the parent task
 

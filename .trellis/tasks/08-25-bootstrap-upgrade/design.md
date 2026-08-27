@@ -25,4 +25,4 @@ Bootstrap 作为 npm 依赖，由 D 的构建 manifest 产生主站 CSS/JS。仓
 
 ## 5. 视觉与回滚
 
-对 `/login`、`/note`、`/blog`、admin、member、album、leaui_image 在桌面/窄屏保存前后截图。可见差异只有框架必要差异，不能改变业务布局。任务可独立回退到 Bootstrap 3 生成入口与模板提交。
+对 `/login`、`/note`、`/blog`、admin、member、album、leaui_image 在桌面/窄屏保存前后截图作为本地人工证据；截图不得进入 CI artifact，使用脱敏测试数据且不得包含账号、Cookie、认证头或真实用户内容。可见差异只有框架必要差异，不能改变业务布局。任务可独立回退到 Bootstrap 3 生成入口与模板提交。

@@ -9,7 +9,7 @@
 
 ## Phase 0：确认规划与上下文
 
-- [ ] 父任务及 11 个子/孙任务均保持 `planning`，依赖图与本文件一致。
+- [ ] 未获用户批准并运行 `task.py start` 前，父任务及 11 个子/孙任务均保持 `planning`；批准后仅当前 `task.py current` 指向的叶子可为 `in_progress`，父任务和未激活任务仍为 `planning`，依赖图与本文件一致。
 - [ ] 每个任务的 PRD、复杂任务 design/implement、implement/check context manifest 可被 Trellis 校验。
 - [ ] ADR、外部事实研究和 `docs/modernization-backlog.md` 从相关任务互链。
 - [ ] 规划文档不存在模糊版本、占位符、未决产品边界或与父任务冲突的验收。

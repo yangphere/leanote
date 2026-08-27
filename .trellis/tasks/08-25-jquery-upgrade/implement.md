@@ -10,7 +10,7 @@
 
 **Files:**
 - Create: `tests/js/jquery-compat.test.js`
-- Create: `tests/e2e/jquery-flows.spec.js`
+- Create: `tests/e2e/business/jquery-flows.spec.js`
 - Read: `public/js/jquery-1.9.0.min.js`、`public/js/app/`、`public/js/plugins/`、`public/admin/js/`、`public/member/js/`、`public/blog/js/`、`public/album/js/`
 
 - [ ] 用源码搜索记录废弃 API 和所有 jQuery 插件注册点，按主应用/admin/member/blog/album/leaui_image 分类。
