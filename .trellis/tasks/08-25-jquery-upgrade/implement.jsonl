@@ -9,3 +9,6 @@
 {"file": "conf/app.conf", "reason": "Keep the identity route behind the existing loopback-bound test configuration."}
 {"file": ".github/workflows/regression-baseline.yml", "reason": "Run build and business E2E in one test-mode lifecycle with sanitized artifacts and unconditional cleanup."}
 {"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "Keep the PR Chromium gate and four-browser release smoke evidence consistent across delivery planning."}
+{"file": "tests/e2e/build/build-resource-smoke.spec.mjs", "reason": "Existing build smoke must gain the pre-login identity precheck through the shared tests/e2e/e2e-environment.mjs helper; register that helper here once it is created."}
+{"file": "tests/e2e/build/sanitized-summary-reporter.mjs", "reason": "Sanitized summary reporter both E2E projects must reuse without leaking credentials or page content."}
+{"file": "playwright.config.mjs", "reason": "build-smoke and business Chromium project discovery; keep one config with the shared identity fixture for both projects."}

@@ -30,7 +30,9 @@
     "tests/js/build-pipeline.test.js",
     "tests/js/jquery-asset-contract.test.js",
     "tests/e2e/business/jquery-upgrade.spec.mjs",
-    "tests/e2e/business/e2e-environment.mjs",
+    "tests/e2e/e2e-environment.mjs",
+    "tests/e2e/build/build-resource-smoke.spec.mjs",
+    "tests/e2e/build/sanitized-summary-reporter.mjs",
     "playwright.config.mjs",
     ".github/workflows/regression-baseline.yml",
     "app/tests/harness",
@@ -51,7 +53,7 @@
     "docs/modernization/browser-smoke/jquery-3.7.md",
     "docs/modernization-backlog.md"
   ],
-  "notes": "不升级 jQuery 4，不在生产保留 jquery-migrate。",
+  "notes": "不升级 jQuery 4，不在生产保留 jquery-migrate。E2E 身份预检与 CI 门禁契约见本任务 PRD R-jQ3/R-jQ6；共享身份 helper 为 `tests/e2e/e2e-environment.mjs`（build/business 两个 project 复用，登录前预检）。",
   "meta": {
     "depends_on": [
       "08-25-frontend-build-chain"

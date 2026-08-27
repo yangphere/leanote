@@ -38,9 +38,9 @@
 - 保持 `$` 与 `window.jQuery` 的单一全局实例、脚本相对顺序、RequireJS 模块名、AJAX method/URL/参数/响应解释、DOM 选择、事件委派、表单字段序列化、Deferred 成功/失败分支、`.data()` 的可见值和跨 iframe 调用语义。
 - 已有公共 AJAX wrapper（`public/js/common.js` 的 `_ajax`/`ajaxGet`/`ajaxPost`/`ajaxPostJson`）在 HTTP 4xx/5xx 或解析失败时必须调用既有 `failureFunc`；没有该回调时保留已有明确可见的失败提示。选入 E2E 的第一方直接 `$.get`/`$.post` 调用也必须有可观察的失败分支，不能因迁移而静默完成、吞掉异常或只写日志。
 - 写入型 business E2E 与 build smoke 只能消费仓库启动的 Revel `test` mode harness。harness 恢复 `leanote_test` 后生成每次运行唯一的密码学随机 `LEANOTE_E2E_RUN_TOKEN`，并在该数据库写入唯一、带创建时间的 `e2e_runs` marker（固定 run-kind、token 的 SHA-256 摘要）；再轮换 fixture 中配置为 admin 的账号密码并将账号名和随机密码仅传给同次运行的子进程。测试不得写死、推导或复用 fixture 默认密码，也不得依赖 GitHub Secrets；CI 必须先 mask 值并以临时 job 环境传递，因此 fork PR 与同仓 PR 使用同一隔离路径。
-- 仅 test mode 的 loopback 服务可暴露只读 `GET /_test/e2e/identity`。handler 必须通过**当前应用的数据库会话**读取 `e2e_runs` marker，验证 marker 唯一、未过期且其 token 摘要与进程中的 run token 常量时间匹配，并从该会话取得实际 database 名。只有全部成立时才返回 `{runToken, database}`，其中 `database` 为 `leanote_test`；非 test mode 或非 loopback 一律 404，marker/数据库/摘要校验失败一律 503 且不得泄露 token、marker 内容或连接信息。handler 不得创建、刷新或删除 marker，也不得记录原始 token。
-- `test:e2e:build` 与 business E2E 都必须在任何登录前请求并严格比对身份响应；business E2E 还必须在创建、上传、删除或 route 注入前再次确认该预检已完成。缺少 `LEANOTE_BASE_URL`、`LEANOTE_E2E_EMAIL`、`LEANOTE_E2E_PASSWORD` 或 `LEANOTE_E2E_RUN_TOKEN`，服务不可达、接口非 200、字段不匹配、浏览器未安装或账号未认证均须立即失败。测试不得自行启动另一服务、使用默认凭据，或把任意可登录 URL 当作隔离环境。
-- 会写入数据的流程只允许在隔离 fixture 和测试专用实体上执行；每个用例在 finally/fixture teardown 删除自身创建的笔记、附件、相册、博客评论和主题，harness 销毁数据库容器前还须删除 `e2e_runs` 标记。admin/member 流程必须在写入前验证登录账号可访问对应页面；不满足权限或清理失败均失败，不得遗留共享数据库数据。
+- 仅 test mode 的 loopback 服务可暴露只读 `GET /_test/e2e/identity`。handler 必须通过**当前应用的数据库会话**读取 `e2e_runs` marker，验证 marker 唯一、未过期（有效期为 `createdAt` 后 2 小时，2026-08-27 确认）且其 token 摘要与进程中的 run token 常量时间匹配，并从该会话取得实际 database 名。只有全部成立时才返回 `{runToken, database}`，其中 `database` 为 `leanote_test`；非 test mode 或非 loopback 一律 404，marker/数据库/摘要校验失败一律 503 且不得泄露 token、marker 内容或连接信息。handler 不得创建、刷新或删除 marker，也不得记录原始 token。
+- `test:e2e:build` 与 business E2E 都必须经共享 helper `tests/e2e/e2e-environment.mjs`（build/business 复用同一实现）在任何登录前请求并严格比对身份响应；business E2E 还必须在创建、上传、删除或 route 注入前再次确认该预检已完成。缺少 `LEANOTE_BASE_URL`、`LEANOTE_E2E_EMAIL`、`LEANOTE_E2E_PASSWORD` 或 `LEANOTE_E2E_RUN_TOKEN`，服务不可达、接口非 200、字段不匹配、浏览器未安装或账号未认证均须立即失败。测试不得自行启动另一服务、使用默认凭据，或把任意可登录 URL 当作隔离环境。
+- 会写入数据的流程只允许在隔离 fixture 和测试专用实体上执行；每个用例在 finally/fixture teardown 删除自身创建的笔记、附件、相册、博客评论和主题，harness 销毁数据库容器前还须删除 `e2e_runs` 标记。admin/member 流程必须在写入前验证登录账号可访问对应页面；member 区流程由同一已轮换的 admin 账号执行（2026-08-27 确认，选项 (a)），fixture 中的非 admin `demo` 账号不纳入轮换或使用。不满足权限或清理失败均失败，不得遗留共享数据库数据。
 
 ### R-jQ4: Migrate Is Test-Only Diagnostics
 
@@ -77,7 +77,7 @@
 - [ ] **AC-jQ3** `/js/jquery-1.9.0.min.js` 仍返回 200 且内容为 3.7.1；`dep.min.js`、`album/js/main.all.js` 和 `leaui_image` iframe 不再执行任何 1.9.x 核心。一个页面或 iframe 不会加载两个 jQuery 核心。
 - [ ] **AC-jQ4** 受跟踪的兼容性清单覆盖 R-jQ2 的区域、每个实际 Migrate warning 和所有权排除项；第一方适配与第三方替换均有定位、行为说明和回归用例。
 - [ ] **AC-jQ5** Node 静态契约测试证明生产 manifest/output/template 中没有 migrate、私有 1.9.1 iframe 副本或未声明的 jQuery 核心；`npm run build && npm run build && git diff --exit-code` 通过。
-- [ ] **AC-jQ6** `npm run test:e2e:build` 与新的 `business` Chromium E2E 仅在 test-mode harness 的匹配 run token、由实际应用 DB 会话验证的唯一 marker、`leanote_test` 身份响应和已认证的随机化 fixture admin 账号下通过；身份预检在所有登录前执行，business 流程在所有写入或 route 注入前再次确认。marker 缺失/重复/过期、摘要不匹配、数据库错误、非 test mode、非 loopback 或错误凭据均有 fail-closed 回归。业务流覆盖登录、笔记列表/搜索、笔记本/标签、对话框、上传、相册、博客、admin/member 以及 `leaui_image` iframe，写入用例无残留数据。
+- [ ] **AC-jQ6** `npm run test:e2e:build` 与新的 `business` Chromium E2E 仅在 test-mode harness 的匹配 run token、由实际应用 DB 会话验证的唯一 marker、`leanote_test` 身份响应和已认证的随机化 fixture admin 账号下通过；build 与 business 两个 project 的身份预检均在任何登录前经共享 helper `tests/e2e/e2e-environment.mjs` 执行，business 流程在所有写入或 route 注入前再次确认。marker 缺失/重复/过期、摘要不匹配、数据库错误、非 test mode、非 loopback 或错误凭据均有 fail-closed 回归。业务流覆盖登录、笔记列表/搜索、笔记本/标签、对话框、上传、相册、博客、admin/member 以及 `leaui_image` iframe，写入用例无残留数据。
 - [ ] **AC-jQ7** 诊断 E2E 的 `JQMIGRATE:` warning 为零；生产 E2E 的错误/网络断言为零。每类选入的第一方 AJAX wrapper 至少有一次受控 4xx/5xx/解析失败回归，证明既有失败回调或可见提示被触发而非静默吞掉。
 - [ ] **AC-jQ8** `npm run build && npm test`、D 的资源 smoke、G 的 Golden/USN/page smoke、相关 Go/Node 定向测试均通过；最终 diff 不包含 Bootstrap/TinyMCE 升级、永久兼容层、后端兼容分支或视觉重设计。
 - [ ] **AC-jQ9** Chrome、Edge、Firefox 和真实 Safari 的当前及前一主版本 smoke 按 R-jQ7 的受跟踪记录完成；Chromium E2E 是本任务 PR/push 合并阻断门禁。

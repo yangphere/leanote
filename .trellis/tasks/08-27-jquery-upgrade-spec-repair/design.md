@@ -21,3 +21,9 @@ PR/push 使用 Chromium 阻断 E2E。发布前由真实 Chrome、Edge、Firefox�
 ## 5. Rollback
 
 本次只修改计划工件；任何技术选择若不能保持 test-only 路由、随机 marker、无泄露摘要和四浏览器证据，必须回到规划而不能以人工声明或生产 fallback 代替。
+
+## 6. Round-2 Clarifications（2026-08-27 复核新增）
+
+- **身份路由的可观察契约**：第 2 节「production/dev 路由必须不存在」与上游「非 test mode 或非 loopback 一律 404」按外部行为等价执行——在 test mode 且 loopback 之外，该端点必须无差别返回 fail-closed 404，且不泄露任何差异信号（注册方式、运行模式、数据库状态均不可区分）。实现方可选择条件注册或在 handler 内守卫，二者均满足契约。
+- **marker 有效期阈值（RD-1，已确认）**：上游原仅表述「未过期」。2026-08-27 用户确认阈值为 `createdAt` + 2 小时（CI `node-tests` 35 分钟超时的宽裕上界），并已补写上游 PRD R-jQ3、design §3 与 implement 红灯清单。token 单次随机匹配仍是主控制，阈值只是过期分支回归的确定性依据。
+- **member 流程执行账号（RD-5，已确认）**：上游只轮换 fixture admin（`admin@leanote.com`）；fixture 另有非 admin 账号 `demo@leanote.com`。2026-08-27 用户确认采用选项 (a)：member 区流程由同一已轮换 admin 账号执行，并在写入前验证其页面访问；不轮换、不使用 `demo` 账号。已补写上游 PRD R-jQ3 与 design §3。

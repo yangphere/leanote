@@ -24,9 +24,9 @@ TinyMCE 内部 bridge 与脑图子应用只登记到清单的 E-TM 排除区。�
 
 E2E 使用单一 test-mode harness。恢复 `leanote_test` 后，harness 生成随机 run token 与 admin 密码，将 `{kind: "jquery-upgrade", tokenSha256, createdAt}` 作为唯一 marker 写入 `e2e_runs`，并用现有密码哈希逻辑轮换 fixture `admin` 的密码。账号名、密码和 token 只经本次运行子进程环境传递；CI 在写入临时 job 环境前 mask 值，不能读取 GitHub Secrets，也不能在日志、摘要或 artifact 输出它们。
 
-`GET /_test/e2e/identity` 仅在 test mode 且请求来源为 loopback 时可达。它通过应用已连接的 MongoDB session 查询该唯一 marker，以常量时间比较 marker 的 `tokenSha256` 与环境 token 的摘要，并从同一 session 取得 database 名；只有 marker 有且仅有一条、未过期、摘要匹配且 database 为 `leanote_test` 时才返回 `{runToken, database}`。非 test/非 loopback 返回 404；marker、数据库或连接校验失败返回无敏感细节的 503。该 handler 只读且不记录 token。
+`GET /_test/e2e/identity` 仅在 test mode 且请求来源为 loopback 时可达。它通过应用已连接的 MongoDB session 查询该唯一 marker，以常量时间比较 marker 的 `tokenSha256` 与环境 token 的摘要，并从同一 session 取得 database 名；只有 marker 有且仅有一条、未过期（有效期：`createdAt` 后 2 小时，2026-08-27 确认）、摘要匹配且 database 为 `leanote_test` 时才返回 `{runToken, database}`。非 test/非 loopback 返回 404；marker、数据库或连接校验失败返回无敏感细节的 503。该 handler 只读且不记录 token。
 
-共享 `tests/e2e/e2e-environment.mjs` 同时供 build-smoke 与 business project 使用，在**任何登录**前完成身份预检；business 流程在任何 route 注入和写入前断言该预检结果仍有效，随后验证 admin/member 页面权限。测试数据在各用例 finally 清理，harness 最后删除 marker 和数据库容器；任何预检、清理或报告失败都终止运行。
+共享 `tests/e2e/e2e-environment.mjs` 同时供 build-smoke 与 business project 使用，在**任何登录**前完成身份预检；business 流程在任何 route 注入和写入前断言该预检结果仍有效，随后验证 admin/member 页面权限（member 区由同一已轮换 admin 账号执行，2026-08-27 确认，选项 (a)；`demo` 账号不轮换、不使用）。测试数据在各用例 finally 清理，harness 最后删除 marker 和数据库容器；任何预检、清理或报告失败都终止运行。
 
 ## 4. Test-Only Migrate Diagnostics
 

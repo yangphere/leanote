@@ -26,7 +26,7 @@
 
 - [ ] 记录每个资产、页面/iframe、插件、旧 API、所有者、风险和期望回归；将 E-TM 排除项明确写入清单。
 - [ ] 先写静态测试：声明 jquery-runtime、34 输出、唯一 3.7.1、无生产 Migrate/私有 1.9.1、旧公开 URL 仍受 manifest 管理；在当前树确认失败。
-- [ ] 先扩展 harness：恢复 fixture 后生成 token/密码，轮换 `admin` 密码并写入唯一 marker（token SHA-256、kind、createdAt）；仅以 mask 后的临时 job 环境传给 build/business，fork PR 不读取 E2E secrets。为 marker 重复/过期、摘要不匹配、数据库连接错误、密码轮换失败和 cleanup 失败写红灯。
+- [ ] 先扩展 harness：恢复 fixture 后生成 token/密码，轮换 `admin` 密码并写入唯一 marker（token SHA-256、kind、createdAt）；仅以 mask 后的临时 job 环境传给 build/business，fork PR 不读取 E2E secrets。为 marker 重复/过期（按 `createdAt` + 2 小时阈值，2026-08-27 确认）、摘要不匹配、数据库连接错误、密码轮换失败和 cleanup 失败写红灯。
 - [ ] 先写 build 与 business 共用的环境校验：identity handler 必须通过当前应用 DB session 验证 marker 后才返回随机 token 与 `leanote_test`；两类 E2E 均在任何登录前执行预检，business 在写入/route 注入前再次断言。缺变量、非 test mode、非 loopback、错误数据库、错误 token、权限不足、清理失败均为红灯。验证 token 与密码不进入摘要或 artifact；基线不具备服务时记录为前置条件，不伪造通过。
 
 ## 2. Switch The Canonical Asset Without Changing The Public URL

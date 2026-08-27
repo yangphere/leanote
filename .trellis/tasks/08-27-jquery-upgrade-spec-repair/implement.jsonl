@@ -6,3 +6,4 @@
 {"file": ".github/workflows/regression-baseline.yml", "reason": "Current build-only E2E invocation is the CI ownership baseline."}
 {"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "Synchronize the shared four-browser compatibility contract."}
 {"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "Synchronize delivery browser evidence and sanitized artifact policy."}
+{"file": ".trellis/tasks/08-25-jquery-upgrade/task.json", "reason": "Keep relatedFiles on the canonical shared-helper path and notes referencing R-jQ3/R-jQ6 per the strengthened AC-1 checklist."}

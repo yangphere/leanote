@@ -9,3 +9,7 @@
 {"file": "app/tests/README.md", "reason": "Verify the documented test fixture lifecycle remains the sole base for write-capable browser flows."}
 {"file": "conf/app.conf", "reason": "Verify the test-mode configuration remains loopback-bound and selects the isolated database."}
 {"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "Verify release browser evidence is consistent with the root compatibility matrix."}
+{"file": "tests/e2e/build/build-resource-smoke.spec.mjs", "reason": "Verify the build smoke performs the identity precheck before any login via the shared helper, not only the business project."}
+{"file": "tests/e2e/build/sanitized-summary-reporter.mjs", "reason": "Verify summaries stay allowlisted and credential-free for both E2E projects."}
+{"file": "playwright.config.mjs", "reason": "Verify both projects share one identity fixture and Chromium remains the only blocking browser."}
+{"file": ".trellis/tasks/08-25-jquery-upgrade/task.json", "reason": "Verify relatedFiles uses the canonical shared-helper path and notes references R-jQ3/R-jQ6."}

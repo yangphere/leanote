@@ -3,3 +3,4 @@
 {"file": ".github/workflows/regression-baseline.yml", "reason": "Verify the future business E2E is a real PR/push gate in the shared harness lifecycle."}
 {"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "Verify Chrome and Edge remain explicit current-and-previous-version requirements."}
 {"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "Verify release evidence does not substitute Chromium for real branded browsers."}
+{"file": ".trellis/tasks/08-25-jquery-upgrade/task.json", "reason": "Verify the strengthened AC-1 metadata checklist: canonical helper path, both E2E entries and explicit R-jQ3/R-jQ6 references."}
