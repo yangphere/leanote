@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/leanote/leanote/app/tests/harness"
+	"github.com/yangphere/leanote/app/tests/harness"
 )
 
 func main() {

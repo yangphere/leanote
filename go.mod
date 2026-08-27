@@ -1,4 +1,4 @@
-module github.com/leanote/leanote
+module github.com/yangphere/leanote
 
 go 1.26
 

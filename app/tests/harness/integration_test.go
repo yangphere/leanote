@@ -11,7 +11,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/leanote/leanote/app/info"
+	"github.com/yangphere/leanote/app/info"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )

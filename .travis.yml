@@ -9,7 +9,7 @@ install:
   - export PATH=$PATH:$HOME/gopath/bin
   - mkdir -p "$HOME/gopath/bin"
   - export GOTOOLCHAIN=local
-  # - go get -v github.com/leanote/leanote/app
+  # - go get -v github.com/yangphere/leanote/app
   - go build -o "$HOME/gopath/bin/revel" github.com/revel/cmd/revel
   - go version -m "$HOME/gopath/bin/revel" | grep -E 'golang.org/x/tools[[:space:]]+v0\.49\.0'
   # - ls $GOPATH/src/github.com/revel/
@@ -19,7 +19,7 @@ install:
   - ls
 
 script:
-  - wget https://github.com/leanote/leanote/archive/refs/heads/master.zip
+  - wget https://github.com/yangphere/leanote/archive/refs/heads/master.zip
   - unzip master.zip
   - mv leanote-master leanote
   - cd leanote
@@ -28,15 +28,15 @@ script:
   - mongorestore -h localhost -d leanote --dir ./mongodb_backup/leanote_install_data/
 
   - cd ./sh
-  # - cd $GOPATH/src/github.com/leanote/leanote/sh
+  # - cd $GOPATH/src/github.com/yangphere/leanote/sh
   - sh run.sh &
 
   # gen tmp/main.go, routes/routes.go
   #- go run app/cmd/main.go
   # build
-  #- go build -o leanote github.com/leanote/leanote/app/tmp
+  #- go build -o leanote github.com/yangphere/leanote/app/tmp
   # run with port 9000
-  #- ./leanote -importPath=github.com/leanote/leanote -runMode=dev -port=9000 &
+  #- ./leanote -importPath=github.com/yangphere/leanote -runMode=dev -port=9000 &
 
   - sleep 10s;
   # test
@@ -45,5 +45,5 @@ script:
   - curl http://localhost:9000/login
   - curl http://localhost:9000/demo
 
-  # - revel build github.com/leanote/leanote tmp
+  # - revel build github.com/yangphere/leanote tmp
   # OK

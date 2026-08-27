@@ -23,7 +23,7 @@ build、revel run 真实 HTTP smoke 和 revel package；检查 tarball 存在、
 ```bash
 cd /src/app/cmd && go run . build -v ../../ ./tmptmp     # GENERATION OK，无 panic
 # 输出：/src/app/routes/routes.go (61402 bytes)、/src/app/tmp/main.go + tmp/run/
-cd /src && go build -o /tmp/leanote-bin github.com/leanote/leanote/app/tmp
+cd /src && go build -o /tmp/leanote-bin github.com/yangphere/leanote/app/tmp
 # BINARY BUILD OK，/tmp/leanote-bin 21941825 bytes
 rm -rf /src/app/tmp /src/app/routes /src/app/cmd/tmptmp # 三个路径均确认不存在
 ```
@@ -82,7 +82,7 @@ cd /work/sh && PATH="/tmp:$PATH" sh package.sh
 # Your application has been built in: /tmp/work1712129466
 # Your archive is ready: /work/sh/leanote.tar.gz
 ls -l  → 27446759 bytes（存在且非空）
-tar -tzf → 2303 entries（含 run.sh/run.bat/src/github.com/leanote/leanote/app/views/**）
+tar -tzf → 2303 entries（含 run.sh/run.bat/src/github.com/yangphere/leanote/app/views/**）
 tar -xzf → 解包成功（/tmp/unpack/{run.sh,run.bat,src,work}）
 ```
 

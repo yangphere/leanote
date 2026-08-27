@@ -49,7 +49,7 @@ func TestUpdateBuildConfigDefaults(t *testing.T) {
 	// the pre-configured import path lives on Build.ImportPath (embedded
 	// ImportCommand), matching how buildApp consumes it
 	c := &model.CommandConfig{
-		Build: command.Build{ImportCommand: command.ImportCommand{ImportPath: "github.com/leanote/leanote"}},
+		Build: command.Build{ImportCommand: command.ImportCommand{ImportPath: "github.com/yangphere/leanote"}},
 	}
 	if !updateBuildConfig(c, nil) {
 		t.Fatal("pre-configured import path with no args must succeed")

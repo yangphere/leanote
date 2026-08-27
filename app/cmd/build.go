@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"fmt"
-	"github.com/leanote/leanote/app/cmd/harness" // 只改了这个
+	"github.com/yangphere/leanote/app/cmd/harness" // 只改了这个
 	"github.com/revel/cmd/model"
 	"github.com/revel/cmd/utils"
 )

@@ -27,8 +27,8 @@ app/tests/harness/server.go
 
 ```bash
 cd app/cmd && go run . build -v ../../ ./tmptmp && rm -rf ./tmptmp   # 生成 routes.go + tmp/main.go
-go build -o "$tempDir/leanote" github.com/leanote/leanote/app/tmp
-"$tempDir/leanote" -importPath=github.com/leanote/leanote -runMode=test -port="$port"
+go build -o "$tempDir/leanote" github.com/yangphere/leanote/app/tmp
+"$tempDir/leanote" -importPath=github.com/yangphere/leanote -runMode=test -port="$port"
 ```
 
 C-b 之后退化为 `go build -o "$tempDir/leanote" .` —— **只改 `buildServerBinary()` 一处**。
@@ -318,7 +318,7 @@ diff 会精确指出是哪个端点的哪个字段，而不是一个巨大的合
   Go 1.20.14 可完成生成和构建，因此 README 与 CI 均固定该版本；harness 缺少
   `LEANOTE_TEST_GO` 时显式失败，不做工具链降级或静默 fallback。
 - Revel 1.0 生成出的二进制在 module workspace 启动时，`runMode` JSON 必须提供
-  `packagePathMap["github.com/leanote/leanote"] = repoRoot` 与
+  `packagePathMap["github.com/yangphere/leanote"] = repoRoot` 与
   `packagePathMap["github.com/revel/revel"] = go list -m` 所得模块目录。此约束集中在
   `app/tests/harness/server.go` 的 `serverRunMode`；后续 C-b 替换 HTTP 层时只允许调整
   `buildServerBinary()`，不得让测试直接依赖 controller。

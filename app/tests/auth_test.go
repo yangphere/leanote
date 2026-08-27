@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leanote/leanote/app/db"
-	"github.com/leanote/leanote/app/service"
+	"github.com/yangphere/leanote/app/db"
+	"github.com/yangphere/leanote/app/service"
 )
 
 func TestAuth(t *testing.T) {

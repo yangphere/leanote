@@ -3,10 +3,10 @@ package api
 import (
 	"github.com/revel/revel"
 	//	"encoding/json"
-	//	. "github.com/leanote/leanote/app/lea"
+	//	. "github.com/yangphere/leanote/app/lea"
 	//	"gopkg.in/mgo.v2/bson"
-	//	"github.com/leanote/leanote/app/lea/netutil"
-	//	"github.com/leanote/leanote/app/info"
+	//	"github.com/yangphere/leanote/app/lea/netutil"
+	//	"github.com/yangphere/leanote/app/info"
 	//	"io/ioutil"
 	"os"
 	//	"strconv"

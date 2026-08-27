@@ -25,8 +25,8 @@ cd sh && sh package.sh
 
 # Build without the revel CLI: generate app/routes/routes.go + app/tmp/main.go (both gitignored)
 cd app/cmd && sh gen_tmp.sh
-go build -o leanote github.com/leanote/leanote/app/tmp
-./leanote -importPath=github.com/leanote/leanote -runMode=dev -port=9000
+go build -o leanote github.com/yangphere/leanote/app/tmp
+./leanote -importPath=github.com/yangphere/leanote -runMode=dev -port=9000
 
 # Go tests (app/tests) - REQUIRE a running Mongo, even with -run: auth_test.go's
 # package-level init() calls db.Init and panics with "no reachable servers" otherwise
@@ -76,7 +76,7 @@ Startup order in `OnAppStart` is load-bearing: `db.Init` → `InitEmail` → `In
 - **`app/db/Mgo.go`** — there is no repository/DAO layer. It exposes `*mgo.Collection` globals
   (`db.Notes`, `db.Users`, …) plus generic helpers, and services query them directly.
 - **`app/info/`** — bson-tagged models *and* the JSON envelopes `Re` / `ApiRe`.
-- **`app/lea/`** — utilities, usually dot-imported (`. "github.com/leanote/leanote/app/lea"`).
+- **`app/lea/`** — utilities, usually dot-imported (`. "github.com/yangphere/leanote/app/lea"`).
 - **`app/cmd/`** — a trimmed vendored copy of `revel/cmd` that only runs source generation, so
   `routes.go`/`main.go` can be produced without the real Revel tool. `app/cmd/README.md` lists
   exactly which files were modified; keep it in sync if you touch that package.

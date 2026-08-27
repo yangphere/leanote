@@ -1,51 +1,51 @@
 # github.com/PuerkitoBio/goquery
-github.com/leanote/leanote/app/lea
+github.com/yangphere/leanote/app/lea
 github.com/PuerkitoBio/goquery
 
 # github.com/agtorre/gocolorize
-github.com/leanote/leanote/app/cmd
+github.com/yangphere/leanote/app/cmd
 github.com/agtorre/gocolorize
 
 # github.com/bradfitz/gomemcache
-github.com/leanote/leanote
+github.com/yangphere/leanote
 github.com/bradfitz/gomemcache/memcache
 
 # github.com/garyburd/redigo
-github.com/leanote/leanote
+github.com/yangphere/leanote
 github.com/garyburd/redigo/redis
 
 # github.com/jessevdk/go-flags
-github.com/leanote/leanote/app/cmd
+github.com/yangphere/leanote/app/cmd
 github.com/jessevdk/go-flags
 
 # github.com/patrickmn/go-cache
-github.com/leanote/leanote
+github.com/yangphere/leanote
 github.com/patrickmn/go-cache
 
 # github.com/revel/cmd
-github.com/leanote/leanote/app/cmd
+github.com/yangphere/leanote/app/cmd
 github.com/revel/cmd/logger
 
 # github.com/revel/modules
-github.com/leanote/leanote
+github.com/yangphere/leanote
 github.com/revel/modules/static
 
 # github.com/revel/revel
-github.com/leanote/leanote/app
+github.com/yangphere/leanote/app
 github.com/revel/revel
 
 # github.com/robfig/config
-github.com/leanote/leanote/app/lea/i18n
+github.com/yangphere/leanote/app/lea/i18n
 github.com/robfig/config
 
 # golang.org/x/crypto
-github.com/leanote/leanote/app/lea
+github.com/yangphere/leanote/app/lea
 golang.org/x/crypto/bcrypt
 
 # golang.org/x/tools
-github.com/leanote/leanote/app/cmd/parser2
+github.com/yangphere/leanote/app/cmd/parser2
 golang.org/x/tools/go/packages
 
 # gopkg.in/mgo.v2
-github.com/leanote/leanote/app/db
+github.com/yangphere/leanote/app/db
 gopkg.in/mgo.v2

@@ -19,7 +19,7 @@ import (
 
 const (
 	TestPort        = 28017
-	appImportPath   = "github.com/leanote/leanote"
+	appImportPath   = "github.com/yangphere/leanote"
 	revelImportPath = "github.com/revel/revel"
 )
 

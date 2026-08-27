@@ -8,7 +8,7 @@
 
 | 路径 | 入口 | 验证 |
 |---|---|---|
-| 测试二进制 | `app/cmd` 生成器 + `go build github.com/leanote/leanote/app/tmp` | G 的 HTTP harness 与 Golden |
+| 测试二进制 | `app/cmd` 生成器 + `go build github.com/yangphere/leanote/app/tmp` | G 的 HTTP harness 与 Golden |
 | 开发 | `revel run -a .` / `sh/run.sh` | 隔离端口真实请求 smoke |
 | 生产包 | `revel package --run-mode=prod` / `sh/package.sh` | 解包、启动、访问 `/login` 与 `/api/auth/login` |
 

@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/leanote/leanote/app/cmd/parser2"
+	"github.com/yangphere/leanote/app/cmd/parser2"
 	"github.com/revel/cmd/model"
 	"github.com/revel/cmd/parser"
 	_ "github.com/revel/cmd/parser"

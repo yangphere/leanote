@@ -47,20 +47,20 @@ Feeling suspicious about how those note-taking companies treat your personal dat
 More information about how to install Leanote please see:
 
 * Leanote binary installation tutorial:
-    * [Windows](https://github.com/leanote/leanote/wiki/leanote-source-installation-on-Windows-(En))
-    * [Mac and Linux](https://github.com/leanote/leanote/wiki/leanote-binary-installation-on-Mac-and-Linux-(En))
+    * [Windows](https://github.com/yangphere/leanote/wiki/leanote-source-installation-on-Windows-(En))
+    * [Mac and Linux](https://github.com/yangphere/leanote/wiki/leanote-binary-installation-on-Mac-and-Linux-(En))
 * Leanote source installation tutorial:
-    <!-- * [Windows](https://github.com/leanote/leanote/wiki/leanote-source-installation-on-Windows-(En)) -->
-    * [Mac and Linux](https://github.com/leanote/leanote/wiki/Leanote-source-installation-on-Mac-and-Linux-(En))
+    <!-- * [Windows](https://github.com/yangphere/leanote/wiki/leanote-source-installation-on-Windows-(En)) -->
+    * [Mac and Linux](https://github.com/yangphere/leanote/wiki/Leanote-source-installation-on-Mac-and-Linux-(En))
 
 ## 4. Documentation
 
-Please see [wiki](https://github.com/leanote/leanote/wiki) for detailed instruction on how to install Leanote on various platforms, trouble shooting and configuration explanations.
+Please see [wiki](https://github.com/yangphere/leanote/wiki) for detailed instruction on how to install Leanote on various platforms, trouble shooting and configuration explanations.
 
 
 ## 5. How to develop Leanote
 
-If you are a developer yourself and feel like to build on top of Leanote, please refer to [How-to-develop-leanote](https://github.com/leanote/leanote/wiki/How-to-develop-leanote-%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91leanote).
+If you are a developer yourself and feel like to build on top of Leanote, please refer to [How-to-develop-leanote](https://github.com/yangphere/leanote/wiki/How-to-develop-leanote-%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91leanote).
 
 
 ## 6. Contributions
@@ -68,14 +68,14 @@ If you are a developer yourself and feel like to build on top of Leanote, please
 Like or dislike Leanote, please leave your comments and suggestions to help us improve it.
 If you encounter any issue, we suggest you first search the issues section to see whether a solution already exists, or open up a new one otherwise.
 
-We’d like to acknowledge the contributions made by our [developers and contributors](https://github.com/leanote/leanote/graphs/contributors) to
+We’d like to acknowledge the contributions made by our [developers and contributors](https://github.com/yangphere/leanote/graphs/contributors) to
 this project. Leanote won’t exist without your hard work. Your help is much appreciated.
 
 ## 7. Join us
 
-Please feel free to fork this repository and contribute back using [pull requests](https://github.com/leanote/leanote/pulls).
+Please feel free to fork this repository and contribute back using [pull requests](https://github.com/yangphere/leanote/pulls).
 
-If you find any problems or have any good ideas, feature requests, please submit here [issues](https://github.com/leanote/leanote/issues).
+If you find any problems or have any good ideas, feature requests, please submit here [issues](https://github.com/yangphere/leanote/issues).
 
 
 ## 8. Donation
@@ -142,29 +142,29 @@ Leanote云笔记产品包括: Leanote Web & Server(即本仓库), 桌面客户�
 这里详细整理了Leanote二进版和Leanote开发版的安装教程, 请移步至:
 
 * Leanote二进制详细安装教程:
-    * [Windows](https://github.com/leanote/leanote/wiki/Leanote%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%89%88%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B---Windows)
-    * [Mac, Linux](https://github.com/leanote/leanote/wiki/leanote%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%89%88%E8%AF%A6%E7%BB%86%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B)
+    * [Windows](https://github.com/yangphere/leanote/wiki/Leanote%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%89%88%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B---Windows)
+    * [Mac, Linux](https://github.com/yangphere/leanote/wiki/leanote%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%89%88%E8%AF%A6%E7%BB%86%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B)
 * Leanote源码详细安装教程:
-    <!-- * [Windows](https://github.com/leanote/leanote/wiki/Leanote-%E6%BA%90%E7%A0%81%E7%89%88%E8%AF%A6%E7%BB%86%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B----Windows) -->
-    * [Mac, Linux](https://github.com/leanote/leanote/wiki/leanote%E5%BC%80%E5%8F%91%E7%89%88%E8%AF%A6%E7%BB%86%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B)
+    <!-- * [Windows](https://github.com/yangphere/leanote/wiki/Leanote-%E6%BA%90%E7%A0%81%E7%89%88%E8%AF%A6%E7%BB%86%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B----Windows) -->
+    * [Mac, Linux](https://github.com/yangphere/leanote/wiki/leanote%E5%BC%80%E5%8F%91%E7%89%88%E8%AF%A6%E7%BB%86%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B)
 
 ## 4. 相关文档
 
-更多详细的安装说明、问题处理和配置说明文档，请查看 [wiki](https://github.com/leanote/leanote/wiki)。
+更多详细的安装说明、问题处理和配置说明文档，请查看 [wiki](https://github.com/yangphere/leanote/wiki)。
 
 ## 5. 如何对Leanote进行二次开发
 
-如果您有兴趣基于Leanote二次开发，请查看 [How-to-develop-Leanote](https://github.com/leanote/leanote/wiki/How-to-develop-leanote-%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91leanote)。
+如果您有兴趣基于Leanote二次开发，请查看 [How-to-develop-Leanote](https://github.com/yangphere/leanote/wiki/How-to-develop-leanote-%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91leanote)。
 
 ## 6. 贡献者
 
-在此对向Leanote贡献力量的[贡献者们](https://github.com/leanote/leanote/graphs/contributors) 表示感谢。Leanote因有你们而更完美!
+在此对向Leanote贡献力量的[贡献者们](https://github.com/yangphere/leanote/graphs/contributors) 表示感谢。Leanote因有你们而更完美!
 
 ## 7. 加入我们
 
-欢迎提交[pull requests](https://github.com/leanote/leanote/pulls) 到Leanote。
+欢迎提交[pull requests](https://github.com/yangphere/leanote/pulls) 到Leanote。
 
-有任何问题或建议, 请先搜索[issue](https://github.com/leanote/leanote/issues)区是否已经有解决方法。如果没有，欢迎提交新issue。
+有任何问题或建议, 请先搜索[issue](https://github.com/yangphere/leanote/issues)区是否已经有解决方法。如果没有，欢迎提交新issue。
 
 Leanote还有很多问题, 如果你喜欢它, 欢迎加入我们一起完善Leanote。
 
