@@ -13,13 +13,22 @@ function copyBuildTree() {
   fs.cpSync(path.join(ROOT, 'messages'), path.join(temp, 'messages'), { recursive: true });
   fs.cpSync(path.join(ROOT, 'app', 'views'), path.join(temp, 'app', 'views'), { recursive: true });
   fs.cpSync(path.join(ROOT, 'tests', 'js', 'fixtures'), path.join(temp, 'tests', 'js', 'fixtures'), { recursive: true });
+  // The manifest consumes node_modules/jquery/dist/jquery.min.js as the canonical jQuery
+  // input, so an isolated build tree must carry the declared dependency with it.
+  fs.cpSync(path.join(ROOT, 'node_modules', 'jquery'), path.join(temp, 'node_modules', 'jquery'), {
+    recursive: true,
+    filter: (source) => {
+      const relative = path.relative(path.join(ROOT, 'node_modules', 'jquery'), source);
+      return relative === '' || relative === 'package.json' || relative.split(path.sep)[0] === 'dist';
+    },
+  });
   return temp;
 }
 
-test('manifest declares the complete 33-output contract', async () => {
+test('manifest declares the complete 34-output contract', async () => {
   const { MANIFEST, BUILD_OUTPUTS, validateManifest } = await import('../../scripts/build/manifest.mjs');
-  assert.equal(BUILD_OUTPUTS.length, 33);
-  assert.equal(new Set(BUILD_OUTPUTS).size, 33);
+  assert.equal(BUILD_OUTPUTS.length, 34);
+  assert.equal(new Set(BUILD_OUTPUTS).size, 34);
   assert.equal(MANIFEST.i18nDerivedInputExclusions.includes('public/md/main-v2.min.js'), true);
   validateManifest(MANIFEST);
   for (const output of BUILD_OUTPUTS) {

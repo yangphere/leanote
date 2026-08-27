@@ -4,8 +4,11 @@ import path from 'node:path';
 const posix = (...parts) => parts.join('/').replaceAll('\\', '/').replace(/^\.\//, '');
 
 const js = [
+  { name: 'jquery-runtime', kind: 'js', transform: 'concat', inputs: [
+    'node_modules/jquery/dist/jquery.min.js',
+  ], output: 'public/js/jquery-1.9.0.min.js', url: '/js/jquery-1.9.0.min.js' },
   { name: 'dep', kind: 'js', transform: 'concat', inputs: [
-    'public/js/jquery-1.9.0.min.js',
+    'node_modules/jquery/dist/jquery.min.js',
     'public/js/jquery.ztree.all-3.5-min.js',
     'public/js/jQuery-slimScroll-1.3.0/jquery.slimscroll-min.js',
     'public/js/contextmenu/jquery.contextmenu-min.js',
@@ -26,7 +29,7 @@ const js = [
     'public/js/require.js', 'public/md/main-v2.min.js',
   ], output: 'public/js/markdown-v2.min.js', url: '/js/markdown-v2.min.js' },
   { name: 'album', kind: 'js', transform: 'esbuild-concat', inputs: [
-    'public/js/jquery-1.9.0.min.js', 'public/js/bootstrap-min.js',
+    'node_modules/jquery/dist/jquery.min.js', 'public/js/bootstrap-min.js',
     'public/js/plugins/libs-min/fileupload.js', 'public/js/jquery.pagination.js',
     'public/album/js/main.js',
   ], output: 'public/album/js/main.all.js', url: '/public/album/js/main.all.js' },
@@ -91,7 +94,7 @@ export function validateManifest(input = manifest) {
     outputs.push(output);
     for (const source of entry.inputs ?? []) validateRelative(source, 'input');
   }
-  if (outputs.length !== 33) throw new Error(`expected 33 outputs, got ${outputs.length}`);
+  if (outputs.length !== 34) throw new Error(`expected 34 outputs, got ${outputs.length}`);
   for (const root of input.i18nScanRoots) validateRelative(root, 'scan root');
   const exclusions = input.i18nDerivedInputExclusions ?? [];
   const normalizedExclusions = exclusions.map((item) => validateRelative(item, 'i18n derived input exclusion'));
