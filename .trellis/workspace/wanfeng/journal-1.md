@@ -87,3 +87,24 @@
 
 - 在隔离的真实 workflow_dispatch 中运行 record-export-pdf 并审阅 artifact。
 - 完成父任务 Phase 6 全量验收后，再决定其归档。
+
+
+## Session 4: Node 24 前端构建链迁移与验收
+
+**Date**: 2026-08-27
+**Task**: Node 24 前端构建链迁移与验收
+**Branch**: `dev`
+
+### Summary
+
+完成 Node 24/esbuild manifest 构建链、33 项生成物、i18n 词法与路径安全、原子发布回滚、Playwright 脱敏 smoke 及 Mongo/Revel CI harness；补齐回归测试和前端代码规范。npm test 41/41、构建确定性、Playwright 用例发现、Trellis 校验与 diff 检查通过；真实服务 E2E 因本机缺少 Mongo/服务/凭据未执行。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bddca23` | (see git log) |
+
+### Status
+
+[OK] **Completed**
