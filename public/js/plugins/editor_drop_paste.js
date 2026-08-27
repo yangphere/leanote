@@ -239,7 +239,7 @@ define('editor_drop_paste', ['fileupload'], function() {
 	    }
 
 	    // drag css
-		$(document).bind('dragover', function (e) {
+		$(document).on('dragover', function (e) {
 		    var dropZone = $('#drop'),
 		        timeout = window.dropZoneTimeout;
 		    if (!timeout) {

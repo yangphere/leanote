@@ -65,7 +65,7 @@ const manifest = {
   ],
   i18nMessageFiles: ['msg', 'member', 'markdown', 'album', 'blog', 'tinymce_editor'],
   dynamicKeyExceptions: [
-    { path: 'public/js/common.js', line: 1158, column: 11 },
+    { path: 'public/js/common.js', line: 1164, column: 11 },
     { path: 'public/md/main-v2.js', line: 17417, column: 23 },
   ],
 };

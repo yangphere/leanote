@@ -819,7 +819,7 @@ var o = {
 	    }
 
 	    // drag css
-		$(document).bind('dragover', function (e) {
+		$(document).on('dragover', function (e) {
 		    var dropZone = $('#drop'),
 		        timeout = window.dropZoneTimeout;
 		    if (!timeout) {

@@ -16,7 +16,7 @@ define('import_theme', ['fileupload'], function(){
     function setDropStyle(dropzoneId, formId) {
 	    // drag css
 	    var dropZone = $(dropzoneId);
-		$(formId).bind('dragover', function (e) {
+		$(formId).on('dragover', function (e) {
 			e.preventDefault();
 		    var timeout = window.dropZoneTimeoutAttach;
 		    if(timeout) {

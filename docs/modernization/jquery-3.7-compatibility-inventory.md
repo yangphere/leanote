@@ -21,29 +21,29 @@
 
 ## 3. 第一方代码高风险调用
 
-### 3.1 jQuery 3 已移除（升级即坏）
+### 3.1 jQuery 3 已移除（升级即坏）— 已适配 ✅
 
 | 位置 | 调用 | 行为 | 处置与回归 |
 |---|---|---|---|
-| `public/js/app/page.js:632,639` | `navs.size()` / `target.size()` | 导航省略号计算抛 TypeError | 改 `.length`；note 页导航 smoke |
-| `public/js/app/blog/view.js:8,15` | 同上（复制代码） | 博客视图导航 | 改 `.length`；博客 E2E |
-| `public/blog/js/common.js:219,226` | 同上（复制代码） | 博客前台 | 改 `.length`；博客 E2E |
+| `public/js/app/page.js` | `navs.size()` / `target.size()` | 导航省略号计算抛 TypeError | 已改 `.length`；note 页导航 smoke 待 E2E |
+| `public/js/app/blog/view.js` | 同上（复制代码） | 博客视图导航 | 已改 `.length`；博客 E2E |
+| `public/blog/js/common.js` | 同上（复制代码） | 博客前台 | 已改 `.length`；博客 E2E |
 
 ### 3.2 语义变化（attr/prop、:visible）
 
 | 位置 | 调用 | 风险 | 处置与回归 |
 |---|---|---|---|
-| `public/js/app/page.js:726` | `.attr("checked", true)` | 3.x 设 attribute 不设 property，radio 预选失效 | 改 `.prop()`；主题选择 smoke |
-| `public/album/js/main.js:588-591,675-678` | `.attr("disabled",…)` 混用 `.prop("checked")` | 布尔状态读回为字符串 | 统一 `.prop()`；album E2E |
-| `page.js:693`、`share.js:138`、`app/blog/view.js:74,324`、`blog/js/common.js:285`、`blog/share_comment.js:245`、`album/js/main.js:90,209` | `.is(":hidden"/":visible")` | 3.x 布局盒（含 0×0）视为 visible | 逐处核对是否依赖"隐藏=无盒"；对话框/树显隐 E2E |
+| `public/js/app/page.js` | `.attr("checked", true)` | 3.x 设 attribute 不设 property，radio 预选失效 | 已改 `.prop()` |
+| `public/album/js/main.js` | `.attr("disabled",…)` ×8 | 布尔状态读回为字符串 | 已统一 `.prop()`；album E2E |
+| 各处 `.is(":hidden"/":visible")`（page.js:699+、share.js、view.js、blog common.js、share_comment.js、album main.js） | 对话框/表单 display:none 显隐切换 | 3.x 语义变化仅影响"有布局盒但不可见"的元素；以上用法全部是 display:none 切换，语义不变 | 已核验无需改动；对话框 E2E 覆盖 |
 
-### 3.3 弃用但未移除（诊断警告项，需清零）
+### 3.3 弃用但未移除（诊断警告项）— 已适配 ✅
 
-`.bind/.unbind`：`page.js:185,195,204,215,749`、`editor_drop_paste.js:242`、`attachment_upload.js:22`、`member/avatar.js:20`、`member/import_theme.js:19`、`album/main.js:825`、`leaui_image/public/js/main.js:822`（`$(document).bind('dragover')`）→ 全部改 `.on/.off`；诊断 E2E 断言零警告。`.hover(fn,fn)`（page.js:127、share.js:127、notebook.js:270）3.7 支持，`无需改动`。
+全部 `.bind/.unbind`（page.js ×7、editor_drop_paste.js、attachment_upload.js、member/avatar.js、member/import_theme.js、album/main.js、leaui_image main.js）已改 `.on/.off`；诊断 E2E 仍须断言零警告。`.hover(fn,fn)`（page.js、share.js、notebook.js）3.7 支持，无需改动。
 
-### 3.4 AJAX 失败语义（R-jQ3 契约修复）
+### 3.4 AJAX 失败语义（R-jQ3 契约修复）— 已适配 ✅
 
-`public/js/common.js`：`_ajax`（L230-251）的 `success` 与 `error` 回调都路由到 `_ajaxCallback`（L209-229）；HTTP 4xx/5xx 时 jqXHR 对象被 `typeof=="object"` 判为成功 → **failureFunc 永不触发**。`ajaxPostJson` 另有两处缺陷：`datatype:` 拼写错误（L295，响应不自动解析）与 `async` 反转（L234-238、L286-290，显式传 `true` 也变同步）。处置：`_ajax` 的 error 分支改传失败标记进 `_ajaxCallback` 保证 failureFunc/可见提示触发；修正拼写与 async 判定；第一方业务代码无绕过 wrapper 的直接 `$.get/$.post`（已扫描确认），回归 = AC-jQ7 受控 4xx/5xx/解析失败注入。
+`public/js/common.js`：`_ajax`/`ajaxPostJson` 的 `error` 回调改经 `_ajaxFailure` 路由——HTTP 4xx/5xx 必触发 `failureFunc`，无回调时保留 `alert("error!")` 可见提示（原实现把 jqXHR 对象误判为成功）；修正 `datatype:` → `dataType:`（响应恢复自动 JSON 解析）；`async` 不再反转（显式传值按文档语义生效，仓库内无调用方传值，行为无实际变化）。回归：`tests/js/ajax-wrapper-contract.test.js` 6 项（成功/失败路由、NOTLOGIN、可见提示、async 三态、dataType）；E2E 受控故障注入（AC-jQ7）待 harness 阶段。
 
 ## 4. 第三方插件
 

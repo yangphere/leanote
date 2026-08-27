@@ -585,10 +585,10 @@ var o = {
 	// clear attrs and disable it
 	clearAttrs: function() {
 		var self = this;
-		self.attrTitleO.val("").attr("disabled", true);
-		self.attrHeightO.val("").attr("disabled", true);
-		self.attrWidthO.val("").attr("disabled", true);
-		self.attrConstrainO.prop("checked", false).attr("disabled", true);
+		self.attrTitleO.val("").prop("disabled", true);
+		self.attrHeightO.val("").prop("disabled", true);
+		self.attrWidthO.val("").prop("disabled", true);
+		self.attrConstrainO.prop("checked", false).prop("disabled", true);
 	},
 	scale: function(isWidth) {
 		var self = this;
@@ -672,10 +672,10 @@ var o = {
 		var attrs = self.imageAttrs[src];
 		function setAttr(attrs) {
 			attrs = attrs || {};
-			self.attrTitleO.val(attrs.title).attr("disabled", false);
-			self.attrWidthO.val(attrs.width).attr("disabled", false);
-			self.attrHeightO.val(attrs.height).attr("disabled", false);
-			self.attrConstrainO.attr("disabled", false);
+			self.attrTitleO.val(attrs.title).prop("disabled", false);
+			self.attrWidthO.val(attrs.width).prop("disabled", false);
+			self.attrHeightO.val(attrs.height).prop("disabled", false);
+			self.attrConstrainO.prop("disabled", false);
 
 			if(attrs.constrain) {
 				self.attrConstrainO.prop('checked', true);
@@ -822,7 +822,7 @@ var o = {
 	    }
 
 	    // drag css
-		$(document).bind('dragover', function (e) {
+		$(document).on('dragover', function (e) {
 		    var dropZone = $('#drop'),
 		        timeout = window.dropZoneTimeout;
 		    if (!timeout) {

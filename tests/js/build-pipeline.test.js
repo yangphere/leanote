@@ -67,7 +67,7 @@ test('i18n scanner excludes generated markdown derivative', async () => {
   assert.equal(scan.keys.some((key) => key.key === '{{msg . '), false);
   assert.equal(scan.dynamic.some((item) => item.path === 'public/md/main-v2.js' && item.line === 17417), true);
   assert.deepEqual(scan.dynamic.map(({ path, line, column }) => ({ path, line, column })), [
-    { path: 'public/js/common.js', line: 1158, column: 11 },
+    { path: 'public/js/common.js', line: 1164, column: 11 },
     { path: 'public/md/main-v2.js', line: 17417, column: 23 },
   ]);
 });

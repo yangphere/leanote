@@ -216,14 +216,14 @@ function scrollTo(self, tagName, text) {
 	// 找到是第几个
 	// 在nav是第几个
 	var navs = $('#blogNavContent [data-a="' + tagName + '-' + encodeURI(text) + '"]');
-	var len = navs.size();
+	var len = navs.length;
 	for(var i = 0; i < len; ++i) {
 		if(navs[i] == self) {
 			break;
 		}
 	}
 	
-	if (target.size() >= i+1) {
+	if (target.length >= i+1) {
 		target = target.eq(i);
 		// 之前插入, 防止多行定位不准
 		var top = target.offset().top;

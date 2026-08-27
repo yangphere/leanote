@@ -91,7 +91,7 @@ editorMode.prototype.normalMode = function() {
 	*/
 
 	$("#noteItemListWrap, #notesAndSort").show();
-	$("#noteList").unbind("mouseenter").unbind("mouseleave"); 
+	$("#noteList").off("mouseenter").off("mouseleave"); 
 	
 	var theme = UserInfo.Theme || "default";
 	theme += ".css";
@@ -182,7 +182,7 @@ var Resize = {
 		var self = this;
 		
 		// 鼠标点下
-		$(".noteSplit").bind("mousedown", function(event) {
+		$(".noteSplit").on("mousedown", function(event) {
 			event.preventDefault(); // 防止选择文本
 			self.lineMove = true;
 			$(this).css("background-color", "#ccc");
@@ -192,7 +192,7 @@ var Resize = {
 		});
 		
 		// 鼠标点下
-		self.mdSplitter.bind("mousedown", function(event) {
+		self.mdSplitter.on("mousedown", function(event) {
 			event.preventDefault(); // 防止选择文本
 			if($(this).hasClass('open')) {
 				self.mdLineMove = true;
@@ -201,7 +201,7 @@ var Resize = {
 		});
 		
 		// 鼠标移动时
-		self.body.bind("mousemove", function(event) {
+		self.body.on("mousemove", function(event) {
 			if(self.lineMove) { // 如果没有这个if会导致不能选择文本
 				event.preventDefault();
 				self.resize3Columns(event);
@@ -212,7 +212,7 @@ var Resize = {
 		});	
 
 		// 鼠标放开, 结束
-		self.body.bind("mouseup", function(event) {
+		self.body.on("mouseup", function(event) {
 			self.stopResize();
 			// 取消遮罩
 			$("#noteMask").css("z-index", -1);
@@ -629,14 +629,14 @@ function scrollTo(self, tagName, text) {
 	// 在nav是第几个
 	var navs = $('#leanoteNavContent [data-a="' + tagName + '-' + encodeURI(text) + '"]');
 //	alert('#leanoteNavContent [data-a="' + tagName + '-' + encodeURI(text) + '"]')
-	var len = navs.size();
+	var len = navs.length;
 	for(var i = 0; i < len; ++i) {
 		if(navs[i] == self) {
 			break;
 		}
 	}
 	
-	if (target.size() >= i+1) {
+	if (target.length >= i+1) {
 		target = target.eq(i);
 		// 之前插入, 防止多行定位不准
 		// log(target.scrollTop());
@@ -723,7 +723,7 @@ function hideMask () {
 			if (!UserInfo.Theme) {
 				UserInfo.Theme = "default";
 			}
-			$("#themeForm input[value='" + UserInfo.Theme + "']").attr("checked", true);
+			$("#themeForm input[value='" + UserInfo.Theme + "']").prop("checked", true);
 		}});
 	});
 	
@@ -746,7 +746,7 @@ function hideMask () {
 	});
 
 	// 禁止双击选中文字
-	$("#notebook, #newMyNote, #myProfile, #topNav, #notesAndSort", "#leanoteNavTrigger").bind("selectstart", function(e) {
+	$("#notebook, #newMyNote, #myProfile, #topNav, #notesAndSort", "#leanoteNavTrigger").on("selectstart", function(e) {
 		e.preventDefault();
 		return false;
 	});

@@ -227,14 +227,22 @@ function _ajaxCallback(ret, successFunc, failureFunc) {
 		}
 	}
 }
+// http错误(4xx/5xx)或解析失败时的操作
+// 必须触发failureFunc; 没有该回调时保留可见的失败提示, 不能静默
+function _ajaxFailure(ret, failureFunc) {
+	if(typeof failureFunc == "function") {
+		failureFunc(ret);
+	} else {
+		alert("error!")
+	}
+}
+
 function _ajax(type, url, param, successFunc, failureFunc, async) {
 	// log("-------------------ajax:");
 	// log(url);
 	// log(param);
 	if(typeof async == "undefined") {
 		async = true;
-	} else {
-		async = false;
 	}
 	return $.ajax({
 		type: type,
@@ -245,7 +253,7 @@ function _ajax(type, url, param, successFunc, failureFunc, async) {
 			_ajaxCallback(ret, successFunc, failureFunc);
 		},
 		error: function(ret) {
-			_ajaxCallback(ret, successFunc, failureFunc);
+			_ajaxFailure(ret, failureFunc);
 		}
 	});
 }
@@ -285,21 +293,19 @@ function ajaxPostJson(url, param, successFunc, failureFunc, async) {
 	// 默认是异步的
 	if(typeof async == "undefined") {
 		async = true;
-	} else {
-		async = false;
 	}
 	$.ajax({
 	    url : url,
 	    type : "POST",
 	    contentType: "application/json; charset=utf-8",
-	    datatype: "json",
+	    dataType: "json",
 	    async: async,
 	    data : JSON.stringify(param),
 	    success : function(ret, stats) {
 			_ajaxCallback(ret, successFunc, failureFunc);
 	    },
 		error: function(ret) {
-			_ajaxCallback(ret, successFunc, failureFunc);
+			_ajaxFailure(ret, failureFunc);
 		}
 	});
 }
