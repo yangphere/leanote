@@ -13,7 +13,7 @@
 - Create/Modify: focused test and smoke scripts under `scripts/`
 - Modify: application version source and package metadata
 
-- [ ] 为 Go 单元/静态检查、Mongo 集成、Node build/test、Chromium E2E、生成物漂移、package smoke 和 PDF smoke 提供非交互命令。
+- [ ] 为 Go 单元/静态检查、Mongo 集成、Node build/test、Chromium E2E、生成物漂移、package smoke 和 PDF smoke 提供非交互命令，并定义真实 Chrome、Edge、Firefox、Safari 当前及前一主版本 release smoke 的记录命令或人工环境入口。
 - [ ] 固定单一机器可读版本来源，增加 tag 与应用版本一致性检查。
 - [ ] 证明命令在干净 checkout、无用户 profile 和仅声明服务的环境运行。
 - [ ] 为每类命令设置合理超时并保留失败退出码，不用包装脚本吞错。
@@ -72,6 +72,7 @@
 - [ ] 在 PR 模式运行全部 job，确认每个必需门槛真实执行且没有零测试假绿。
 - [ ] 在测试 tag 演练 Release/GHCR，下载 tarball和 pull 镜像后独立复验健康、上传和 PDF。
 - [ ] 检查工作流权限、缓存、timeout、artifact 留存和日志脱敏。
+- [ ] 核对每个发布候选的真实四浏览器当前/前一版本 smoke 记录，确认 commit、产品/完整版本、OS、覆盖范围、认证/错误门禁和结果齐全；Chromium 不得替代 Chrome、Edge 或 Safari。
 - [ ] 更新 README/部署说明中的支持矩阵、配置、卷、架构限制及“无自动生产部署”边界。
 - [ ] 复核 diff 无 `.travis.yml` 残留、旧交付脚本假设或敏感文件。
 

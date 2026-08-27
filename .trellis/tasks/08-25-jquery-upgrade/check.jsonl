@@ -1,3 +1,11 @@
-{"file": ".trellis/tasks/08-25-jquery-upgrade/prd.md", "reason": "检查生产无 jQuery 1.9、无 migrate、AJAX/事件/插件错误可见。"}
-{"file": ".trellis/tasks/08-25-jquery-upgrade/design.md", "reason": "检查没有双 jQuery 或永久兼容 helper。"}
-{"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "核对 jQuery 子任务不得提前升级 Bootstrap/TinyMCE。"}
+{"file": ".trellis/tasks/08-25-jquery-upgrade/prd.md", "reason": "Review public-URL preservation, 3.7.1-only runtime, explicit error behavior, E-TM boundary and observable acceptance."}
+{"file": ".trellis/tasks/08-25-jquery-upgrade/design.md", "reason": "Review one-runtime asset flow, production-versus-diagnostic separation and stop conditions."}
+{"file": ".trellis/tasks/08-25-jquery-upgrade/implement.md", "reason": "Review red-test ordering, isolated E2E preconditions, validation coverage and rollback points."}
+{"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "Verify no Bootstrap/TinyMCE scope drift and inherited browser/E2E requirements remain satisfied."}
+{"file": ".trellis/tasks/archive/2026-08/08-25-frontend-build-chain/prd.md", "reason": "Verify the manifest extension preserves D atomicity, generated-resource and strict smoke contracts."}
+{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "Verify generated resources, Migrate exclusion and browser support obey the accepted architecture decision."}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/prd.md", "reason": "Verify public URL, API/data and parent-track compatibility invariants are not weakened."}
+{"file": ".github/workflows/regression-baseline.yml", "reason": "Verify PR/push runs the business gate inside the same isolated harness and only uploads sanitized summaries."}
+{"file": "app/tests/README.md", "reason": "Verify the documented test fixture lifecycle remains the sole base for write-capable browser flows."}
+{"file": "conf/app.conf", "reason": "Verify the test-mode configuration remains loopback-bound and selects the isolated database."}
+{"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "Verify release browser evidence is consistent with the root compatibility matrix."}

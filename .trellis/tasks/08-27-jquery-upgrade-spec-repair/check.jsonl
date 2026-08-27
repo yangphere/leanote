@@ -1,0 +1,5 @@
+{"file": ".trellis/tasks/08-25-jquery-upgrade/prd.md", "reason": "Verify every audit finding has a fail-closed, observable acceptance criterion."}
+{"file": ".trellis/tasks/08-25-jquery-upgrade/design.md", "reason": "Verify the marker route is test-only and cannot be confused with production identity."}
+{"file": ".github/workflows/regression-baseline.yml", "reason": "Verify the future business E2E is a real PR/push gate in the shared harness lifecycle."}
+{"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "Verify Chrome and Edge remain explicit current-and-previous-version requirements."}
+{"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "Verify release evidence does not substitute Chromium for real branded browsers."}

@@ -14,7 +14,7 @@ CI 按可并行 job 拆为 Go 单元/静态检查矩阵、MongoDB 8.0 集成、N
 - Go：1.26、1.27 矩阵；`go.mod` 最低 1.26。
 - Node：24.x，使用 `npm ci`；缓存键包含 lockfile 与 runner 架构。
 - MongoDB：官方 8.0 service/container，等待真实 ping 后导入最小测试数据。
-- 浏览器：`@playwright/test` 的 Chromium 是阻塞 E2E。Firefox/Safari 当前及前一主版本属于发布前 smoke 证据，Safari 必须在真实 Safari 环境验证。
+- 浏览器：`@playwright/test` 的 Chromium 是阻塞 E2E。真实 Chrome、Edge、Firefox、Safari 的当前及前一主版本属于发布前 smoke 证据；Safari 必须在真实 Safari 环境验证，Playwright Chromium 不能代替 Chrome 或 Edge。每项证据记录提交 SHA、浏览器产品/完整版本、OS、覆盖范围、认证/错误门禁和结果，且不得包含认证材料或页面内容。
 
 所有 job 有超时和取消同分支旧 run 的 concurrency group。失败时只上传 allowlisted 脱敏测试摘要与脱敏服务健康摘要，最长保留 7 天；禁止上传原始 Playwright trace/HTML report、浏览器 screenshot/video、storage state、cookie、认证头、页面正文或未脱敏服务日志。摘要只包含工具/运行版本、阶段、页面 URL、资源路径、状态码、错误类别、服务 readiness/exit code 等可定位字段。唯一受控例外是手工 `record-export-pdf` 的 Golden JSON：仅在 `workflow_dispatch` 上传该单一文件，最长保留 7 天，不得包含账号、Cookie、认证头或页面正文。
 

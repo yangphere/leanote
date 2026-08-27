@@ -5,7 +5,7 @@
 - 本协调任务不直接修改生产代码。
 - 子任务严格按 jQuery → Bootstrap → TinyMCE 执行。
 - 每个子任务均回放 G 的契约套件与 D 的生成资源门禁。
-- Playwright 依赖、`build-smoke`/`business` Chromium projects、安装命令和服务/账号环境由 D 提供；E 增加固定的 `test:e2e` 脚本与 `tests/e2e/business/` 用例，只复用该配置和版本，不另建配置或依赖。所有报告只保留脱敏摘要。
+- Playwright 依赖、`build-smoke`/`business` Chromium projects、安装命令和 test-mode 服务/账号/run-token 环境由 D/E-jQ 共同收敛；E 增加固定的 `test:e2e` 脚本与 `tests/e2e/business/` 用例，只复用该配置和版本，不另建配置或依赖。所有报告只保留脱敏摘要。
 
 ### Task 1：启动前核对
 
@@ -17,7 +17,7 @@
 
 - [ ] 检查 jQuery 3.7.1、开发期 migrate 诊断结果和生产 bundle 无 migrate。
 - [ ] 运行构建、JS 测试、Chromium E2E、Golden 与资源漂移检查。
-- [ ] 先运行 D 的 `npm run test:e2e:build`，再运行 E-owned 的 `npm run test:e2e`（`--project=business`）；两者均使用同一 Playwright 版本、配置和 G fixture，且 build-smoke 不发现 business 测试。
+- [ ] 先运行 D 的 `npm run test:e2e:build`，再运行 E-owned 的 `npm run test:e2e`（`--project=business`）；两者均使用同一 Playwright 版本、配置、test-mode fixture 与 run token，且 build-smoke 不发现 business 测试。
 - [ ] 只有全部通过后允许 Bootstrap 子任务进入实现。
 
 ### Task 3：验收 Bootstrap 子任务
@@ -37,8 +37,8 @@
 
 - [ ] 从干净 checkout 执行 `npm ci && npm run build && npm test`，构建后零 diff。
 - [ ] 运行 Go/Golden/USN/所有权套件，确认前端变更没有后端契约差异。
-- [ ] 在 Chromium 运行完整 E2E，在 Firefox/Safari 运行发布 smoke 并记录版本与结果。
-- [ ] 组合发布门禁复用 D 的 Chromium 安装、`test:e2e:build` 与 E 的 `test:e2e`；仅上传脱敏摘要，删除原始 trace/HTML report、截图/视频、storage state、cookie、认证头、页面正文和未脱敏服务日志，artifact 保留不超过 7 天。Firefox/Safari 仅在真实环境运行发布 smoke，不把 Chromium 结果冒充 Safari。
+- [ ] 在 Chromium 运行完整 E2E；在真实 Chrome、Edge、Firefox、Safari 的当前及前一主版本运行发布 smoke，并记录产品、完整版本、OS、commit、覆盖范围、认证/错误门禁和结果。
+- [ ] 组合发布门禁复用 D 的 Chromium 安装、`test:e2e:build` 与 E 的 `test:e2e`；仅上传脱敏摘要，删除原始 trace/HTML report、截图/视频、storage state、cookie、认证头、页面正文和未脱敏服务日志，artifact 保留不超过 7 天。真实 Safari 是 Safari 唯一证据，Chromium 不得冒充 Chrome、Edge 或 Safari。
 - [ ] 确认控制台无未处理异常、静态资源 404、migrate 警告。
 - [ ] 确认所有生产代码变更都能归属到三个实现子任务之一。
 

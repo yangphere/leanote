@@ -1,0 +1,8 @@
+{"file": ".trellis/tasks/08-25-jquery-upgrade/prd.md", "reason": "Repair the write-capable E2E, CI gate and browser evidence requirements."}
+{"file": ".trellis/tasks/08-25-jquery-upgrade/design.md", "reason": "Define the test-mode identity and shared CI lifecycle design."}
+{"file": ".trellis/tasks/08-25-jquery-upgrade/implement.md", "reason": "Order future implementation and validation without starting it now."}
+{"file": "app/tests/README.md", "reason": "The documented test-mode fixture lifecycle establishes the isolation baseline."}
+{"file": "conf/app.conf", "reason": "The loopback-bound test configuration establishes the isolated server baseline."}
+{"file": ".github/workflows/regression-baseline.yml", "reason": "Current build-only E2E invocation is the CI ownership baseline."}
+{"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "Synchronize the shared four-browser compatibility contract."}
+{"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "Synchronize delivery browser evidence and sanitized artifact policy."}

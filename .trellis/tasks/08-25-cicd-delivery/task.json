@@ -26,6 +26,7 @@
     "Dockerfile",
     ".dockerignore",
     "sh/package.sh",
+    "docs/modernization/browser-smoke",
     "docs/modernization-backlog.md"
   ],
   "notes": "首发只支持 Linux/amd64 且必须保留完整 PDF；arm64 后续工作为 MOD-002。",

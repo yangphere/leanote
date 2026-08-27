@@ -16,7 +16,7 @@ Gulp 3 已无法在现代 Node 安装，生产资源依赖手工同步；jQuery 
 - `jquery-migrate` 只在迁移开发阶段用于诊断；最终生产 bundle 不包含它且迁移警告清零。
 - TinyMCE 通过 npm 自托管；仓库只保留第一方插件和仍需 vendoring 的独立脑图子应用。
 - 未编辑即关闭不得触发保存，数据库 HTML 原文保持字节不变。实际编辑并保存时允许明确列出的空白或属性顺序规范化，但 DOM 语义、文本、链接、图片、代码块和第一方插件标记必须等价。
-- 支持 Chrome、Edge、Firefox、Safari 的当前及前一主版本；Chromium E2E 是阻断门禁，Firefox/Safari 是发布前冒烟；不支持 IE。
+- 支持 Chrome、Edge、Firefox、Safari 的当前及前一主版本；Chromium E2E 是 PR/push 阻断门禁，真实 Chrome、Edge、Firefox、Safari 的两版 smoke 是发布前证据，Safari 必须在真实 Safari 环境验证，Chromium 不能代替 Chrome 或 Edge；不支持 IE。
 
 ## Consequences
 
@@ -24,4 +24,3 @@ Gulp 3 已无法在现代 Node 安装，生产资源依赖手工同步；jQuery 
 - Git diff 仍包含生成文件，但任何漂移都可由 CI 发现。
 - 三个库升级可独立评审和回滚；TinyMCE 仍是前端链最高风险阶段。
 - HTML 验收关注数据与语义保真，而不是要求新版编辑器产生与旧版本完全相同的序列化字节。
-
