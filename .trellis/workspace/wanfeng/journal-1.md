@@ -108,3 +108,25 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 5: 完成 jQuery 3.7 升级复审修复
+<!-- trellis-session: v=2 fp=4e25986e1c646c97 -->
+
+**Date**: 2026-08-28
+**Task**: 完成 jQuery 3.7 升级复审修复
+**Branch**: `dev`
+
+### Summary
+
+修复 jQuery 3.7 兼容、Windows harness ABI 与 E2E fail-closed 门禁，并完成真实 Mongo、Revel 与 Playwright 验证。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7500f20` | fix(jquery): 完成 jQuery 3.7 兼容与 E2E 门禁 |
+
+### Status
+
+[OK] **Completed**
