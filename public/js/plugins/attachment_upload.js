@@ -1,7 +1,7 @@
 // upload attachment
 // 依赖note
 var urlPrefix = UrlPrefix;
-define('attachment_upload', ['fileupload'], function(){
+define('attachment_upload', [], function(){
 	// Helper function that formats the file sizes
     function formatFileSize(bytes) {
         if (typeof bytes !== 'number') {
@@ -49,8 +49,8 @@ define('attachment_upload', ['fileupload'], function(){
     setDropStyle("#dropAttach", "#uploadAttach");
     
 	var initUploader = function() {
-	    $('.dropzone .btn-choose-file').click(function() {
-	        $(this).parent().find('input').click();
+	    $('.dropzone .btn-choose-file').on('click', function() {
+	        $(this).parent().find('input').trigger('click');
 	    });
 
 		var $msg = $('#attachUploadMsg');

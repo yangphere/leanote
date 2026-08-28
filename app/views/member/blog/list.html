@@ -148,7 +148,7 @@
 <script>
 $(function() {
 	var postUrl="{{$.userAndBlog.PostUrl}}";
-	$(".url-title").change(function(){
+	$(".url-title").on('change', function(){
 		var $t = $(this);
 		var url = $t.val();
 		var noteId = $t.data('id');

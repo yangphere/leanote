@@ -84,7 +84,7 @@ var C = {
 	},
 	initMoreComments: function() {
 		var self = this;
-		self.commentsMoreO.find("a").click(function(){ 
+self.commentsMoreO.find("a").on('click', function(){
 			if(self.info.pageInfo.TotalPage > self.info.pageInfo.CurPage) {
 				self.commentsMoreO.addClass("hide");
 				self.commentsLoadingO.removeClass("hide");
@@ -214,7 +214,7 @@ var C = {
 		var self = this;
 		
 		// like or not
-		self.likeBtnO.click(function() {
+		self.likeBtnO.on('click', function() {
 			if(!self.visitUserInfo.UserId) {
 				needLogin();
 				return;
@@ -244,7 +244,7 @@ var C = {
 			var form = $(this).closest("li").find("form");
 			if(form.is(":hidden")) {
 				form.show();
-				form.find("textarea").focus();
+				form.find("textarea").trigger('focus');
 			} else {
 				form.hide();
 			}
@@ -259,9 +259,9 @@ var C = {
 			var commentId = $(this).data("comment-id");
 			var $form = $(this).closest("form");
 			var $content = $form.find("textarea");
-			var content = $.trim($content.val());
+			var content = ($content.val() || "").trim();
 			if(!content) {
-				$content.focus();
+				$content.trigger('focus');
 				return;
 			}
 			var t = $(this);
@@ -344,7 +344,7 @@ var C = {
 	weixinQRCodeO: $("#weixinQRCode"),
 	initShare: function() {
 		var self = this;
-		$(".btn-weixin").click(function() {
+		$(".btn-weixin").on('click', function() {
 			if(!self.weixinQRCodeO.html()) {
 				self.weixinQRCodeO.qrcode(location.href);
 			}
@@ -354,7 +354,7 @@ var C = {
 	        });
 		});
 		
-		$(".btn-share").click(function() {
+		$(".btn-share").on('click', function() {
 			var $this = $(this);
 			var map = {"btn-weibo": shareSinaWeibo, "tencent-weibo": shareTencentWeibo, "qq": shareQQ, "renren": shareRenRen};
 			for(var i in map) {

@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { MANIFEST } from '../../../scripts/build/manifest.mjs';
 import { sanitizeSummary } from './sanitized-summary-reporter.mjs';
+import { ensureE2EIdentity } from '../e2e-environment.mjs';
 
 const baseUrl = process.env.LEANOTE_BASE_URL;
 const email = process.env.LEANOTE_E2E_EMAIL;
@@ -38,6 +39,20 @@ test.beforeAll(async () => {
       await writeSummary();
       throw new Error(`${name} is required for build smoke`);
     }
+  }
+  if (!process.env.LEANOTE_E2E_RUN_TOKEN) {
+    summary.stage = 'prerequisite-check:failed';
+    summary.errors.push('missing-LEANOTE_E2E_RUN_TOKEN');
+    await writeSummary();
+    throw new Error('LEANOTE_E2E_RUN_TOKEN is required for build smoke');
+  }
+  try {
+    await ensureE2EIdentity();
+  } catch (error) {
+    summary.stage = 'prerequisite-check:failed';
+    summary.errors.push('runner:identity-preflight');
+    await writeSummary();
+    throw error;
   }
 });
 

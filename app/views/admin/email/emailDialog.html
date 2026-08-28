@@ -49,7 +49,7 @@ overflow-y: scroll;">
 <script>
 var oldEmails = eval("(" + {{json .map.oldEmails}} + ")");
 $(function() {
-	$(".old-emails").change(function() {
+	$(".old-emails").on('change', function() {
 		var subject = $(this).val();
 		var body = oldEmails[subject];
 		if(subject) {
@@ -59,7 +59,7 @@ $(function() {
 		}
 	});
 	
-	$("#submitEmail").click(function(e){
+	$("#submitEmail").on('click', function(e){
 		e.preventDefault();
 		var t = this;
 		$(t).button('loading');

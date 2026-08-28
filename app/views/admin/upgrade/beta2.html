@@ -28,7 +28,7 @@
 {{template "admin/footer.html" .}}
 <script>
 $(function() {
-$("#submit").click(function(e){
+$("#submit").on('click', function(e){
 	e.preventDefault();
 	var t = this;
 	art.confirm("Are you sure to upgrade to v1.0-beta.2", function() {

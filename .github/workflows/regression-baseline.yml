@@ -27,7 +27,7 @@ jobs:
       - name: Vet application packages
         run: go vet ./app/...
       - name: Run DB-independent unit tests
-        run: go test ./app/info/... ./app/lea/... ./app/cmd/... -count=1
+        run: go test ./app/info/... ./app/lea/... ./app/cmd/... ./app/controllers/... -count=1
       - name: Install wkhtmltopdf 0.12.6.1 for ExportPdf replay
         shell: bash
         run: |
@@ -79,7 +79,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p test-results
-          node --input-type=module -e "import fs from 'node:fs/promises'; const summary={tool:{node:process.version,playwright:'1.62.1'},stage:'ci-harness-starting',service:{baseUrl:'http://127.0.0.1:9000',readiness:'unknown',status:null,exitCode:null},auth:{finalUrl:null,authenticated:false},pages:[],resources:[],errors:[]}; await fs.writeFile('test-results/build-smoke-summary.json',JSON.stringify(summary,null,2)+'\\n'); await fs.writeFile('test-results/service-health-summary.json',JSON.stringify({tool:summary.tool,stage:summary.stage,service:summary.service},null,2)+'\\n')"
+          node --input-type=module -e "import fs from 'node:fs/promises'; const summary={tool:{node:process.version,playwright:'1.62.1'},stage:'ci-harness-starting',service:{baseUrl:'http://127.0.0.1:28017',readiness:'unknown',status:null,exitCode:null},auth:{finalUrl:null,authenticated:false},pages:[],resources:[],errors:[]}; await fs.writeFile('test-results/build-smoke-summary.json',JSON.stringify(summary,null,2)+'\\n'); await fs.writeFile('test-results/business-e2e-summary.json',JSON.stringify(summary,null,2)+'\\n'); await fs.writeFile('test-results/service-health-summary.json',JSON.stringify({tool:summary.tool,stage:summary.stage,service:summary.service},null,2)+'\\n')"
       - name: Build Revel CLI from the main module graph
         id: revel-cli
         shell: bash
@@ -91,51 +91,6 @@ jobs:
       - name: Record Revel CLI failure in sanitized summary
         if: always() && steps.revel-cli.outcome == 'failure'
         run: node scripts/ci/update-build-summary.mjs ci-revel-cli revel-cli
-      - name: Start MongoDB 5.0 fixture for build smoke
-        id: mongo-fixture
-        shell: bash
-        run: |
-          docker rm -f leanote-build-smoke-mongo >/dev/null 2>&1 || true
-          docker run -d --rm --name leanote-build-smoke-mongo -p 27017:27017 mongo:5.0
-          deadline=$((SECONDS + 60))
-          while true; do
-            ping="$(docker exec leanote-build-smoke-mongo mongosh --quiet --eval 'db.runCommand({ping:1}).ok' 2>/dev/null || true)"
-            if [ "$(printf '%s' "$ping" | tr -d '[:space:]')" = '1' ]; then break; fi
-            if [ "$SECONDS" -ge "$deadline" ]; then echo 'Mongo ping timeout after 60s' >&2; exit 1; fi
-            sleep 0.5
-          done
-          docker cp mongodb_backup/leanote_install_data leanote-build-smoke-mongo:/
-          docker exec leanote-build-smoke-mongo mongorestore --db leanote --dir /leanote_install_data --drop
-          docker exec leanote-build-smoke-mongo mongorestore --db leanote_test --dir /leanote_install_data --drop
-      - name: Record Mongo fixture failure in sanitized summary
-        if: always() && steps.mongo-fixture.outcome == 'failure'
-        run: node scripts/ci/update-build-summary.mjs ci-mongo-fixture mongo-fixture
-      - name: Start Leanote service for build smoke
-        id: service-start
-        shell: bash
-        run: |
-          rm -f "$RUNNER_TEMP/leanote-build-smoke.exit"
-          nohup setsid bash -c 'revel run -a .; code=$?; printf "%s\\n" "$code" > "$1"; exit "$code"' leanote "$RUNNER_TEMP/leanote-build-smoke.exit" > "$RUNNER_TEMP/leanote-build-smoke.log" 2>&1 &
-          echo $! > "$RUNNER_TEMP/leanote-build-smoke.pid"
-          deadline=$((SECONDS + 120))
-          while true; do
-            if curl --fail --silent --show-error --max-time 3 http://127.0.0.1:9000/login >/dev/null; then break; fi
-            if [ "$SECONDS" -ge "$deadline" ]; then
-              echo 'Leanote service readiness timeout' >&2
-              exit 1
-            fi
-            if ! kill -0 "$(cat "$RUNNER_TEMP/leanote-build-smoke.pid")" 2>/dev/null; then
-              echo 'Leanote service exited before readiness' >&2
-              exit 1
-            fi
-            sleep 1
-          done
-      - name: Record service startup failure in sanitized summary
-        if: always() && steps.service-start.outcome == 'failure'
-        run: node scripts/ci/update-build-summary.mjs ci-service-start service-start
-      - name: Record service readiness in sanitized summary
-        if: steps.service-start.outcome == 'success'
-        run: node scripts/ci/update-build-summary.mjs service-ready runner-error
       - run: npm ci
       - run: npm run build
       - name: Verify generated assets are tracked and clean
@@ -146,44 +101,10 @@ jobs:
       - run: npm test
       - name: Install Playwright Chromium
         run: npm exec -- playwright install chromium
-      - name: Run build resource smoke
-        env:
-          LEANOTE_BASE_URL: http://127.0.0.1:9000
-          LEANOTE_E2E_EMAIL: ${{ secrets.LEANOTE_E2E_EMAIL }}
-          LEANOTE_E2E_PASSWORD: ${{ secrets.LEANOTE_E2E_PASSWORD }}
-        run: npm run test:e2e:build
-      - name: Stop Leanote build smoke harness
-        if: always()
+      - name: Run build smoke and business E2E under the test-mode harness
         shell: bash
         run: |
-          cleanup_failed=0
-          pid=''
-          if [ -f "$RUNNER_TEMP/leanote-build-smoke.pid" ]; then
-            pid="$(cat "$RUNNER_TEMP/leanote-build-smoke.pid")"
-            kill -- -"$pid" >/dev/null 2>&1 || kill "$pid" >/dev/null 2>&1 || true
-            for _ in $(seq 1 20); do
-              if ! kill -0 "$pid" >/dev/null 2>&1; then break; fi
-              sleep 1
-            done
-          fi
-          service_exit_code=''
-          if [ -f "$RUNNER_TEMP/leanote-build-smoke.exit" ]; then
-            service_exit_code="$(cat "$RUNNER_TEMP/leanote-build-smoke.exit")"
-          fi
-          node scripts/ci/update-build-summary.mjs service-stopped runner-error "$service_exit_code" || cleanup_failed=1
-          for _ in $(seq 1 20); do
-            if ! curl --silent --max-time 2 http://127.0.0.1:9000/ >/dev/null 2>&1; then break; fi
-            sleep 1
-          done
-          if curl --silent --max-time 2 http://127.0.0.1:9000/ >/dev/null 2>&1; then
-            node scripts/ci/update-build-summary.mjs ci-cleanup cleanup || cleanup_failed=1
-            cleanup_failed=1
-          fi
-          docker rm -f leanote-build-smoke-mongo >/dev/null 2>&1 || cleanup_failed=1
-          rm -f "$RUNNER_TEMP/leanote-build-smoke.pid" "$RUNNER_TEMP/leanote-build-smoke.log" "$RUNNER_TEMP/leanote-build-smoke.exit" || cleanup_failed=1
-          if [ "$cleanup_failed" -ne 0 ]; then
-            exit 1
-          fi
+          go run ./app/tests/harness/cmd/e2e -- bash -c 'set -e; npm run test:e2e:build; npm run test:e2e'
       - name: Upload sanitized build summary
         if: failure()
         uses: actions/upload-artifact@v4
@@ -191,6 +112,7 @@ jobs:
           name: build-smoke-summary
           path: |
             test-results/build-smoke-summary.json
+            test-results/business-e2e-summary.json
             test-results/service-health-summary.json
           if-no-files-found: ignore
           retention-days: 7

@@ -87,8 +87,17 @@ func (e MongoEnvironment) Down() error {
 	if e.run == nil {
 		e.run = runCommand
 	}
-	_, err := e.run("docker", "rm", "-f", MongoContainerName)
-	return err
+	output, err := e.run("docker", "rm", "-f", MongoContainerName)
+	if err != nil {
+		// Tearing down an environment that was never fully started (or was
+		// already destroyed) is a no-op, not a failure; this keeps signal-time
+		// cleanup idempotent.
+		if strings.Contains(output, "No such container") {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (e MongoEnvironment) waitForPing() error {

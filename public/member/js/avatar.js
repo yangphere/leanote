@@ -1,5 +1,5 @@
 var urlPrefix = UrlPrefix;
-define('avatar', ['fileupload'], function(){
+define('avatar', [], function(){
 	// Helper function that formats the file sizes
     function formatFileSize(bytes) {
         if (typeof bytes !== 'number') {
@@ -45,8 +45,8 @@ define('avatar', ['fileupload'], function(){
     }
     
     setDropStyle("#dropAvatar", "#uploadAvatar");
-    $('.dropzone .btn-choose-file').click(function() {
-        $(this).parent().find('input').click();
+    $('.dropzone .btn-choose-file').on('click', function() {
+        $(this).parent().find('input').trigger('click');
     });
 	var $msg2 = $('#avatarUploadMsg');
     $('#uploadAvatar').fileupload({

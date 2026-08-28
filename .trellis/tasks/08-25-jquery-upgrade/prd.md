@@ -46,7 +46,9 @@
 
 - `jquery-migrate` 不能出现在 manifest、`BUILD_OUTPUTS`、模板、静态目录、生产 bundle 或生产页面请求中。常规 `npm run build` 必须不读取或复制它。
 - 诊断 E2E 必须从本地已锁定包读取 3.6.0，并以 Playwright 路由/临时诊断 bundle 在**同一文档**内紧随 jQuery 核心、先于任何应用或第三方插件脚本执行。诊断字节不得写回仓库或服务静态目录。
-- 诊断必须断言所有测试页面和 iframe 流程的 `JQMIGRATE:` warning 数为零；生产 E2E 同时断言没有 `console.error`、`pageerror`、未处理 rejection、应用拥有资源的 4xx/5xx 或请求失败。不得用过滤 warning、关闭日志或永久 shim 达成通过。
+- 诊断必须断言所有测试页面和 iframe 流程（登录、笔记（含 markdown 加载路径）、album（含真实上传回调）、blog、admin、member、leaui_image 文档）的 `JQMIGRATE:` warning 满足：**第一方来源（含页面内联与模板内联脚本）为零**；第三方来源按清单 §4.1 所有权表逐条登记豁免，且每个登记豁免类别必须在运行中被实际观察到；**任何未登记来源的 warning 一律判定失败**（fail-closed），不得以静默过滤或永久 shim 达成通过。生产 E2E 同时断言没有 `console.error`、`pageerror`、未处理 rejection、应用拥有资源的 4xx/5xx 或请求失败。
+- 生产 business E2E 必须为每类选入的直接 `$.get`/`$.post` 调用（album、leaui、note search、admin/member dialog、blog wrapper）注入受控 4xx/5xx 失败，并断言可观察失败行为（alert、dialog 错误内容、loading 收起）。
+- （2026-08-28 规格变更）原措辞"warning 数为零"与 R-jQ5"上游字节不可补丁"联合不可满足：zTree/slimScroll/bootstrap 等无零告警上游，逐字节 npm dist 亦不可修改。变更为上述"第一方零 + 登记豁免逐条命中 + 未登记即失败"契约，未放松任何第一方要求，并新增未登记来源的 fail-closed 语义。
 
 ### R-jQ5: Third-Party Adaptation Boundary
 
@@ -78,7 +80,7 @@
 - [ ] **AC-jQ4** 受跟踪的兼容性清单覆盖 R-jQ2 的区域、每个实际 Migrate warning 和所有权排除项；第一方适配与第三方替换均有定位、行为说明和回归用例。
 - [ ] **AC-jQ5** Node 静态契约测试证明生产 manifest/output/template 中没有 migrate、私有 1.9.1 iframe 副本或未声明的 jQuery 核心；`npm run build && npm run build && git diff --exit-code` 通过。
 - [ ] **AC-jQ6** `npm run test:e2e:build` 与新的 `business` Chromium E2E 仅在 test-mode harness 的匹配 run token、由实际应用 DB 会话验证的唯一 marker、`leanote_test` 身份响应和已认证的随机化 fixture admin 账号下通过；build 与 business 两个 project 的身份预检均在任何登录前经共享 helper `tests/e2e/e2e-environment.mjs` 执行，business 流程在所有写入或 route 注入前再次确认。marker 缺失/重复/过期、摘要不匹配、数据库错误、非 test mode、非 loopback 或错误凭据均有 fail-closed 回归。业务流覆盖登录、笔记列表/搜索、笔记本/标签、对话框、上传、相册、博客、admin/member 以及 `leaui_image` iframe，写入用例无残留数据。
-- [ ] **AC-jQ7** 诊断 E2E 的 `JQMIGRATE:` warning 为零；生产 E2E 的错误/网络断言为零。每类选入的第一方 AJAX wrapper 至少有一次受控 4xx/5xx/解析失败回归，证明既有失败回调或可见提示被触发而非静默吞掉。
+- [ ] **AC-jQ7** 诊断 E2E：第一方归属的 `JQMIGRATE:` warning 为零；清单 §4.1 登记的第三方豁免类别逐条在运行中被观察到；未登记来源 fail-closed；每条 console warning 与栈归因记录一一配对。生产 E2E 的错误/网络断言为零，且每类选入的第一方直接 AJAX 调用（album、leaui、note search、admin/member dialog、blog wrapper）至少有一次受控 4xx/5xx 注入回归，证明 `.fail()` 分支产生可观察行为而非静默吞掉。
 - [ ] **AC-jQ8** `npm run build && npm test`、D 的资源 smoke、G 的 Golden/USN/page smoke、相关 Go/Node 定向测试均通过；最终 diff 不包含 Bootstrap/TinyMCE 升级、永久兼容层、后端兼容分支或视觉重设计。
 - [ ] **AC-jQ9** Chrome、Edge、Firefox 和真实 Safari 的当前及前一主版本 smoke 按 R-jQ7 的受跟踪记录完成；Chromium E2E 是本任务 PR/push 合并阻断门禁。
 - [ ] **AC-jQ10** 包括 fork PR 的 PR/push workflow 在同一 test-mode harness 中先后运行 build smoke 与 `npm run test:e2e`；账号与 run token 均由 harness 随机生成、mask 后仅传给本次 job，workflow 不读取 E2E GitHub Secrets。business E2E、身份预检、权限预检、数据清理或 harness cleanup 任一失败均使 workflow 失败，artifact 只含脱敏摘要。

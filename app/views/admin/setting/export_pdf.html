@@ -31,7 +31,7 @@
 $(function() {
 	init_validator("#add_user_form");
 	
-	$("#submit").click(function(e){
+	$("#submit").on('click', function(e){
 			e.preventDefault();
 			var t = this;
 			if($("#add_user_form").valid()) {

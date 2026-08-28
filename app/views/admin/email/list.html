@@ -137,10 +137,10 @@
 
 <script>
 $(function() {
-	$(".send-email").click(function() {
+	$(".send-email").on('click', function() {
 		openSendEmailDialog($(this).data("email"));
 	});
-	$(".bulk-send").click(function() {
+	$(".bulk-send").on('click', function() {
 		var emails = [];
 		$(".ck:checked").each(function() {
 			emails.push($(this).data("email"));
@@ -168,12 +168,12 @@ $(function() {
 		});
 	}
 	
-	$(".delete-email").click(function() {
+	$(".delete-email").on('click', function() {
 		var id = $(this).data('id');
 		deleteEmails(id);
 	});
 	
-	$(".bulk-delete").click(function() {
+	$(".bulk-delete").on('click', function() {
 		var ids = [];
 		$(".ck:checked").each(function() {
 			ids.push($(this).data("id"));

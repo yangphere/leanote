@@ -101,7 +101,7 @@ $(function() {
 	});
 	
 	// 提交
-	$("#submitBtn").click(function(e) {
+	$("#submitBtn").on('click', function(e) {
 		e.preventDefault();
 		var data = {
 			noteId: "{{.noteId}}",
@@ -143,7 +143,7 @@ $(function() {
 	$imgSrc = $('#imgSrc');
 	
 	if (imgLen) {
-		$(".btn-select-img").click(function() {
+		$(".btn-select-img").on('click', function() {
 			imgSeq++;
 			imgSeq = imgSeq % imgLen;
 			$imgSrc.attr("src", images[imgSeq]);

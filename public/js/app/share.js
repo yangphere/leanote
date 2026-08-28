@@ -124,15 +124,15 @@ Share.renderShareNotebooks = function(sharedUserInfos, shareNotebooks) {
 		log(self.userNavs);
 	}
 	
-	$(".friend-notebooks").hover(function () {
+	$(".friend-notebooks").on('mouseenter', function () {
 		if (!$(this).hasClass("showIcon")) {
 			$(this).addClass("showIcon");
 		}
-	}, function() {
+	}).on('mouseleave', function() {
 		$(this).removeClass("showIcon");
 	});
 	
-	$(".friend-header i").click(function() {
+	$(".friend-header i").on('click', function() {
 		var $this = $(this);
 		var $tree = $(this).parent().next();
 		if($tree.is(":hidden")) {
@@ -446,12 +446,12 @@ $(function() {
 	// 新建笔记
 	// 1. 直接点击新建 OR
 	// 2. 点击nav for new note
-	$("#newSharedNoteBtn").click(function() {
+	$("#newSharedNoteBtn").on('click', function() {
 		var notebookId = $("#curNotebookForNewSharedNote").attr('notebookId');
 		var userId = $("#curNotebookForNewSharedNote").attr('userId');
 		Note.newNote(notebookId, true, userId);
 	});
-	$("#newShareNoteMarkdownBtn").click(function() {
+	$("#newShareNoteMarkdownBtn").on('click', function() {
 		var notebookId = $("#curNotebookForNewSharedNote").attr('notebookId');
 		var userId = $("#curNotebookForNewSharedNote").attr('userId');
 		Note.newNote(notebookId, true, userId, true);
@@ -529,12 +529,12 @@ $(function() {
 		tpl += "</td></tr>";
 		$("#shareNotebookTable tbody").prepend(tpl);
 		
-		$("#tr" + seq + " #friendsEmail").focus();
+		$("#tr" + seq + " #friendsEmail").trigger('focus');
 	});
 	
 	//-------------------
 	// 发送邀请邮件
-	$("#registerEmailBtn").click(function() {
+	$("#registerEmailBtn").on('click', function() {
 		var content = $("#emailContent").val();
 		var toEmail = $("#toEmail").val();
 		if(!content) {
@@ -580,7 +580,7 @@ function addShareNoteOrNotebook(trSeq) {
 				$(trId).html(tpl);
 			} else {
 				var shareUrl = UrlPrefix + '/register?iu=' + UserInfo.Username;
-				showAlert("#shareMsg", getMsg('friendNotExits', [getMsg("app"), '<input style="background: none;border: 1px solid #ccc;width: 300px;padding: 3px;border-radius: 3px;outline: none;" onclick="$(this).focus().select()" type="text" value="' + shareUrl + '" />']) + '</a> <br /> ' + getMsg("sendInviteEmailToYourFriend") + ', <a href="#" onclick="sendRegisterEmail(\'' + emails + '\')">' + getMsg("send"), "warning");
+				showAlert("#shareMsg", getMsg('friendNotExits', [getMsg("app"), '<input style="background: none;border: 1px solid #ccc;width: 300px;padding: 3px;border-radius: 3px;outline: none;" onclick="$(this).trigger(\'focus\').select()" type="text" value="' + shareUrl + '" />']) + '</a> <br /> ' + getMsg("sendInviteEmailToYourFriend") + ', <a href="#" onclick="sendRegisterEmail(\'' + emails + '\')">' + getMsg("send"), "warning");
 			}
 		}
 	}, trId + " .btn-success");
@@ -591,7 +591,7 @@ function sendRegisterEmail(email) {
 	showDialog2("#sendRegisterEmailDialog", {postShow: function() {
 		$("#emailContent").val(getMsg("inviteEmailBody", [UserInfo.Username, getMsg("app")]));
 		setTimeout(function() {
-			$("#emailContent").focus();
+			$("#emailContent").trigger('focus');
 		}, 500);
 		$("#toEmail").val(email);
 	}});

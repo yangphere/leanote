@@ -34,7 +34,7 @@
 $(function() {
 	init_validator("#data_form");
 	
-	$("#submit").click(function(e){
+	$("#submit").on('click', function(e){
 			e.preventDefault();
 			var t = this;
 			if($("#data_form").valid()) {

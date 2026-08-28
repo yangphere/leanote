@@ -22,7 +22,7 @@ define('tips', [], function() {
 
     var view = {
         init: function () {
-            $("#tipsBtn").click(function() {
+            $("#tipsBtn").on('click', function() {
                 $tpl.modal({show: true});
             });
         }

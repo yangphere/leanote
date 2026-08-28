@@ -55,7 +55,7 @@
 $(function() {
 // 第三方账号设置
 var acountVd = new vd.init("#formData");
-$("#accountBtn").click(function(e) {
+$("#accountBtn").on('click', function(e) {
 	e.preventDefault();
 	if(!acountVd.valid()) {
 		return;

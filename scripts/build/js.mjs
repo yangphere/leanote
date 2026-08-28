@@ -5,6 +5,11 @@ import { resolveRepoPath } from './manifest.mjs';
 
 export async function buildJavaScript(entry, root, stagingRoot) {
   if (!Array.isArray(entry.inputs) || entry.inputs.length === 0) throw new Error(`empty JavaScript inputs for ${entry.name}`);
+  const guardedInputs = new Set(entry.amdGuard ?? []);
+  const knownInputs = new Set(entry.inputs);
+  for (const guarded of guardedInputs) {
+    if (!knownInputs.has(guarded)) throw new Error(`amdGuard input is not declared for ${entry.name}: ${guarded}`);
+  }
   const chunks = [];
   for (const relative of entry.inputs) {
     const sourcePath = resolveRepoPath(root, relative);
@@ -29,7 +34,13 @@ export async function buildJavaScript(entry, root, stagingRoot) {
       legalComments: 'none',
       sourcefile: relative,
     });
-    chunks.push(result.code);
+    let code = result.code;
+    if (guardedInputs.has(relative)) {
+      // Shadow `define` so upstream AMD detections resolve to the browser-globals
+      // branch while the bundle executes as a plain script.
+      code = `(function(define){${code}})(void 0);`;
+    }
+    chunks.push(code);
   }
   const outputPath = resolveRepoPath(stagingRoot, entry.output);
   if (!chunks.some((chunk) => chunk.trim())) throw new Error(`empty JavaScript bundle for ${entry.name}`);

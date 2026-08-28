@@ -3,6 +3,16 @@ import path from 'node:path';
 
 const posix = (...parts) => parts.join('/').replaceAll('\\', '/').replace(/^\.\//, '');
 
+// blueimp-file-upload is consumed verbatim from the npm dist (see
+// docs/modernization/fileupload-provenance.md). The AMD branches of its
+// factory wrappers must stay dormant inside concatenated bundles, so the
+// build wraps these inputs with a `define` shadow (scripts/build/js.mjs).
+const fileuploadInputs = [
+  'node_modules/blueimp-file-upload/js/vendor/jquery.ui.widget.js',
+  'node_modules/blueimp-file-upload/js/jquery.iframe-transport.js',
+  'node_modules/blueimp-file-upload/js/jquery.fileupload.js',
+];
+
 const js = [
   { name: 'jquery-runtime', kind: 'js', transform: 'concat', inputs: [
     'node_modules/jquery/dist/jquery.min.js',
@@ -20,19 +30,19 @@ const js = [
     'public/js/app/tag.js', 'public/js/app/notebook.js', 'public/js/app/share.js',
   ], output: 'public/js/app.min.js', url: '/js/app.min.js' },
   { name: 'plugins', kind: 'js', transform: 'esbuild-concat', inputs: [
+    ...fileuploadInputs,
     'public/js/plugins/note_info.js', 'public/js/plugins/tips.js',
     'public/js/plugins/history.js', 'public/js/plugins/attachment_upload.js',
     'public/js/plugins/editor_drop_paste.js', 'public/js/plugins/main.js',
-    'public/js/plugins/libs-min/fileupload.js',
-  ], output: 'public/js/plugins/main.min.js', url: '/public/js/plugins/main.min.js' },
+  ], amdGuard: fileuploadInputs, output: 'public/js/plugins/main.min.js', url: '/public/js/plugins/main.min.js' },
   { name: 'markdown', kind: 'js', transform: 'esbuild-concat', inputs: [
     'public/js/require.js', 'public/md/main-v2.min.js',
   ], output: 'public/js/markdown-v2.min.js', url: '/js/markdown-v2.min.js' },
   { name: 'album', kind: 'js', transform: 'esbuild-concat', inputs: [
     'node_modules/jquery/dist/jquery.min.js', 'public/js/bootstrap-min.js',
-    'public/js/plugins/libs-min/fileupload.js', 'public/js/jquery.pagination.js',
+    ...fileuploadInputs, 'public/js/jquery.pagination.js',
     'public/album/js/main.js',
-  ], output: 'public/album/js/main.all.js', url: '/public/album/js/main.all.js' },
+  ], amdGuard: fileuploadInputs, output: 'public/album/js/main.all.js', url: '/public/album/js/main.all.js' },
 ];
 
 const css = [
@@ -93,6 +103,13 @@ export function validateManifest(input = manifest) {
     if (outputs.includes(output)) throw new Error(`duplicate output: ${output}`);
     outputs.push(output);
     for (const source of entry.inputs ?? []) validateRelative(source, 'input');
+    if (entry.amdGuard !== undefined) {
+      if (!Array.isArray(entry.amdGuard)) throw new Error(`amdGuard must be an array for ${entry.name}`);
+      for (const guarded of entry.amdGuard) {
+        validateRelative(guarded, 'amdGuard input');
+        if (!(entry.inputs ?? []).includes(guarded)) throw new Error(`amdGuard input is not declared for ${entry.name}: ${guarded}`);
+      }
+    }
   }
   if (outputs.length !== 34) throw new Error(`expected 34 outputs, got ${outputs.length}`);
   for (const root of input.i18nScanRoots) validateRelative(root, 'scan root');

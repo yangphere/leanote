@@ -128,7 +128,7 @@ Tag.appendTag = function(tag, save) {
 			return;
 		}
 	} else {
-		tag = $.trim(tag);
+		tag = tag == null ? "" : String(tag).trim();
 		text = tag;
 		if(!text) {
 			return;
@@ -272,16 +272,16 @@ Tag.addTagNav = function(newTag) {
 // 事件
 $(function() {
 	// tag
-	$("#addTagTrigger").click(function() {
+	$("#addTagTrigger").on('click', function() {
 		$(this).hide();
-		$("#addTagInput").show().focus().val("");
+		$("#addTagInput").show().trigger('focus').val("");
 	});
 	
-	$("#addTagInput").click(function(event) {
+	$("#addTagInput").on('click', function(event) {
 		showTagList(event);
 	});
 	
-	$("#addTagInput").blur(function() {
+	$("#addTagInput").on('blur', function() {
 		var val = $(this).val();
 		if(val) {
 			Tag.appendTag(val, true);
@@ -292,7 +292,7 @@ $(function() {
 		$("#addTagInput").hide();
 		// revertTagStatus();
 	});
-	$('#addTagInput').keydown(function(e) {
+	$('#addTagInput').on('keydown', function(e) {
 		if (e.keyCode == 13) {
 			hideTagList();
 			// 如果有值, 再生成, 没值直接隐藏
@@ -305,7 +305,7 @@ $(function() {
 		}
 	});
 	// 点击下拉时也会触发input的blur事件
-	$("#tagColor li").click(function(event) {
+	$("#tagColor li").on('click', function(event) {
 		var a;
 		if($(this).attr("role")) {
 			a = $(this).find("span");
@@ -319,7 +319,7 @@ $(function() {
 	});
 	// 这是个问题, 为什么? 捕获不了事件?, input的blur造成
 	/*
-	$(".label").click(function(event) {
+	$(".label").on('click', function(event) {
 		var a = $(this);
 		Tag.appendTag({
 			classes : a.attr("class"),
@@ -336,7 +336,7 @@ $(function() {
 	//
 	function deleteTag() {
 		$li = $(this).closest('li');
-		var tag = $.trim($li.data("tag"));
+		var tag = ($li.data("tag") || "").trim();
 		if(confirm("Are you sure ?")) {
 			ajaxPost("/tag/deleteTag", {tag: tag}, function(re) {
 				if(reIsOk(re)) {
@@ -355,7 +355,7 @@ $(function() {
 	// nav 标签搜索
 	function searchTag() {
 		var $li = $(this).closest('li');
-		var tag = $.trim($li.data("tag"));
+		var tag = ($li.data("tag") || "").trim();
 		// tag = Tag.mapCn2En[tag] || tag;
 		
 		// 学习changeNotebook

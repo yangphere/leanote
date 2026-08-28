@@ -81,7 +81,7 @@ $.extend(LEA, {
 
 function trimLeft(str, substr) {
 	if(!substr || substr == " ") {
-		return $.trim(str);
+		return str == null ? "" : String(str).trim();
 	}
 	while(str.indexOf(substr) == 0) {
 		str = str.substring(substr.length);
@@ -776,7 +776,7 @@ function showMsg2(id, msg, timeout) {
 function showAlert(id, msg, type, id2Focus) {
 	$(id).html(msg).removeClass("alert-danger").removeClass("alert-success").removeClass("alert-warning").addClass("alert-" + type).show();
 	if(id2Focus) {
-		$(id2Focus).focus();
+		$(id2Focus).trigger('focus');
 	}
 }
 function hideAlert(id, timeout) {
@@ -974,7 +974,7 @@ function saveBookmark() {
 				}
 			} else if($p.is("p")) {
 				var $children = $p.children();
-				if($children.length == 1 && $.trim($p.text()) == "") {
+				if($children.length == 1 && $p.text().trim() == "") {
 					var $c = $children.eq(0);
 					if($c.attr("id") == LEA.bookmark.id + "_start") {
 						LEA.hasBookmark = false;
@@ -1034,7 +1034,7 @@ var vd = {
 	    return result;
 	},
 	isBlank: function(o) { 
-		return !$.trim(o);
+		return !(o == null ? "" : String(o).trim());
 	},
 	has_special_chars: function(o) {
 		return /['"#$%&\^<>\?*]/.test(o);

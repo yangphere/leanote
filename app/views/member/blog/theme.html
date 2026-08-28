@@ -143,7 +143,7 @@
 var urlPrefix = "{{.siteUrl}}";
 $(function() {
 // 使用主题
-$(".btn-active").click(function() {
+$(".btn-active").on('click', function() {
 	var id = $(this).parent().data('id');
 	var t = $(this);
 	t.button("loading");
@@ -159,14 +159,14 @@ $(".btn-active").click(function() {
 });
 
 // 导出主题
-$(".btn-export").click(function() {
+$(".btn-export").on('click', function() {
 	var id = $(this).parent().data('id');
 	var t = $(this);
 	window.open("/member/blog/exportTheme?themeId=" + id);
 });
 
 // 删除主题
-$(".btn-delete").click(function() {
+$(".btn-delete").on('click', function() {
 	var id = $(this).parent().data('id');
 	var t = $(this);
 	art.confirm(getMsg("Are you sure ?"), function() {
@@ -184,7 +184,7 @@ $(".btn-delete").click(function() {
 });
 
 // 安装主题
-$(".btn-install").click(function() {
+$(".btn-install").on('click', function() {
 	var id = $(this).parent().data('id');
 	var t = $(this);
 	art.confirm(getMsg("Are you sure to install it ?"), function() {
@@ -203,7 +203,7 @@ $(".btn-install").click(function() {
 
 {{if .isAdmin}}
 // 只有管理员才有公开主题
-$(".btn-public").click(function() {
+$(".btn-public").on('click', function() {
 	var id = $(this).parent().data('id');
 	var t = $(this);
 	art.confirm(getMsg("Are you sure ?"), function() {
@@ -224,6 +224,9 @@ $(".btn-public").click(function() {
 });
 </script>
 
+<script src="/js/plugins/libs-min/jquery.ui.widget.js"></script>
+<script src="/js/plugins/libs-min/jquery.iframe-transport.js"></script>
+<script src="/js/plugins/libs-min/jquery.fileupload.js"></script>
 <script src="/js/require.js"></script>
 <script>
 // 导入主题
@@ -231,7 +234,6 @@ require.config({
 	baseUrl: '/public',
     paths: {
     	'import_theme': 'member/js/import_theme',
-    	'fileupload': 'js/plugins/libs-min/fileupload',
     },
 });
 $(function() {

@@ -5,7 +5,7 @@ function reIsOk(re) {
 function showAlert(id, msg, type, id2Focus) {
 	$(id).html(msg).removeClass("alert-danger").removeClass("alert-success").removeClass("alert-warning").addClass("alert-" + type).show();
 	if(id2Focus) {
-		$(id2Focus).focus();
+		$(id2Focus).trigger('focus');
 	}
 }
 function hideAlert(id, timeout) {
@@ -18,12 +18,16 @@ function hideAlert(id, timeout) {
 	}
 }
 function ajaxGet(url, param, func) {
-	$.get(url, param, func);
+	$.get(url, param, func).fail(function() {
+		alert("error!");
+	});
 }
 function ajaxPost(url, param, func) {
-	$.post(url, param, func);
+	$.post(url, param, func).fail(function() {
+		alert("error!");
+	});
 }
-function goLogin(){ 
+function goLogin(){
 	var loginUrl = urlPrefix + '/login?from=' + encodeURI(location.href);
 	location.href = loginUrl;
 }
@@ -137,8 +141,8 @@ function getDateDiff(dateTimeStamp){
 
 function weixin() {
 	var local=window.location.href;
-	var title = $.trim($(".title").text());
-	var desc = $.trim($("#desc").text());
+	var title = $(".title").text().trim();
+	var desc = $("#desc").text().trim();
 	var imgUrl = $("#content img").eq(0).attr('src');
 	window.shareData = { 
 	   "imgUrl": imgUrl, 

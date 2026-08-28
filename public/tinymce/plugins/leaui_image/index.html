@@ -154,6 +154,8 @@ var G = {};
 G.imageSrcPrefix = 'upload';
 G.perPageItems = 12;
 G.maxSelected = 1;
+// 独立打开(非 iframe)时没有父页提供 UrlPrefix, 置空使图片走相对路径
+var UrlPrefix = '';
 /*
 var url = location.href;
 var classes = "";

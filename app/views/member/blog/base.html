@@ -23,7 +23,7 @@
 							<form id="formLogo" action="/file/uploadBlogLogo" method="post"
 								enctype="multipart/form-data" target="logoTarget">
 								<input type="file" class="form-control" id="logo2" name="file"
-									onChange='$("#formLogo").submit();' /> 
+									onChange='$("#formLogo").trigger("submit");' />
 								<div id="logoImg"
 									{{if .userBlog.Logo }}	
 									{{else}}
@@ -72,12 +72,12 @@
 <script>
 var urlPrefix = "{{.siteUrl}}";
 $(function() {
-	$("#deleteLogo").click(function() {
+	$("#deleteLogo").on('click', function() {
 		$("#Logo").val("");
 		$("#logoImg").hide();
 	});
 	// 基本设置
-	$("#baseBtn").click(function() {
+	$("#baseBtn").on('click', function() {
 		var data = {
 			Title : $("#Title").val(),
 			SubTitle : $("#SubTitle").val(),

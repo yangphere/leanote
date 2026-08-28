@@ -324,7 +324,7 @@ Note.genDesc = function(content) {
 
 	// 将html tags全部删除
 	content = content.replace(/<\/?[^>]+(>|$)/g, "");
-	content = $.trim(content);
+	content = content == null ? "" : String(content).trim();
 	// pre下text()会将&lt; => < &gt; => >
 	content = content.replace(/</g, "&lt;");
 	content = content.replace(/>/g, "&gt;");
@@ -1186,7 +1186,7 @@ Note.newNote = function(notebookId, isShare, fromUserId, isMarkdown) {
 
 	Note.selectTarget($(tt('[noteId="?"]', note.NoteId)));
 
-	$("#noteTitle").focus();
+	$("#noteTitle").trigger('focus');
 	
 	Note.renderNote(note);
 	Note.renderNoteContent(note);
@@ -1342,7 +1342,7 @@ Note.shareNote = function(target) {
 	showDialog("dialogShareNote", {title: getMsg("shareToFriends") + "-" + title});
 	
 	setTimeout(function() {
-		$("#friendsEmail").focus();
+		$("#friendsEmail").trigger('focus');
 	}, 500);
 	
 	var noteId = $(target).attr("noteId");
@@ -1355,13 +1355,13 @@ Note.download = function(url, params) {
 	for (var i in params) {
 		inputs += '<input name="' + i + '" value="' + params[i] + '">';
 	}
-	$('<form target="mdImageManager" action="' + url + '" method="GET">' + inputs + '</form>').appendTo('body').submit().remove();
+	$('<form target="mdImageManager" action="' + url + '" method="GET">' + inputs + '</form>').appendTo('body').trigger('submit').remove();
 };
 
 // 导出成PDF
 Note.exportPDF = function(target) {
 	var noteId = $(target).attr("noteId");
-	$('<form target="mdImageManager" action="/note/exportPdf" method="GET"><input name="noteId" value="' + noteId + '"/></form>').appendTo('body').submit().remove();
+	$('<form target="mdImageManager" action="/note/exportPdf" method="GET"><input name="noteId" value="' + noteId + '"/></form>').appendTo('body').trigger('submit').remove();
 };
 
 //--------------
@@ -1472,6 +1472,15 @@ Note.searchNote = function() {
 		} else {
 			// abort的
 		}
+	}).fail(function(jqXHR, textStatus) {
+		// abort的是被新搜索主动取消的旧请求, 不是失败
+		if(textStatus === "abort") {
+			return;
+		}
+		hideLoading();
+		Notebook.hideNoteAndEditorLoading();
+		Note.lastSearch = null;
+		alert("error!");
 	});
 	// Note.lastSearch.abort();
 };
@@ -1724,7 +1733,7 @@ Note.toggleReadOnly = function(needSave) {
 	$editor.addClass('read-only').removeClass('all-tool'); // 不要全部的
 
 	// 不可写
-	$('#editorContent').attr('contenteditable', false);
+	$('#editorContent').attr('contenteditable', 'false');
 
 	// markdown
 	$('#mdEditor').addClass('read-only');
@@ -1766,7 +1775,7 @@ LEA.toggleWriteable = Note.toggleWriteable = function(isFromNewNote) {
 	// $('#infoToolbar').hide();
 	$('#editor').removeClass('read-only');
 	$('#note').removeClass('read-only-editor');
-	$('#editorContent').attr('contenteditable', true);
+	$('#editorContent').attr('contenteditable', 'true');
 
 	// markdown
 	$('#mdEditor').removeClass('read-only');
@@ -1958,12 +1967,12 @@ var Attach = {
 	init: function() {
 		var self = this;
 		// 显示attachs
-		$("#showAttach").click(function() {
+		$("#showAttach").on('click', function() {
 			// self._bookmark = tinymce.activeEditor.selection.getBookmark();
 			self.renderAttachs(Note.curNoteId);
 		});
 		// 防止点击隐藏
-		self.attachListO.click(function(e) {
+		self.attachListO.on('click', function(e) {
 			e.stopPropagation();
 		});
 		// 删除
@@ -1990,7 +1999,7 @@ var Attach = {
 			Note.download("/attach/download", {attachId:attachId});
 		});
 		// 下载全部
-		self.downloadAllBtnO.click(function() {
+		self.downloadAllBtnO.on('click', function() {
 			Note.download("/attach/downloadAll", {noteId: Note.curNoteId});
 		});
 
@@ -2397,7 +2406,7 @@ Note.batch = {
 		});
 
 		// ctrl + all
-		$body.keydown(function (e) {
+		$body.on('keydown', function (e) {
 			if (e.target && e.target.nodeName === 'BODY') {
 				if ((e.ctrlKey || e.metaKey) && e.which === 65) {
 					e.preventDefault();
@@ -2429,7 +2438,7 @@ Note.batch = {
 			!Note.nowIsInShared ? Note.contextmenu.showMenu(e) : Share.contextmenu.showMenu(e);
 		});
 
-		me.$batchMask.find('.batch-info .fa').click(function (e) {
+		me.$batchMask.find('.batch-info .fa').on('click', function (e) {
 			e.preventDefault();
 			e.pageX -= 90;
 			e.pageY += 10;
@@ -2437,7 +2446,7 @@ Note.batch = {
 			// 这导致其它dropdown不能隐藏
 			e.stopPropagation();
 			// 所以
-			$(document).click();
+			$(document).trigger('click');
 			!Note.nowIsInShared ? Note.contextmenu.showMenu(e) : Share.contextmenu.showMenu(e);
 		});
 	},
@@ -2579,11 +2588,11 @@ $(function() {
 	// 新建笔记
 	// 1. 直接点击新建 OR
 	// 2. 点击nav for new note
-	$("#newNoteBtn, #editorMask .note").click(function() {
+	$("#newNoteBtn, #editorMask .note").on('click', function() {
 		var notebookId = $("#curNotebookForNewNote").attr('notebookId');
 		Note.newNote(notebookId);
 	});
-	$("#newNoteMarkdownBtn, #editorMask .markdown").click(function() {
+	$("#newNoteMarkdownBtn, #editorMask .markdown").on('click', function() {
 		var notebookId = $("#curNotebookForNewNote").attr('notebookId');
 		Note.newNote(notebookId, false, "", true);
 	});
@@ -2595,14 +2604,14 @@ $(function() {
 			Note.newNote(notebookId);
 		}
 	});
-	$("#searchNotebookForAdd").click(function(e) {
+	$("#searchNotebookForAdd").on('click', function(e) {
 		e.stopPropagation();
 	});
-	$("#searchNotebookForAdd").keyup(function() {
+	$("#searchNotebookForAdd").on('keyup', function() {
 		var key = $(this).val();
 		Notebook.searchNotebookForAddNote(key);
 	});
-	$("#searchNotebookForList").keyup(function() {
+	$("#searchNotebookForList").on('keyup', function() {
 		var key = $(this).val();
 		Notebook.searchNotebookForList(key);
 	});
@@ -2634,7 +2643,7 @@ $(function() {
 		}
 	});
 	
-	$("#saveBtn").click(function() {
+	$("#saveBtn").on('click', function() {
 		// 只有在这里, 才会force
 		Note.curChangedSaveIt(true);
 	});
@@ -2645,7 +2654,7 @@ $(function() {
 		// 这导致其它dropdown不能隐藏
 		e.stopPropagation();
 		// 所以
-		$(document).click();
+		$(document).trigger('click');
 
 		// 得到ID
 		var noteId = $(this).parent().attr('noteId');
@@ -2662,7 +2671,7 @@ $(function() {
 		// 这导致其它dropdown不能隐藏
 		e.stopPropagation();
 		// 所以
-		$(document).click();
+		$(document).trigger('click');
 
 		var $p = $(this).parent();
 		Note.contextmenu.showMenu(e, $p);
@@ -2670,10 +2679,10 @@ $(function() {
 
 	// readony
 	// 修改
-	$('.toolbar-update').click(function() {
+	$('.toolbar-update').on('click', function() {
 		Note.toggleWriteable();
 	});
-	$("#editBtn").click(function() {
+	$("#editBtn").on('click', function() {
 		Note.toggleWriteableAndReadOnly();
 	});
 
@@ -2703,10 +2712,10 @@ $(function() {
 	var view = localStorage.getItem('viewStyle');
 	Note.toggleView(view);
 	// view 切换
-	$('.view-style').click(function (e) {
+	$('.view-style').on('click', function (e) {
 		Note.toggleView(e);
 	});
-	$('.sorter-style').click(function (e) {
+	$('.sorter-style').on('click', function (e) {
 		Note.setNotesSorter(e);
 	});
 });

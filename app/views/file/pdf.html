@@ -112,7 +112,8 @@ ok();
 {{if .blog.IsMarkdown }}
 <script src="/public/libs/md2html/md2html_for_export.js"></script>
 <script>
-var content = $.trim($("#markdownContent textarea").val());
+var markdownValue = $("#markdownContent textarea").val();
+var content = markdownValue == null ? "" : String(markdownValue).trim();
 md2Html(content, $("#parsedContent"), function(html) {
     $("pre").addClass("prettyprint");
     prettyPrint();

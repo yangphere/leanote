@@ -267,11 +267,11 @@ Notebook.renderNotebooks = function(notebooks) {
 	
 	// 展开/折叠图标
 	var $notebookList = $("#notebookList");
-	$notebookList.hover(function () {
+	$notebookList.on('mouseenter', function () {
 		if(!$(this).hasClass("showIcon")) {
 			$(this).addClass("showIcon");
 		}
-	}, function() {
+	}).on('mouseleave', function() {
 		$(this).removeClass("showIcon");
 	});
 			
@@ -708,7 +708,7 @@ Notebook.shareNotebooks= function(target) {
 	var title = $(target).text();
 	showDialog("dialogShareNote", {title: "分享笔记本给好友-" + title});
 	setTimeout(function() {
-		$("#friendsEmail").focus();
+		$("#friendsEmail").trigger('focus');
 	}, 500);
 	var notebookId = $(target).attr("notebookId");
 	
@@ -957,7 +957,7 @@ $(function() {
 	Notebook.contextmenuSearch = $("#notebookListForSearch li a").contextmenu(notebookListMenu2);
 	
 	// 添加笔记本
-	$("#addNotebookPlus").click(function(e) {
+	$("#addNotebookPlus").on('click', function(e) {
 		e.stopPropagation();
 		Notebook.addNotebook();
 	});

@@ -8,19 +8,11 @@ requirejs.config({
         // life
         'editor_drop_paste': 'js/plugins/editor_drop_paste',
         'attachment_upload': 'js/plugins/attachment_upload',
-        
-        // 'jquery.ui.widget': 'js/plugins/libs-min/jquery.ui.widget',
-        'fileupload': 'js/plugins/libs-min/fileupload',
-        // 'iframe-transport': 'js/plugins/libs-min/jquery.iframe-transport',
 
         'note_info': 'js/plugins/note_info',
         'tips': 'js/plugins/tips',
         'history': 'js/plugins/history',
     },
-    shim: {
-        // life
-        // 'fileupload': {deps: ['jquery.ui.widget', 'iframe-transport']},
-    }
 });
 
 // 异步加载

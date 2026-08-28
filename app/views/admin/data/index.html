@@ -61,7 +61,7 @@
 
 <script>
 $(function() {
-	$(".backup-btn").click(function(){ 
+	$(".backup-btn").on('click', function(){
 		ajaxGet("/adminData/backup", {}, function(ret) {
 			if(ret.Ok) {
 				art.tips("Success");
@@ -72,7 +72,7 @@ $(function() {
 		});
 	});
 	// 还原
-	$(".restore-btn").click(function() {
+	$(".restore-btn").on('click', function() {
 		var createdTime = $(this).data("id");
 		art.confirm("Are you sure? <br />Note. Leanote will do the following steps: <br />1)Backup the current database first. <br />2) And then delete the database. <br />3) Restore database from the selected version.", function() {
 			ajaxGet("/adminData/restore", {createdTime: createdTime}, function(ret) {
@@ -85,7 +85,7 @@ $(function() {
 			});
 		});
 	});
-	$(".delete-btn").click(function() {
+	$(".delete-btn").on('click', function() {
 		var createdTime = $(this).data("id");
 		art.confirm("Are you sure?", function() {
 			ajaxGet("/adminData/delete", {createdTime: createdTime}, function(ret) {
@@ -98,7 +98,7 @@ $(function() {
 			});
 		});
 	});
-	$(".remark").change(function() {
+	$(".remark").on('change', function() {
 		var createdTime = $(this).data("id");
 		var remark = $(this).val();
 		ajaxPost("/adminData/updateRemark", {createdTime: createdTime, remark: remark}, function(ret) {

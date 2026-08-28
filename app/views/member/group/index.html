@@ -112,12 +112,12 @@ var group = {
 	// 添加用户分组
 	addGroupEvent: function() {
 		var self = this;
-		$('.btn-add-group').click(function() {
+		$('.btn-add-group').on('click', function() {
 			ajaxPost("/member/group/addGroup", {title: getMsg("Group Title")}, function(re) {
 				if(reIsOk(re)) {
 					var group = re.Item;
 					self.groupsO.prepend(self.tGroupO.render(group))
-					self.groupsO.find(".group-title").eq(0).focus().select();
+					self.groupsO.find(".group-title").eq(0).trigger('focus').select();
 				}
 			});
 		});

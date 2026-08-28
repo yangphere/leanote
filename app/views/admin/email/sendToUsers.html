@@ -74,7 +74,7 @@ var oldEmails = eval("(" + {{json .map.oldEmails}} + ")");
 $(function() {
 	init_validator("#formContainer");
 	
-	$(".old-emails").change(function() {
+	$(".old-emails").on('change', function() {
 		var subject = $(this).val();
 		var body = oldEmails[subject];
 		if(subject) {
@@ -84,7 +84,7 @@ $(function() {
 		}
 	});
 	
-	$("#submit").click(function(e){
+	$("#submit").on('click', function(e){
 			e.preventDefault();
 			var t = this;
 			if($("#formContainer").valid()) {

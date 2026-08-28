@@ -110,7 +110,7 @@
 
 <script>
 $(function() {
-	$(".change-recommend").click(function() {
+	$(".change-recommend").on('click', function() {
 		var isRecommend = +$(this).data("recommend");
 		var noteId = $(this).data("id");
 		var t = this;

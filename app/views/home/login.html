@@ -79,20 +79,20 @@ $(function() {
 		$("#captchaContainer").html($("#tCaptcha").html());
 	}
 	
-	$("#email").focus();
+	$("#email").trigger('focus');
 	if($("#email").val()) {
-		$("#pwd").focus();
+		$("#pwd").trigger('focus');
 	}
 	function showMsg(msg, id) {
 		$("#loginMsg").html(msg).show();
 		if(id) {
-			$("#" + id).focus();
+			$("#" + id).trigger('focus');
 		}
 	}
 	function hideMsg() {
 		$("#loginMsg").hide();
 	}
-	$("#loginBtn").click(function(e){
+	$("#loginBtn").on('click', function(e){
 		e.preventDefault();
 		var email = $("#email").val();
 		var pwd = $("#pwd").val();
@@ -125,7 +125,7 @@ $(function() {
 				var from = $("#from").val() || "{{.noteUrl}}" || "/note";
 				location.href = from;
 			} else {
-				if(e.Item && $.trim($("#captchaContainer").text()) == "") {
+				if(e.Item && ($("#captchaContainer").text() || "").trim() == "") {
 					$("#captchaContainer").html($("#tCaptcha").html());
 					needCaptcha = true
 				}

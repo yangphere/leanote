@@ -10,70 +10,10 @@
   ],
   "keys": [
     {
-      "key": "Error",
-      "namespace": "blog",
-      "path": "app/views/member/blog/add_single.html",
-      "line": 95
-    },
-    {
-      "key": "Success",
-      "namespace": "blog",
-      "path": "app/views/member/blog/add_single.html",
-      "line": 90
-    },
-    {
-      "key": "Error",
-      "namespace": "blog",
-      "path": "app/views/member/blog/cate.html",
-      "line": 51
-    },
-    {
-      "key": "Error",
-      "namespace": "blog",
-      "path": "app/views/member/blog/cate.html",
-      "line": 64
-    },
-    {
-      "key": "Success",
-      "namespace": "blog",
-      "path": "app/views/member/blog/cate.html",
-      "line": 49
-    },
-    {
       "key": "Are you sure ?",
       "namespace": "blog",
       "path": "app/views/member/blog/single.html",
       "line": 59
-    },
-    {
-      "key": "Error",
-      "namespace": "blog",
-      "path": "app/views/member/blog/single.html",
-      "line": 52
-    },
-    {
-      "key": "Error",
-      "namespace": "blog",
-      "path": "app/views/member/blog/single.html",
-      "line": 65
-    },
-    {
-      "key": "Error",
-      "namespace": "blog",
-      "path": "app/views/member/blog/single.html",
-      "line": 79
-    },
-    {
-      "key": "Success",
-      "namespace": "blog",
-      "path": "app/views/member/blog/single.html",
-      "line": 50
-    },
-    {
-      "key": "Success",
-      "namespace": "blog",
-      "path": "app/views/member/blog/single.html",
-      "line": 62
     },
     {
       "key": "Are you sure ?",
@@ -88,42 +28,6 @@
       "line": 209
     },
     {
-      "key": "Are you sure to install it ?",
-      "namespace": "blog",
-      "path": "app/views/member/blog/theme.html",
-      "line": 190
-    },
-    {
-      "key": "Error",
-      "namespace": "blog",
-      "path": "app/views/member/blog/theme.html",
-      "line": 198
-    },
-    {
-      "key": "Error",
-      "namespace": "blog",
-      "path": "app/views/member/blog/theme.html",
-      "line": 217
-    },
-    {
-      "key": "Success",
-      "namespace": "blog",
-      "path": "app/views/member/blog/theme.html",
-      "line": 195
-    },
-    {
-      "key": "Success",
-      "namespace": "blog",
-      "path": "app/views/member/blog/theme.html",
-      "line": 214
-    },
-    {
-      "key": "Success",
-      "namespace": "blog",
-      "path": "app/views/member/blog/update_abstract.html",
-      "line": 114
-    },
-    {
       "key": "Are you sure to delete",
       "namespace": "blog",
       "path": "app/views/member/blog/update_theme.html",
@@ -136,526 +40,10 @@
       "line": 307
     },
     {
-      "key": "Delete file",
+      "key": "Are you sure to install it ?",
       "namespace": "blog",
-      "path": "app/views/member/blog/update_theme.html",
-      "line": 186
-    },
-    {
-      "key": "Error",
-      "namespace": "blog",
-      "path": "app/views/member/blog/update_theme.html",
-      "line": 292
-    },
-    {
-      "key": "Error",
-      "namespace": "blog",
-      "path": "app/views/member/blog/update_theme.html",
-      "line": 366
-    },
-    {
-      "key": "File exists",
-      "namespace": "blog",
-      "path": "app/views/member/blog/update_theme.html",
-      "line": 183
-    },
-    {
-      "key": "Filename",
-      "namespace": "blog",
-      "path": "app/views/member/blog/update_theme.html",
-      "line": 178
-    },
-    {
-      "key": "No images",
-      "namespace": "blog",
-      "path": "app/views/member/blog/update_theme.html",
-      "line": 322
-    },
-    {
-      "key": "Success",
-      "namespace": "blog",
-      "path": "app/views/member/blog/update_theme.html",
-      "line": 161
-    },
-    {
-      "key": "Success",
-      "namespace": "blog",
-      "path": "app/views/member/blog/update_theme.html",
-      "line": 310
-    },
-    {
-      "key": "Are you sure ?",
-      "namespace": "msg",
-      "path": "app/views/member/group/index.html",
-      "line": 150
-    },
-    {
-      "key": "Are you sure ?",
-      "namespace": "msg",
-      "path": "app/views/member/group/index.html",
-      "line": 201
-    },
-    {
-      "key": "Group Title",
-      "namespace": "msg",
-      "path": "app/views/member/group/index.html",
-      "line": 116
-    },
-    {
-      "key": "Success",
-      "namespace": "msg",
-      "path": "app/views/member/group/index.html",
-      "line": 139
-    },
-    {
-      "key": "Success",
-      "namespace": "msg",
-      "path": "app/views/member/group/index.html",
-      "line": 154
-    },
-    {
-      "key": "Success",
-      "namespace": "msg",
-      "path": "app/views/member/group/index.html",
-      "line": 185
-    },
-    {
-      "key": "Success",
-      "namespace": "msg",
-      "path": "app/views/member/group/index.html",
-      "line": 206
-    },
-    {
-      "key": "confirmPassword",
-      "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 38
-    },
-    {
-      "key": "createAccountFailed",
-      "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 73
-    },
-    {
-      "key": "createAccountSuccess",
-      "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 68
-    },
-    {
-      "key": "errorEmail",
-      "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 17
-    },
-    {
-      "key": "errorPassword",
-      "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 27
-    },
-    {
-      "key": "inputEmail",
-      "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 16
-    },
-    {
-      "key": "inputPassword",
-      "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 26
-    },
-    {
-      "key": "inputPassword2",
-      "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 37
-    },
-    {
-      "key": "checkEmail",
-      "namespace": "msg",
-      "path": "app/views/member/user/email.html",
-      "line": 103
-    },
-    {
-      "key": "emailSendFailed",
-      "namespace": "msg",
-      "path": "app/views/member/user/email.html",
-      "line": 105
-    },
-    {
-      "key": "sendFailed",
-      "namespace": "msg",
-      "path": "app/views/member/user/email.html",
-      "line": 124
-    },
-    {
-      "key": "sendSuccess",
-      "namespace": "msg",
-      "path": "app/views/member/user/email.html",
-      "line": 116
-    },
-    {
-      "key": "verifiedEmaiHasSent",
-      "namespace": "msg",
-      "path": "app/views/member/user/email.html",
-      "line": 103
-    },
-    {
-      "key": "confirmPassword",
-      "namespace": "msg",
-      "path": "app/views/member/user/password.html",
-      "line": 34
-    },
-    {
-      "key": "errorPassword",
-      "namespace": "msg",
-      "path": "app/views/member/user/password.html",
-      "line": 23
-    },
-    {
-      "key": "inputNewPassword",
-      "namespace": "msg",
-      "path": "app/views/member/user/password.html",
-      "line": 22
-    },
-    {
-      "key": "inputPassword",
-      "namespace": "msg",
-      "path": "app/views/member/user/password.html",
-      "line": 13
-    },
-    {
-      "key": "inputPassword2",
-      "namespace": "msg",
-      "path": "app/views/member/user/password.html",
-      "line": 33
-    },
-    {
-      "key": "updatePasswordSuccess",
-      "namespace": "msg",
-      "path": "app/views/member/user/password.html",
-      "line": 63
-    },
-    {
-      "key": "inputUsername",
-      "namespace": "msg",
-      "path": "app/views/member/user/username.html",
-      "line": 16
-    },
-    {
-      "key": "minLength",
-      "namespace": "msg",
-      "path": "app/views/member/user/username.html",
-      "line": 18
-    },
-    {
-      "key": "noSpecialChars",
-      "namespace": "msg",
-      "path": "app/views/member/user/username.html",
-      "line": 17
-    },
-    {
-      "key": "updateUsernameSuccess",
-      "namespace": "msg",
-      "path": "app/views/member/user/username.html",
-      "line": 47
-    },
-    {
-      "key": "usernameIsExisted",
-      "namespace": "msg",
-      "path": "app/views/member/user/username.html",
-      "line": 49
-    },
-    {
-      "key": "checkEmail",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 223
-    },
-    {
-      "key": "confirmPassword",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 98
-    },
-    {
-      "key": "confirmPassword",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 145
-    },
-    {
-      "key": "createAccountFailed",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 185
-    },
-    {
-      "key": "createAccountSuccess",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 180
-    },
-    {
-      "key": "emailSendFailed",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 225
-    },
-    {
-      "key": "errorEmail",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 58
-    },
-    {
-      "key": "errorEmail",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 124
-    },
-    {
-      "key": "errorPassword",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 87
-    },
-    {
-      "key": "errorPassword",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 134
-    },
-    {
-      "key": "inputEmail",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 57
-    },
-    {
-      "key": "inputEmail",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 123
-    },
-    {
-      "key": "inputNewPassword",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 86
-    },
-    {
-      "key": "inputPassword",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 77
-    },
-    {
-      "key": "inputPassword",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 133
-    },
-    {
-      "key": "inputPassword2",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 97
-    },
-    {
-      "key": "inputPassword2",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 144
-    },
-    {
-      "key": "inputUsername",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 24
-    },
-    {
-      "key": "minLength",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 26
-    },
-    {
-      "key": "noSpecialChars",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 25
-    },
-    {
-      "key": "sendFailed",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 262
-    },
-    {
-      "key": "sendSuccess",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 254
-    },
-    {
-      "key": "sendVerifiedEmail",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 251
-    },
-    {
-      "key": "updatePasswordSuccess",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 241
-    },
-    {
-      "key": "updateUsernameSuccess",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 204
-    },
-    {
-      "key": "usernameIsExisted",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 206
-    },
-    {
-      "key": "verifiedEmaiHasSent",
-      "namespace": "msg",
-      "path": "app/views/user/account.html",
-      "line": 223
-    },
-    {
-      "key": "Add Album",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 113
-    },
-    {
-      "key": "Add Success!",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 131
-    },
-    {
-      "key": "Are you sure to delete this image ?",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 434
-    },
-    {
-      "key": "Cannot delete default album",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 161
-    },
-    {
-      "key": "Cannot rename default album",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 102
-    },
-    {
-      "key": "click to remove this image",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 330
-    },
-    {
-      "key": "Delete Success!",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 166
-    },
-    {
-      "key": "error",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 138
-    },
-    {
-      "key": "Error",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 785
-    },
-    {
-      "key": "error!",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 152
-    },
-    {
-      "key": "Next",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 61
-    },
-    {
-      "key": "Prev",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 60
-    },
-    {
-      "key": "Rename Album",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 106
-    },
-    {
-      "key": "Rename Success!",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 145
-    },
-    {
-      "key": "This album has images, please delete it's images at first.",
-      "namespace": "msg",
-      "path": "public/album/js/main.js",
-      "line": 178
-    },
-    {
-      "key": "daysAgo",
-      "namespace": "blog",
-      "path": "public/js/app/blog/common.js",
-      "line": 125
-    },
-    {
-      "key": "hoursAgo",
-      "namespace": "blog",
-      "path": "public/js/app/blog/common.js",
-      "line": 128
-    },
-    {
-      "key": "justNow",
-      "namespace": "blog",
-      "path": "public/js/app/blog/common.js",
-      "line": 133
-    },
-    {
-      "key": "minutesAgo",
-      "namespace": "blog",
-      "path": "public/js/app/blog/common.js",
-      "line": 131
-    },
-    {
-      "key": "monthsAgo",
-      "namespace": "blog",
-      "path": "public/js/app/blog/common.js",
-      "line": 119
-    },
-    {
-      "key": "weeksAgo",
-      "namespace": "blog",
-      "path": "public/js/app/blog/common.js",
-      "line": 122
+      "path": "app/views/member/blog/theme.html",
+      "line": 190
     },
     {
       "key": "cancel",
@@ -682,16 +70,130 @@
       "line": 370
     },
     {
+      "key": "daysAgo",
+      "namespace": "blog",
+      "path": "public/js/app/blog/common.js",
+      "line": 129
+    },
+    {
+      "key": "Delete file",
+      "namespace": "blog",
+      "path": "app/views/member/blog/update_theme.html",
+      "line": 186
+    },
+    {
       "key": "error",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
       "line": 445
     },
     {
+      "key": "Error",
+      "namespace": "blog",
+      "path": "app/views/member/blog/add_single.html",
+      "line": 95
+    },
+    {
+      "key": "Error",
+      "namespace": "blog",
+      "path": "app/views/member/blog/cate.html",
+      "line": 51
+    },
+    {
+      "key": "Error",
+      "namespace": "blog",
+      "path": "app/views/member/blog/cate.html",
+      "line": 64
+    },
+    {
+      "key": "Error",
+      "namespace": "blog",
+      "path": "app/views/member/blog/single.html",
+      "line": 52
+    },
+    {
+      "key": "Error",
+      "namespace": "blog",
+      "path": "app/views/member/blog/single.html",
+      "line": 65
+    },
+    {
+      "key": "Error",
+      "namespace": "blog",
+      "path": "app/views/member/blog/single.html",
+      "line": 79
+    },
+    {
+      "key": "Error",
+      "namespace": "blog",
+      "path": "app/views/member/blog/theme.html",
+      "line": 198
+    },
+    {
+      "key": "Error",
+      "namespace": "blog",
+      "path": "app/views/member/blog/theme.html",
+      "line": 217
+    },
+    {
+      "key": "Error",
+      "namespace": "blog",
+      "path": "app/views/member/blog/update_theme.html",
+      "line": 292
+    },
+    {
+      "key": "Error",
+      "namespace": "blog",
+      "path": "app/views/member/blog/update_theme.html",
+      "line": 366
+    },
+    {
+      "key": "File exists",
+      "namespace": "blog",
+      "path": "app/views/member/blog/update_theme.html",
+      "line": 183
+    },
+    {
+      "key": "Filename",
+      "namespace": "blog",
+      "path": "app/views/member/blog/update_theme.html",
+      "line": 178
+    },
+    {
+      "key": "hoursAgo",
+      "namespace": "blog",
+      "path": "public/js/app/blog/common.js",
+      "line": 132
+    },
+    {
+      "key": "justNow",
+      "namespace": "blog",
+      "path": "public/js/app/blog/common.js",
+      "line": 137
+    },
+    {
       "key": "like",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
       "line": 404
+    },
+    {
+      "key": "minutesAgo",
+      "namespace": "blog",
+      "path": "public/js/app/blog/common.js",
+      "line": 135
+    },
+    {
+      "key": "monthsAgo",
+      "namespace": "blog",
+      "path": "public/js/app/blog/common.js",
+      "line": 123
+    },
+    {
+      "key": "No images",
+      "namespace": "blog",
+      "path": "app/views/member/blog/update_theme.html",
+      "line": 322
     },
     {
       "key": "none",
@@ -724,106 +226,82 @@
       "line": 489
     },
     {
+      "key": "Success",
+      "namespace": "blog",
+      "path": "app/views/member/blog/add_single.html",
+      "line": 90
+    },
+    {
+      "key": "Success",
+      "namespace": "blog",
+      "path": "app/views/member/blog/cate.html",
+      "line": 49
+    },
+    {
+      "key": "Success",
+      "namespace": "blog",
+      "path": "app/views/member/blog/single.html",
+      "line": 50
+    },
+    {
+      "key": "Success",
+      "namespace": "blog",
+      "path": "app/views/member/blog/single.html",
+      "line": 62
+    },
+    {
+      "key": "Success",
+      "namespace": "blog",
+      "path": "app/views/member/blog/theme.html",
+      "line": 195
+    },
+    {
+      "key": "Success",
+      "namespace": "blog",
+      "path": "app/views/member/blog/theme.html",
+      "line": 214
+    },
+    {
+      "key": "Success",
+      "namespace": "blog",
+      "path": "app/views/member/blog/update_abstract.html",
+      "line": 114
+    },
+    {
+      "key": "Success",
+      "namespace": "blog",
+      "path": "app/views/member/blog/update_theme.html",
+      "line": 161
+    },
+    {
+      "key": "Success",
+      "namespace": "blog",
+      "path": "app/views/member/blog/update_theme.html",
+      "line": 310
+    },
+    {
       "key": "unlike",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
       "line": 402
     },
     {
-      "key": "Are you sure to delete it ?",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 1974
+      "key": "weeksAgo",
+      "namespace": "blog",
+      "path": "public/js/app/blog/common.js",
+      "line": 126
     },
     {
-      "key": "cancelPublic",
+      "key": "Add Album",
       "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 1865
+      "path": "public/album/js/main.js",
+      "line": 113
     },
     {
-      "key": "copy",
+      "key": "Add Success!",
       "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 1876
-    },
-    {
-      "key": "delete",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 1870
-    },
-    {
-      "key": "Delete",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 2073
-    },
-    {
-      "key": "Download",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 2074
-    },
-    {
-      "key": "exportPdf",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 1868
-    },
-    {
-      "key": "Insert link into content",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 2075
-    },
-    {
-      "key": "move",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 1871
-    },
-    {
-      "key": "publicAsBlog",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 1864
-    },
-    {
-      "key": "saveSuccess",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 449
-    },
-    {
-      "key": "saving",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 434
-    },
-    {
-      "key": "shareToFriends",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 1342
-    },
-    {
-      "key": "shareToFriends",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 1862
-    },
-    {
-      "key": "unTitled",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 1384
-    },
-    {
-      "key": "unTitled",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 2549
+      "path": "public/album/js/main.js",
+      "line": 131
     },
     {
       "key": "addChildNotebook",
@@ -838,84 +316,6 @@
       "line": 262
     },
     {
-      "key": "cancelPublic",
-      "namespace": "msg",
-      "path": "public/js/app/notebook.js",
-      "line": 895
-    },
-    {
-      "key": "cancelPublic",
-      "namespace": "msg",
-      "path": "public/js/app/notebook.js",
-      "line": 914
-    },
-    {
-      "key": "delete",
-      "namespace": "msg",
-      "path": "public/js/app/notebook.js",
-      "line": 899
-    },
-    {
-      "key": "delete",
-      "namespace": "msg",
-      "path": "public/js/app/notebook.js",
-      "line": 917
-    },
-    {
-      "key": "publicAsBlog",
-      "namespace": "msg",
-      "path": "public/js/app/notebook.js",
-      "line": 894
-    },
-    {
-      "key": "publicAsBlog",
-      "namespace": "msg",
-      "path": "public/js/app/notebook.js",
-      "line": 913
-    },
-    {
-      "key": "rename",
-      "namespace": "msg",
-      "path": "public/js/app/notebook.js",
-      "line": 898
-    },
-    {
-      "key": "rename",
-      "namespace": "msg",
-      "path": "public/js/app/notebook.js",
-      "line": 916
-    },
-    {
-      "key": "shareToFriends",
-      "namespace": "msg",
-      "path": "public/js/app/notebook.js",
-      "line": 892
-    },
-    {
-      "key": "shareToFriends",
-      "namespace": "msg",
-      "path": "public/js/app/notebook.js",
-      "line": 911
-    },
-    {
-      "key": "trash",
-      "namespace": "msg",
-      "path": "public/js/app/notebook.js",
-      "line": 263
-    },
-    {
-      "key": "normalMode",
-      "namespace": "msg",
-      "path": "public/js/app/page.js",
-      "line": 30
-    },
-    {
-      "key": "writingMode",
-      "namespace": "msg",
-      "path": "public/js/app/page.js",
-      "line": 33
-    },
-    {
       "key": "app",
       "namespace": "msg",
       "path": "public/js/app/share.js",
@@ -928,430 +328,34 @@
       "line": 592
     },
     {
-      "key": "clickToChangePermission",
+      "key": "Are you sure ?",
       "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 578
+      "path": "app/views/member/group/index.html",
+      "line": 150
     },
     {
-      "key": "copyToMyNotebook",
+      "key": "Are you sure ?",
       "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 401
+      "path": "app/views/member/group/index.html",
+      "line": 201
     },
     {
-      "key": "defaultShare",
+      "key": "Are you sure to delete it ?",
       "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 7
+      "path": "public/js/app/note.js",
+      "line": 1983
     },
     {
-      "key": "delete",
+      "key": "Are you sure to delete this image ?",
       "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 407
-    },
-    {
-      "key": "delete",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 528
-    },
-    {
-      "key": "delete",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 579
-    },
-    {
-      "key": "deleteAllShared",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 178
-    },
-    {
-      "key": "deleteSharedNotebook",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 153
-    },
-    {
-      "key": "emailBodyRequired",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 541
-    },
-    {
-      "key": "friendEmail",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 524
-    },
-    {
-      "key": "friendNotExits",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 583
-    },
-    {
-      "key": "inputFriendEmail",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 556
-    },
-    {
-      "key": "inviteEmailBody",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 592
-    },
-    {
-      "key": "readOnly",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 480
-    },
-    {
-      "key": "readOnly",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 525
-    },
-    {
-      "key": "readOnly",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 578
-    },
-    {
-      "key": "send",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 583
-    },
-    {
-      "key": "sendInviteEmailToYourFriend",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 583
-    },
-    {
-      "key": "sendSuccess",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 545
-    },
-    {
-      "key": "share",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 527
-    },
-    {
-      "key": "writable",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 477
-    },
-    {
-      "key": "writable",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 526
-    },
-    {
-      "key": "writable",
-      "namespace": "msg",
-      "path": "public/js/app/share.js",
-      "line": 578
-    },
-    {
-      "key": "delete",
-      "namespace": "msg",
-      "path": "public/js/app/tag.js",
-      "line": 148
-    },
-    {
-      "key": "noTag",
-      "namespace": "msg",
-      "path": "public/js/app/tag.js",
-      "line": 90
-    },
-    {
-      "key": "errorEmail",
-      "namespace": "msg",
-      "path": "public/js/common.js",
-      "line": 835
-    },
-    {
-      "key": "inputEmail",
-      "namespace": "msg",
-      "path": "public/js/common.js",
-      "line": 833
-    },
-    {
-      "key": "Please sign in firstly!",
-      "namespace": "msg",
-      "path": "public/js/common.js",
-      "line": 215
+      "path": "public/album/js/main.js",
+      "line": 445
     },
     {
       "key": "Blockquote",
       "namespace": "msg",
       "path": "public/js/markdown.min.js",
       "line": 13
-    },
-    {
-      "key": "Bulleted List",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Cancel",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 14
-    },
-    {
-      "key": "Code Sample",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Emphasis",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "emphasized text",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "enter code here",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "enter image description here",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "enter link description here",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Heading",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Horizontal Rule",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Hyperlink",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Hyperlink",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 14
-    },
-    {
-      "key": "Image",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "List item",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Numbered List",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "OK",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 14
-    },
-    {
-      "key": "optional title",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 14
-    },
-    {
-      "key": "Please provide the link URL and an optional title",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 14
-    },
-    {
-      "key": "Redo",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Strong",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "strong text",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Undo",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Error",
-      "namespace": "msg",
-      "path": "public/js/plugins/editor_drop_paste.js",
-      "line": 186
-    },
-    {
-      "key": "Error",
-      "namespace": "msg",
-      "path": "public/js/plugins/editor_drop_paste.js",
-      "line": 199
-    },
-    {
-      "key": "close",
-      "namespace": "msg",
-      "path": "public/js/plugins/history.js",
-      "line": 28
-    },
-    {
-      "key": "confirmBackup",
-      "namespace": "msg",
-      "path": "public/js/plugins/history.js",
-      "line": 90
-    },
-    {
-      "key": "datetime",
-      "namespace": "msg",
-      "path": "public/js/plugins/history.js",
-      "line": 130
-    },
-    {
-      "key": "fold",
-      "namespace": "msg",
-      "path": "public/js/plugins/history.js",
-      "line": 140
-    },
-    {
-      "key": "historiesNum",
-      "namespace": "msg",
-      "path": "public/js/plugins/history.js",
-      "line": 120
-    },
-    {
-      "key": "history",
-      "namespace": "msg",
-      "path": "public/js/plugins/history.js",
-      "line": 16
-    },
-    {
-      "key": "noHistories",
-      "namespace": "msg",
-      "path": "public/js/plugins/history.js",
-      "line": 111
-    },
-    {
-      "key": "restoreFromThisVersion",
-      "namespace": "msg",
-      "path": "public/js/plugins/history.js",
-      "line": 21
-    },
-    {
-      "key": "restoreFromThisVersion",
-      "namespace": "msg",
-      "path": "public/js/plugins/history.js",
-      "line": 130
-    },
-    {
-      "key": "unfold",
-      "namespace": "msg",
-      "path": "public/js/plugins/history.js",
-      "line": 130
-    },
-    {
-      "key": "unfold",
-      "namespace": "msg",
-      "path": "public/js/plugins/history.js",
-      "line": 144
-    },
-    {
-      "key": "Create Time",
-      "namespace": "msg",
-      "path": "public/js/plugins/note_info.js",
-      "line": 8
-    },
-    {
-      "key": "Post Url",
-      "namespace": "msg",
-      "path": "public/js/plugins/note_info.js",
-      "line": 11
-    },
-    {
-      "key": "update",
-      "namespace": "msg",
-      "path": "public/js/plugins/note_info.js",
-      "line": 17
-    },
-    {
-      "key": "Update Time",
-      "namespace": "msg",
-      "path": "public/js/plugins/note_info.js",
-      "line": 9
-    },
-    {
-      "key": "close",
-      "namespace": "msg",
-      "path": "public/js/plugins/tips.js",
-      "line": 16
-    },
-    {
-      "key": "editorTips",
-      "namespace": "msg",
-      "path": "public/js/plugins/tips.js",
-      "line": 12
-    },
-    {
-      "key": "editorTipsInfo",
-      "namespace": "msg",
-      "path": "public/js/plugins/tips.js",
-      "line": 14
     },
     {
       "key": "Blockquote",
@@ -1378,6 +382,30 @@
       "line": 14484
     },
     {
+      "key": "Blockquote",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31483
+    },
+    {
+      "key": "Blockquote",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31484
+    },
+    {
+      "key": "Blockquote",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "Bulleted List",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
+    },
+    {
       "key": "Bulleted List",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
@@ -1390,10 +418,112 @@
       "line": 14494
     },
     {
+      "key": "Bulleted List",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31494
+    },
+    {
+      "key": "Bulleted List",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "Cancel",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 14
+    },
+    {
       "key": "Cancel",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 16826
+    },
+    {
+      "key": "Cancel",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 33833
+    },
+    {
+      "key": "Cancel",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 13
+    },
+    {
+      "key": "cancelPublic",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 1874
+    },
+    {
+      "key": "cancelPublic",
+      "namespace": "msg",
+      "path": "public/js/app/notebook.js",
+      "line": 895
+    },
+    {
+      "key": "cancelPublic",
+      "namespace": "msg",
+      "path": "public/js/app/notebook.js",
+      "line": 914
+    },
+    {
+      "key": "Cannot delete default album",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 165
+    },
+    {
+      "key": "Cannot rename default album",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 102
+    },
+    {
+      "key": "checkEmail",
+      "namespace": "msg",
+      "path": "app/views/member/user/email.html",
+      "line": 103
+    },
+    {
+      "key": "checkEmail",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 223
+    },
+    {
+      "key": "click to remove this image",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 341
+    },
+    {
+      "key": "clickToChangePermission",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 578
+    },
+    {
+      "key": "close",
+      "namespace": "msg",
+      "path": "public/js/plugins/history.js",
+      "line": 28
+    },
+    {
+      "key": "close",
+      "namespace": "msg",
+      "path": "public/js/plugins/tips.js",
+      "line": 16
+    },
+    {
+      "key": "Code Sample",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
     },
     {
       "key": "Code Sample",
@@ -1408,16 +538,220 @@
       "line": 14486
     },
     {
+      "key": "Code Sample",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31486
+    },
+    {
+      "key": "Code Sample",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "confirmBackup",
+      "namespace": "msg",
+      "path": "public/js/plugins/history.js",
+      "line": 90
+    },
+    {
+      "key": "confirmPassword",
+      "namespace": "msg",
+      "path": "app/views/member/user/add_account.html",
+      "line": 38
+    },
+    {
+      "key": "confirmPassword",
+      "namespace": "msg",
+      "path": "app/views/member/user/password.html",
+      "line": 34
+    },
+    {
+      "key": "confirmPassword",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 98
+    },
+    {
+      "key": "confirmPassword",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 145
+    },
+    {
+      "key": "copy",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 1885
+    },
+    {
+      "key": "copyToMyNotebook",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 401
+    },
+    {
+      "key": "Create Time",
+      "namespace": "msg",
+      "path": "public/js/plugins/note_info.js",
+      "line": 8
+    },
+    {
+      "key": "createAccountFailed",
+      "namespace": "msg",
+      "path": "app/views/member/user/add_account.html",
+      "line": 73
+    },
+    {
+      "key": "createAccountFailed",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 185
+    },
+    {
+      "key": "createAccountSuccess",
+      "namespace": "msg",
+      "path": "app/views/member/user/add_account.html",
+      "line": 68
+    },
+    {
+      "key": "createAccountSuccess",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 180
+    },
+    {
+      "key": "datetime",
+      "namespace": "msg",
+      "path": "public/js/plugins/history.js",
+      "line": 130
+    },
+    {
+      "key": "defaultShare",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 7
+    },
+    {
+      "key": "delete",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 1879
+    },
+    {
+      "key": "delete",
+      "namespace": "msg",
+      "path": "public/js/app/notebook.js",
+      "line": 899
+    },
+    {
+      "key": "delete",
+      "namespace": "msg",
+      "path": "public/js/app/notebook.js",
+      "line": 917
+    },
+    {
+      "key": "delete",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 407
+    },
+    {
+      "key": "delete",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 528
+    },
+    {
+      "key": "delete",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 579
+    },
+    {
+      "key": "delete",
+      "namespace": "msg",
+      "path": "public/js/app/tag.js",
+      "line": 148
+    },
+    {
+      "key": "Delete",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 2082
+    },
+    {
+      "key": "Delete Success!",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 170
+    },
+    {
+      "key": "deleteAllShared",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 178
+    },
+    {
+      "key": "deleteSharedNotebook",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 153
+    },
+    {
+      "key": "Download",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 2083
+    },
+    {
       "key": "Edit mode",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 17471
     },
     {
+      "key": "editorTips",
+      "namespace": "msg",
+      "path": "public/js/plugins/tips.js",
+      "line": 12
+    },
+    {
+      "key": "editorTipsInfo",
+      "namespace": "msg",
+      "path": "public/js/plugins/tips.js",
+      "line": 14
+    },
+    {
       "key": "Emacs mode",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 17477
+    },
+    {
+      "key": "emailBodyRequired",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 541
+    },
+    {
+      "key": "emailSendFailed",
+      "namespace": "msg",
+      "path": "app/views/member/user/email.html",
+      "line": 105
+    },
+    {
+      "key": "emailSendFailed",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 225
+    },
+    {
+      "key": "Emphasis",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
     },
     {
       "key": "Emphasis",
@@ -1432,6 +766,24 @@
       "line": 14476
     },
     {
+      "key": "Emphasis",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31476
+    },
+    {
+      "key": "Emphasis",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "emphasized text",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
+    },
+    {
       "key": "emphasized text",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
@@ -1442,6 +794,24 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14477
+    },
+    {
+      "key": "emphasized text",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31477
+    },
+    {
+      "key": "emphasized text",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "enter code here",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
     },
     {
       "key": "enter code here",
@@ -1456,6 +826,24 @@
       "line": 14487
     },
     {
+      "key": "enter code here",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31487
+    },
+    {
+      "key": "enter code here",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "enter image description here",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
+    },
+    {
       "key": "enter image description here",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
@@ -1468,6 +856,24 @@
       "line": 14490
     },
     {
+      "key": "enter image description here",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31490
+    },
+    {
+      "key": "enter image description here",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "enter link description here",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
+    },
+    {
       "key": "enter link description here",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
@@ -1478,6 +884,174 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14480
+    },
+    {
+      "key": "enter link description here",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31480
+    },
+    {
+      "key": "enter link description here",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "error",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 138
+    },
+    {
+      "key": "error",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 141
+    },
+    {
+      "key": "error",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 208
+    },
+    {
+      "key": "error",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 306
+    },
+    {
+      "key": "error",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 456
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 800
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/plugins/editor_drop_paste.js",
+      "line": 186
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/plugins/editor_drop_paste.js",
+      "line": 199
+    },
+    {
+      "key": "error!",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 154
+    },
+    {
+      "key": "error!",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 157
+    },
+    {
+      "key": "error!",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 185
+    },
+    {
+      "key": "error!",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 485
+    },
+    {
+      "key": "errorEmail",
+      "namespace": "msg",
+      "path": "app/views/member/user/add_account.html",
+      "line": 17
+    },
+    {
+      "key": "errorEmail",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 58
+    },
+    {
+      "key": "errorEmail",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 124
+    },
+    {
+      "key": "errorEmail",
+      "namespace": "msg",
+      "path": "public/js/common.js",
+      "line": 835
+    },
+    {
+      "key": "errorPassword",
+      "namespace": "msg",
+      "path": "app/views/member/user/add_account.html",
+      "line": 27
+    },
+    {
+      "key": "errorPassword",
+      "namespace": "msg",
+      "path": "app/views/member/user/password.html",
+      "line": 23
+    },
+    {
+      "key": "errorPassword",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 87
+    },
+    {
+      "key": "errorPassword",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 134
+    },
+    {
+      "key": "exportPdf",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 1877
+    },
+    {
+      "key": "fold",
+      "namespace": "msg",
+      "path": "public/js/plugins/history.js",
+      "line": 140
+    },
+    {
+      "key": "friendEmail",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 524
+    },
+    {
+      "key": "friendNotExits",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 583
+    },
+    {
+      "key": "Group Title",
+      "namespace": "msg",
+      "path": "app/views/member/group/index.html",
+      "line": 116
+    },
+    {
+      "key": "Heading",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
     },
     {
       "key": "Heading",
@@ -1504,6 +1078,42 @@
       "line": 14498
     },
     {
+      "key": "Heading",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31497
+    },
+    {
+      "key": "Heading",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31498
+    },
+    {
+      "key": "Heading",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "historiesNum",
+      "namespace": "msg",
+      "path": "public/js/plugins/history.js",
+      "line": 120
+    },
+    {
+      "key": "history",
+      "namespace": "msg",
+      "path": "public/js/plugins/history.js",
+      "line": 16
+    },
+    {
+      "key": "Horizontal Rule",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
+    },
+    {
       "key": "Horizontal Rule",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
@@ -1514,6 +1124,30 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14500
+    },
+    {
+      "key": "Horizontal Rule",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31500
+    },
+    {
+      "key": "Horizontal Rule",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "Hyperlink",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
+    },
+    {
+      "key": "Hyperlink",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 14
     },
     {
       "key": "Hyperlink",
@@ -1534,6 +1168,36 @@
       "line": 16824
     },
     {
+      "key": "Hyperlink",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31479
+    },
+    {
+      "key": "Hyperlink",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 33831
+    },
+    {
+      "key": "Hyperlink",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "Hyperlink",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 13
+    },
+    {
+      "key": "Image",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
+    },
+    {
       "key": "Image",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
@@ -1546,10 +1210,142 @@
       "line": 14489
     },
     {
+      "key": "Image",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31489
+    },
+    {
+      "key": "Image",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "inputEmail",
+      "namespace": "msg",
+      "path": "app/views/member/user/add_account.html",
+      "line": 16
+    },
+    {
+      "key": "inputEmail",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 57
+    },
+    {
+      "key": "inputEmail",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 123
+    },
+    {
+      "key": "inputEmail",
+      "namespace": "msg",
+      "path": "public/js/common.js",
+      "line": 833
+    },
+    {
+      "key": "inputFriendEmail",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 556
+    },
+    {
+      "key": "inputNewPassword",
+      "namespace": "msg",
+      "path": "app/views/member/user/password.html",
+      "line": 22
+    },
+    {
+      "key": "inputNewPassword",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 86
+    },
+    {
+      "key": "inputPassword",
+      "namespace": "msg",
+      "path": "app/views/member/user/add_account.html",
+      "line": 26
+    },
+    {
+      "key": "inputPassword",
+      "namespace": "msg",
+      "path": "app/views/member/user/password.html",
+      "line": 13
+    },
+    {
+      "key": "inputPassword",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 77
+    },
+    {
+      "key": "inputPassword",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 133
+    },
+    {
+      "key": "inputPassword2",
+      "namespace": "msg",
+      "path": "app/views/member/user/add_account.html",
+      "line": 37
+    },
+    {
+      "key": "inputPassword2",
+      "namespace": "msg",
+      "path": "app/views/member/user/password.html",
+      "line": 33
+    },
+    {
+      "key": "inputPassword2",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 97
+    },
+    {
+      "key": "inputPassword2",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 144
+    },
+    {
+      "key": "inputUsername",
+      "namespace": "msg",
+      "path": "app/views/member/user/username.html",
+      "line": 16
+    },
+    {
+      "key": "inputUsername",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 24
+    },
+    {
+      "key": "Insert link into content",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 2084
+    },
+    {
+      "key": "inviteEmailBody",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 592
+    },
+    {
       "key": "Light editor",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 17479
+    },
+    {
+      "key": "List item",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
     },
     {
       "key": "List item",
@@ -1564,16 +1360,88 @@
       "line": 14495
     },
     {
+      "key": "List item",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31495
+    },
+    {
+      "key": "List item",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
       "key": "Markdown syntax",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 16961
     },
     {
+      "key": "minLength",
+      "namespace": "msg",
+      "path": "app/views/member/user/username.html",
+      "line": 18
+    },
+    {
+      "key": "minLength",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 26
+    },
+    {
+      "key": "move",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 1880
+    },
+    {
+      "key": "Next",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 61
+    },
+    {
+      "key": "noHistories",
+      "namespace": "msg",
+      "path": "public/js/plugins/history.js",
+      "line": 111
+    },
+    {
       "key": "Normal mode",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 17475
+    },
+    {
+      "key": "normalMode",
+      "namespace": "msg",
+      "path": "public/js/app/page.js",
+      "line": 30
+    },
+    {
+      "key": "noSpecialChars",
+      "namespace": "msg",
+      "path": "app/views/member/user/username.html",
+      "line": 17
+    },
+    {
+      "key": "noSpecialChars",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 25
+    },
+    {
+      "key": "noTag",
+      "namespace": "msg",
+      "path": "public/js/app/tag.js",
+      "line": 90
+    },
+    {
+      "key": "Numbered List",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
     },
     {
       "key": "Numbered List",
@@ -1588,10 +1456,46 @@
       "line": 14493
     },
     {
+      "key": "Numbered List",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31493
+    },
+    {
+      "key": "Numbered List",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "OK",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 14
+    },
+    {
       "key": "OK",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 16826
+    },
+    {
+      "key": "OK",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 33833
+    },
+    {
+      "key": "OK",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 13
+    },
+    {
+      "key": "optional title",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 14
     },
     {
       "key": "optional title",
@@ -1600,10 +1504,100 @@
       "line": 16826
     },
     {
+      "key": "optional title",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 33833
+    },
+    {
+      "key": "optional title",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 13
+    },
+    {
+      "key": "Please provide the link URL and an optional title",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 14
+    },
+    {
       "key": "Please provide the link URL and an optional title",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 16825
+    },
+    {
+      "key": "Please provide the link URL and an optional title",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 33832
+    },
+    {
+      "key": "Please provide the link URL and an optional title",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 13
+    },
+    {
+      "key": "Please sign in firstly!",
+      "namespace": "msg",
+      "path": "public/js/common.js",
+      "line": 215
+    },
+    {
+      "key": "Post Url",
+      "namespace": "msg",
+      "path": "public/js/plugins/note_info.js",
+      "line": 11
+    },
+    {
+      "key": "Prev",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 60
+    },
+    {
+      "key": "publicAsBlog",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 1873
+    },
+    {
+      "key": "publicAsBlog",
+      "namespace": "msg",
+      "path": "public/js/app/notebook.js",
+      "line": 894
+    },
+    {
+      "key": "publicAsBlog",
+      "namespace": "msg",
+      "path": "public/js/app/notebook.js",
+      "line": 913
+    },
+    {
+      "key": "readOnly",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 480
+    },
+    {
+      "key": "readOnly",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 525
+    },
+    {
+      "key": "readOnly",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 578
+    },
+    {
+      "key": "Redo",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
     },
     {
       "key": "Redo",
@@ -1624,6 +1618,150 @@
       "line": 14504
     },
     {
+      "key": "Redo",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31503
+    },
+    {
+      "key": "Redo",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "rename",
+      "namespace": "msg",
+      "path": "public/js/app/notebook.js",
+      "line": 898
+    },
+    {
+      "key": "rename",
+      "namespace": "msg",
+      "path": "public/js/app/notebook.js",
+      "line": 916
+    },
+    {
+      "key": "Rename Album",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 106
+    },
+    {
+      "key": "Rename Success!",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 147
+    },
+    {
+      "key": "restoreFromThisVersion",
+      "namespace": "msg",
+      "path": "public/js/plugins/history.js",
+      "line": 21
+    },
+    {
+      "key": "restoreFromThisVersion",
+      "namespace": "msg",
+      "path": "public/js/plugins/history.js",
+      "line": 130
+    },
+    {
+      "key": "saveSuccess",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 449
+    },
+    {
+      "key": "saving",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 434
+    },
+    {
+      "key": "send",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 583
+    },
+    {
+      "key": "sendFailed",
+      "namespace": "msg",
+      "path": "app/views/member/user/email.html",
+      "line": 124
+    },
+    {
+      "key": "sendFailed",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 262
+    },
+    {
+      "key": "sendInviteEmailToYourFriend",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 583
+    },
+    {
+      "key": "sendSuccess",
+      "namespace": "msg",
+      "path": "app/views/member/user/email.html",
+      "line": 116
+    },
+    {
+      "key": "sendSuccess",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 254
+    },
+    {
+      "key": "sendSuccess",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 545
+    },
+    {
+      "key": "sendVerifiedEmail",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 251
+    },
+    {
+      "key": "share",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 527
+    },
+    {
+      "key": "shareToFriends",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 1342
+    },
+    {
+      "key": "shareToFriends",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 1871
+    },
+    {
+      "key": "shareToFriends",
+      "namespace": "msg",
+      "path": "public/js/app/notebook.js",
+      "line": 892
+    },
+    {
+      "key": "shareToFriends",
+      "namespace": "msg",
+      "path": "public/js/app/notebook.js",
+      "line": 911
+    },
+    {
+      "key": "Strong",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
+    },
+    {
       "key": "Strong",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
@@ -1634,6 +1772,24 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14473
+    },
+    {
+      "key": "Strong",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31473
+    },
+    {
+      "key": "Strong",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "strong text",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
     },
     {
       "key": "strong text",
@@ -1648,6 +1804,60 @@
       "line": 14474
     },
     {
+      "key": "strong text",
+      "namespace": "msg",
+      "path": "public/md/main.js",
+      "line": 31474
+    },
+    {
+      "key": "strong text",
+      "namespace": "msg",
+      "path": "public/md/main.min.js",
+      "line": 12
+    },
+    {
+      "key": "Success",
+      "namespace": "msg",
+      "path": "app/views/member/group/index.html",
+      "line": 139
+    },
+    {
+      "key": "Success",
+      "namespace": "msg",
+      "path": "app/views/member/group/index.html",
+      "line": 154
+    },
+    {
+      "key": "Success",
+      "namespace": "msg",
+      "path": "app/views/member/group/index.html",
+      "line": 185
+    },
+    {
+      "key": "Success",
+      "namespace": "msg",
+      "path": "app/views/member/group/index.html",
+      "line": 206
+    },
+    {
+      "key": "This album has images, please delete it's images at first.",
+      "namespace": "msg",
+      "path": "public/album/js/main.js",
+      "line": 182
+    },
+    {
+      "key": "trash",
+      "namespace": "msg",
+      "path": "public/js/app/notebook.js",
+      "line": 263
+    },
+    {
+      "key": "Undo",
+      "namespace": "msg",
+      "path": "public/js/markdown.min.js",
+      "line": 13
+    },
+    {
       "key": "Undo",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
@@ -1660,298 +1870,130 @@
       "line": 14502
     },
     {
-      "key": "Vim mode",
-      "namespace": "msg",
-      "path": "public/md/main-v2.js",
-      "line": 17476
-    },
-    {
-      "key": "Blockquote",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31483
-    },
-    {
-      "key": "Blockquote",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31484
-    },
-    {
-      "key": "Bulleted List",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31494
-    },
-    {
-      "key": "Cancel",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 33833
-    },
-    {
-      "key": "Code Sample",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31486
-    },
-    {
-      "key": "Emphasis",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31476
-    },
-    {
-      "key": "emphasized text",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31477
-    },
-    {
-      "key": "enter code here",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31487
-    },
-    {
-      "key": "enter image description here",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31490
-    },
-    {
-      "key": "enter link description here",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31480
-    },
-    {
-      "key": "Heading",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31497
-    },
-    {
-      "key": "Heading",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31498
-    },
-    {
-      "key": "Horizontal Rule",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31500
-    },
-    {
-      "key": "Hyperlink",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31479
-    },
-    {
-      "key": "Hyperlink",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 33831
-    },
-    {
-      "key": "Image",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31489
-    },
-    {
-      "key": "List item",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31495
-    },
-    {
-      "key": "Numbered List",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31493
-    },
-    {
-      "key": "OK",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 33833
-    },
-    {
-      "key": "optional title",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 33833
-    },
-    {
-      "key": "Please provide the link URL and an optional title",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 33832
-    },
-    {
-      "key": "Redo",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31503
-    },
-    {
-      "key": "Strong",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31473
-    },
-    {
-      "key": "strong text",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31474
-    },
-    {
       "key": "Undo",
       "namespace": "msg",
       "path": "public/md/main.js",
       "line": 31502
     },
     {
-      "key": "Blockquote",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "Bulleted List",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "Cancel",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 13
-    },
-    {
-      "key": "Code Sample",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "Emphasis",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "emphasized text",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "enter code here",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "enter image description here",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "enter link description here",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "Heading",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "Horizontal Rule",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "Hyperlink",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "Hyperlink",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 13
-    },
-    {
-      "key": "Image",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "List item",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "Numbered List",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "OK",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 13
-    },
-    {
-      "key": "optional title",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 13
-    },
-    {
-      "key": "Please provide the link URL and an optional title",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 13
-    },
-    {
-      "key": "Redo",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "Strong",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "strong text",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
       "key": "Undo",
       "namespace": "msg",
       "path": "public/md/main.min.js",
       "line": 12
+    },
+    {
+      "key": "unfold",
+      "namespace": "msg",
+      "path": "public/js/plugins/history.js",
+      "line": 130
+    },
+    {
+      "key": "unfold",
+      "namespace": "msg",
+      "path": "public/js/plugins/history.js",
+      "line": 144
+    },
+    {
+      "key": "unTitled",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 1384
+    },
+    {
+      "key": "unTitled",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 2558
+    },
+    {
+      "key": "update",
+      "namespace": "msg",
+      "path": "public/js/plugins/note_info.js",
+      "line": 17
+    },
+    {
+      "key": "Update Time",
+      "namespace": "msg",
+      "path": "public/js/plugins/note_info.js",
+      "line": 9
+    },
+    {
+      "key": "updatePasswordSuccess",
+      "namespace": "msg",
+      "path": "app/views/member/user/password.html",
+      "line": 63
+    },
+    {
+      "key": "updatePasswordSuccess",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 241
+    },
+    {
+      "key": "updateUsernameSuccess",
+      "namespace": "msg",
+      "path": "app/views/member/user/username.html",
+      "line": 47
+    },
+    {
+      "key": "updateUsernameSuccess",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 204
+    },
+    {
+      "key": "usernameIsExisted",
+      "namespace": "msg",
+      "path": "app/views/member/user/username.html",
+      "line": 49
+    },
+    {
+      "key": "usernameIsExisted",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 206
+    },
+    {
+      "key": "verifiedEmaiHasSent",
+      "namespace": "msg",
+      "path": "app/views/member/user/email.html",
+      "line": 103
+    },
+    {
+      "key": "verifiedEmaiHasSent",
+      "namespace": "msg",
+      "path": "app/views/user/account.html",
+      "line": 223
+    },
+    {
+      "key": "Vim mode",
+      "namespace": "msg",
+      "path": "public/md/main-v2.js",
+      "line": 17476
+    },
+    {
+      "key": "writable",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 477
+    },
+    {
+      "key": "writable",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 526
+    },
+    {
+      "key": "writable",
+      "namespace": "msg",
+      "path": "public/js/app/share.js",
+      "line": 578
+    },
+    {
+      "key": "writingMode",
+      "namespace": "msg",
+      "path": "public/js/app/page.js",
+      "line": 33
     }
   ],
   "dynamic": [

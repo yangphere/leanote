@@ -96,7 +96,7 @@ var o = {
 			}
 		}
 		// rename
-		$("#renameAlbumBtn").click(function(){ 
+$("#renameAlbumBtn").on('click', function(){
 			curAlbum = $("#albumsForUpload").val();
 			if(!curAlbum) {
 				alert(getMsg("Cannot rename default album"));
@@ -104,26 +104,26 @@ var o = {
 			}
 			toggleAddAlbum();
 			$("#addOrUpdateAlbumBtn").html(getMsg("Rename Album"));
-			$("#albumName").val($("#albumsForUpload option:selected").html()).focus();
+			$("#albumName").val($("#albumsForUpload option:selected").html()).trigger('focus');
 			isAddAlbum = false;
 		});
 		// add album
-	    $("#addAlbumBtn").click(function() {
+	    $("#addAlbumBtn").on('click', function() {
 			toggleAddAlbum();
-			$("#addOrUpdateAlbumBtn").html(getMsg("Add Album"));
-    		$("#albumName").val("").focus();
-			isAddAlbum = true;
-		});
-		$("#cancelAlbumBtn").click(function() {
-			toggleAddAlbum();
-		});
-		// add or update album
-		$("#addOrUpdateAlbumBtn").click(function() {
-	    	var albumName = $("#albumName").val();
-	    	if(!albumName) {
-	    		$("#albumName").focus();
-	    		return;
-	    	}
+	$("#addOrUpdateAlbumBtn").html(getMsg("Add Album"));
+	$("#albumName").val("").trigger('focus');
+	isAddAlbum = true;
+});
+$("#cancelAlbumBtn").on('click', function() {
+	toggleAddAlbum();
+});
+// add or update album
+$("#addOrUpdateAlbumBtn").on('click', function() {
+		var albumName = $("#albumName").val();
+		if(!albumName) {
+		$("#albumName").trigger('focus');
+		return;
+		}
 	    	if(isAddAlbum) {
 		    	$.get("/album/addAlbum", {name: albumName}, function(ret) {
 		    		if(typeof ret == "object" && ret.AlbumId != "") {
@@ -137,6 +137,8 @@ var o = {
 		    		} else {
 		    			alert(getMsg("error"));
 		    		}
+}).fail(function() {
+alert(getMsg("error"));
 		    	});
 	    	} else {
 		    	$.get("/album/updateAlbum", {albumId: curAlbum, name: albumName}, function(ret) {
@@ -151,11 +153,13 @@ var o = {
 		    		} else {
 		    			alert(getMsg("error!"));
 		    		}
+}).fail(function() {
+alert(getMsg("error!"));
 		    	});
 	    	}
 	    })
 	    // delete album
-	    $("#deleteAlbumBtn").click(function() {
+	    $("#deleteAlbumBtn").on('click', function() {
 	    	var albumId = $("#albumsForUpload").val();
 	    	if(!albumId) {
 	    		alert(getMsg("Cannot delete default album"));
@@ -177,6 +181,8 @@ var o = {
 	    		} else {
 	    			alert(getMsg("This album has images, please delete it's images at first."));
 	    		}
+}).fail(function() {
+alert(getMsg("error!"));
 	    	});
 
 	    });
@@ -198,6 +204,8 @@ var o = {
 
 	    	var albumId = $("#albumsForList").val();
 		    self.renderImages(albumId, 1, true);
+}).fail(function() {
+alert(getMsg("error"));
     	});
     },
 
@@ -293,6 +301,9 @@ var o = {
 
     		// $("#imageList img").lazyload({effect : "fadeIn"});
     		// $("#imageList img").lazyload();
+}).fail(function() {
+self.noImages();
+alert(getMsg("error"));
     	});
     },
 
@@ -337,7 +348,7 @@ var o = {
 				// is add
 				// trigger click and set attrs
 				if(addSrc == src) {
-					target.click();
+					target.trigger('click');
 				}
 			}
 		}
@@ -409,7 +420,7 @@ var o = {
 		
 		self.processAlbum();
 
-		$("#albumsForList").change(function() {
+		$("#albumsForList").on('change', function() {
 			var albumId = $(this).val();
 			self.renderImages(albumId, 1, true);
 		});
@@ -441,6 +452,8 @@ var o = {
 						}
 						$(t).closest('li').remove();
 					}
+				}).fail(function() {
+					alert(getMsg("error"));
 				});
 			}	
 		});
@@ -457,18 +470,20 @@ var o = {
 			$(this).html('<input type="text" value="' + fileTitle + '" />');
 
 			var $input = $(this).find("input");
-			$input.focus();
-			$input.keydown(function(e){
+			$input.trigger('focus');
+			$input.on('keydown', function(e){
 				if(e.keyCode==13){
 					$(this).trigger("blur");
 				}
 			});
-			$input.blur(function() {
+			$input.on('blur', function() {
 				var title = $(this).val();
 				if(!title) {
 					title = fileTitle;
 				} else {
-					$.post("/file/updateImageTitle", {fileId: fileId, title: title});
+					$.post("/file/updateImageTitle", {fileId: fileId, title: title}).fail(function() {
+						alert(getMsg("error!"));
+					});
 				}
 				$(p).html(title);
 			});
@@ -491,7 +506,7 @@ var o = {
 		});
 
 		// 
-		$("#goAddImageBtn").click(function() {
+		$("#goAddImageBtn").on('click', function() {
 			$("#albumsForUpload").val($("#albumsForList").val());
 			$('#myTab li:eq(1) a').tab('show');
 		});
@@ -513,21 +528,21 @@ var o = {
 			}
 
 			if(href == "#url") {
-				$("#imageUrl").focus();
+				$("#imageUrl").trigger('focus');
 			}
 		});
-		$("#refresh").click(function() {
+		$("#refresh").on('click', function() {
 			var albumId = $("#albumsForList").val();
 			var key = $("#key").val();
 			self.renderImages(albumId, self.pageNum, false, key);
 		});
 
 		// add url
-		$("#addImageUrlBtn").click(function(e) {
+		$("#addImageUrlBtn").on('click', function(e) {
 			e.preventDefault();
-			var url = $.trim($("#imageUrl").val());
+			var url = ($("#imageUrl").val() || "").trim();
 			if(!url) {
-				$("#imageUrl").focus();
+				$("#imageUrl").trigger('focus');
 				return;
 			}
 
@@ -722,9 +737,9 @@ var o = {
 		var self = this;
 		var ul = $('#upload ul');
 
-	    $('#drop a').click(function() {
+	    $('#drop a').on('click', function() {
 	        // trigger to show file select
-	        $(this).parent().find('input').click();
+	        $(this).parent().find('input').trigger('click');
 	    });
 	    // Initialize the jQuery File Upload plugin
 	    $('#upload').fileupload({

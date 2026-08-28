@@ -30,7 +30,7 @@
 {{template "admin/footer.html" .}}
 <script>
 $(function() {
-	$("#submit").click(function(e){
+	$("#submit").on('click', function(e){
 		e.preventDefault();
 		var t = this;
 		$(t).button('loading');

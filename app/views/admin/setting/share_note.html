@@ -152,7 +152,7 @@ $(function() {
 
 	init_validator("#formContainer");
 	
-	$("#submit").click(function(e){
+	$("#submit").on('click', function(e){
 			e.preventDefault();
 			var t = this;
 			if($("#formContainer").valid()) {

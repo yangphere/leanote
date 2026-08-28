@@ -39,7 +39,7 @@
 <script type="text/javascript" src="/public/member/js/jquery.sortable.js"></script>
 <script>
 $(function() {
-	$("#baseBtn").click(function(){
+	$("#baseBtn").on('click', function(){
 		var ids = [];
 		$(".list-group-item").each(function() {
 			ids.push($(this).data("id"));
@@ -53,7 +53,7 @@ $(function() {
 		});
 	});
 	
-	$(".url-title").change(function(){
+	$(".url-title").on('change', function(){
 		var $t = $(this);
 		var url = $t.val();
 		var cateId = $t.data('id');

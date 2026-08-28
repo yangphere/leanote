@@ -11,8 +11,8 @@
 **Create**
 - `docs/modernization/jquery-3.7-compatibility-inventory.md`
 - `tests/js/jquery-asset-contract.test.js`
-- `tests/e2e/business/jquery-upgrade.spec.mjs`
-- `tests/e2e/business/jquery-diagnostics.mjs`（如需将路由诊断逻辑与业务流分离）
+- `tests/e2e/business/business-flows.spec.mjs`
+- `tests/e2e/business/jquery-diagnostics.spec.mjs`（路由诊断逻辑与业务流分离）
 - `tests/e2e/e2e-environment.mjs`（build/business 共用 identity/权限/cleanup fixture）
 - `tests/e2e/build/build-resource-smoke.spec.mjs`
 - `tests/e2e/build/sanitized-summary-reporter.mjs`

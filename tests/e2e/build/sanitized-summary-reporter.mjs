@@ -15,6 +15,7 @@ const ERROR_CATEGORIES = new Set([
   'runner:timeout', 'runner:browser-init', 'runner:fixture-init', 'runner:runner-error',
   'runner:console-error', 'runner:page-error', 'runner:unhandled-rejection',
   'runner:request-failed', 'runner:http-error', 'runner:missing-env', 'runner:unknown',
+  'runner:identity-preflight', 'runner:identity-fresh-failed', 'runner:cleanup-failed',
   'ci:revel-cli', 'ci:mongo-fixture', 'ci:service-start', 'ci:service-readiness',
   'ci:service-exit', 'ci:cleanup', 'ci:runner-error',
 ]);
@@ -135,6 +136,13 @@ function errorCategory(error) {
 export default class SanitizedSummaryReporter {
   constructor() {
     this.writeQueue = Promise.resolve();
+    this.active = false;
+  }
+
+  // The reporter is scoped to the build-smoke project so a business-project
+  // invocation sharing this config never clobbers the build summary files.
+  isActive(suite) {
+    return (suite?.suites ?? []).some((projectSuite) => projectSuite.project()?.name === 'build-smoke');
   }
 
   enqueue(update) {
@@ -146,7 +154,12 @@ export default class SanitizedSummaryReporter {
     return this.writeQueue;
   }
 
-  async onBegin() {
+  // Playwright invokes reporters with (config, suite). Keep the config
+  // parameter explicit so project scoping is evaluated against the suite
+  // rather than the config object.
+  async onBegin(_config, suite) {
+    if (!this.isActive(suite)) return;
+    this.active = true;
     await this.enqueue((summary) => {
       const service = summary.service;
       Object.assign(summary, initialSummary(), { stage: 'runner-started' });
@@ -155,6 +168,7 @@ export default class SanitizedSummaryReporter {
   }
 
   async onError(error) {
+    if (!this.active) return;
     await this.enqueue((summary) => {
       const category = errorCategory(error);
       summary.errors = [...new Set([...(summary.errors ?? []), `runner:${category}`])];
@@ -163,6 +177,7 @@ export default class SanitizedSummaryReporter {
   }
 
   async onEnd(result) {
+    if (!this.active) return;
     await this.writeQueue;
     await this.enqueue((summary) => {
       if (result?.status === 'passed' && summary.stage === 'complete') summary.stage = 'complete';
@@ -172,6 +187,7 @@ export default class SanitizedSummaryReporter {
   }
 
   async onExit() {
+    if (!this.active) return;
     await this.writeQueue;
   }
 }

@@ -32,7 +32,7 @@
 $(function() {
 	var userId = "{{.userInfo.UserId.Hex}}";
 	init_validator("#dataForm");
-	$("#resetPwdBtn").click(function(e){
+	$("#resetPwdBtn").on('click', function(e){
 		e.preventDefault();
 		var t = this;
 		if($("#dataForm").valid()) {

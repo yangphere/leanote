@@ -110,7 +110,7 @@ Share.dialogIsNote = {{.isNote}};
 Share.dialogNoteOrNotebookId = '{{.noteOrNotebookId}}';
 $(function() {
 setTimeout(function() {
-	$("#tr1 #friendsEmail").focus();
+	$("#tr1 #friendsEmail").trigger('focus');
 }, 500);
 	
 // 分享/删除给分组
@@ -155,7 +155,7 @@ $("#groupInfo").on("click", ".btn-share-or-not", function() {
 	});
 });
 
-$(".group-perm").click(function() {
+$(".group-perm").on('click', function() {
 	var $t = $(this);
 	var $ptr = $t.closest("tr");
 	var hasShared = $ptr.data('uid');

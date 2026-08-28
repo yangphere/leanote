@@ -1,6 +1,6 @@
 // for editor.
 // drag image to editor
-define('editor_drop_paste', ['fileupload'], function() {
+define('editor_drop_paste', [], function() {
 
 	// 在toggle成pre或ace时
 	// 最后没有元素, 或者元素不是p, 则在最后插入之
@@ -140,9 +140,9 @@ define('editor_drop_paste', ['fileupload'], function() {
 	var initUploader =  function() {
 		var ul = $('#upload ul');
 	
-	    $('#drop a').click(function() {
+	    $('#drop a').on('click', function() {
 	        // trigger to show file select
-	        $(this).parent().find('input').click();
+	        $(this).parent().find('input').trigger('click');
 	    });
 	
 	    // Initialize the jQuery File Upload plugin

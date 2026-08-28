@@ -76,7 +76,7 @@ define('history', [], function() {
 
         bind: function () {
             var me = this;
-            $("#contentHistory").click(function() {
+            $("#contentHistory").on('click', function() {
                 me.getHistories();
             });
 
@@ -86,7 +86,7 @@ define('history', [], function() {
             });
 
             // 还原
-            $tpl.find('.back').click(function() {
+            $tpl.find('.back').on('click', function() {
                 if(confirm(getMsg("confirmBackup"))) {
                     // 保存当前版本
                     Note.curChangedSaveIt(true);
@@ -131,7 +131,7 @@ define('history', [], function() {
                 }
                 str += "</table></div>";
                 $content.html(str);
-                $("#historyList .all").click(function() {
+                $("#historyList .all").on('click', function() {
                     $p = $(this).parent().parent();
                     var seq = $p.attr("seq");
                     var $c = $p.find(".each-content");

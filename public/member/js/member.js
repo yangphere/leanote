@@ -27,6 +27,8 @@ function openDialog(config) {
 	if(config.url) {
 		$.get(config.url, {}, function(ret) {
 			d.content(ret);
+		}).fail(function() {
+			d.content("error!");
 		});
 	}
 	
@@ -176,7 +178,7 @@ if(typeof art != "undefined") {
 	// art dialog bind 
 	// <a href="javascript:;" id="agree_btn" class="button art-dialog" data-url="index.php?app=seller_refund&amp;action=confirm_refund&amp;order_id=55" data-title="确认退款">同意退款</a>
 	$(function() {
-		$(".art-dialog").click(function(){
+		$(".art-dialog").on('click', function(){
 			var title = $(this).data('title');
 			var url = $(this).data("url");
 			var lock = +$(this).data('lock');
@@ -275,7 +277,7 @@ function goNowToDatetime(goNow) {
   $(function(){
   	
   	// life
-  	$(".nav li > a").click(function(e) {
+$(".nav li > a").on('click', function(e) {
   		$p = $(this).closest("ul");
   		var $li = $(this).closest("li");
   		if($li.find("ul").length == 0) {
@@ -291,7 +293,7 @@ function goNowToDatetime(goNow) {
   	});
   	
   	// sort
-  	$(".th-sortable").click(function() {
+$(".th-sortable").on('click', function() {
   		var up = $(this).hasClass("th-sort-up");
   		var down = $(this).hasClass("th-sort-down");
   		var url = $(this).data("url");
@@ -313,16 +315,16 @@ function goNowToDatetime(goNow) {
   	});
   	
   	// search 
-  	$(".search-group input").keyup(function(e){
+$(".search-group input").on('keyup', function(e){
   		enter_submit(".search-group button");
   	});
-  	$(".search-group button").click(function(e){
+$(".search-group button").on('click', function(e){
   		var url = $(this).data("url");
   		$input = $(this).closest(".search-group").find("input");
   		var keywords = $input.val();
   		/*
   		if(!keywords) {
-  			$input.focus();
+						$input.trigger('focus');
   			return;
   		}
   		*/
@@ -347,7 +349,7 @@ function goNowToDatetime(goNow) {
 			$(this).sparkline('html', $data);
 		});
 	};
-	$(window).resize(function(e) {
+	$(window).on('resize', function(e) {
 		clearTimeout(sr);
 		sr = setTimeout(function(){sparkline(true)}, 500);
 	});
@@ -468,7 +470,7 @@ function goNowToDatetime(goNow) {
 	$('.no-touch .slim-scroll').each(function(){
 		var $self = $(this), $data = $self.data(), $slimResize;
 		$self.slimScroll($data);
-		$(window).resize(function(e) {
+		$(window).on('resize', function(e) {
 			clearTimeout($slimResize);
 			$slimResize = setTimeout(function(){$self.slimScroll($data);}, 500);
 		});

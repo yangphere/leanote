@@ -52,18 +52,18 @@
 
 <script>
 $(function() {
-	$("#email").focus();
+	$("#email").trigger('focus');
 	
 	function showMsg(msg, id) {
 		$("#loginMsg").html(msg).show();
 		if(id) {
-			$("#" + id).focus();
+			$("#" + id).trigger('focus');
 		}
 	}
 	function hideMsg() {
 		$("#loginMsg").hide();
 	}
-	$("#registerBtn").click(function(e){
+	$("#registerBtn").on('click', function(e){
 		e.preventDefault();
 		var email = $("#email").val();
 		var pwd = $("#pwd").val();

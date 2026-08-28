@@ -59,7 +59,7 @@
 var urlPrefix = "{{.siteUrl}}";
 $(function() {
 	// 评论
-	$("#baseBtn").click(function(e) {
+	$("#baseBtn").on('click', function(e) {
 		e.preventDefault();
 		var data = {
 			CanComment : $("#CanComment").is(":checked"),
@@ -70,7 +70,7 @@ $(function() {
 			showAlert("#baseMsg", "{{msg . "saveSuccess"}}", "success");
 		}, this);
 	});
-	$("#CanComment").click(function() {
+	$("#CanComment").on('click', function() {
 		if ($(this).is(":checked")) {
 			$("#commentSet").show();
 		} else {
@@ -78,7 +78,7 @@ $(function() {
 		}
 	});
 	
-	$("input[name='commentType']").click(function() {
+	$("input[name='commentType']").on('click', function() {
 		if ($("input[name='commentType']:checked").val() == "disqus") {
 			$("#disqusSet").show();
 		} else {

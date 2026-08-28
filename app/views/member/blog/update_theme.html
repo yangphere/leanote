@@ -99,7 +99,7 @@
 				enctype="multipart/form-data" target="logoTarget">
 				<input type="hidden" name="themeId" value="{{.themeId}}" />
 				<input type="file" class="form-control" id="logo2" name="file"
-					onChange='$("#formLogo").submit();' /> 
+					onChange='$("#formLogo").trigger("submit");' />
 			</form>
 			<iframe id="logoTarget" name="logoTarget" src="#" style="display: none"></iframe>
 		</footer>
@@ -140,7 +140,7 @@ var theme = {
 		self.renderTpl("header.html");
 		$(".file-list a").eq(0).addClass("active");
 		
-		self.saveBtnO.click(function(){ 
+		self.saveBtnO.on('click', function(){
 			self.saveCurContent($(this));
 		});
 		
@@ -172,7 +172,7 @@ var theme = {
 	},
 	newFile: function() {
 		var self = this;
-		self.newFileO.click(function() {
+		self.newFileO.on('click', function() {
 			// 文件是否存在?
 			
 			art.prompt(getMsg("Filename"), function(file) { 
@@ -190,7 +190,7 @@ var theme = {
 				self.inited[file] = true;
 				
 				// trigger click, 选中之
-				t.click();
+				t.trigger('click');
 			});
 		});
 	},
@@ -343,7 +343,7 @@ var theme = {
 }
 $(function() {
 	theme.init();
-	$(window).keydown(function(e) {
+	$(window).on('keydown', function(e) {
 		if (e.keyCode == 83 && (e.ctrlKey || e.metaKey)) {
 			e.preventDefault();
 			theme.saveBtnO.trigger("click");

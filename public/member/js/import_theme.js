@@ -1,4 +1,4 @@
-define('import_theme', ['fileupload'], function(){
+define('import_theme', [], function(){
 	// Helper function that formats the file sizes
     function formatFileSize(bytes) {
         if (typeof bytes !== 'number') {
@@ -47,8 +47,8 @@ define('import_theme', ['fileupload'], function(){
     setDropStyle("#dropAvatar", "#uploadAvatar");
     
 	var initUploader = function() {
-	    $('.dropzone .btn-choose-file').click(function() {
-	        $(this).parent().find('input').click();
+	    $('.dropzone .btn-choose-file').on('click', function() {
+	        $(this).parent().find('input').trigger('click');
 	    });
 	
 	    var $msg2 = $('#avatarUploadMsg');

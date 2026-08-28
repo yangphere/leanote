@@ -51,7 +51,7 @@
 var urlPrefix = "{{.siteUrl}}";
 $(function() {
 	// domain
-	$("#baseBtn").click(function(e) {
+	$("#baseBtn").on('click', function(e) {
 		e.preventDefault();
 		var data = $("#dataFrom").serialize();
 		post("/member/blog/setUserBlogPaging", data, function(re) {

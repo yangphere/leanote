@@ -44,7 +44,7 @@ editorMode.prototype.init = function() {
 	this.$themeLink = $("#themeLink");
 	this.changeMode(this.isWritingMode);
 	var self = this;
-	$(".toggle-editor-mode").click(function(e) {
+	$(".toggle-editor-mode").on('click', function(e) {
 		e.preventDefault();
 		saveBookmark();
 		var $a = $(this).find("a");
@@ -91,7 +91,7 @@ editorMode.prototype.normalMode = function() {
 	*/
 
 	$("#noteItemListWrap, #notesAndSort").show();
-	$("#noteList").off("mouseenter").off("mouseleave"); 
+	$("#noteList").off("mouseenter").off("mouseleave");
 	
 	var theme = UserInfo.Theme || "default";
 	theme += ".css";
@@ -124,9 +124,9 @@ editorMode.prototype.writtingMode = function() {
 	*/
 		
 	$("#noteItemListWrap, #notesAndSort").fadeOut();
-	$("#noteList").hover(function() {
+	$("#noteList").on('mouseenter', function() {
 		$("#noteItemListWrap, #notesAndSort").fadeIn();
-	}, function() {
+	}).on('mouseleave', function() {
 		$("#noteItemListWrap, #notesAndSort").fadeOut();
 	});
 	
@@ -220,7 +220,7 @@ var Resize = {
 		
 		// 瞬间
 		var everLeftWidth;
-		$('.layout-toggler-preview').click(function() {
+		$('.layout-toggler-preview').on('click', function() {
 			var $t = $(this);
 			var $p = self.leftColumn.parent();
 			// 是开的
@@ -373,7 +373,7 @@ Mobile = {
 		// self.hashChange();
 		/*
 		$("#noteItemList").on("tap", ".item", function(event) {
-			$(this).click();
+			$(this).trigger('click');
 		});
 		$(document).on("swipeleft",function(e){
 			e.stopPropagation();
@@ -474,7 +474,7 @@ function initEditor() {
 	// editor
 	// toolbar 下拉扩展, 也要resizeEditor
 	var mceToobarEverHeight = 0;
-	$("#moreBtn").click(function() {
+	$("#moreBtn").on('click', function() {
 		saveBookmark();
 		var $editor = $('#editor');
 		if($editor.hasClass('all-tool')) {
@@ -678,7 +678,7 @@ function hideMask () {
 	console.log('initing...');
 	
 	// 窗口缩放时
-	$(window).resize(function() {
+	$(window).on('resize', function() {
 		Mobile.isMobile();
 		resizeEditor();
 	});
@@ -687,7 +687,7 @@ function hideMask () {
 	initEditor();
 
 	// 左侧, folder 展开与关闭
-	$(".folderHeader").click(function() {
+	$(".folderHeader").on('click', function() {
 		var body = $(this).next();
 		var p = $(this).parent();
 		if (!body.is(":hidden")) {
@@ -714,11 +714,11 @@ function hideMask () {
 	});
 	
 	// 邮箱验证
-	$("#wrongEmail").click(function() {
+	$("#wrongEmail").on('click', function() {
 		openSetInfoDialog(1);
 	});
 	
-	$("#setTheme").click(function() {
+	$("#setTheme").on('click', function() {
 		showDialog2("#setThemeDialog", {title: "主题设置", postShow: function() {
 			if (!UserInfo.Theme) {
 				UserInfo.Theme = "default";
@@ -778,7 +778,7 @@ function hideMask () {
 	$("#leftSwitcher2").on('click', function() {
 		maxLeft(true);
 	});
-	$("#leftSwitcher").click('click', function() {
+	$("#leftSwitcher").on('click', function() {
 		if(Mobile.switchPage()) {
 			minLeft(true);
 		}
@@ -800,7 +800,7 @@ function hideMask () {
 	
 	// mini版
 	// 点击展开
-	$("#notebookMin div.minContainer").click(function() {
+	$("#notebookMin div.minContainer").on('click', function() {
 		var target = $(this).attr("target");
 		maxLeft(true);
 		if(target == "#notebookList") {
@@ -854,15 +854,15 @@ function hideMask () {
 	/*
 	//--------
 	// 建议
-	$("#yourSuggestions").click(function() {
+	$("#yourSuggestions").on('click', function() {
 		showDialog2("#suggestionsDialog");
 	});
-	$("#suggestionBtn").click(function(e) {
+	$("#suggestionBtn").on('click', function(e) {
 		e.preventDefault();
-		var suggestion = $.trim($("#suggestionTextarea").val());
+		var suggestion = ($("#suggestionTextarea").val() || "").trim();
 		if(!suggestion) {
 			$("#suggestionMsg").html("请输入您的建议, 谢谢!").show().addClass("alert-warning").removeClass("alert-success");
-			$("#suggestionTextarea").focus();
+			$("#suggestionTextarea").trigger('focus');
 			return;
 		}
 		$("#suggestionBtn").html("正在处理...").addClass("disabled");
@@ -1037,7 +1037,7 @@ LeaAce = {
 			var preHtml = $pre.html();
 
 			$pre.removeClass('ace-to-pre');
-			$pre.attr("contenteditable", false); // ? 避免tinymce编辑
+			$pre.attr("contenteditable", "false"); // ? 避免tinymce编辑
 			var aceEditor = ace.edit(id);
 
 			aceEditor.container.style.lineHeight = 1.5;
@@ -1107,7 +1107,7 @@ LeaAce = {
 			// 当有错误时, 会有XXXXX的形式, 此时不要ace, 直接原生的!!!
 			console.error('ace error!!!!');
 			console.error(e);
-			$pre.attr("contenteditable", true);
+			$pre.attr("contenteditable", "true");
 			$pre.removeClass('ace-tomorrow ace_editor ace-tm');
 			$pre.html(rawCode);
 			me.resetAddHistory();

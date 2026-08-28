@@ -189,7 +189,7 @@ $("#accountInfoDialog").on("click", "#accountBtn", function(e) {
 
 //-------------
 var usernameVd = new vd.init("#baseInfo");
-$("#usernameBtn").click(function(e) {
+$("#usernameBtn").on('click', function(e) {
 	e.preventDefault();
 	
 	if(!usernameVd.valid()) {
@@ -211,7 +211,7 @@ $("#usernameBtn").click(function(e) {
 
 // 修改邮箱
 var emailVd = new vd.init("#emailInfo");
-$("#emailBtn").click(function(e) {
+$("#emailBtn").on('click', function(e) {
 	e.preventDefault();
 	if(!emailVd.valid()) {
 		return;
@@ -229,7 +229,7 @@ $("#emailBtn").click(function(e) {
 
 // 修改密码
 var updatePwdVd = new vd.init("#updatePwd");
-$("#pwdBtn").click(function(e) {
+$("#pwdBtn").on('click', function(e) {
 	e.preventDefault();
 	if(!updatePwdVd.valid()) {
 		return;
@@ -246,14 +246,14 @@ $("#pwdBtn").click(function(e) {
 });
 
 // 重新发送
-$(".reSendActiveEmail").click(function() {
+$(".reSendActiveEmail").on('click', function() {
 	// 弹框出来
 	showDialog("reSendActiveEmailDialog", {title: getMsg("sendVerifiedEmail"), postShow: function() {
 		ajaxGet("/user/reSendActiveEmail", {}, function(ret) {
 			if (typeof ret == "object" && ret.Ok) {
 				$("#leanoteDialog .text").html(getMsg("sendSuccess"))
 				$("#leanoteDialog .viewEmailBtn").removeClass("disabled");
-				$("#leanoteDialog .viewEmailBtn").click(function() {
+				$("#leanoteDialog .viewEmailBtn").on('click', function() {
 					hideDialog();
 					var url = getEmailLoginAddress(UserInfo.Email);
 					window.open(url, "_blank");
@@ -265,7 +265,7 @@ $(".reSendActiveEmail").click(function() {
 	}});
 });
 // 现在去验证
-$(".nowToActive").click(function() {
+$(".nowToActive").on('click', function() {
 	var url = getEmailLoginAddress(UserInfo.Email);
 	window.open(url, "_blank");
 });

@@ -80,7 +80,7 @@ function log(o) {
 						<!--
 						<div class="dropdown" style="display: inline-block">
 							<a class="ios7-a dropdown-toggle"
-								id="listNotebookDropdownMenu" data-toggle="dropdown">
+id="listNotebookDropdownMenu" data-toggle="dropdown">
 								<i class="fa fa-angle-down"></i>
 							</a>
 							<div class="dropdown-menu dropdown-list" id="searchNotebookForAddDropdownList">
@@ -110,7 +110,7 @@ function log(o) {
 
 						<!--
 						<div class="dropdown" style="display: inline-block">
-							<a id="listShareNotebookDropdownMenu" class="ios7-a dropdown-toggle" data-toggle="dropdown">
+<a id="listShareNotebookDropdownMenu" class="ios7-a dropdown-toggle" data-toggle="dropdown">
 								<i class="fa fa-angle-down"></i>
 							</a>
 							<div class="dropdown-menu dropdown-list" id="searchNotebookForAddShareDropdownList" >
@@ -118,7 +118,7 @@ function log(o) {
 							</div>
 						</div>
 						-->
-					</div>
+</div>
 				</div>
 
 				<div class="pull-left" id="leanoteMsg">
@@ -129,8 +129,8 @@ function log(o) {
 
 				<div class="pull-right" id="myProfile">
 					<div class="dropdown">
-						<a class="dropdown-toggle profile-img" title="{{.userInfo.Username}}" data-toggle="dropdown">
-							<img alt="{{.userInfo.Username}}" title="{{.userInfo.Username}}" src="{{if .userInfo.Logo}}{{.userInfo.Logo}}{{else}}/images/blog/default_avatar.png{{end}}" id="myAvatar"/>
+<a class="dropdown-toggle profile-img" title="{{.userInfo.Username}}" data-toggle="dropdown">
+<img alt="{{.userInfo.Username}}" title="{{.userInfo.Username}}" src="{{if .userInfo.Logo}}{{.userInfo.Logo}}{{else}}/images/blog/default_avatar.png{{end}}" id="myAvatar"/>
 							<span class="username">
 								{{.userInfo.Username}}
 							</span>
@@ -139,14 +139,14 @@ function log(o) {
 						<ul class="dropdown-menu li-a" role="menu">
 							<li role="presentation">
 								<a href="/member" target="_blank">
-								<i class="fa fa-user"></i>
+<i class="fa fa-user"></i>
 								{{msg . "memberCenter"}}
 								</a>
 							</li>
 
 							<li role="presentation" id="setTheme">
 								<a>
-								<i class="fa fa-sun-o"></i>
+<i class="fa fa-sun-o"></i>
 								{{leaMsg . "Theme"}}
 								</a>
 							</li>
@@ -154,7 +154,7 @@ function log(o) {
 							<li role="presentation" class="divider"></li>
 							<li role="presentation">
 								<a href="/member/blog/index" target="_blank">
-								<i class="fa fa-bold"></i>
+<i class="fa fa-bold"></i>
 								{{msg . "blogSet"}}
 								</a>
 							</li>
@@ -175,14 +175,14 @@ function log(o) {
 							<li role="presentation" class="divider"></li>
 							<li role="presentation">
 								<a target="_blank" title="{{msg . "admin"}}" href="/admin/index">
-									<i class="fa fa-dashboard"></i>
+<i class="fa fa-dashboard"></i>
 									<span>{{msg . "admin"}}</span>
 								</a>
 							</li>
 							{{end}}
 							<li role="presentation" class="divider"></li>
 							<li role="presentation" onclick="logout()">
-								<i class="fa fa-sign-out"></i>
+<i class="fa fa-sign-out"></i>
 								{{msg . "logout"}}
 							</li>
 						</ul>
@@ -190,13 +190,13 @@ function log(o) {
 				</div>
 
 				<div class="pull-right top-nav writting-hide lea-blog">
-					<a target="_blank" href="http://lea.leanote.com">
+<a target="_blank" href="http://lea.leanote.com">
 						{{msg . "Explore"}}
 					</a>
 				</div>
 
 				<div class="pull-right top-nav writting-hide" id="myBlog">
-					<a target="_blank" href="{{$.blogUrl}}/{{.userInfo.Username}}">
+<a target="_blank" href="{{$.blogUrl}}/{{.userInfo.Username}}">
 						{{msg . "myBlog"}}
 					</a>
 				</div>
@@ -206,7 +206,7 @@ function log(o) {
 				</div>
 
 				{{if eq .userInfo.Email "demo@leanote.com"}}
-				{{if .openRegister}}
+{{if .openRegister}}
 				<div class="pull-right top-nav" id="demoRegister">
 					<span>
 						{{msg . "demoRegister"}}
@@ -218,7 +218,7 @@ function log(o) {
 				<!--
 				<ul id="setting" class="pull-right">
 					<li class="dropdown messages">
-						<a class="dropdown-toggle" data-toggle="dropdown">
+<a class="dropdown-toggle" data-toggle="dropdown">
 							<span aria-hidden="true" class="icon se7en-flag"></span>
 							<div class="sr-only">Messages</div>
 							<p class="counter">3</p>
@@ -230,7 +230,7 @@ function log(o) {
 					</li>
 
 					<li class="dropdown settings">
-						<a class="dropdown-toggle" data-toggle="dropdown">
+<a class="dropdown-toggle" data-toggle="dropdown">
 							<span aria-hidden="true" class="icon se7en-gear"></span>
 							<div class="sr-only">Settings</div>
 						</a>
@@ -260,7 +260,7 @@ function log(o) {
 					<div id="notebook">
 						<div class="folderNote opened" id="myNotebooks">
 							<div class="folderHeader clearfix">
-								<i class="fa fa-book pull-left fa-left"></i>
+<i class="fa fa-book pull-left fa-left"></i>
 								<span class="pull-left">
 									{{msg . "notebook"}}
 								</span>
@@ -270,7 +270,7 @@ function log(o) {
 							</div>
 
 							<div class="folderBody">
-								<input type="text" class="form-control" id="searchNotebookForList" placeholder="{{msg . "SearchNotebook"}}"/>
+<input type="text" class="form-control" id="searchNotebookForList" placeholder="{{msg . "SearchNotebook"}}"/>
 								<ul class="ztree" id="notebookList"></ul>
 								<ul class="ztree" id="notebookListForSearch"></ul>
 							</div>
@@ -327,8 +327,8 @@ function log(o) {
 						</div>
 					</div>
 
-					<!--
-					底下隐藏/展开
+<!--
+底下隐藏/展开
 					<div id="notebookBottom">
 						<i class="fa fa-angle-left" id="leftSwitcher"></i>
 					</div>
@@ -369,7 +369,7 @@ function log(o) {
 						<div id="sortType">
 							<div class="dropdown">
 								<a class="ios7-a dropdown-toggle" id="dropdownMenu1"
-									data-toggle="dropdown">
+data-toggle="dropdown">
 									</i><i class="fa fa-th-list"></i>
 								</a>
 								<ul class="dropdown-menu" role="menu"
@@ -432,13 +432,13 @@ function log(o) {
 					<!-- 遮罩, 为了resize3Columns用 -->
 					<div id="noteMask" class="note-mask"></div>
 					<!-- for loading -->
-					<div id="noteMaskForLoading" class="note-mask"> <!-- z-index: 11 -->
+<div id="noteMaskForLoading" class="note-mask"> <!-- z-index: 11 -->
 						<img src="/images/loading-24.gif"/>
 						<br />
 						loading...
 					</div>
 					<!-- for tips -->
-					<div id="editorMask"> <!-- z-index: 10 -->
+<div id="editorMask"> <!-- z-index: 10 -->
 						{{msg . "noNoteNewNoteTips"}}
 						<br />
 						<br />
@@ -451,7 +451,7 @@ function log(o) {
 						</div>
 					</div>
 
-					<div id="batchMask" class="note-mask"> <!-- z-index: 99 -->
+<div id="batchMask" class="note-mask"> <!-- z-index: 99 -->
 						<div class="batch-ctn" id="batchCtn"></div>
 						<div class="batch-info">
 							{{leaMsg . "<span></span> notes selected"}}
@@ -477,14 +477,14 @@ function log(o) {
 
 								<div class="dropdown" style="display: inline-block"
 									id="tagDropdown">
-									<i class="fa fa-bookmark-o"></i>
+<i class="fa fa-bookmark-o"></i>
 									<a
 										class="metro-a dropdown-toggle" data-toggle="dropdown"
 										id="addTagTrigger" style="cursor: text; padding-left: 0">
 										<span class="add-tag-text">
 										{{msg . "clickAddTag"}}
 										</span>
-									</a>
+</a>
 									<input type="text" id="addTagInput" />
 									<ul class="dropdown-menu" role="menu" id="tagColor">
 										<li role="presentation"><span class="label label-red">{{msg . "red"}}</span>
@@ -525,11 +525,11 @@ function log(o) {
 							                <div id="dropAttach" class="dropzone">
 							                    <a class="btn btn-success btn-choose-file">
 													<i class="fa fa-upload"></i>
-								<span>{{msg . "Choose File"}}</span>
+<span>{{msg . "Choose File"}}</span>
 							                    </a>
 							                    <a class="btn btn-default" id="downloadAllBtn">
 								                    <i class="fa fa-download"></i>
-								<span>{{msg . "Download All"}}</span>
+<span>{{msg . "Download All"}}</span>
 							                    </a>
 
 							                    <input type="file" name="file" multiple/>
@@ -561,11 +561,11 @@ function log(o) {
 								<span id="noteReadTags"></span>
 
 								<!-- 修改时间 -->
-								<i class="fa fa-clock-o"></i> {{msg . "update"}}
-								<span id="noteReadUpdatedTime"></span>
+<i class="fa fa-clock-o"></i> {{msg . "update"}}
+<span id="noteReadUpdatedTime"></span>
 
 								<!-- 修改时间 -->
-								<i class="fa fa-clock-o"></i> {{msg . "create"}}
+<i class="fa fa-clock-o"></i> {{msg . "create"}}
 								<span id="noteReadCreatedTime"></span>
 							</div>
 						</div>
@@ -614,12 +614,12 @@ function log(o) {
 						    <div class="layout-wrapper-l2">
 						        <div class="navbar navbar-default">
 						            <div class="navbar-inner" id="wmd-button-bar">
-							<div id="mdInfoToolbar" class="info-toolbar invisible">
+<div id="mdInfoToolbar" class="info-toolbar invisible">
 							              <span class="lang">{{msg . "created"}}</span>: <span class="created-time"></span>
 							              <span class="lang">{{msg . "updated"}}</span>: <span class="updated-time"></span>
 							            </div>
 
-							<div class="wmd-button-bar-inner clearfix">
+<div class="wmd-button-bar-inner clearfix">
 							                <ul class="nav left-buttons">
 							                    <li class="wmd-button-group1 btn-group"></li>
 							                </ul>
@@ -635,7 +635,7 @@ function log(o) {
 							                <!-- 帮助 -->
 							                 <ul class="nav left-buttons">
 							                    <li class="wmd-button-group6 btn-group">
-								<li class="wmd-button btn btn-success" id="wmd-help-button" title="{{msg . "Markdown syntax"}}" style="left: 0px; display: none;"><span style="display: none; background-position: 0px 0px;"></span><i class="fa fa-question-circle"></i></li>
+<li class="wmd-button btn btn-success" id="wmd-help-button" title="{{msg . "Markdown syntax"}}" style="left: 0px; display: none;"><span style="display: none; background-position: 0px 0px;"></span><i class="fa fa-question-circle"></i></li>
 							                    </li>
 							                </ul>
 
@@ -662,7 +662,7 @@ function log(o) {
 						            <div class="editorBg"></div>
 						        </div>
 						        <div class="layout-wrapper-l3">
-							<div id="left-column">
+<div id="left-column">
 							            <pre id="wmd-input" class="form-control"><div class="editor-content mousetrap" contenteditable=true></div><div class="editor-margin"></div></pre>
 							            <!-- v2 markdown lightmode需要 -->
 							            <div class="textarea-helper"></div>
@@ -691,7 +691,7 @@ function log(o) {
 						        </div>
 						    </div>
 						    <div id="wmd-button-bar" class="hide"></div>
-						</div>
+</div>
 
 						<!--
 						<div id="wmd-button-bar" id="mdBar"></div>
@@ -713,7 +713,7 @@ function log(o) {
 	                    <textarea id="md-section-helper"></textarea>
 	                    -->
 					</div>
-				</div>
+</div>
 			</div>
 
 			<!-- mdEditor -->
@@ -727,7 +727,7 @@ function log(o) {
 			                <h4 class="modal-title">{{leaMsg . "Image"}}</h4>
 			            </div>
 			            <div class="modal-body" style="padding-top: 0; padding-bottom: 0">
-				<iframe name="mdImageManager" style="width: 100%; height: 350px" scrolling="no" id="leauiIfrForMD" src="" frameborder="0"></iframe>
+<iframe name="mdImageManager" style="width: 100%; height: 350px" scrolling="no" id="leauiIfrForMD" src="" frameborder="0"></iframe>
 			            </div>
 			            <div class="modal-footer">
 			                 <a href="#" class="btn btn-default"
@@ -752,7 +752,7 @@ function log(o) {
 							<p></p>
 							<div class="input-group">
 							  <span class="input-group-addon">
-								<i></i>
+<i></i>
 							  </span>
 							  <input type="text" class="form-control" placeholder="">
 							</div>
@@ -804,9 +804,9 @@ function log(o) {
 				   <div class="modal-body">
 						<form role="form">
 						  <div class="form-group">
-							<div id="registerEmailMsg" class="alert alert-warning" style="display: none">
-							</div>
-							<input type="hidden" id="toEmail"/>
+<div id="registerEmailMsg" class="alert alert-warning" style="display: none">
+</div>
+<input type="hidden" id="toEmail"/>
 						    <label for="emailContent">邮件内容</label>
 						    <textarea class="form-control" id="emailContent">Hi, 我是life, leanote非常好用, 快来注册吧.</textarea>
 						  </div>
@@ -830,24 +830,24 @@ function log(o) {
 			        <h4 class="modal-title" class="modalTitle">{{msg . "theme"}}</h4>
 			      </div>
 					<div class="modal-body">
-						<table id="themeForm">
-							<tr>
-								<td>
-									<label>
-									<img src="/images/slider/all.gif" height="100px">
-									<br />
-									<input type="radio" name="theme" value="default"> {{msg . "default"}}
-									</label>
-								</td>
-								<td>
-									<label>
-									<img src="/images/slider/all-simple.gif" height="100px">
-									<br />
-									<input type="radio" name="theme" value="simple"> {{msg . "simple"}}
-									</label>
-								</td>
-							</tr>
-						</table>
+<table id="themeForm">
+<tr>
+<td>
+<label>
+<img src="/images/slider/all.gif" height="100px">
+<br />
+<input type="radio" name="theme" value="default"> {{msg . "default"}}
+</label>
+</td>
+<td>
+<label>
+<img src="/images/slider/all-simple.gif" height="100px">
+<br />
+<input type="radio" name="theme" value="simple"> {{msg . "simple"}}
+</label>
+</td>
+</tr>
+</table>
 					</div>
 					<div class="modal-footer">
 						<button type="button" class="btn btn-default" data-dismiss="modal">{{msg . "close"}}</button>

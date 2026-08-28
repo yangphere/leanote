@@ -22,6 +22,14 @@ function copyBuildTree() {
       return relative === '' || relative === 'package.json' || relative.split(path.sep)[0] === 'dist';
     },
   });
+  // Same for the blueimp-file-upload dist files consumed by the plugins/album bundles.
+  fs.cpSync(path.join(ROOT, 'node_modules', 'blueimp-file-upload'), path.join(temp, 'node_modules', 'blueimp-file-upload'), {
+    recursive: true,
+    filter: (source) => {
+      const relative = path.relative(path.join(ROOT, 'node_modules', 'blueimp-file-upload'), source);
+      return relative === '' || relative === 'package.json' || relative === 'LICENSE.txt' || relative.split(path.sep)[0] === 'js';
+    },
+  });
   return temp;
 }
 
@@ -310,11 +318,13 @@ test('sanitized Playwright reporter serializes concurrent writes', async () => {
   const reportDir = path.join(ROOT, 'test-results');
   fs.rmSync(reportDir, { recursive: true, force: true });
   const reporter = new SanitizedSummaryReporter();
+  const suite = { suites: [{ project: () => ({ name: 'build-smoke' }) }] };
   await Promise.all([
-    reporter.onBegin(),
+    reporter.onBegin({}, suite),
     reporter.onError(new Error('fixture failed')),
     reporter.onError(Object.assign(new Error('browser missing'), { name: 'TimeoutError' })),
   ]);
+  assert.equal(reporter.active, true);
   await reporter.onEnd({ status: 'failed' });
   const summary = JSON.parse(fs.readFileSync(path.join(reportDir, 'build-smoke-summary.json'), 'utf8'));
   assert.match(summary.stage, /failed$/);

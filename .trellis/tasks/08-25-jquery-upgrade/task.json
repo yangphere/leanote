@@ -19,7 +19,8 @@
   "pr_url": null,
   "subtasks": [],
   "children": [
-    "08-27-jquery-upgrade-spec-repair"
+    "08-27-jquery-upgrade-spec-repair",
+    "08-28-jquery-upgrade-review-repair"
   ],
   "parent": "08-25-frontend-libs",
   "relatedFiles": [
@@ -27,15 +28,21 @@
     "package-lock.json",
     "scripts/build/manifest.mjs",
     "scripts/build/index.mjs",
+    "scripts/build/js.mjs",
     "tests/js/build-pipeline.test.js",
     "tests/js/jquery-asset-contract.test.js",
-    "tests/e2e/business/jquery-upgrade.spec.mjs",
+    "tests/e2e/business/business-flows.spec.mjs",
+    "tests/e2e/business/jquery-diagnostics.spec.mjs",
+    "tests/e2e/business/business-summary.mjs",
     "tests/e2e/e2e-environment.mjs",
     "tests/e2e/build/build-resource-smoke.spec.mjs",
     "tests/e2e/build/sanitized-summary-reporter.mjs",
     "playwright.config.mjs",
     ".github/workflows/regression-baseline.yml",
     "app/tests/harness",
+    "app/tests/harness/cmd/e2e/main.go",
+    "app/controllers/TestE2eController.go",
+    "app/controllers/TestE2eController_test.go",
     "app/controllers",
     "conf/app.conf",
     "app/controllers/BlogController.go",
@@ -50,6 +57,7 @@
     "public/blog/js",
     "public/album/js",
     "docs/modernization/jquery-3.7-compatibility-inventory.md",
+    "docs/modernization/fileupload-provenance.md",
     "docs/modernization/browser-smoke/jquery-3.7.md",
     "docs/modernization-backlog.md"
   ],

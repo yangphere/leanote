@@ -43,7 +43,7 @@ func StartServer(t testing.TB) *Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server, err := startServer(repoRoot)
+	server, err := startServer(repoRoot, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,6 +53,32 @@ func StartServer(t testing.TB) *Server {
 		}
 	})
 	return server
+}
+
+// StartServerProcess starts the application under test in Revel "test" run
+// mode without a *testing.T handle, for long-lived supervisors such as the
+// E2E harness command (app/tests/harness/cmd/e2e). The child process
+// inherits the caller's environment, including LEANOTE_E2E_RUN_TOKEN.
+func StartServerProcess() (*Server, error) {
+	return StartServerProcessWithRegistration(nil)
+}
+
+// StartServerProcessWithRegistration starts the application under test in
+// Revel "test" run mode and invokes register immediately after the process
+// starts, before the readiness probe begins. Supervisors use this hook to
+// publish the live server handle before any blocking startup work, ensuring
+// an interrupt during readiness still tears the process down.
+func StartServerProcessWithRegistration(register func(*Server)) (*Server, error) {
+	repoRoot, err := findRepositoryRoot()
+	if err != nil {
+		return nil, err
+	}
+	return startServer(repoRoot, register)
+}
+
+// RepositoryRoot resolves the repository root from the working directory.
+func RepositoryRoot() (string, error) {
+	return findRepositoryRoot()
 }
 
 func (s *Server) Close() error {
@@ -72,7 +98,7 @@ func (s *Server) Close() error {
 	return s.closeErr
 }
 
-func startServer(repoRoot string) (*Server, error) {
+func startServer(repoRoot string, register func(*Server)) (*Server, error) {
 	if err := ensureTestPortAvailable(); err != nil {
 		return nil, err
 	}
@@ -126,6 +152,9 @@ func startServer(repoRoot string) (*Server, error) {
 			_ = logFile.Close()
 			cleanup()
 		},
+	}
+	if register != nil {
+		register(server)
 	}
 	if err := server.waitForReady(logFile.Name()); err != nil {
 		_ = server.Close()

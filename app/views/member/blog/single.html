@@ -40,7 +40,7 @@
 <script type="text/javascript" src="/public/member/js/jquery.sortable.js"></script>
 <script>
 $(function() {
-	$("#baseBtn").click(function(){
+	$("#baseBtn").on('click', function(){
 		var ids = [];
 		$(".list-group-item").each(function() {
 			ids.push($(this).data("id"));
@@ -54,7 +54,7 @@ $(function() {
 		});
 	});
 	
-	$(".page-delete").click(function() {
+	$(".page-delete").on('click', function() {
 		var singleId = $(this).data('id');
 		art.confirm(getMsg("Are you sure ?"), function() {
 			ajaxPost("/member/blog/deleteSingle", {singleId: singleId}, function(re){
@@ -68,7 +68,7 @@ $(function() {
 		});
 	});
 	
-	$(".url-title").change(function(){
+	$(".url-title").on('change', function(){
 		var $t = $(this);
 		var url = $t.val();
 		var singleId = $t.data('id');

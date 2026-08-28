@@ -74,7 +74,7 @@ $(function() {
 	
 	// 基本设置
 	var vdPage = new vd.init("#formData");
-	$("#baseBtn").click(function(e) {
+	$("#baseBtn").on('click', function(e) {
 		e.preventDefault();
 		if(!vdPage.valid()) {
 			return;

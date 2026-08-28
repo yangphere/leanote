@@ -22,7 +22,7 @@ TinyMCE 内部 bridge 与脑图子应用只登记到清单的 E-TM 排除区。�
 
 业务 E2E 对清单选定的真实请求使用 Playwright route 注入受控失败响应，断言页面可见失败状态/既有 alert 或 failure callback、无 pageerror，且测试不会修改生产数据。直接 `$.get`/`$.post` 没有错误处理的业务路径必须在清单中得到明确适配和回归，不得靠未覆盖来保留静默失败。
 
-E2E 使用单一 test-mode harness。恢复 `leanote_test` 后，harness 生成随机 run token 与 admin 密码，将 `{kind: "jquery-upgrade", tokenSha256, createdAt}` 作为唯一 marker 写入 `e2e_runs`，并用现有密码哈希逻辑轮换 fixture `admin` 的密码。账号名、密码和 token 只经本次运行子进程环境传递；CI 在写入临时 job 环境前 mask 值，不能读取 GitHub Secrets，也不能在日志、摘要或 artifact 输出它们。
+E2E 使用单一 test-mode harness。恢复 `leanote_test` 后，harness 生成随机 run token 与 admin 密码，将 `{kind: "browser-e2e", tokenSha256, createdAt}` 作为唯一 marker 写入 `e2e_runs`，并用现有密码哈希逻辑轮换 fixture `admin` 的密码。账号名、密码和 token 只经本次运行子进程环境传递；CI 在写入临时 job 环境前 mask 值，不能读取 GitHub Secrets，也不能在日志、摘要或 artifact 输出它们。harness 的信号处理器在创建任何资源之前安装，按"终止子进程树 → 停止服务 → 删除 marker → 销毁容器"聚合错误执行，teardown 幂等（Windows 经 Job Object KILL_ON_JOB_CLOSE 回收整棵进程树）。
 
 `GET /_test/e2e/identity` 仅在 test mode 且请求来源为 loopback 时可达。它通过应用已连接的 MongoDB session 查询该唯一 marker，以常量时间比较 marker 的 `tokenSha256` 与环境 token 的摘要，并从同一 session 取得 database 名；只有 marker 有且仅有一条、未过期（有效期：`createdAt` 后 2 小时，2026-08-27 确认）、摘要匹配且 database 为 `leanote_test` 时才返回 `{runToken, database}`。非 test/非 loopback 返回 404；marker、数据库或连接校验失败返回无敏感细节的 503。该 handler 只读且不记录 token。
 
