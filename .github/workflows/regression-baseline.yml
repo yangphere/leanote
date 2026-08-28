@@ -86,7 +86,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/leanote-bin"
           go build -o "$RUNNER_TEMP/leanote-bin/revel" github.com/revel/cmd/revel
-          go version -m "$RUNNER_TEMP/leanote-bin/revel" | grep -F 'golang.org/x/tools v0.49.0'
+          go version -m "$RUNNER_TEMP/leanote-bin/revel" | grep -E 'golang\.org/x/tools[[:space:]]+v0\.49\.0'
           echo "$RUNNER_TEMP/leanote-bin" >> "$GITHUB_PATH"
       - name: Record Revel CLI failure in sanitized summary
         if: always() && steps.revel-cli.outcome == 'failure'
