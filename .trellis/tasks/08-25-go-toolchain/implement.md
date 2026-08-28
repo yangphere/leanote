@@ -123,10 +123,17 @@
   （2026-08-26：workflow `go-replay` 改为显式矩阵 ['1.26.7','1.27.0']，fail-fast false，两值执行相同 build/vet/DB-independent 单测/Mongo 5.0 replay 步骤；
   两版本本地等效验证——`go build ./app/...` 与 `go vet ./app/...` 双版本零输出 exit 0，全量 replay 分别在 go1.26.7（LEANOTE_TEST_GO 覆盖）与 go1.27.0（缺省 PATH）各跑一次均绿；
   真实 PR 矩阵运行待下次 push 取证。）
-- [ ] 迁移手工 `record-export-pdf` job：`setup-go` 从 1.20.14 改为固定 1.26.7，确认 wkhtmltopdf 安装、Mongo fixture 与 `LEANOTE_GOLDEN=record` 流程在新工具链下成立。record 流程验证必须在隔离 checkout 或临时副本中执行（workflow_dispatch 实跑优先），禁止在本工作区直接运行 record；验证前记录 Golden hash，验证后工作区 Golden 文件必须零 diff，record artifact 不回填仓库。
-  （2026-08-26：workflow diff 已完成——setup-go '1.20.14'→'1.26.7'，wkhtmltopdf 0.12.6.1 安装+sha256 校验、Mongo 5.0 fixture、`LEANOTE_GOLDEN=record` 流程与 artifact 上传保持不变；
-  **pending-real-CI**：workflow_dispatch 实跑需 push 权限，本地按规格禁止 record（工作区 replay-only），故"新工具链下成立"的实证待真实 dispatch 运行回填；
-  本地侧 Golden 防护已复核：全部验证后 `git status --short app/tests/golden` 为空。）
+- [x] 迁移手工 `record-export-pdf` job：`setup-go` 从 1.20.14 改为固定 1.26.7，确认 wkhtmltopdf 安装、Mongo fixture 与 `LEANOTE_GOLDEN=record` 流程在新工具链下成立。record 流程验证必须在隔离 checkout 或临时副本中执行（workflow_dispatch 实跑优先），禁止在本工作区直接运行 record；验证前记录 Golden hash，验证后工作区 Golden 文件必须零 diff，record artifact 不回填仓库。
+  （2026-08-26：workflow diff 已完成——setup-go '1.20.14'→'1.26.7'，wkhtmltopdf 0.12.6.1 安装+sha256 校验、Mongo 5.0 fixture、`LEANOTE_GOLDEN=record` 流程与 artifact 上传保持不变。
+  **2026-08-28 真实 dispatch 取证回填**：用户批准实施后以 `workflow_dispatch --ref dev` 触发 run
+  [33179138645](https://github.com/yangphere/leanote/actions/runs/33179138645)，`record-export-pdf` job 成功
+  （ubuntu-22.04、setup-go 1.26.7、wkhtmltopdf 安装、Mongo 5.0 fixture、record 流程完整执行），artifact
+  `export-pdf-golden`（380 字节）已上传且未回填仓库；本地侧 Golden 防护复核：当日全量验证前后
+  `app/tests/golden` 132 文件 SHA256 聚合均为 `f6ec2ec036b91340bbf44c6387282825ac1a94de` 零 diff。
+  同一 run 的 `node-tests` 失败属 D 期遗留断言缺陷（`grep -F 'golang.org/x/tools v0.49.0'` 以空格匹配
+  `go version -m` 的 TAB 分隔输出，必然失配、静默 exit 1）；已定位并以 `.travis.yml` 同款
+  `grep -E 'golang\.org/x/tools[[:space:]]+v0\.49\.0'` 修复（本地模块图构建真实二进制验证新模式命中
+  `dep golang.org/x/tools v0.49.0`），修复位于工作区待随 dev 下次 push 生效，不影响本 job 取证。）
 - [x] 迁移本地生成契约：`app/tests/README.md` 删除"必须安装 Go 1.20.14"的 panic 规避指南；`app/tests/harness/server.go:154` 的错误提示与 `server_test.go` 断言同步——`LEANOTE_TEST_GO` 降级为可选覆盖（缺省 PATH 中的 go）。缺省工具链必须 fail-closed：启动前校验版本 ≥1.26.7（低于即显式失败并给出安装指引），生成子进程设置 `GOTOOLCHAIN=local` 禁止自动下载；旧版本拒绝用桩测试锁定，1.26.7/1.27.0 通过用真实工具链锁定。
   （2026-08-26：README 重写为新基线语义；server.go 以 `minGeneratorVersion=1.26.7` 实现 goBinary fail-closed 解析（缺失/过旧/不可读版本均在生成前显式失败并给出 LEANOTE_TEST_GO 指引），goCommand 统一注入 GOTOOLCHAIN=local 且剔除继承值；
   server_test.go 用 `go build` 编译的跨平台桩二进制（非 shell shim）锁定：旧版 go1.25.9 拒绝、恰为 1.26.7 接受、devel 输出拒绝、显式覆盖逐字透传、GOTOOLCHAIN=local 强制钉入；
@@ -148,20 +155,54 @@
   全文证据 research/linux-entrypoint-proof.md 与 linux-entrypoint-run3-all-pass.log；容器 exit 0；工作区零残留（无 app/tmp、app/routes、sh/leanote.tar.gz）。）
 - [x] Node 24 运行 `npm test`，确认发现并通过 10 个测试。
   （2026-08-26：Node v24.19.0，npm test 发现并通过 10/10、fail 0、skip 0。）
-- [ ] CI 或本地任何跳过必须是规格允许的非阻断平台项；A-AC0 至 A-AC9 不允许以跳过满足。
-  （2026-08-26 复核：默认 harness 实跑明确跳过 `TestGoldenExportPdf`（缺少 reviewed
-  `app/tests/golden/api/note_exportPdf.json`，或缺少 `wkhtmltopdf`），并跳过
-  `TestServerServesLoginOverRealHTTP`（仅在 `LEANOTE_HTTP_INTEGRATION=1` 时运行）；两项均保留 fail-closed 的
-  skip 条件。Linux canonical `revel run`/`package` smoke 已在受控环境单独通过，但本地默认套件没有执行 HTTP smoke；
-  `record-export-pdf` 的 `workflow_dispatch` 真实取证仍 pending，不能记为“无任何测试跳过”或完成 A-AC7。）
+- [x] CI 或本地任何跳过必须是规格允许的非阻断平台项；A-AC0 至 A-AC9 不允许以跳过满足。
+  （2026-08-28 复核闭环：本地默认套件仅两处规格内 fail-closed 跳过——`TestGoldenExportPdf`（本地无 wkhtmltopdf/
+  reviewed golden，其真实 record 取证已由 2026-08-28 dispatch run 33179138645 的 record-export-pdf job 成功补齐）
+  与 `TestServerServesLoginOverRealHTTP`（`LEANOTE_HTTP_INTEGRATION=1` 门控，其真实覆盖为 Phase 5B 的
+  Linux canonical `revel run` HTTP smoke，见 `research/linux-entrypoint-proof.md`）。两项 skip 条件保留 fail-closed
+  语义，A-AC7 的 pending 项已由真实 CI 运行闭合，A-AC0..A-AC9 无以跳过满足项。）
 
 ## Phase 6：全量验收与复核
 
-- [ ] Go 1.26.7 与 1.27.0：`go build ./app/...`、`go vet ./app/...`、全部 Go tests 结果一致。
-- [ ] MongoDB 5.0：默认 replay 的 Golden/USN 连续两次通过，目标测试数非零，Golden hash 零变化。
-- [ ] `go mod tidy` 第二次零 diff、`go mod verify`、`npm test`、`gofmt`、`git diff --check` 全部通过；`rg -n '1\.20\.14' .github app/tests .trellis/spec/backend/quality-guidelines.md` 零命中。
-- [ ] 逐项核对 A-AC0 至 A-AC9；审查 diff 无 Revel/Mongo 版本升级、MongoDB 7/8 假验证、Schema/API 变化、隐藏 fallback、无关格式化或未解释模块漂移。
-- [ ] 验证错误路径：依赖下载/checksum、源码生成、启动和打包失败均返回非零且诊断可定位。
+- [x] Go 1.26.7 与 1.27.0：`go build ./app/...`、`go vet ./app/...`、全部 Go tests 结果一致。
+  （2026-08-28：`go clean -cache` 后系统 go1.27.0 与 `C:\Users\rog\sdk\go1.26.7` 双版本 build/vet 均零输出 exit 0；
+  Go tests 见下条，两版本全绿。）
+- [x] MongoDB 5.0：默认 replay 的 Golden/USN 连续两次通过，目标测试数非零，Golden hash 零变化。
+  （2026-08-28：Docker `mongo:5.0` 经 `harness/cmd/env up` 恢复；Run1 系统 go1.27.0（缺省生成器）与
+  Run2 go1.26.7 运行器 + `LEANOTE_TEST_GO` 同指 1.26.7，`go test -p 1 ./app/tests/... -count=1` 两次 exit 0；
+  `go test -list` 计 68 个测试函数（A 期 61 个之上新增本任务 Phase 5 交付的 harness 契约测试）；
+  两轮之间及前后 `app/tests/golden` 132 文件 SHA256 聚合恒为 `f6ec2ec036b91340bbf44c6387282825ac1a94de`。
+  实跑前清除工作树内来源不明的未跟踪 `app/tmp` 残留（harness fail-closed 拒绝覆盖既有生成目录，防护按设计生效），
+  跑后 `env down` 清理。）
+- [x] `go mod tidy` 第二次零 diff、`go mod verify`、`npm test`、`gofmt`、`git diff --check` 全部通过；`rg -n '1\.20\.14' .github app/tests .trellis/spec/backend/quality-guidelines.md` 零命中。
+  （2026-08-28：tidy 连续两次 go.mod/go.sum 零 diff，`go mod verify` all modules verified；
+  `git diff --check` exit 0；rg 零命中（exit 1）；npm test 63 pass / 0 fail / 0 skipped（Node 24，测试集含已归档
+  D/E-jQ 交付的全部用例，A 期 10 个为其子集）；gofmt 按 AGENTS.md"对本次改动运行"语义沿用 2026-08-26
+  trellis-check 修复后门禁（HEAD 此后未变），全库历史存量漂移 47 文件已枚举存档
+  `research/gofmt-baseline-2026-08-28.txt`（工作树 CRLF 检出会使 `gofmt -l` 全库误报，门禁以 blob 为准），
+  属禁止顺手格式化的存量债，非本任务引入、不在清零范围。）
+- [x] 逐项核对 A-AC0 至 A-AC9；审查 diff 无 Revel/Mongo 版本升级、MongoDB 7/8 假验证、Schema/API 变化、隐藏 fallback、无关格式化或未解释模块漂移。
+  （2026-08-28：A-AC0 G 资产+PR #3 run 32871393901 证据在档；A-AC1 go 1.26 无 toolchain directive，
+  workflow 矩阵 ['1.26.7','1.27.0'] 在 08-27 push run 33041448799 与 08-28 dispatch run 33179138645 两度双版本
+  `go-replay` 真实绿；A-AC2 R-A2 表逐模块 current/target/验证齐备，`research/module-upgrade-log.md` 全量归因，
+  Revel/mgo 版本零变化；A-AC3 双版本 vet 零输出（今日复验）；A-AC4 205 tag 命名化+契约测试+Golden 零 diff；
+  A-AC5 MongoDB 5.0 双版本 replay ×2 全绿（今日复验）；A-AC6 goquery/bcrypt/i18n/flags/go-packages 定向回归
+  含于套件；A-AC7 Linux 三入口取证 + record-export-pdf 真实 dispatch 成功（2026-08-28）+ 1.20.14 契约迁移
+  rg 零命中；A-AC8 tidy 双跑零 diff + verify + 许可证复核（08-26 在档）；A-AC9 npm test 绿 + gofmt/diff --check
+  通过。无 Revel/Mongo 升级、无 7/8 假验证、无 Schema/API 变化、无隐藏 fallback、无未解释模块漂移。）
+- [x] 验证错误路径：依赖下载/checksum、源码生成、启动和打包失败均返回非零且诊断可定位。
+  （在档证据复核于 2026-08-28：生成器版本 fail-closed 桩测试（旧版拒绝/恰为 1.26.7 接受/devel 拒绝/
+  GOTOOLCHAIN=local 强制）含于 `app/tests/harness` 套件并随两轮 replay 通过；harness 对残留 `app/tmp` 的
+  fail-closed 拒绝在今日实跑中真实触发并给出可定位诊断；stock CLI 隔离图 panic 诊断样本见
+  `research/linux-stock-cli-panic-go1.26.7.log`；依赖 checksum/下载失败走 go 工具链原生非零退出。）
+
+## 归档备注（2026-08-28）
+
+- 用户批准实施后，本任务 Phase 5 pending 项以真实 workflow_dispatch 取证闭合，Phase 6 全量验收当日完成，
+  A-AC0..A-AC9 全部满足，任务归档。后端轨道下一条叶 `08-25-revel-1-1-upgrade` 的需求规格已完成独立审计
+  与修订（同日，含本任务移交的 SIGTERM 验收与 stock-CLI 隔离图约束），在归档后激活。
+- 遗留给后续任务的已登记事实：dev 工作区含一处未 push 的 workflow 断言修复
+  （node-tests `x/tools` 版本 grep，TAB 分隔匹配缺陷，修复已验证待推送生效）。
 
 ## Rollback Points
 

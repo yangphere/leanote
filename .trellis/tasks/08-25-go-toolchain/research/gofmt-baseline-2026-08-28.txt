@@ -1,0 +1,62 @@
+app/cmd/build.go
+app/cmd/harness/app.go
+app/cmd/harness/build.go
+app/cmd/harness/harness.go
+app/cmd/parser2/source_info_processor.go
+app/cmd/parser2/source_processor.go
+app/cmd/revel.go
+app/controllers/AuthController.go
+app/controllers/BaseController.go
+app/controllers/CaptchaController.go
+app/controllers/FileController.go
+app/controllers/IndexController.go
+app/controllers/NoteController.go
+app/controllers/NotebookController.go
+app/controllers/ShareController.go
+app/controllers/UserController.go
+app/controllers/admin/AdminData.go
+app/controllers/admin/AdminEmailController.go
+app/controllers/admin/AdminUserController.go
+app/controllers/api/ApiAuthController.go
+app/controllers/api/ApiNoteController.go
+app/controllers/api/ApiNotebookController.go
+app/controllers/api/ApiTagController.go
+app/controllers/api/ApiUserController.go
+app/controllers/api/init.go
+app/controllers/member/MemberBlogController.go
+app/controllers/member/MemberGroupController.go
+app/db/Mgo.go
+app/init.go
+app/lea/Debug.go
+app/lea/archive/zip.go
+app/lea/binder/binder.go
+app/lea/blog/Template.go
+app/lea/i18n/i18n.go
+app/lea/route/Route.go
+app/service/AttachService.go
+app/service/BlogService.go
+app/service/ConfigService.go
+app/service/EmailService.go
+app/service/FileService.go
+app/service/NoteImageService.go
+app/service/NoteService.go
+app/service/SessionService.go
+app/service/ShareService.go
+app/service/TagService.go
+app/service/ThemeService.go
+app/service/UserService.go
+
+# gofmt 存量漂移基线（2026-08-28，HEAD ab0fb94）
+
+方法：对全部已跟踪 *.go 的 HEAD blob（git show，LF 原文）逐文件运行 gofmt -d，
+存在输出者即列入上表（共 47 个）。工作树 CRLF 检出会使 gofmt -l 误报全库，
+不得以工作树 gofmt -l 作为门禁。
+
+定性：
+- 全部为 A 之前的历史漂移（import 组内排序、gofmt 1.19+ 文档注释编号等），
+  集中于 app/cmd（vendored Revel cmd 副本，AGENTS.md 禁止无关格式化）、
+  app/controllers、app/service、app/lea 等从未整体格式化过的历史代码。
+- A 的 gofmt 门禁按 AGENTS.md"提交前对本次改动运行 gofmt"执行：
+  A 改动引入的格式问题已在 2026-08-26 由 trellis-check 修复（8 文件），
+  此后 HEAD 未变；本文件仅为存量债精确定位，供 C-b（删除 app/cmd）与
+  后续触碰者参考，不属于 A 的清零范围。
