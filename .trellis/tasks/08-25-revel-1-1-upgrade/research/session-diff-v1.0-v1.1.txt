@@ -1,0 +1,160 @@
+11c11
+< 	"github.com/twinj/uuid"
+---
+> 	"github.com/google/uuid"
+19c19
+< 	// The key for the identity of the session
+---
+> 	// The key for the identity of the session.
+21c21
+< 	// The expiration date of the session
+---
+> 	// The expiration date of the session.
+24c24
+< 	// this is set under the TimestampKey if the session data should expire immediately
+---
+> 	// this is set under the TimestampKey if the session data should expire immediately.
+27c27
+< 	// serialized by key using JSON
+---
+> 	// serialized by key using JSON.
+29c29
+< 	// The mapped session object
+---
+> 	// The mapped session object.
+31c31
+< 	// The suffix of the session cookie
+---
+> 	// The suffix of the session cookie.
+52c52
+< 	buffer := uuid.NewV4()
+---
+> 	suuid := uuid.New()
+54c54
+< 	s[SessionIDKey] = hex.EncodeToString(buffer.Bytes())
+---
+> 	s[SessionIDKey] = hex.EncodeToString(suuid[0:])
+60c60
+< // browser dependent (ie session). If previous session has set to "session", the time returned is time.IsZero()
+---
+> // browser dependent (ie session). If previous session has set to "session", the time returned is time.IsZero().
+69c69
+< // SetNoExpiration sets session to expire when browser session ends
+---
+> // SetNoExpiration sets session to expire when browser session ends.
+74c74
+< // SetDefaultExpiration sets session to expire after default duration
+---
+> // SetDefaultExpiration sets session to expire after default duration.
+93c93
+< // Constant error if session value is not found
+---
+> // Constant error if session value is not found.
+107c107
+< // If value exists in the session it will just return the value
+---
+> // If value exists in the session it will just return the value.
+145c145
+< // Returns the default value if the key is not found
+---
+> // Returns the default value if the key is not found.
+154c154
+< // Extract the values from the session
+---
+> // Extract the values from the session.
+168c168
+< 		//idx := val.MapIndex(reflect.ValueOf(key))
+---
+> 		// idx := val.MapIndex(reflect.ValueOf(key))
+186c186
+< // (or you can use the Session.Del(key) function
+---
+> // (or you can use the Session.Del(key) function.
+197c197
+< // Delete the key from the sessionObjects and Session
+---
+> // Delete the key from the sessionObjects and Session.
+204c204
+< // Extracts the session as a map of [string keys] and json values
+---
+> // Extracts the session as a map of [string keys] and json values.
+221c221
+< // The expiration time will also be assigned
+---
+> // The expiration time will also be assigned.
+247d246
+< 
+256c255
+< // Set the session object from the loaded data
+---
+> // Set the session object from the loaded data.
+269d267
+< 
+273c271
+< // Checks to see if the session is empty
+---
+> // Checks to see if the session is empty.
+297c295
+< // Starting at position 1 drill into the object
+---
+> // Starting at position 1 drill into the object.
+309c307
+< // it will store the results under the session key name SessionMapKeyName
+---
+> // it will store the results under the session key name SessionMapKeyName.
+334c332
+< // Unpack the object from the session map and store it in the session when done, if no error occurs
+---
+> // Unpack the object from the session map and store it in the session when done, if no error occurs.
+344c342
+< // Converts from the session json map into the target,
+---
+> // Converts from the session json map into the target,.
+### session_adapter_cookie.go diff:
+5d4
+< 	"github.com/revel/revel/session"
+11d9
+< )
+12a11,12
+> 	"github.com/revel/revel/session"
+> )
+15c15
+< 	// The session cookie engine
+---
+> 	// The session cookie engine.
+21c21
+< // A logger for the session engine
+---
+> // A logger for the session engine.
+24c24
+< // Create a new instance to test
+---
+> // Create a new instance to test.
+29c29
+< // For testing purposes this engine is used
+---
+> // For testing purposes this engine is used.
+35c35
+< // Called when the the application starts, retrieves data from the app config so cannot be run until then
+---
+> // Called when the the application starts, retrieves data from the app config so cannot be run until then.
+51c51
+< // Decode the session information from the cookie retrieved from the controller request
+---
+> // Decode the session information from the cookie retrieved from the controller request.
+64c64
+< // Encode the session information to the cookie, set the cookie on the controller
+---
+> // Encode the session information to the cookie, set the cookie on the controller.
+66d65
+< 
+70c69
+< // Exposed only for testing purposes
+---
+> // Exposed only for testing purposes.
+104c103
+< // Convert session to cookie
+---
+> // Convert session to cookie.
+144d142
+< 
