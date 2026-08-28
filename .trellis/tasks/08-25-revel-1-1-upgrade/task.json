@@ -26,9 +26,15 @@
     "app/cmd",
     "conf/routes",
     "sh/run.sh",
-    "sh/package.sh"
+    "sh/package.sh",
+    "tools.go",
+    "app/init.go",
+    "app/tests/harness",
+    ".travis.yml",
+    ".github/workflows/regression-baseline.yml",
+    "app/controllers/init.go"
   ],
-  "notes": "只做版本基线，不提前迁出 Revel。",
+  "notes": "只做版本基线，不提前迁出 Revel。SIGTERM 优雅关停验收由本任务拥有（A 移交）；按 Revel v1.1.0 的 app.cancel.timeout 默认 60 秒取证，不修改生产配置；CLI canonical 构建为主模块图（A 实证 stock CLI 隔离图在 Go>=1.26 panic）；数据库验证固定 MongoDB 5.0，7/8 属于 B。2026-08-28 完成需求规格审计修订（修正结构基线计数为 25 interceptor/27 TemplateFuncs，blogTags 与 gt 的块注释死代码不计入；新增 Cookie 字节兼容 R-Ca6 与模块 diff 归因 R-Ca7）；启动以 go-toolchain 归档为前提，待确认事项见 PRD。",
   "meta": {
     "depends_on": [
       "08-25-go-toolchain"
