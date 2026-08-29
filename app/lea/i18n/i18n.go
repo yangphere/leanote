@@ -1,6 +1,7 @@
 package i18n
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/revel/revel"
 	"github.com/robfig/config"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 const (
@@ -112,16 +114,30 @@ func parseLocale(locale string) (language, region string) {
 }
 
 // Recursively read and cache all available messages from all message files on the given path.
-func loadMessages(path string) {
+func loadMessages(path string) error {
 	messages = make(map[string]*config.Config)
 
-	if error := filepath.Walk(path, loadEachMessageLang); error != nil && !os.IsNotExist(error) {
-		// ERROR.Println("Error reading messages files:", error)
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("messages directory %q: %w", path, err)
 	}
+	if !info.IsDir() {
+		return fmt.Errorf("messages path %q is not a directory", path)
+	}
+	if err := filepath.Walk(path, loadEachMessageLang); err != nil {
+		return fmt.Errorf("load messages from %q: %w", path, err)
+	}
+	return nil
 }
 
 // 加载每一个文件夹
 func loadEachMessageLang(parentPath string, parentInfo os.FileInfo, osError error) (err error) {
+	if osError != nil {
+		return osError
+	}
+	if parentInfo == nil {
+		return fmt.Errorf("message path %q has no file info", parentPath)
+	}
 	if !parentInfo.IsDir() {
 		return nil
 	}
@@ -129,16 +145,19 @@ func loadEachMessageLang(parentPath string, parentInfo os.FileInfo, osError erro
 	if err := filepath.Walk(parentPath, func(path string, info os.FileInfo, osError error) error {
 		return loadMessageFile(parentInfo.Name(), path, info, osError)
 
-	}); err != nil && !os.IsNotExist(err) {
-		// ERROR.Println("Error reading messages files:", error)
+	}); err != nil {
+		return err
 	}
-	return err
+	return nil
 }
 
 // Load a single message file
 func loadMessageFile(locale string, path string, info os.FileInfo, osError error) error {
 	if osError != nil {
 		return osError
+	}
+	if info == nil {
+		return fmt.Errorf("message file %q has no file info", path)
 	}
 	if info.IsDir() {
 		return nil
@@ -169,8 +188,55 @@ func loadMessageFile(locale string, path string, info os.FileInfo, osError error
 }
 
 func parseMessagesFile(path string) (messageConfig *config.Config, error error) {
+	if err := validateMessageSyntax(path); err != nil {
+		return nil, err
+	}
 	messageConfig, error = config.ReadDefault(path)
 	return
+}
+
+// validateMessageSyntax catches the parser errors from robfig/config before
+// it opens the file. The frozen dependency does not close its file handle on
+// parse errors, which is observable as an undeletable file on Windows.
+func validateMessageSyntax(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	section := ""
+	option := ""
+	for lineNumber := 1; scanner.Scan(); lineNumber++ {
+		line := strings.TrimRightFunc(stripMessageComments(scanner.Text()), unicode.IsSpace)
+		if len(line) == 0 || line[0] == '#' || line[0] == ';' {
+			continue
+		}
+		if line[0] == '[' && line[len(line)-1] == ']' {
+			section = strings.TrimSpace(line[1 : len(line)-1])
+			option = ""
+			continue
+		}
+		if section != "" && option != "" && (line[0] == ' ' || line[0] == '\t') {
+			continue
+		}
+		separator := strings.IndexAny(line, "=:")
+		if separator <= 0 || line[0] == ' ' || line[0] == '\t' {
+			return fmt.Errorf("could not parse line %d in %q: %s", lineNumber, path, line)
+		}
+		option = strings.TrimSpace(line[:separator])
+	}
+	return scanner.Err()
+}
+
+func stripMessageComments(line string) string {
+	for _, marker := range []string{" ;", "\t;", " #", "\t#"} {
+		if index := strings.Index(line, marker); index != -1 {
+			line = line[:index]
+		}
+	}
+	return line
 }
 
 func parseLocaleFromFileName(file string) string {
@@ -180,14 +246,16 @@ func parseLocaleFromFileName(file string) string {
 
 func init() {
 	revel.OnAppStart(func() {
-		loadMessages(filepath.Join(revel.BasePath, messageFilesDirectory))
+		if err := loadMessages(filepath.Join(revel.BasePath, messageFilesDirectory)); err != nil {
+			panic(err)
+		}
 	})
 }
 
 // LoadMessages loads message files from dir for plain-Go processes
 // (revel used OnAppStart with BasePath + the messages dir name).
-func LoadMessages(dir string) {
-	loadMessages(dir)
+func LoadMessages(dir string) error {
+	return loadMessages(dir)
 }
 
 func I18nFilter(c *revel.Controller, fc []revel.Filter) {

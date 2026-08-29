@@ -369,8 +369,12 @@ func LoadTemplates(dir string) (*template.Template, error) {
 			return relErr
 		}
 		name = filepath.ToSlash(name)
-		_, perr := tpl.New(name).ParseFiles(path)
-		return perr
+		contents, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
+		}
+		_, parseErr := tpl.New(name).Parse(string(contents))
+		return parseErr
 	})
 	if err != nil {
 		return nil, err
@@ -387,7 +391,7 @@ func TemplateSetRenderer(tpl *template.Template) func(name string, args map[stri
 			return nil, fmt.Errorf("template %q not found", name)
 		}
 		var b strings.Builder
-		if err := t.Execute(&b, args); err != nil {
+		if err := tpl.ExecuteTemplate(&b, name, args); err != nil {
 			return nil, err
 		}
 		return []byte(b.String()), nil

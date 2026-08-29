@@ -26,9 +26,11 @@
 - [ ] 实现配置兼容读取（section/插值/类型）和 prod secret 验证；测试密钥只存在 test 配置。
 - [ ] 真实 `conf/app.conf` 与 `conf/app.conf-default` 在 dev/prod/test 三种 run-mode 下全量解析成功并抽查关键键（http.port、db.dbname、app.secret、%(app.name)s 插值）——解析器为 fatal 语义，真实文件回归必须被测试先抓住。
 - [ ] 建立 config/logger/BasePath seam 并迁移 app/db 与 lea/Debug 的 `revel.Config`/`revel.AppLog` 调用（B 的配置键与日志行为不变，db 测试守门）。
+  - 进度注记（2026-08-29 审核）：本项按 design §1.2 以**容忍式 seam** 交付（lea/Debug nil 回退、app/db `revel.Config == nil` 分支、cmd/leanote 自持 URL 推导）；调用方全量迁移顺延至 Task 4 批次就地迁移 + Task 6 清扫，不视为本项未完成的欠账。
 - [ ] 实现第一方 Result 与统一 writer，保证错误不被写成 200。
 - [ ] 按原 `OnAppStart` 顺序（5 处注册点）组装依赖，增加受限 Shutdown（`http.shutdownTimeoutMs`，默认 30000）。
-- [ ] 运行 config/response/server 测试直到通过。
+  - 进度注记：cmd/leanote 已接 service→controllers→api 三条 InitService 链、SIGTERM 关停，以及模板/i18n 装配（`TemplateSetRenderer(LoadTemplates(...))`、`i18n.LoadMessages(...)`、`i18n.DefaultLanguage`）。模板执行回归覆盖了按相对路径命名的模板集。
+- [ ] 运行 config/response/server 测试直到通过。（已达成：53 测试 -race 全绿）
 
 ### Task 3：路由、参数与中间件
 
@@ -53,7 +55,25 @@
 - [ ] 实现新 Cookie session，保留业务键（UserId/Email/Username/UsernameRaw/Verified/Theme/themeId/NotebookWidth/NoteListWidth/LeftIsMin/Logo）和配置项，不实现 Revel decoder。
 - [ ] 把 Session/Params/ViewArgs/Message/Render* 收敛到第一方 BaseController/Result；Render* 清单含 RenderTemplate/RenderJSON/**RenderJSONP**（BlogController 8 处）/RenderText/binary/file/attachment。
 - [ ] 保持 API BaseController（`ApiBaseContrller`，按值嵌入 `controllers.BaseController`）行为并添加专门回归测试。
+  - 进度注记：api 批次（ApiAuth/ApiTag + firstPartyAPIApp 回归 + 真实 Mongo 隔离库测试）已提交（25d4842/65c9054）；主站 BaseController 的收敛仍待主站批次完成。
 - [ ] 分响应类型迁移 controller，每完成一类就运行对应 Golden，而不是最后一次性验证。
+
+**余量清单（2026-08-29 审核盘点，按 Go 源文件计，`rg --glob '*.go' -l "github.com/revel" app` 现存 64 文件、其中 app/cmd 8 个归 Task 6 删除）：**
+
+| 批次 | 控制器（含 Base 收敛） |
+|---|---|
+| 主站（14+1） | Auth（起始，最简模板渲染）→ Note、Notebook、User、Blog、Index、Tag、Share、File、Attach、NoteContentHistory、Captcha、Preview、**Album**（memory 旧清单漏记，已补）+ `BaseController.go` |
+| api 余量（4+1） | ApiFile、ApiNote、ApiNotebook、ApiUser + `ApiBaseController.go` |
+| admin（7+1） | Admin、AdminBlog、AdminData、AdminEmail、AdminSetting、AdminUpgrade、AdminUser + `AdminBaseController.go` |
+| member（4+1） | MemberUser、MemberBlog、MemberGroup、MemberIndex + `MemberBaseController.go` |
+
+**批次模式（已验证，照抄）：** `type XxxServer struct{}` + `func (s *XxxServer) Action(c *httpserver.Context) httpserver.Result` + `rs.Register("Xxx", "Action", beforeHooks, s.Action)`；`c.Session["_userId"]` 取 API 侧用户、`c.Session["UserId"]` 取 Web 侧用户；BEFORE 钩子 `httpserver.BeforeFunc`，返回 nil 继续。
+
+**批次伴随约束（审核新增）：**
+
+- [ ] 每批次就地迁移该批所用 service 的 `revel.Config`/`revel.BasePath` 调用（对应 design §1.1 调用方清单：ConfigService 13、ThemeService 8、FileService 5、html2image 4、AttachService/AuthService 等），避免 Task 6 清扫堆积。
+- [ ] 批次汇合时提取 `needValidateAPI`（api/httpserver.go）与 `needValidateWhitelist`（middleware.go）的字节级重复为单一白名单辅助。
+- [x] 批次收尾在 cmd/leanote 完成 Task 2 注记的三项装配（TemplateSetRenderer + i18n.LoadMessages + DefaultLanguage），主站模板渲染批次即可跑真实页面验证。
 
 ### Task 5：模板、博客和静态资源
 
@@ -70,6 +90,7 @@
 - Delete: `app/cmd/`
 
 - [ ] 先移植 harness 启动（`buildServerBinary`/`serverRunMode` → 构建运行 `cmd/leanote`），确认 Golden/USN/权限门禁在新入口上运行——此步完成前不得删除任何 Revel 依赖。
+- [ ] 清扫 Task 4 批次未覆盖的残余 Revel 调用方（design §1.2）：service/lea 层未随批迁移的 `revel.Config`/`revel.BasePath`/`revel.AppLog` 调用、`app/init.go` 旧 filter 链与 TemplateFuncs 注册、db 操作超时键接第一方 config（沿用 B 既有键名）。此步完成前不得进入删除步骤。
 - [ ] 把开发启动改为构建/运行 `cmd/leanote`（`sh/run.sh`），生产打包不调用 Revel CLI（`sh/package.sh`）。
 - [ ] 更新 CI node-tests job：删 "Build Revel CLI"/`ci-revel-cli` 步骤，改为构建 `cmd/leanote`。
 - [ ] 删除 `github.com/revel/*` 依赖和 `app/cmd/`，执行 `go mod tidy`。

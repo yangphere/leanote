@@ -11,12 +11,14 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/yangphere/leanote/app/controllers"
 	api "github.com/yangphere/leanote/app/controllers/api"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/httpserver"
+	"github.com/yangphere/leanote/app/lea/i18n"
 	"github.com/yangphere/leanote/app/service"
 )
 
@@ -39,6 +41,14 @@ func main() {
 	secret, _ := cfg.String("app.secret")
 	if err := validateProdSecret(*runMode, secret); err != nil {
 		log.Fatalf("app.conf: %v", err)
+	}
+	appBase := applicationBase(*confPath)
+	if err := setupPresentation(
+		cfg,
+		filepath.Join(appBase, "app", "views"),
+		filepath.Join(appBase, "messages"),
+	); err != nil {
+		log.Fatalf("load presentation assets: %v", err)
 	}
 
 	addr := fmt.Sprintf("%s:%d",
@@ -84,6 +94,30 @@ func main() {
 		log.Fatalf("shutdown: %v", err)
 	}
 	log.Printf("leanote stopped cleanly")
+}
+
+func applicationBase(confPath string) string {
+	confDir := filepath.Dir(filepath.Clean(confPath))
+	if strings.EqualFold(filepath.Base(confDir), "conf") {
+		return filepath.Dir(confDir)
+	}
+	return confDir
+}
+
+// setupPresentation installs the first-party template renderer and loads the
+// message catalog before any request can reach a controller. The paths are
+// explicit so resource lookup follows the selected configuration root.
+func setupPresentation(cfg *httpserver.Config, viewsDir, messagesDir string) error {
+	templates, err := httpserver.LoadTemplates(viewsDir)
+	if err != nil {
+		return err
+	}
+	if err := i18n.LoadMessages(messagesDir); err != nil {
+		return fmt.Errorf("load messages: %w", err)
+	}
+	i18n.DefaultLanguage = cfg.StringDefault("i18n.default_language", "en-us")
+	httpserver.TemplateRenderer = httpserver.TemplateSetRenderer(templates)
+	return nil
 }
 
 func orInt(override, base int) int {

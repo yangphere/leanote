@@ -26,6 +26,25 @@ controller 仍负责 HTTP 编排，service 仍负责业务；service 不依赖 `
 - **logger**：`lea/Debug.go` 的 Log/Logf/LogW/LogJ 是全站唯一日志门面，直连 `revel.AppLog`。保留函数签名，后端替换为标准库 slog（或等价结构化 logger），输出格式无外部契约。
 - **BasePath**：`revel.BasePath` 45 处（ThemeService/FileService/html2image 及 controllers/service 的文件系统与 URL 路径拼接）。配置键定名 `basePath`（默认 "."，即应用根，与 Revel 现值一致；已确认，不再在实现期更名）。
 
+## 1.2 seam 交付形态的执行更正（2026-08-29 需求审核登记）
+
+§1.1 的"先迁调用方再删依赖"顺序不变，但调用方迁移的**执行时点**按已提交
+代码（6f44a9c–65c9054）固化为双栈渐进式，取代"Task 2 一次迁完"的字面读法：
+
+- 已交付的 seam 是**容忍式**而非替换式：`lea/Debug` 以 `revel.AppLog == nil`
+  分支回退标准 logger；`app/db/mongo_client.go` 以 `revel.Config == nil`
+  分支跳过 Revel 键读取；`cmd/leanote` 的 `initDatabase` 自持 db URL 推导
+  （db.url → db.urlEnv → db.host/port/user/pass），不依赖 `revel.Config`。
+  双栈期间 Revel 进程与纯 Go 进程各自可用，无运行时 feature flag。
+- **调用方全量迁移顺延为 Task 6 删依赖的前置清扫**：service 层
+  （ConfigService/AuthService/AttachService/FileService/ThemeService）、
+  lea 层（i18n 的 Filter 残余、Email、blog/Template、html2image、route、
+  binder）、`app/init.go` 与各 controller 的残余调用，随 Task 4 批次就地
+  迁移，未迁完的由 Task 6 的残余调用方清扫步骤兜底。
+- **db 操作超时键**：新入口下暂用 wrapper 默认值（`cmd/leanote/main.go`
+  注释已声明）；Task 6 清扫时把 db 连接/读写/查询超时接到第一方 config
+  键，键名沿用 B 验收的既有键，不新造语义。
+
 ## 2. 路由算法
 
 1. 注册静态文件与 `conf/routes` 的显式规则，保持文件顺序和优先级。

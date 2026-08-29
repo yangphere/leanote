@@ -13,7 +13,9 @@ func loadRepoMessages(t *testing.T) {
 		t.Fatal("runtime.Caller failed")
 	}
 	repoRoot := filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
-	loadMessages(filepath.Join(repoRoot, "messages"))
+	if err := loadMessages(filepath.Join(repoRoot, "messages")); err != nil {
+		t.Fatalf("load repository messages: %v", err)
+	}
 }
 
 // TestMessageContract pins the robfig/config-backed lookup semantics for all
