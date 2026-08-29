@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 7
+- **Total Sessions**: 8
 - **Last Active**: 2026-08-29
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~179 | Active |
+| `journal-1.md` | ~201 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 8 | 2026-08-29 | C-b revel-migration：规格审核三轮 + Task 1/2 实现与三轮四层评审 | `6f44a9c` | `dev` |
 | 7 | 2026-08-29 | B mongo-driver-migration：实现、双轴评审修复、验证与归档 | `c815b1e` | `dev` |
 | 6 | 2026-08-29 | Revel 1.1 upgrade closeout | `e4ba314`, `bd21965`, `318a1f0`, `810cf68` | `dev` |
 | 5 | 2026-08-28 | 完成 jQuery 3.7 升级复审修复 | `7500f20` | `dev` |

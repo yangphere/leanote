@@ -177,3 +177,25 @@ Closed C-a after push run 33223459179 confirmed go-replay on Go 1.26.7 and 1.27.
 ### Status
 
 [OK] **Completed**
+
+
+## Session 8: C-b revel-migration：规格审核三轮 + Task 1/2 实现与三轮四层评审
+<!-- trellis-session: v=2 fp=58b2f75b2f9cc2d5 -->
+
+**Date**: 2026-08-29
+**Task**: C-b revel-migration：规格审核三轮 + Task 1/2 实现与三轮四层评审
+**Branch**: `dev`
+
+### Summary
+
+C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs、25 活跃拦截器、seam 计数 34/45、_token/_userId 会话键、SIGTERM 上界 30000、静态资源/CSRF/cookie.httponly 说明、dev 直做、basePath 定名、harness 移植顺序约束）。实现 Task 1/2：app/httpserver 新包（config 复刻 revel/config 语义——段/插值/注释/Bool 词表/unparseable fatal，真实 conf 冒烟零差异；session HMAC Cookie 安全默认值；response 状态单写 + Render* 全家含 JSONP/确定性 Content-Type；server 优雅关停）+ cmd/leanote 纯 Go 入口与 prod secret 校验。三轮四层 code-review（实现/测试/规格/元数据）全部闭环：修复 JSONP 契约、环引用/空值/未设  塌缩、server 竞态、任务未 start 等；47 测试 -race 全绿。任务保持 in_progress（2/7），未归档。经验：Bash heredoc 吞反斜杠已多次复现，含转义内容一律 Write/Edit；Task 3 起为路由/registry 主体工程。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6f44a9c` | feat(httpserver): C-b 增量（Task 1-2/7）——第一方 HTTP 骨架与纯 Go 入口 |
+
+### Status
+
+[OK] **Completed**
