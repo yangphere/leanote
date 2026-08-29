@@ -199,3 +199,25 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 9: C-b 需求规格审核：确认唯一 ready 叶并落盘规格修订
+<!-- trellis-session: v=2 fp=2bf3f17802d48789 -->
+
+**Date**: 2026-08-30
+**Task**: C-b 需求规格审核：确认唯一 ready 叶并落盘规格修订
+**Branch**: `dev`
+
+### Summary
+
+选定 C-b revel-migration 为唯一 ready 叶（E-jQ 待用户 AC-jQ9 取证，Bootstrap/TinyMCE 串行其后，F 双依赖未满足）。审核确认 R1 四项发现已全部修复（a6a155c/65c9054），go build 全绿，拦截器 25 处计数仍准。规格修订落盘：design §1.2 登记 seam 容忍式交付形态与 db 超时键 Task 6 归属；implement.md 补 Task 4 精确余量清单（主站 14 含 Album、api 4、admin 7、member 4 + 四 Base）、批次模式、needValidate 去重与 cmd/leanote 三项装配；Task 6 加清扫前置 checkbox。PRD 十条 AC 复核无需改动。文档修订随并行会话的 3bc0ff9 一并入库。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3bc0ff9` | fix: 修复审核发现的资源加载与路径问题 |
+
+### Status
+
+[OK] **Completed**
