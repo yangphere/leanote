@@ -93,9 +93,6 @@ func (c *Collection) Insert(docs ...interface{}) error {
 	return err
 }
 
-// Update replaces one document. Driver v2 reports a no-match as nil error
-// with matched count 0 (mgo reported "not found"); the legacy bool contract
-// treats both as success, and the no-match is logged for visibility.
 // splitUpdateKind mirrors mgo's update semantics: a document whose first
 // top-level key is a $-operator is an operator update; anything else is a
 // full replacement. Driver v2 splits these across UpdateOne and ReplaceOne.

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -147,35 +148,13 @@ func TestApiTagLifecycle(t *testing.T) {
 		t.Fatalf("probe-tag missing from sync tags: %q", rec.Body.String())
 	}
 
-	// Delete it at the tag Usn.
-	rec = apiPost(t, app, "/api/tag/deleteTag", "tag=probe-tag&usn="+itoa(tags[0].Usn)+"&token="+issued.Token)
+	// Delete it at the Usn the addTag response reported (tags[0] may be a
+	// different tag on a warm database).
+	rec = apiPost(t, app, "/api/tag/deleteTag", "tag=probe-tag&usn="+strconv.Itoa(added.Usn)+"&token="+issued.Token)
 	var deleted struct {
 		Ok bool
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &deleted); err != nil || !deleted.Ok {
 		t.Fatalf("deleteTag body = %q", rec.Body.String())
 	}
-}
-
-func itoa(v int) string {
-	return json.Number(intToStr(v)).String()
-}
-
-func intToStr(v int) string {
-	if v == 0 {
-		return "0"
-	}
-	neg := v < 0
-	if neg {
-		v = -v
-	}
-	digits := ""
-	for v > 0 {
-		digits = string(rune('0'+v%10)) + digits
-		v /= 10
-	}
-	if neg {
-		digits = "-" + digits
-	}
-	return digits
 }

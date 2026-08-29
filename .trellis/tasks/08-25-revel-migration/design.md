@@ -89,6 +89,19 @@ G 建立的 Golden/USN/权限/页面 smoke 全部经 `app/tests/harness/server.g
 - SIGTERM 触发 `http.Server.Shutdown`，停止接收新请求并等待 `http.shutdownTimeoutMs`（默认 30000，配置可调）；超时后返回非零错误。
 - 实现期加固（无 Revel 对应物，防御性新增）：`ReadHeaderTimeout` 30s；SIGTERM 与 SIGINT 均触发关停；`Server.Run` 另接受显式 `stop` 通道供测试/编程式停止。
 
+## 6.1 对 B 任务归档设计 §2 的更正（supersession）
+
+B（archive/2026-08/08-25-mongo-driver-migration）design §2 冻结的映射
+`Update → UpdateOne`、`Upsert → UpdateOne + SetUpsert(true)` 在实践中被驱动
+v2.8.1 推翻：`UpdateOne` 强制 `ensureDollarKey`（"update document must
+contain key beginning with '$'"），而 mgo 的 Update/Upsert 同时接受算子式
+（`{"$set": …}`）与替换式（全量文档）两种形态——service 层有大量替换式
+调用方（TokenService、BlogService 等）。修正：app/db 引入
+`splitUpdateKind`（按文档首键是否以 `$` 开头嗅探），替换式走
+`ReplaceOne`（Upsert 为 `ReplaceOne + SetUpsert`），算子式走 `UpdateOne`。
+归档设计不可改；以本节为准。回归测试：
+`app/db/mongo_compat_test.go` TestCompatReplacementUpdateAndUpsert。
+
 ## 7. 回滚
 
 C-b 与 B 同策略，工作直落 `dev`（已确认；不另开独立分支）。不保留双 HTTP 栈 feature flag。合并/推送前需通过全部契约与主题测试；Schema 未变，回滚为 revert C-b 的提交序列，不涉及数据。一次性 Web 重登录是已接受部署影响。
