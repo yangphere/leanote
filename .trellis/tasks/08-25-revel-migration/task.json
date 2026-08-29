@@ -3,7 +3,7 @@
   "name": "revel-migration",
   "title": "迁出 Revel 到标准库 HTTP",
   "description": "以 net/http、显式路由和受限 action registry 替换 Revel，并收紧 session 安全默认值。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "backend",
   "scope": "HTTP server, routing, middleware and session",
   "package": null,
@@ -12,7 +12,7 @@
   "assignee": "wanfeng",
   "createdAt": "2026-08-25",
   "completedAt": null,
-  "branch": null,
+  "branch": "dev",
   "base_branch": "dev",
   "worktree_path": null,
   "commit": null,
@@ -26,7 +26,9 @@
     "app/lea/route",
     "app/views",
     "conf/routes",
-    "conf/app.conf"
+    "conf/app.conf",
+    "app/httpserver",
+    "cmd/leanote"
   ],
   "notes": "允许 Web 用户一次性重新登录；API token 契约保持。",
   "meta": {
