@@ -96,10 +96,40 @@ func (c *Collection) Insert(docs ...interface{}) error {
 // Update replaces one document. Driver v2 reports a no-match as nil error
 // with matched count 0 (mgo reported "not found"); the legacy bool contract
 // treats both as success, and the no-match is logged for visibility.
+// splitUpdateKind mirrors mgo's update semantics: a document whose first
+// top-level key is a $-operator is an operator update; anything else is a
+// full replacement. Driver v2 splits these across UpdateOne and ReplaceOne.
+func splitUpdateKind(update interface{}) (replacement bool, err error) {
+	raw, err := bson.Marshal(update)
+	if err != nil {
+		return false, err
+	}
+	elements, err := bson.Raw(raw).Elements()
+	if err != nil {
+		return false, err
+	}
+	if len(elements) == 0 {
+		return true, nil // empty document replaces
+	}
+	return !strings.HasPrefix(elements[0].Key(), "$"), nil
+}
+
+// Update replaces one document. Replacement-style documents (no $ keys)
+// route through ReplaceOne, mirroring mgo where Update accepted both forms.
 func (c *Collection) Update(query, update interface{}) error {
 	ctx, cancel := operationContext()
 	defer cancel()
-	res, err := c.coll.UpdateOne(ctx, query, update)
+	replacement, err := splitUpdateKind(update)
+	if err != nil {
+		c.logFailure("update", err)
+		return err
+	}
+	var res *mongo.UpdateResult
+	if replacement {
+		res, err = c.coll.ReplaceOne(ctx, query, update)
+	} else {
+		res, err = c.coll.UpdateOne(ctx, query, update)
+	}
 	if err != nil {
 		c.logFailure("update", err)
 		return err
@@ -123,10 +153,21 @@ func (c *Collection) UpdateAll(query, update interface{}) (int, error) {
 }
 
 // Upsert updates a document or inserts it when the query matches nothing.
+// Replacement-style documents route through ReplaceOne (mgo parity).
 func (c *Collection) Upsert(query, update interface{}) (interface{}, error) {
 	ctx, cancel := operationContext()
 	defer cancel()
-	res, err := c.coll.UpdateOne(ctx, query, update, options.UpdateOne().SetUpsert(true))
+	replacement, err := splitUpdateKind(update)
+	if err != nil {
+		c.logFailure("upsert", err)
+		return nil, err
+	}
+	var res *mongo.UpdateResult
+	if replacement {
+		res, err = c.coll.ReplaceOne(ctx, query, update, options.Replace().SetUpsert(true))
+	} else {
+		res, err = c.coll.UpdateOne(ctx, query, update, options.UpdateOne().SetUpsert(true))
+	}
 	if err != nil {
 		c.logFailure("upsert", err)
 		return nil, err

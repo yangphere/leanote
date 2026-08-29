@@ -369,3 +369,39 @@ func TestParseSortFields(t *testing.T) {
 		}
 	}
 }
+
+// TestCompatReplacementUpdateAndUpsert pins the mgo semantics where Update
+// and Upsert accept full-document replacements (no $ operators) as well as
+// operator documents — driver v2 needs explicit routing (splitUpdateKind).
+func TestCompatReplacementUpdateAndUpsert(t *testing.T) {
+	coll, _ := testCollection(t)
+	seedCompatDocs(t, compatSeed())
+
+	// Replacement-style update (whole document, no $ operators).
+	if err := coll.Update(bson.M{"Title": "alpha"},
+		compatDoc{ID: MustObjectIDFromHex("507f1f77bcf86cd799439001"), UserId: MustObjectIDFromHex("507f1f77bcf86cd7994390aa"), Title: "alpha-v2", Count: 10}); err != nil {
+		t.Fatalf("replacement Update: %v", err)
+	}
+	var got compatDoc
+	if err := coll.Find(bson.M{"Title": "alpha-v2"}).One(&got); err != nil || got.Count != 10 {
+		t.Fatalf("replacement update not visible: %+v err=%v", got, err)
+	}
+
+	// Replacement-style upsert (creates the document).
+	_, err := coll.Upsert(bson.M{"Title": "upsert-new"},
+		compatDoc{ID: MustObjectIDFromHex("507f1f77bcf86cd799439020"), UserId: MustObjectIDFromHex("507f1f77bcf86cd7994390aa"), Title: "upsert-new", Count: 5})
+	if err != nil {
+		t.Fatalf("replacement Upsert: %v", err)
+	}
+	if n := Count(coll, bson.M{"Title": "upsert-new"}); n != 1 {
+		t.Fatalf("replacement upsert Count = %d, want 1", n)
+	}
+
+	// Operator-style upsert still works.
+	if _, err := coll.Upsert(bson.M{"Title": "op-upsert"}, bson.M{"$set": bson.M{"Count": 9}}); err != nil {
+		t.Fatalf("operator Upsert: %v", err)
+	}
+	if n := Count(coll, bson.M{"Title": "op-upsert"}); n != 1 {
+		t.Fatalf("operator upsert Count = %d, want 1", n)
+	}
+}
