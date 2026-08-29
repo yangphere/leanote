@@ -4,16 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Leanote server + web app: a Go 1.15 / **Revel 1.0** monolith on **MongoDB** (`gopkg.in/mgo.v2`), serving
+Leanote server + web app: a Go 1.26 / **Revel 1.1** monolith (runtime v1.1.0, CLI v1.1.2 — transitional
+baseline before the stdlib HTTP migration) on **MongoDB** (`gopkg.in/mgo.v2`), serving
 server-rendered templates plus a jQuery/TinyMCE frontend. The same binary also serves the `/api/*`
 JSON API consumed by the separate desktop, iOS and Android clients, so API responses and the USN sync
 model are external contracts — changing them breaks shipped clients.
 
 ## Commands
 
-Requires a local MongoDB and the Revel CLI (`go install github.com/revel/cmd/revel@v1.0.3`).
+Requires a local MongoDB and the Revel CLI built from the main module graph — never
+`go get`/`go install github.com/revel/cmd/revel@<version>` at the module root (versioned isolated
+graphs carry stale or downgraded dependencies).
 
 ```bash
+# Revel CLI from the main module graph, with provenance assertion (required once per clone)
+GOTOOLCHAIN=local go build -o "$HOME/gopath/bin/revel" github.com/revel/cmd/revel
+go version -m "$HOME/gopath/bin/revel" | grep -E 'github\.com/revel/cmd[[:space:]]+v1\.1\.2'
+
 # First-time data (creates the leanote DB with the admin user + demo notes)
 mongorestore -h localhost -d leanote --dir ./mongodb_backup/leanote_install_data/
 

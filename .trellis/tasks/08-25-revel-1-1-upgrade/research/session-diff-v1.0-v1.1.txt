@@ -83,13 +83,13 @@
 ---
 > // The expiration time will also be assigned.
 247d246
-< 
+<
 256c255
 < // Set the session object from the loaded data
 ---
 > // Set the session object from the loaded data.
 269d267
-< 
+<
 273c271
 < // Checks to see if the session is empty
 ---
@@ -147,7 +147,7 @@
 ---
 > // Encode the session information to the cookie, set the cookie on the controller.
 66d65
-< 
+<
 70c69
 < // Exposed only for testing purposes
 ---
@@ -157,4 +157,4 @@
 ---
 > // Convert session to cookie.
 144d142
-< 
+<

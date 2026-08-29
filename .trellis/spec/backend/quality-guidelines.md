@@ -145,7 +145,9 @@ Correct: unset means replay; a missing snapshot fails and asks for explicit reco
 When a Travis job running Go 1.26+ invokes `sh/run.sh` or `sh/package.sh`, the
 Revel executable must be built from Leanote's main module graph. A versioned
 `go install github.com/revel/cmd/revel@v1.0.3` instead resolves Revel's frozen
-2020 `x/tools` dependency and panics during type checking.
+2020 `x/tools` dependency and panics during type checking (evidenced 2026-08-26;
+since the Revel 1.1 upgrade the isolated `go install ...@v1.1.2` graph happens
+to build, but the module-graph build with metadata assertion stays canonical).
 
 ### 2. Signatures
 
@@ -153,6 +155,7 @@ Revel executable must be built from Leanote's main module graph. A versioned
 export PATH="$PATH:$HOME/gopath/bin"
 export GOTOOLCHAIN=local
 go build -o "$HOME/gopath/bin/revel" github.com/revel/cmd/revel
+go version -m "$HOME/gopath/bin/revel" | grep -E 'github\.com/revel/cmd[[:space:]]+v1\.1\.2'
 go version -m "$HOME/gopath/bin/revel" | grep -E 'golang.org/x/tools[[:space:]]+v0\.49\.0'
 ```
 
@@ -160,9 +163,10 @@ go version -m "$HOME/gopath/bin/revel" | grep -E 'golang.org/x/tools[[:space:]]+
 
 - The executable path is `$HOME/gopath/bin/revel`, the same PATH entry used by
   `sh/run.sh` and `sh/package.sh`.
-- The main `go.mod` selects `github.com/revel/cmd v1.0.3` and
-  `golang.org/x/tools v0.49.0`; the binary metadata check proves that selected
-  dependency graph reached the executable.
+- The main `go.mod` selects `github.com/revel/cmd v1.1.2` (Revel runtime
+  v1.1.0 since the 2026-08-28 C-a upgrade) and `golang.org/x/tools v0.49.0`;
+  the binary metadata checks prove that selected dependency graph reached the
+  executable.
 - `GOTOOLCHAIN=local` prohibits the CLI build from silently downloading a
   different Go toolchain.
 

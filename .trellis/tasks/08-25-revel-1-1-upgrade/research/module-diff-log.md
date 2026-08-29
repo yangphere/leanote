@@ -36,4 +36,12 @@ github.com/PuerkitoBio/goquery v1.12.0、robfig/config 2014 伪版本、agtorre/
 | valyala/fasthttp v1.12.0→v1.34.0、tcplisten →v1.0.0、klauspost/compress v1.10.4→v1.15.0、andybalholm/brotli 新增 | fasthttp 簇随 Revel 族图的更高要求整体抬升（fasthttp 系 v1.0 代图内既有） |
 
 无未知模块、无第二套框架/日志/配置实现、无法归因条目：无。
-`tools.go` 未改动（gomemcache/garyburd-redigo/go-cache/revel-modules-static 钉住保持）。
+
+## tools.go 改动（2026-08-28 评审修正：此前本日志误称"未改动"）
+
+`tools.go` 实际有一处必要适配：新增 `_ "github.com/gomodule/redigo/redis"` 钉住（含注释说明）。
+根因：生成主文件 `app/tmp/run/run.go` 硬编码空白导入 `_ "github.com/revel/revel/cache"`，
+v1.1 的 cache 实现从 garyburd/redigo 换为 gomodule/redigo，而生成物不在 tidy 视野内 ⇒ 钉住缺失
+使测试服务二进制构建失败（missing go.sum entry）。既有四个钉住（gomemcache、garyburd/redigo、
+go-cache、revel-modules/static）全部保留未删；新增钉住归类为 Revel 图换代的生成链直接依赖，
+契约依据见 PRD R-Ca1（评审后修订版）。

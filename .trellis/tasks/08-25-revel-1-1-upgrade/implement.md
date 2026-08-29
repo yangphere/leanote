@@ -4,7 +4,7 @@
 
 ## Global Constraints
 
-- 仅升级 Revel 三件套及其图内被动变化；非 Revel 直接依赖与 `tools.go` 零改动。
+- 仅升级 Revel 三件套及其图内被动变化；非 Revel 直接依赖零变化；`tools.go` 既有四个钉住不删，唯一允许改动为生成链必要适配的新增钉住（实际新增 `_ gomodule/redigo/redis`，依据见 PRD R-Ca1 与 Task 2 证据）。
 - URL、配置、Cookie、模板、API/USN 契约保持不变；Golden/USN 零 diff，不刷新基线。
 - 数据库验证固定 MongoDB 5.0 fixture；不跑 MongoDB 7/8 假验证。
 - 不写 C-b 的 `net/http` 代码，不删除/重植 `app/cmd`。
@@ -47,7 +47,8 @@
   （容器实跑：断言命中；五页面 200/200/302/200/302 与 v1.0 基线逐项一致，见 research/linux-v1.1-run.log。）
 - [x] 用 v1.1.2 CLI 执行 `sh/package.sh`，解包到临时目录并启动验证 `/login` 与 `/api/auth/login`；验证后工作区零残留（无 `app/tmp`、`app/routes`、`sh/leanote.tar.gz` 入库）。
   （27,453,086 bytes / 2298 entries（条目数与 v1.0 同 HEAD 基线一致）；规范 run.sh 启动后 /login 200、POST /api/auth/login 200 信封一致；全部产物在容器内，宿主工作树零残留。）
-- [ ] Linux 容器内对服务进程发送 SIGTERM：不修改生产配置，在未覆盖 `app.cancel.timeout` 的环境确认 Revel effective 默认值为 60 秒；记录配置状态、实际退出耗时、退出码、端口释放与关闭日志。
+- [x] Linux 容器内对服务进程发送 SIGTERM：不修改生产配置，在未覆盖 `app.cancel.timeout` 的环境确认 Revel effective 默认值为 60 秒；记录配置状态、实际退出耗时、退出码、端口释放与关闭日志。
+  （2026-08-28 全字段取证：配置状态——`conf/app.conf` 无 `app.cancel.timeout`（grep 零命中）、容器 env 仅 GOTOOLCHAIN ⇒ effective 默认 60 秒（revel@v1.1.0 server_adapter_go.go:227 `Config.IntDefault("app.cancel.timeout", 60)`）；实际退出耗时——打包 prod 二进制 SIGTERM 后约 1 秒（/proc state=Z）；退出码——0（干净退出）；端口释放——after_term curl 000；关闭日志——prod.log "Revel engine is listening on.. 0.0.0.0:9006" → "NOT listening on.. 0.0.0.0:9006"。对照 v1.0 基线（默认信号杀死、dev 子进程孤儿化）见 research/linux-v1.0-baseline-run.log 与 linux-v1.1-run.log。）
 - [x] Cookie 兼容取证：模块缓存中 diff v1.0.0/v1.1.0 session 序列化实现，或以 v1.0 基线签发 Cookie 在 v1.1 实测仍认证通过；证据写入 `research/`。
   （research/session-diff-v1.0-v1.1.txt：实质差异仅 uuid 库替换（同为随机 v4 hex，只影响新 ID 生成源）与注释句号；序列化/过期/Cookie 写入逻辑零变化 ⇒ v1.0 签发 Cookie 在 v1.1 仍有效，无提前强制重登。）
 - [x] （诊断，可选）隔离图 `go install github.com/revel/cmd/revel@v1.1.2` 在 Go 1.26/1.27 下的结果记录入 `research/`；无论结果如何不作为验收路径。
@@ -66,7 +67,10 @@
   与 A 期 08-27 push run 33041448799 / 08-28 dispatch run 33179138645 双版本 go-replay 绿同构的
   套件已在本机双版本全绿；下次 push 后以真实运行回填本项。）
 - [x] `gofmt`、`git diff --check` 通过；逐项核对 AC-Ca1..AC-Ca10；diff 不含 C-b 架构代码。
-  （tools.go blob gofmt 零 diff；AC 逐项核对见 implement 末尾验收清单。）
+  （tools.go blob gofmt 零 diff；AC 逐项核对见 implement 末尾验收清单。
+  **2026-08-28 评审修正**：此前对干净工作树的无范围 `git diff --check` 是空核（恒过、不可复现）；
+  改为范围化检查 `git diff --check 03f69c7^..HEAD`——首轮暴露 research/session-diff-v1.0-v1.1.txt
+  4 处尾随空格（diff 空上下文行），已清理后范围化检查零输出，后续门禁一律使用范围化形式。）
 
 ## Rollback Point
 

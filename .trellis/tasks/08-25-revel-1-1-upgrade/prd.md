@@ -34,7 +34,7 @@
 
 - 精确固定 `github.com/revel/revel v1.1.0`、`github.com/revel/cmd v1.1.2`、`github.com/revel/modules v1.1.0`，形成单一 v1.1 代集合；不得混用 v1.0/v1.1 代（如 runtime v1.1.0 + modules v1.0.0）。若实现期证明某组件无法在 v1.1 代编译且无最小适配解，停止并回到规划，不得静默选旧版。
 - Revel 族间接依赖的预期终态：`revel/config` 因 cmd v1.1.2 图经 MVS 抬升到 v1.1.0；`revel/log15 v2.11.20+incompatible` 与 `revel/pathtree`（既有伪版本）不变；实际以 tidy 后 `go list -m` 为准记录。
-- 非 Revel 直接依赖版本零变化（A 拥有）；`tools.go` 保持原样（含其全部空白导入与 build tag），不得以"清理"名义删除钉住项。新增仅被 Revel 图引入、无业务调用的模块必须以 `// indirect` 呈现并归因到具体 Revel 组件。
+- 非 Revel 直接依赖版本零变化（A 拥有）；`tools.go` 的 build tag 与既有四个钉住（gomemcache、garyburd/redigo、go-cache、revel-modules/static）不得删除。允许且仅允许一类改动：**生成链必要适配的新增钉住**——生成主文件 `app/tmp/run/run.go` 硬编码空白导入 `revel/revel/cache`，v1.1 的 cache 实现改用 `gomodule/redigo`，该直接依赖必须经 tools.go 钉住才能在 tidy 剪枝下存活（C-a 已实际新增此一行，归类为 Revel 图换代的生成链直接依赖，见 research/module-diff-log.md）。新增钉住以外的任何 tools.go 改动回到规划。新增仅被 Revel 图引入、无业务调用的模块必须以 `// indirect` 呈现并归因到具体 Revel 组件。
 - 不使用 `replace`/`exclude`/vendor 改写 Revel 图；任何额外版本变化必须先回到规划。
 
 ### R-Ca2 行为不变量（对照 Confirmed Facts 的结构基线）
@@ -78,7 +78,7 @@
 
 ## Acceptance Criteria
 
-- [ ] **AC-Ca1** `go list -m` 显示 revel v1.1.0、cmd v1.1.2、modules v1.1.0 的单一版本集合，无 v1.0 代残留；Revel 族间接依赖终态与模块 diff 日志一致；非 Revel 直接依赖零变化，`tools.go` 未改动。
+- [ ] **AC-Ca1** `go list -m` 显示 revel v1.1.0、cmd v1.1.2、modules v1.1.0 的单一版本集合，无 v1.0 代残留；Revel 族间接依赖终态与模块 diff 日志一致；非 Revel 直接依赖零变化；`tools.go` 既有四个钉住未删，唯一改动为 R-Ca1 允许的生成链必要适配（新增 gomodule/redigo 钉住）。
 - [ ] **AC-Ca2** Go 1.26.7 与 1.27.0 双版本：`go build ./app/...`、`go vet ./app/...` 零输出 exit 0；`go test ./app/tests/...`（MongoDB 5.0 fixture replay）目标测试数非零、Golden/USN 全绿且 Golden 文件 hash 零变化。
 - [ ] **AC-Ca3** `app/cmd` 生成 `app/routes/routes.go` 与 `app/tmp/main.go` 后二进制可构建并经 harness 启动；A 的 flags/generate/server 契约测试保持通过；生成文件不入库、工作区零残留。
 - [ ] **AC-Ca4** 主模块图构建的 v1.1.2 CLI（`go version -m` 断言通过）完成 `revel run -a .` 真实页面 smoke 与 `sh/package.sh` 生产 tarball（解包、启动、`/login`、`/api/auth/login`）验证；`sh/*.sh` 未改动。

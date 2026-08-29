@@ -2,14 +2,15 @@
 
 ## 项目结构与模块组织
 
-Leanote 是 Go 1.15、Revel 1.0 与 MongoDB 构成的单体应用。`app/controllers/` 处理 Web、管理端、会员端和 `/api/*` 请求，`app/service/` 放业务逻辑，`app/db/` 负责 MongoDB 访问，`app/info/` 定义模型，`app/views/` 保存 Revel 模板。浏览器代码、样式和图片位于 `public/`，翻译位于 `messages/<locale>/`，路由与运行配置位于 `conf/`。Go 测试在 `app/tests/`，Node 测试在 `tests/js/`；`tests/apptest.go` 是未启用的旧 Revel 测试入口。
+Leanote 是 Go 1.26、Revel 1.1（runtime v1.1.0 / CLI v1.1.2，迁出 Revel 前的过渡基线）与 MongoDB 构成的单体应用。`app/controllers/` 处理 Web、管理端、会员端和 `/api/*` 请求，`app/service/` 放业务逻辑，`app/db/` 负责 MongoDB 访问，`app/info/` 定义模型，`app/views/` 保存 Revel 模板。浏览器代码、样式和图片位于 `public/`，翻译位于 `messages/<locale>/`，路由与运行配置位于 `conf/`。Go 测试在 `app/tests/`，Node 测试在 `tests/js/`；`tests/apptest.go` 是未启用的旧 Revel 测试入口。
 
 ## 构建、测试与本地开发
 
-本地运行需要 MongoDB 和 Revel CLI：
+本地运行需要 MongoDB 和 Revel CLI（必须从主模块图构建；`go get`/`go install github.com/revel/cmd/revel@<版本>` 会改写或退回失效的隔离依赖图，禁止在模块根执行）：
 
 ```bash
-go get github.com/revel/cmd/revel@v1.0.3
+GOTOOLCHAIN=local go build -o "$HOME/gopath/bin/revel" github.com/revel/cmd/revel
+go version -m "$HOME/gopath/bin/revel" | grep -E 'github\.com/revel/cmd[[:space:]]+v1\.1\.2'   # 断言 CLI 源自主模块图
 mongorestore -h localhost -d leanote --dir ./mongodb_backup/leanote_install_data/
 cd sh && sh run.sh                 # 在 :9000 启动开发服务器
 go test ./app/tests/...            # 需要已运行且已初始化的 MongoDB
