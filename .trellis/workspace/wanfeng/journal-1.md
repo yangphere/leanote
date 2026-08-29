@@ -130,3 +130,28 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 6: Revel 1.1 upgrade closeout
+<!-- trellis-session: v=2 fp=5d98985fce28e086 -->
+
+**Date**: 2026-08-29
+**Task**: Revel 1.1 upgrade closeout
+**Branch**: `dev`
+
+### Summary
+
+Closed C-a after push run 33223459179 confirmed go-replay on Go 1.26.7 and 1.27.0. Archived 08-25-revel-1-1-upgrade locally; unrelated jQuery node-tests .focus deprecation remains in the jQuery task and was not mixed into C-a.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e4ba314` | feat(revel): 升级 runtime/CLI/modules 到 v1.1 代并钉住 gomodule/redigo |
+| `bd21965` | docs(revel-1-1): 回填 C-a 实施取证（基线冻结、模块归因、SIGTERM 优雅关停、Cookie 兼容） |
+| `318a1f0` | docs: 修复评审发现——入口文档对齐 Revel 1.1 与模块图 CLI、tools.go 契约同步、SIGTERM 取证补全、门禁改范围化检查 |
+| `810cf68` | docs(revel-1-1): 回填 AC-Ca9 push run 取证并登记 E-jQ 门禁域发现（.focus 弃用告警） |
+
+### Status
+
+[OK] **Completed**
