@@ -1,9 +1,9 @@
 package route
 
 import (
-	"github.com/yangphere/leanote/app/db"
 	"github.com/revel/revel"
-		// . "github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/db"
+	// . "github.com/yangphere/leanote/app/lea"
 	"net/url"
 	"strings"
 )
@@ -55,7 +55,7 @@ func RouterFilter(c *revel.Controller, fc []revel.Filter) {
 		// App\auth
 		// App\note
 		// static\static
-		// 
+		//
 		// Log("---------" + route.ControllerName + "  " + path)
 
 		// api设置

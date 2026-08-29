@@ -13,7 +13,7 @@
 - `middleware.go`：恢复、URL 改写、静态资源、日志、i18n、鉴权、gzip。
 - `session.go`：新 Cookie session 编解码与属性策略。
 - `config.go`：兼容 `app.conf` section、插值与类型读取。
-- `templates.go`：模板加载与 27 个活跃 TemplateFuncs。
+- `templates.go`：模板加载与 30 个模板函数（27 个项目活跃注册 + 视图依赖的 Revel 内置 set/append/pad）。
 - `cmd/leanote/main.go`：纯 Go 可执行入口。
 
 controller 仍负责 HTTP 编排，service 仍负责业务；service 不依赖 `net/http`。

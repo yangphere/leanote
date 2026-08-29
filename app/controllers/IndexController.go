@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"github.com/yangphere/leanote/app/info"
 	"github.com/revel/revel"
+	"github.com/yangphere/leanote/app/info"
 	//	. "github.com/yangphere/leanote/app/lea"
 )
 

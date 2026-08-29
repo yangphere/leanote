@@ -1,8 +1,8 @@
 package binder
 
 import (
-	"github.com/yangphere/leanote/app/info"
 	"github.com/revel/revel"
+	"github.com/yangphere/leanote/app/info"
 	//	"github.com/yangphere/leanote/app/controllers/api"
 	"fmt"
 	"reflect"

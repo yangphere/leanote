@@ -1,8 +1,8 @@
 package admin
 
 import (
-	. "github.com/yangphere/leanote/app/lea"
 	"github.com/revel/revel"
+	. "github.com/yangphere/leanote/app/lea"
 	//	"time"
 	"github.com/yangphere/leanote/app/info"
 )

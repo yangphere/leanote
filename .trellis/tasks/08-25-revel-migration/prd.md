@@ -40,7 +40,7 @@
 ### R-Cb4 配置、模板和博客
 
 - `conf/app.conf` 文件格式、run-mode section（[dev]/[prod]/[test]）、插值与现有键保持兼容。
-- `app/init.go` 现有 **27 个活跃** TemplateFuncs（29 处注册语句中 2 处块注释弃用）逐个移植，名集与行为以契约测试冻结；含依赖 `revel.Message`/locale 的 msg/leaMsg/blogTags 系列；`messages/<locale>` i18n 查找与 `CurrentLocale` view-arg 键保持等价。
+- `app/init.go` 现有 **27 个活跃** TemplateFuncs（29 处注册语句中 2 处块注释弃用）逐个移植，另加视图依赖的 3 个 Revel 内置 set/append/pad，共 30 个，名集与行为以契约测试冻结；含依赖 `revel.Message`/locale 的 msg/leaMsg/blogTags 系列；`messages/<locale>` i18n 查找与 `CurrentLocale` view-arg 键保持等价。
 - Revel 模板目录解析、`note-dev.html`/`note.html` 使用方式保持不变。
 - `app/lea/blog/Template.go` 的内置主题和用户上传主题继续使用 `html/template`，Preview 错误路径保持可用。
 
@@ -58,7 +58,7 @@
 - [ ] 全量 Golden、USN、所有权和页面 smoke 通过——且这些门禁运行在**移植后的 harness** 上：`app/tests/harness/server.go` 以新入口构建并启动服务器，CI node-tests job 不再构建 Revel CLI。
 - [ ] Web 旧 Cookie 被拒绝并可重新登录；API token 在升级前后保持有效。
 - [ ] prod 对空/默认 secret 启动失败；Cookie 属性测试覆盖 HttpOnly、SameSite、Secure 配置和 3 小时过期。
-- [ ] 内置三主题与一个上传主题渲染正常，Preview 显示可定位模板错误；27 个活跃 TemplateFuncs 的名集与行为以契约测试冻结。
+- [ ] 内置三主题与一个上传主题渲染正常，Preview 显示可定位模板错误；30 个 TemplateFuncs（27 项目 + 3 内置）的名集与行为以契约测试冻结。
 - [ ] 静态资源八个前缀（含 `/upload`）的路径解析、Content-Type 断言通过。
 - [ ] SIGTERM 触发优雅关停：停止接收新请求、进行中请求在 `http.shutdownTimeoutMs`（默认 30000）内完成并退出、端口释放（测试以超时上界断言）。
 - [ ] `sh/run.sh` 与 `sh/package.sh` 不再调用 Revel CLI；仓库文档（AGENTS.md/CLAUDE.md）的构建说明同步。

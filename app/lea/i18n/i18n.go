@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"github.com/revel/revel"
 	"github.com/robfig/config"
+	. "github.com/yangphere/leanote/app/lea"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-	. "github.com/yangphere/leanote/app/lea"
 )
 
 const (
@@ -55,6 +55,11 @@ func MessageLanguages() []string {
 // Perform a message look-up for the given locale and message using the given arguments.
 //
 // When either an unknown locale or message is detected, a specially formatted string is returned.
+// DefaultLanguage is the fallback language when the requested locale has
+// no message; settable by plain-Go processes (Revel reads
+// i18n.default_language from app.conf).
+var DefaultLanguage = ""
+
 func Message(locale, message string, args ...interface{}) string {
 	language, region := parseLocale(locale)
 
@@ -63,18 +68,20 @@ func Message(locale, message string, args ...interface{}) string {
 
 	messageConfig, knownLanguage := messages[langAndRegion]
 	if !knownLanguage {
-		// revel.TRACE.Printf("Unsupported language for locale '%s' and message '%s', trying default language", locale, message)
-
-		if defaultLanguage, found := revel.Config.String(defaultLanguageOption); found {
-			// revel.TRACE.Printf("Using default language '%s'", defaultLanguage)
-
-			messageConfig, knownLanguage = messages[defaultLanguage]
-			if !knownLanguage {
-				// WARN.Printf("Unsupported default language for locale '%s' and message '%s'", defaultLanguage, message)
-				return fmt.Sprintf(unknownValueFormat, message)
+		// Default language resolution: i18n.default_language under Revel;
+		// the settable DefaultLanguage var in plain-Go processes (seam).
+		defaultLanguage := DefaultLanguage
+		if defaultLanguage == "" && revel.Config != nil {
+			if v, found := revel.Config.String(defaultLanguageOption); found && v != "" {
+				defaultLanguage = v
 			}
-		} else {
-			// WARN.Printf("Unable to find default language option (%s); messages for unsupported locales will never be translated", defaultLanguageOption)
+		}
+		if defaultLanguage == "" {
+			return fmt.Sprintf(unknownValueFormat, message)
+		}
+
+		messageConfig, knownLanguage = messages[defaultLanguage]
+		if !knownLanguage {
 			return fmt.Sprintf(unknownValueFormat, message)
 		}
 	}
@@ -152,7 +159,7 @@ func loadMessageFile(locale string, path string, info os.FileInfo, osError error
 				messages[locale] = config
 			}
 
-			Logf("Successfully loaded messages from file", info.Name())
+			Logf("Successfully loaded messages from file: %s", info.Name())
 		}
 	} else {
 		Logf("Ignoring file %s because it did not have a valid extension", info.Name())
@@ -175,6 +182,12 @@ func init() {
 	revel.OnAppStart(func() {
 		loadMessages(filepath.Join(revel.BasePath, messageFilesDirectory))
 	})
+}
+
+// LoadMessages loads message files from dir for plain-Go processes
+// (revel used OnAppStart with BasePath + the messages dir name).
+func LoadMessages(dir string) {
+	loadMessages(dir)
 }
 
 func I18nFilter(c *revel.Controller, fc []revel.Filter) {

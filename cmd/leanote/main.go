@@ -10,9 +10,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
+	"github.com/yangphere/leanote/app/controllers"
+	api "github.com/yangphere/leanote/app/controllers/api"
+	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/httpserver"
+	"github.com/yangphere/leanote/app/service"
 )
 
 // defaultPublicSecret mirrors the app.secret shipped in
@@ -41,8 +46,37 @@ func main() {
 		orInt(*port, cfg.IntDefault("http.port", 9000)))
 	shutdownTimeout := httpserver.ShutdownTimeout(cfg)
 
+	initDatabase(cfg)
+
+	// Wire the first-party stack: conf/routes table + registered actions +
+	// sessions + static file roots (module.static equivalents). db must be
+	// initialised before serving; run-mode is injected into controllers.
+	confDir := filepath.Dir(*confPath)
+	routesData, err := os.ReadFile(filepath.Join(confDir, "routes"))
+	if err != nil {
+		log.Fatalf("load routes: %v", err)
+	}
+	routes, err := httpserver.ParseRoutes(routesData)
+	if err != nil {
+		log.Fatalf("parse routes: %v", err)
+	}
+	service.InitService()
+	controllers.InitService()
+	api.InitService()
+	registry := httpserver.NewRegistry()
+	controllers.RegisterHTTP(registry, *runMode)
+	api.RegisterHTTP(registry, *runMode)
+
+	app := &httpserver.App{
+		Routes:        httpserver.CompileRoutes(routes),
+		Registry:      registry,
+		Sessions:      httpserver.NewSessionCodec(cfg),
+		StaticHandler: func(base string) http.Handler { return http.FileServer(http.Dir(base)) },
+		OnRequest:     db.CheckMongoSessionLost,
+	}
+
 	log.Printf("leanote starting: addr=%s runMode=%s shutdownTimeout=%s", addr, *runMode, shutdownTimeout)
-	srv := httpserver.NewServer(addr, http.NotFoundHandler(), shutdownTimeout)
+	srv := httpserver.NewServer(addr, app, shutdownTimeout)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, os.Interrupt)
@@ -72,4 +106,28 @@ func validateProdSecret(runMode, secret string) error {
 		return fmt.Errorf("app.secret is still the public repository default; set a real secret in app.conf before running in prod")
 	}
 	return nil
+}
+
+// initDatabase mirrors db.Init's URL derivation using the first-party
+// config (db.url → db.urlEnv → db.host/port/user/pass), so the plain-Go
+// process never needs revel.Config. db timeouts fall back to their
+// defaults until the db config seam wires the new keys (Task 6).
+func initDatabase(cfg *httpserver.Config) {
+	url := cfg.StringDefault("db.url", "")
+	if url == "" {
+		url = cfg.StringDefault("db.urlEnv", "")
+	}
+	dbname := cfg.StringDefault("db.dbname", "leanote")
+	if url == "" {
+		host := cfg.StringDefault("db.host", "127.0.0.1")
+		port := cfg.StringDefault("db.port", "27017")
+		user := cfg.StringDefault("db.username", "")
+		pass := cfg.StringDefault("db.password", "")
+		userPass := ""
+		if user != "" && pass != "" {
+			userPass = user + ":" + pass + "@"
+		}
+		url = "mongodb://" + userPass + host + ":" + port + "/" + dbname
+	}
+	db.Init(url, dbname)
 }
