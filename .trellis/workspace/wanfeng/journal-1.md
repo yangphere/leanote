@@ -155,3 +155,25 @@ Closed C-a after push run 33223459179 confirmed go-replay on Go 1.26.7 and 1.27.
 ### Status
 
 [OK] **Completed**
+
+
+## Session 7: B mongo-driver-migration：实现、双轴评审修复、验证与归档
+<!-- trellis-session: v=2 fp=e5e9ae9433945f37 -->
+
+**Date**: 2026-08-29
+**Task**: B mongo-driver-migration：实现、双轴评审修复、验证与归档
+**Branch**: `dev`
+
+### Summary
+
+按 ready-leaf ritual 选中并审核 B 任务后实施：app/db 单一兼容边界（client/超时/查询包装/错误分类/日志）、lea.ObjectID 定义类型与显式 CodecRegistry（零值 JSON/Hex 维持 mgo 形态）、DefaultDocumentM 恢复 bson.M 解码、70 文件机械迁移、harness 与 cmd/e2e 迁移、CI go-replay 腿切 mongo:8.0 并加 workflow_dispatch mongo_version 输入。code-review 双轴两轮：修复 gofmt、重复 import、超时非法值 fatal、cursor close 日志、错误分类与聚焦测试、bson-tag 通用扫描（抓到 2 处缺 tag）、PRD 豁免登记。验证：MongoDB 8.0.29 全套回放连续两次绿 + 修复后再绿、7.0.40 一次绿、legacy TestAuth 绿、unit/vet/npm test/diff--check 绿；app+go.mod mgo 零命中（go.sum 仅存 pongo2 上游图校验哈希）。证据：任务目录 validation-evidence.md。经验：本执行环境会吞 heredoc 双反斜杠（改用 Write/chr(92)）；gofmt 批量 w 易波及无关文件，需 marker 启发式回收；harness 测试自管 Mongo 容器生命周期。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c815b1e` | feat(db): 将 mgo.v2 迁移到 mongo-driver/v2 并保持零数据迁移 |
+
+### Status
+
+[OK] **Completed**
