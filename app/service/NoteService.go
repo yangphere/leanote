@@ -4,7 +4,7 @@ import (
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"regexp"
 	"strings"
 	"time"
@@ -27,7 +27,7 @@ func (this *NoteService) GetNoteById(noteId string) (note info.Note) {
 	if noteId == "" {
 		return
 	}
-	db.GetByQ(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId), "IsDeleted": false}, &note)
+	db.GetByQ(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId), "IsDeleted": false}, &note)
 	return
 }
 func (this *NoteService) GetNoteByIdAndUserId(noteId, userId string) (note info.Note) {
@@ -35,7 +35,7 @@ func (this *NoteService) GetNoteByIdAndUserId(noteId, userId string) (note info.
 	if noteId == "" || userId == "" {
 		return
 	}
-	db.GetByQ(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId), "UserId": bson.ObjectIdHex(userId), "IsDeleted": false}, &note)
+	db.GetByQ(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId), "UserId": db.MustObjectIDFromHex(userId), "IsDeleted": false}, &note)
 	return
 }
 
@@ -43,7 +43,7 @@ func (this *NoteService) GetNoteByIdAndUserId(noteId, userId string) (note info.
 // 不要传userId, 因为是公开的
 func (this *NoteService) GetBlogNote(noteId string) (note info.Note) {
 	note = info.Note{}
-	db.GetByQ(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId),
+	db.GetByQ(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId),
 		"IsBlog": true, "IsTrash": false, "IsDeleted": false}, &note)
 	return
 }
@@ -70,20 +70,20 @@ func (this *NoteService) GetNoteBySrc(src, userId string) (note info.Note) {
 
 	notes := []info.Note{}
 	q := db.Notes.Find(bson.M{
-		"UserId": bson.ObjectIdHex(userId),
+		"UserId": db.MustObjectIDFromHex(userId),
 		"Src":    src,
 	})
 	q.Sort("-Usn").Limit(1).All(&notes)
 	if len(notes) > 0 {
 		return notes[0]
 	}
-	// db.GetByQ(db.Notes, bson.M{"Src": src, "UserId": bson.ObjectIdHex(userId), "IsDeleted": false}, &note)
+	// db.GetByQ(db.Notes, bson.M{"Src": src, "UserId": db.MustObjectIDFromHex(userId), "IsDeleted": false}, &note)
 	return
 }
 
 func (this *NoteService) GetNoteAndContentBySrc(src, userId string) (noteId string, noteAndContent info.NoteAndContentSep) {
 	note := this.GetNoteBySrc(src, userId)
-	if (note.NoteId != "") {
+	if !note.NoteId.IsZero() {
 		noteId = note.NoteId.Hex()
 		noteContent := this.GetNoteContent(note.NoteId.Hex(), userId)
 		return noteId, info.NoteAndContentSep{NoteInfo: note, NoteContentInfo: noteContent}
@@ -96,7 +96,7 @@ func (this *NoteService) GetNoteAndContentBySrc(src, userId string) (noteId stri
 func (this *NoteService) GetSyncNotes(userId string, afterUsn, maxEntry int) []info.ApiNote {
 	notes := []info.Note{}
 	q := db.Notes.Find(bson.M{
-		"UserId": bson.ObjectIdHex(userId),
+		"UserId": db.MustObjectIDFromHex(userId),
 		"Usn":    bson.M{"$gt": afterUsn},
 	})
 	q.Sort("Usn").Limit(maxEntry).All(&notes)
@@ -109,7 +109,7 @@ func (this *NoteService) ToApiNotes(notes []info.Note) []info.ApiNote {
 	// 2, 得到所有图片, 附件信息
 	// 查images表, attachs表
 	if len(notes) > 0 {
-		noteIds := make([]bson.ObjectId, len(notes))
+		noteIds := make([]ObjectID, len(notes))
 		for i, note := range notes {
 			noteIds[i] = note.NoteId
 		}
@@ -153,7 +153,7 @@ func (this *NoteService) ToApiNote(note *info.Note, files []info.NoteFile) info.
 // 得到所有图片, 附件信息
 // 查images表, attachs表
 // [待测]
-func (this *NoteService) getFiles(noteIds []bson.ObjectId) map[string][]info.NoteFile {
+func (this *NoteService) getFiles(noteIds []ObjectID) map[string][]info.NoteFile {
 	noteImages := noteImageService.getImagesByNoteIds(noteIds)
 	noteAttachs := attachService.getAttachsByNoteIds(noteIds)
 
@@ -198,12 +198,12 @@ func (this *NoteService) ListNotes(userId, notebookId string,
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 
 	// 不是trash的
-	query := bson.M{"UserId": bson.ObjectIdHex(userId), "IsTrash": isTrash, "IsDeleted": false}
+	query := bson.M{"UserId": db.MustObjectIDFromHex(userId), "IsTrash": isTrash, "IsDeleted": false}
 	if isBlog {
 		query["IsBlog"] = true
 	}
 	if notebookId != "" {
-		query["NotebookId"] = bson.ObjectIdHex(notebookId)
+		query["NotebookId"] = db.MustObjectIDFromHex(notebookId)
 	}
 
 	q := db.Notes.Find(query)
@@ -220,7 +220,7 @@ func (this *NoteService) ListNotes(userId, notebookId string,
 
 // 通过noteIds来查询
 // ShareService调用
-func (this *NoteService) ListNotesByNoteIdsWithPageSort(noteIds []bson.ObjectId, userId string,
+func (this *NoteService) ListNotesByNoteIdsWithPageSort(noteIds []ObjectID, userId string,
 	pageNumber, pageSize int, sortField string, isAsc bool, isBlog bool) (notes []info.Note) {
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 	notes = []info.Note{}
@@ -236,7 +236,7 @@ func (this *NoteService) ListNotesByNoteIdsWithPageSort(noteIds []bson.ObjectId,
 }
 
 // shareService调用
-func (this *NoteService) ListNotesByNoteIds(noteIds []bson.ObjectId) (notes []info.Note) {
+func (this *NoteService) ListNotesByNoteIds(noteIds []ObjectID) (notes []info.Note) {
 	notes = []info.Note{}
 
 	db.Notes.
@@ -246,7 +246,7 @@ func (this *NoteService) ListNotesByNoteIds(noteIds []bson.ObjectId) (notes []in
 }
 
 // blog需要
-func (this *NoteService) ListNoteContentsByNoteIds(noteIds []bson.ObjectId) (notes []info.NoteContent) {
+func (this *NoteService) ListNoteContentsByNoteIds(noteIds []ObjectID) (notes []info.NoteContent) {
 	notes = []info.NoteContent{}
 
 	db.NoteContents.
@@ -256,12 +256,12 @@ func (this *NoteService) ListNoteContentsByNoteIds(noteIds []bson.ObjectId) (not
 }
 
 // 只得到abstract, 不需要content
-func (this *NoteService) ListNoteAbstractsByNoteIds(noteIds []bson.ObjectId) (notes []info.NoteContent) {
+func (this *NoteService) ListNoteAbstractsByNoteIds(noteIds []ObjectID) (notes []info.NoteContent) {
 	notes = []info.NoteContent{}
 	db.ListByQWithFields(db.NoteContents, bson.M{"_id": bson.M{"$in": noteIds}}, []string{"_id", "Abstract"}, &notes)
 	return
 }
-func (this *NoteService) ListNoteContentByNoteIds(noteIds []bson.ObjectId) (notes []info.NoteContent) {
+func (this *NoteService) ListNoteContentByNoteIds(noteIds []ObjectID) (notes []info.NoteContent) {
 	notes = []info.NoteContent{}
 	db.ListByQWithFields(db.NoteContents, bson.M{"_id": bson.M{"$in": noteIds}}, []string{"_id", "Abstract", "Content"}, &notes)
 	return
@@ -273,7 +273,7 @@ func (this *NoteService) ListNoteContentByNoteIds(noteIds []bson.ObjectId) (note
 
 func (this *NoteService) AddNote(note info.Note, fromApi bool) info.Note {
 	if note.NoteId.Hex() == "" {
-		noteId := bson.NewObjectId()
+		noteId := db.NewObjectID()
 		note.NoteId = noteId
 	}
 
@@ -309,7 +309,7 @@ func (this *NoteService) AddNote(note info.Note, fromApi bool) info.Note {
 }
 
 // 添加共享d笔记
-func (this *NoteService) AddSharedNote(note info.Note, myUserId bson.ObjectId) info.Note {
+func (this *NoteService) AddSharedNote(note info.Note, myUserId ObjectID) info.Note {
 	// 判断我是否有权限添加
 	if shareService.HasUpdateNotebookPerm(note.UserId.Hex(), myUserId.Hex(), note.NotebookId.Hex()) {
 		note.CreatedUserId = myUserId // 是我给共享我的人创建的
@@ -337,9 +337,9 @@ func (this *NoteService) AddNoteContent(noteContent info.NoteContent) info.NoteC
 // API, abstract, desc需要这里获取
 // 不需要
 /*
-func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.NoteContent, myUserId bson.ObjectId) info.Note {
+func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.NoteContent, myUserId ObjectID) info.Note {
 	if(note.NoteId.Hex() == "") {
-		noteId := bson.NewObjectId();
+		noteId := db.NewObjectID();
 		note.NoteId = noteId;
 	}
 	note.CreatedTime = time.Now()
@@ -388,11 +388,11 @@ func (this *NoteService) AddNoteAndContentForController(note info.Note, noteCont
 			Log("HAS AUTH -----------")
 		}
 	}
-	return this.AddNoteAndContent(note, noteContent, bson.ObjectIdHex(updatedUserId))
+	return this.AddNoteAndContent(note, noteContent, db.MustObjectIDFromHex(updatedUserId))
 }
-func (this *NoteService) AddNoteAndContent(note info.Note, noteContent info.NoteContent, myUserId bson.ObjectId) info.Note {
+func (this *NoteService) AddNoteAndContent(note info.Note, noteContent info.NoteContent, myUserId ObjectID) info.Note {
 	if note.NoteId.Hex() == "" {
-		noteId := bson.NewObjectId()
+		noteId := db.NewObjectID()
 		note.NoteId = noteId
 	}
 	noteContent.NoteId = note.NoteId
@@ -401,15 +401,15 @@ func (this *NoteService) AddNoteAndContent(note info.Note, noteContent info.Note
 	} else {
 		note = this.AddNote(note, false)
 	}
-	if note.NoteId != "" {
+	if !note.NoteId.IsZero() {
 		this.AddNoteContent(noteContent)
 	}
 	return note
 }
 
-func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.NoteContent, myUserId bson.ObjectId) info.Note {
+func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.NoteContent, myUserId ObjectID) info.Note {
 	if note.NoteId.Hex() == "" {
-		noteId := bson.NewObjectId()
+		noteId := db.NewObjectID()
 		note.NoteId = noteId
 	}
 	noteContent.NoteId = note.NoteId
@@ -418,7 +418,7 @@ func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.N
 	} else {
 		note = this.AddNote(note, true)
 	}
-	if note.NoteId != "" {
+	if !note.NoteId.IsZero() {
 		this.AddNoteContent(noteContent)
 	}
 	return note
@@ -429,7 +429,7 @@ func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.N
 func (this *NoteService) UpdateNote(updatedUserId, noteId string, needUpdate bson.M, usn int) (bool, string, int) {
 	// 是否存在
 	note := this.GetNoteById(noteId)
-	if note.NoteId == "" {
+	if note.NoteId.IsZero() {
 		return false, "notExists", 0
 	}
 
@@ -445,13 +445,13 @@ func (this *NoteService) UpdateNote(updatedUserId, noteId string, needUpdate bso
 	}
 
 	/*
-	// 这里不再判断, 因为controller已经判断了, 删除附件会新增, 所以不用判断
-	if usn > 0 && note.Usn != usn {
-		Log("有冲突!!")
-		Log(note.Usn)
-		Log(usn)
-		return false, "conflict", 0
-	}
+		// 这里不再判断, 因为controller已经判断了, 删除附件会新增, 所以不用判断
+		if usn > 0 && note.Usn != usn {
+			Log("有冲突!!")
+			Log(note.Usn)
+			Log(usn)
+			return false, "conflict", 0
+		}
 	*/
 
 	// 是否已自定义
@@ -460,7 +460,7 @@ func (this *NoteService) UpdateNote(updatedUserId, noteId string, needUpdate bso
 		delete(needUpdate, "Desc")
 	}
 
-	needUpdate["UpdatedUserId"] = bson.ObjectIdHex(updatedUserId)
+	needUpdate["UpdatedUserId"] = db.MustObjectIDFromHex(updatedUserId)
 
 	// 可以将时间传过来
 	updatedTime, ok := needUpdate["UpdatedTime"].(time.Time)
@@ -523,8 +523,8 @@ func (this *NoteService) UpdateNote(updatedUserId, noteId string, needUpdate bso
 	// 两方的notebook也要修改
 	notebookIdI := needUpdate["NotebookId"]
 	if notebookIdI != nil {
-		notebookId := notebookIdI.(bson.ObjectId)
-		if notebookId != "" {
+		notebookId := notebookIdI.(ObjectID)
+		if !notebookId.IsZero() {
 			notebookService.ReCountNotebookNumberNotes(note.NotebookId.Hex())
 			notebookService.ReCountNotebookNumberNotes(notebookId.Hex())
 			hasRecount = true
@@ -571,7 +571,7 @@ func (this *NoteService) UpdateNoteTitle(userId, updatedUserId, noteId, title st
 	}
 
 	return db.UpdateByIdAndUserIdMap(db.Notes, noteId, userId,
-		bson.M{"UpdatedUserId": bson.ObjectIdHex(updatedUserId), "Title": title, "UpdatedTime": time.Now(), "Usn": userService.IncrUsn(userId)})
+		bson.M{"UpdatedUserId": db.MustObjectIDFromHex(updatedUserId), "Title": title, "UpdatedTime": time.Now(), "Usn": userService.IncrUsn(userId)})
 }
 
 // 修改笔记本内容
@@ -583,7 +583,7 @@ func (this *NoteService) UpdateNoteContent(updatedUserId, noteId, content, abstr
 	usn int, updatedTime time.Time) (bool, string, int) {
 	// 是否已自定义
 	note := this.GetNoteById(noteId)
-	if note.NoteId == "" {
+	if note.NoteId.IsZero() {
 		return false, "notExists", 0
 	}
 	userId := note.UserId.Hex()
@@ -598,7 +598,7 @@ func (this *NoteService) UpdateNoteContent(updatedUserId, noteId, content, abstr
 	updatedTime = FixUrlTime(updatedTime)
 
 	// abstract重置
-	data := bson.M{"UpdatedUserId": bson.ObjectIdHex(updatedUserId),
+	data := bson.M{"UpdatedUserId": db.MustObjectIDFromHex(updatedUserId),
 		"Content":     content,
 		"Abstract":    abstract,
 		"UpdatedTime": updatedTime}
@@ -621,7 +621,7 @@ func (this *NoteService) UpdateNoteContent(updatedUserId, noteId, content, abstr
 
 	if db.UpdateByIdAndUserIdMap(db.NoteContents, noteId, userId, data) {
 		// 这里, 添加历史记录
-		noteContentHistoryService.AddHistory(noteId, userId, info.EachHistory{UpdatedUserId: bson.ObjectIdHex(updatedUserId),
+		noteContentHistoryService.AddHistory(noteId, userId, info.EachHistory{UpdatedUserId: db.MustObjectIDFromHex(updatedUserId),
 			Content:     content,
 			UpdatedTime: time.Now(),
 		})
@@ -686,7 +686,7 @@ func (this *NoteService) MoveNote(noteId, notebookId, userId string) info.Note {
 
 		re := db.UpdateByIdAndUserId(db.Notes, noteId, userId,
 			bson.M{"$set": bson.M{"IsTrash": false,
-				"NotebookId": bson.ObjectIdHex(notebookId),
+				"NotebookId": db.MustObjectIDFromHex(notebookId),
 				"Usn":        userService.IncrUsn(userId),
 			}})
 
@@ -726,7 +726,7 @@ func (this *NoteService) updateToNotebookBlog(noteId, notebookId, userId string)
 // 判断是否是blog
 func (this *NoteService) IsBlog(noteId string) bool {
 	note := info.Note{}
-	db.GetByQWithFields(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId)}, []string{"IsBlog"}, &note)
+	db.GetByQWithFields(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId)}, []string{"IsBlog"}, &note)
 	return note.IsBlog
 }
 
@@ -740,8 +740,8 @@ func (this *NoteService) CopyNote(noteId, notebookId, userId string) info.Note {
 		noteContent := this.GetNoteContent(noteId, userId)
 
 		// 重新生成noteId
-		note.NoteId = bson.NewObjectId()
-		note.NotebookId = bson.ObjectIdHex(notebookId)
+		note.NoteId = db.NewObjectID()
+		note.NotebookId = db.MustObjectIDFromHex(notebookId)
 
 		noteContent.NoteId = note.NoteId
 		note = this.AddNoteAndContent(note, noteContent, note.UserId)
@@ -767,15 +767,15 @@ func (this *NoteService) CopySharedNote(noteId, notebookId, fromUserId, myUserId
 	// Log(notebookService.IsMyNotebook(notebookId, myUserId))
 	if notebookService.IsMyNotebook(notebookId, myUserId) && shareService.HasReadPerm(fromUserId, myUserId, noteId) {
 		note := this.GetNote(noteId, fromUserId)
-		if note.NoteId == "" {
+		if note.NoteId.IsZero() {
 			return info.Note{}
 		}
 		noteContent := this.GetNoteContent(noteId, fromUserId)
 
 		// 重新生成noteId
-		note.NoteId = bson.NewObjectId()
-		note.NotebookId = bson.ObjectIdHex(notebookId)
-		note.UserId = bson.ObjectIdHex(myUserId)
+		note.NoteId = db.NewObjectID()
+		note.NotebookId = db.MustObjectIDFromHex(notebookId)
+		note.UserId = db.MustObjectIDFromHex(myUserId)
 		note.IsTop = false
 		note.IsBlog = false // 别人的可能是blog
 
@@ -810,15 +810,15 @@ func (this *NoteService) CopySharedNote(noteId, notebookId, fromUserId, myUserId
 // 通过noteId得到notebookId
 // shareService call
 // [ok]
-func (this *NoteService) GetNotebookId(noteId string) bson.ObjectId {
+func (this *NoteService) GetNotebookId(noteId string) ObjectID {
 	note := info.Note{}
 	// db.Get(db.Notes, noteId, &note)
 	// LogJ(note)
-	db.GetByQWithFields(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId)}, []string{"NotebookId"}, &note)
+	db.GetByQWithFields(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId)}, []string{"NotebookId"}, &note)
 	return note.NotebookId
 }
 
-//------------------
+// ------------------
 // 搜索Note, 博客使用了
 func (this *NoteService) SearchNote(key, userId string, pageNumber, pageSize int, sortField string, isAsc, isBlog bool) (count int, notes []info.Note) {
 	notes = []info.Note{}
@@ -826,11 +826,11 @@ func (this *NoteService) SearchNote(key, userId string, pageNumber, pageSize int
 
 	// 利用标题和desc, 不用content
 	orQ := []bson.M{
-		bson.M{"Title": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + key + ".*", Options: "i"}}},
-		bson.M{"Desc": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + key + ".*", Options: "i"}}},
+		bson.M{"Title": bson.M{"$regex": bson.Regex{Pattern: ".*?" + key + ".*", Options: "i"}}},
+		bson.M{"Desc": bson.M{"$regex": bson.Regex{Pattern: ".*?" + key + ".*", Options: "i"}}},
 	}
 	// 不是trash的
-	query := bson.M{"UserId": bson.ObjectIdHex(userId),
+	query := bson.M{"UserId": db.MustObjectIDFromHex(userId),
 		"IsTrash":   false,
 		"IsDeleted": false, // 不能搜索已删除了的
 		"$or":       orQ,
@@ -858,15 +858,15 @@ func (this *NoteService) SearchNote(key, userId string, pageNumber, pageSize int
 // 搜索noteContents, 补集pageSize个
 func (this *NoteService) searchNoteFromContent(notes []info.Note, userId, key string, pageSize int, sortField string, isBlog bool) []info.Note {
 	var remain = pageSize - len(notes)
-	noteIds := make([]bson.ObjectId, len(notes))
+	noteIds := make([]ObjectID, len(notes))
 	for i, note := range notes {
 		noteIds[i] = note.NoteId
 	}
 	noteContents := []info.NoteContent{}
 	query := bson.M{
 		"_id":     bson.M{"$nin": noteIds},
-		"UserId":  bson.ObjectIdHex(userId),
-		"Content": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + key + ".*", Options: "i"}},
+		"UserId":  db.MustObjectIDFromHex(userId),
+		"Content": bson.M{"$regex": bson.Regex{Pattern: ".*?" + key + ".*", Options: "i"}},
 	}
 	if isBlog {
 		query["IsBlog"] = true
@@ -883,7 +883,7 @@ func (this *NoteService) searchNoteFromContent(notes []info.Note, userId, key st
 	}
 
 	// 收集ids
-	noteIds2 := make([]bson.ObjectId, lenContent)
+	noteIds2 := make([]ObjectID, lenContent)
 	for i, content := range noteContents {
 		noteIds2[i] = content.NoteId
 	}
@@ -902,14 +902,14 @@ func (this *NoteService) searchNoteFromContent(notes []info.Note, userId, key st
 	return notes
 }
 
-//----------------
+// ----------------
 // tag搜索
 func (this *NoteService) SearchNoteByTags(tags []string, userId string, pageNumber, pageSize int, sortField string, isAsc bool) (count int, notes []info.Note) {
 	notes = []info.Note{}
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 
 	// 不是trash的
-	query := bson.M{"UserId": bson.ObjectIdHex(userId),
+	query := bson.M{"UserId": db.MustObjectIDFromHex(userId),
 		"IsTrash": false,
 		"Tags":    bson.M{"$all": tags}}
 
@@ -925,19 +925,19 @@ func (this *NoteService) SearchNoteByTags(tags []string, userId string, pageNumb
 	return
 }
 
-//------------
+// ------------
 // 统计
 func (this *NoteService) CountNote(userId string) int {
 	q := bson.M{"IsTrash": false, "IsDeleted": false}
 	if userId != "" {
-		q["UserId"] = bson.ObjectIdHex(userId)
+		q["UserId"] = db.MustObjectIDFromHex(userId)
 	}
 	return db.Count(db.Notes, q)
 }
 func (this *NoteService) CountBlog(userId string) int {
 	q := bson.M{"IsBlog": true, "IsTrash": false, "IsDeleted": false}
 	if userId != "" {
-		q["UserId"] = bson.ObjectIdHex(userId)
+		q["UserId"] = db.MustObjectIDFromHex(userId)
 	}
 	return db.Count(db.Notes, q)
 }
@@ -947,7 +947,7 @@ func (this *NoteService) CountNoteByTag(userId string, tag string) int {
 	if tag == "" {
 		return 0
 	}
-	query := bson.M{"UserId": bson.ObjectIdHex(userId),
+	query := bson.M{"UserId": db.MustObjectIDFromHex(userId),
 		//		"IsTrash": false,
 		"IsDeleted": false,
 		"Tags":      bson.M{"$in": []string{tag}}}
@@ -957,7 +957,7 @@ func (this *NoteService) CountNoteByTag(userId string, tag string) int {
 // 删除tag
 // 返回所有note的Usn
 func (this *NoteService) UpdateNoteToDeleteTag(userId string, targetTag string) map[string]int {
-	query := bson.M{"UserId": bson.ObjectIdHex(userId),
+	query := bson.M{"UserId": db.MustObjectIDFromHex(userId),
 		"Tags": bson.M{"$in": []string{targetTag}}}
 	notes := []info.Note{}
 	db.ListByQ(db.Notes, query, &notes)
@@ -1078,7 +1078,7 @@ func (this *NoteService) FixContent(content string, isMarkdown bool) string {
 	patterns := []map[string]string{
 		map[string]string{"src": "src", "middle": "/api/file/getImage", "param": "fileId", "to": "getImage?fileId="},
 		map[string]string{"src": "src", "middle": "/file/outputImage", "param": "fileId", "to": "getImage?fileId="},
-		
+
 		map[string]string{"src": "href", "middle": "/attach/download", "param": "attachId", "to": "getAttach?fileId="},
 		map[string]string{"src": "href", "middle": "/api/file/getAtach", "param": "fileId", "to": "getAttach?fileId="},
 

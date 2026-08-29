@@ -4,7 +4,7 @@ import (
 	"github.com/revel/revel"
 	//	"encoding/json"
 	//	. "github.com/yangphere/leanote/app/lea"
-	//	"gopkg.in/mgo.v2/bson"
+	//	"go.mongodb.org/mongo-driver/v2/bson"
 	//	"github.com/yangphere/leanote/app/lea/netutil"
 	//	"github.com/yangphere/leanote/app/info"
 	//	"io/ioutil"
@@ -87,7 +87,7 @@ func (c ApiFile) GetAttach(fileId string) revel.Result {
 // [OK]
 func (c ApiFile) GetAllAttachs(noteId string) revel.Result {
 	note := noteService.GetNoteById(noteId)
-	if note.NoteId == "" {
+	if note.NoteId.IsZero() {
 		return c.RenderText("")
 	}
 	// 得到文件列表

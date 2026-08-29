@@ -1,6 +1,7 @@
 package harness
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -11,9 +12,12 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/lea"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 const (
@@ -123,7 +127,7 @@ func assertTestConfiguration(repoRoot string) error {
 		if err != nil {
 			return fmt.Errorf("conf/app.conf %s: %w", key, err)
 		}
-		dialInfo, parseErr := mgo.ParseURL(value)
+		parsedDatabase, parseErr := uriDatabase(value)
 		initDatabase := databaseNameFromInit(value)
 		if initDatabase == "" {
 			// db.Init falls back to db.dbname when the URL has no database
@@ -132,19 +136,34 @@ func assertTestConfiguration(repoRoot string) error {
 		}
 		if initDatabase != fixtureDatabaseName {
 			if parseErr != nil {
-				return fmt.Errorf("conf/app.conf %s: db.Init selects database %q (want %q); mgo.ParseURL also failed: %v", key, initDatabase, fixtureDatabaseName, parseErr)
+				return fmt.Errorf("conf/app.conf %s: db.Init selects database %q (want %q); URI parse also failed: %v", key, initDatabase, fixtureDatabaseName, parseErr)
 			}
-			return fmt.Errorf("conf/app.conf %s: db.Init selects database %q (want %q); mgo.ParseURL selects %q", key, initDatabase, fixtureDatabaseName, dialInfo.Database)
+			return fmt.Errorf("conf/app.conf %s: db.Init selects database %q (want %q); URI parse selects %q", key, initDatabase, fixtureDatabaseName, parsedDatabase)
 		}
-		// mgo.ParseURL rejects options unknown to its old allow-list (for
-		// example tlsCAFile), while db.Init still uses the URL's final path
+		// The net/url parser accepts options the legacy mgo allow-list rejected
+		// (for example tlsCAFile), while db.Init still uses the URL's final path
 		// segment. A safe db.Init result is therefore accepted when parsing
 		// fails, but a successful parser result must also target the fixture.
-		if parseErr == nil && dialInfo.Database != "" && dialInfo.Database != fixtureDatabaseName {
-			return fmt.Errorf("conf/app.conf %s: mgo.ParseURL selects database %q (want %q); db.Init selects %q", key, dialInfo.Database, fixtureDatabaseName, initDatabase)
+		if parseErr == nil && parsedDatabase != "" && parsedDatabase != fixtureDatabaseName {
+			return fmt.Errorf("conf/app.conf %s: URI parse selects database %q (want %q); db.Init selects %q", key, parsedDatabase, fixtureDatabaseName, initDatabase)
 		}
 	}
 	return nil
+}
+
+// uriDatabase extracts the database segment of a MongoDB URI with net/url,
+// independently of db.Init's string-splitting rules.
+func uriDatabase(value string) (string, error) {
+	u, err := url.Parse(value)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimPrefix(u.Path, "/"), nil
+}
+
+// harnessContext bounds every direct fixture-database operation.
+func harnessContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 5*time.Second)
 }
 
 func databaseNameFromInit(value string) string {
@@ -266,23 +285,31 @@ func captureGolden(t testing.TB, store GoldenStore, client *Client, name string,
 	return snapshot
 }
 
-func fixtureSession(t testing.TB) *mgo.Session {
+func fixtureDatabase(t testing.TB) *mongo.Database {
 	t.Helper()
-	session, err := mgo.DialWithTimeout(fixtureDatabaseURL, 5*time.Second)
+	client, err := mongo.Connect(options.Client().ApplyURI(fixtureDatabaseURL).SetConnectTimeout(5 * time.Second).
+		SetRegistry(lea.CodecRegistry).SetBSONOptions(&options.BSONOptions{DefaultDocumentM: true}))
 	if err != nil {
 		t.Fatalf("connect fixture database: %v", err)
 	}
-	t.Cleanup(session.Close)
-	return session
+	ctx, cancel := harnessContext()
+	defer cancel()
+	if err := client.Ping(ctx, nil); err != nil {
+		t.Fatalf("ping fixture database: %v", err)
+	}
+	t.Cleanup(func() { _ = client.Disconnect(context.Background()) })
+	return client.Database(fixtureDatabaseName)
 }
 
 func fixtureNotebookByTitle(t testing.TB, title string) (string, int) {
 	t.Helper()
 	var notebook info.Notebook
-	err := fixtureSession(t).DB(fixtureDatabaseName).C("notebooks").Find(bson.M{
-		"UserId": bson.ObjectIdHex(fixtureAdminID),
+	ctx, cancel := harnessContext()
+	defer cancel()
+	err := fixtureDatabase(t).Collection("notebooks").FindOne(ctx, bson.M{
+		"UserId": db.MustObjectIDFromHex(fixtureAdminID),
 		"Title":  title,
-	}).One(&notebook)
+	}).Decode(&notebook)
 	if err != nil {
 		t.Fatalf("find notebook %q: %v", title, err)
 	}
@@ -292,10 +319,12 @@ func fixtureNotebookByTitle(t testing.TB, title string) (string, int) {
 func fixtureNoteByTitle(t testing.TB, title string) (string, int) {
 	t.Helper()
 	var note info.Note
-	err := fixtureSession(t).DB(fixtureDatabaseName).C("notes").Find(bson.M{
-		"UserId": bson.ObjectIdHex(fixtureAdminID),
+	ctx, cancel := harnessContext()
+	defer cancel()
+	err := fixtureDatabase(t).Collection("notes").FindOne(ctx, bson.M{
+		"UserId": db.MustObjectIDFromHex(fixtureAdminID),
 		"Title":  title,
-	}).One(&note)
+	}).Decode(&note)
 	if err != nil {
 		t.Fatalf("find note %q: %v", title, err)
 	}
@@ -305,10 +334,12 @@ func fixtureNoteByTitle(t testing.TB, title string) (string, int) {
 func fixtureTagByName(t testing.TB, tag string) int {
 	t.Helper()
 	var noteTag info.NoteTag
-	err := fixtureSession(t).DB(fixtureDatabaseName).C("note_tags").Find(bson.M{
-		"UserId": bson.ObjectIdHex(fixtureAdminID),
+	ctx, cancel := harnessContext()
+	defer cancel()
+	err := fixtureDatabase(t).Collection("note_tags").FindOne(ctx, bson.M{
+		"UserId": db.MustObjectIDFromHex(fixtureAdminID),
 		"Tag":    tag,
-	}).One(&noteTag)
+	}).Decode(&noteTag)
 	if err != nil {
 		t.Fatalf("find tag %q: %v", tag, err)
 	}
@@ -336,18 +367,21 @@ func seedBinaryFiles(t testing.TB, repoRoot string) {
 		t.Fatalf("write attachment seed: %v", err)
 	}
 
-	session := fixtureSession(t)
-	database := session.DB(fixtureDatabaseName)
+	database := fixtureDatabase(t)
 	// Register cleanup before touching Mongo so a partial seed failure cannot
 	// leave files or records behind for a later test.
 	t.Cleanup(func() {
-		_, _ = database.C("files").RemoveAll(bson.M{"_id": bson.ObjectIdHex(seedImageID)})
-		_, _ = database.C("attachs").RemoveAll(bson.M{"_id": bson.ObjectIdHex(seedAttachID)})
+		ctx, cancel := harnessContext()
+		defer cancel()
+		_, _ = database.Collection("files").DeleteMany(ctx, bson.M{"_id": db.MustObjectIDFromHex(seedImageID)})
+		_, _ = database.Collection("attachs").DeleteMany(ctx, bson.M{"_id": db.MustObjectIDFromHex(seedAttachID)})
 	})
-	if err := database.C("files").Insert(info.File{
-		FileId:      bson.ObjectIdHex(seedImageID),
-		UserId:      bson.ObjectIdHex(fixtureAdminID),
-		AlbumId:     bson.ObjectIdHex("52d3e8ac99c37b7f0d000001"),
+	ctx, cancel := harnessContext()
+	defer cancel()
+	if _, err := database.Collection("files").InsertOne(ctx, info.File{
+		FileId:      db.MustObjectIDFromHex(seedImageID),
+		UserId:      db.MustObjectIDFromHex(fixtureAdminID),
+		AlbumId:     db.MustObjectIDFromHex("52d3e8ac99c37b7f0d000001"),
 		Name:        "image.png",
 		Title:       "image.png",
 		Path:        "files/test_seed/image.png",
@@ -356,10 +390,10 @@ func seedBinaryFiles(t testing.TB, repoRoot string) {
 	}); err != nil {
 		t.Fatalf("insert image seed: %v", err)
 	}
-	if err := database.C("attachs").Insert(info.Attach{
-		AttachId:     bson.ObjectIdHex(seedAttachID),
-		NoteId:       bson.ObjectIdHex(fixtureActiveNoteID),
-		UploadUserId: bson.ObjectIdHex(fixtureAdminID),
+	if _, err := database.Collection("attachs").InsertOne(ctx, info.Attach{
+		AttachId:     db.MustObjectIDFromHex(seedAttachID),
+		NoteId:       db.MustObjectIDFromHex(fixtureActiveNoteID),
+		UploadUserId: db.MustObjectIDFromHex(fixtureAdminID),
 		Name:         "attach.txt",
 		Title:        "attach.txt",
 		Path:         "files/test_seed/attach.txt",
@@ -374,7 +408,9 @@ func seedBinaryFiles(t testing.TB, repoRoot string) {
 func removeGeneratedAdminLogo(t testing.TB, repoRoot string) {
 	t.Helper()
 	var user info.User
-	err := fixtureSession(t).DB(fixtureDatabaseName).C("users").FindId(bson.ObjectIdHex(fixtureAdminID)).One(&user)
+	ctx, cancel := harnessContext()
+	defer cancel()
+	err := fixtureDatabase(t).Collection("users").FindOne(ctx, bson.M{"_id": db.MustObjectIDFromHex(fixtureAdminID)}).Decode(&user)
 	if err != nil || user.Logo == "" {
 		return
 	}

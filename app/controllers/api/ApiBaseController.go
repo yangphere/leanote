@@ -2,9 +2,9 @@ package api
 
 import (
 	"github.com/revel/revel"
-	"gopkg.in/mgo.v2/bson"
 	//	"encoding/json"
 	"github.com/yangphere/leanote/app/controllers"
+	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
 	"os"
@@ -106,11 +106,11 @@ func (c ApiBaseContrller) uploadAttach(name string, noteId string) (ok bool, msg
 		fileType = strings.ToLower(ext[1:])
 	}
 	filesize := GetFilesize(toPath)
-	fileInfo := info.Attach{AttachId: bson.NewObjectId(),
+	fileInfo := info.Attach{AttachId: db.NewObjectID(),
 		Name:         filename,
 		Title:        handel.Filename,
-		NoteId:       bson.ObjectIdHex(noteId),
-		UploadUserId: bson.ObjectIdHex(userId),
+		NoteId:       db.MustObjectIDFromHex(noteId),
+		UploadUserId: db.MustObjectIDFromHex(userId),
 		Path:         filePath + "/" + filename,
 		Type:         fileType,
 		Size:         filesize}
@@ -190,7 +190,7 @@ func (c ApiBaseContrller) upload(name string, noteId string, isAttach bool) (ok 
 	fileUrlPath += "/" + filename
 
 	// File
-	fileInfo := info.File{FileId: bson.NewObjectId(),
+	fileInfo := info.File{FileId: db.NewObjectID(),
 		Name:  filename,
 		Title: handel.Filename,
 		Path:  fileUrlPath,

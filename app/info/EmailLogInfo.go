@@ -1,13 +1,13 @@
 package info
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/lea"
 	"time"
 )
 
 // 发送邮件
 type EmailLog struct {
-	LogId bson.ObjectId `bson:"_id"`
+	LogId lea.ObjectID `bson:"_id"`
 
 	Email   string `bson:"Email"`   // 发送者
 	Subject string `bson:"Subject"` // 主题

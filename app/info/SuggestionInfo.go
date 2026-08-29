@@ -1,13 +1,13 @@
 package info
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/lea"
 )
 
 // 建议
 type Suggestion struct {
-	Id         bson.ObjectId `bson:"_id"`
-	UserId     bson.ObjectId `bson:"UserId"`
-	Addr       string        `bson:"Addr"`
-	Suggestion string        `bson:"Suggestion"`
+	Id         lea.ObjectID `bson:"_id"`
+	UserId     lea.ObjectID `bson:"UserId"`
+	Addr       string       `bson:"Addr"`
+	Suggestion string       `bson:"Suggestion"`
 }

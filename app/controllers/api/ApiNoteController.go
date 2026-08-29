@@ -3,14 +3,15 @@ package api
 import (
 	"github.com/revel/revel"
 	//	"encoding/json"
+	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"os"
 	"os/exec"
 	// "strings"
-	"time"
 	"regexp"
+	"time"
 	//	"github.com/yangphere/leanote/app/types"
 	//	"io/ioutil"
 	//	"fmt"
@@ -58,7 +59,7 @@ func (c ApiNote) GetSyncNotes(afterUsn, maxEntry int) revel.Result {
 // 得到笔记本下的笔记
 // [OK]
 func (c ApiNote) GetNotes(notebookId string) revel.Result {
-	if notebookId != "" && !bson.IsObjectIdHex(notebookId) {
+	if notebookId != "" && !db.IsValidObjectIDHex(notebookId) {
 		re := info.NewApiRe()
 		re.Msg = "notebookIdInvalid"
 		return c.RenderJSON(re)
@@ -124,14 +125,14 @@ func (c ApiNote) GetTrashNotes() revel.Result {
 }
 */
 func (c ApiNote) GetNote(noteId string) revel.Result {
-	if !bson.IsObjectIdHex(noteId) {
+	if !db.IsValidObjectIDHex(noteId) {
 		re := info.NewApiRe()
 		re.Msg = "noteIdInvalid"
 		return c.RenderJSON(re)
 	}
 
 	note := noteService.GetNote(noteId, c.getUserId())
-	if note.NoteId == "" {
+	if note.NoteId.IsZero() {
 		re := info.NewApiRe()
 		re.Msg = "notExists"
 		return c.RenderJSON(re)
@@ -168,22 +169,22 @@ func (c ApiNote) fixPostNotecontent(noteOrContent *info.ApiNote) {
 				if !file.IsAttach {
 					// <img src="https://"
 					// ![](http://demo.leanote.top/api/file/getImage?fileId=5863219465b68e4fd5000001)
-					reg, _ := regexp.Compile(`https*://[^/]*?/api/file/getImage\?fileId=`+file.LocalFileId)
+					reg, _ := regexp.Compile(`https*://[^/]*?/api/file/getImage\?fileId=` + file.LocalFileId)
 					// Log(reg)
-					noteOrContent.Content = reg.ReplaceAllString(noteOrContent.Content, `/api/file/getImage?fileId=`+file.FileId)  
+					noteOrContent.Content = reg.ReplaceAllString(noteOrContent.Content, `/api/file/getImage?fileId=`+file.FileId)
 
 					// // "http://a.com/api/file/getImage?fileId=localId" => /api/file/getImage?fileId=serverId
-					// noteOrContent.Content = strings.Replace(noteOrContent.Content, 
-					// 	baseUrl + "/api/file/getImage?fileId="+file.LocalFileId, 
+					// noteOrContent.Content = strings.Replace(noteOrContent.Content,
+					// 	baseUrl + "/api/file/getImage?fileId="+file.LocalFileId,
 					// 	"/api/file/getImage?fileId="+file.FileId, -1)
 				} else {
-					reg, _ := regexp.Compile(`https*://[^/]*?/api/file/getAttach\?fileId=`+file.LocalFileId)
+					reg, _ := regexp.Compile(`https*://[^/]*?/api/file/getAttach\?fileId=` + file.LocalFileId)
 					// Log(reg)
-					noteOrContent.Content = reg.ReplaceAllString(noteOrContent.Content, `/api/file/getAttach?fileId=`+file.FileId)  
+					noteOrContent.Content = reg.ReplaceAllString(noteOrContent.Content, `/api/file/getAttach?fileId=`+file.FileId)
 					/*
-					noteOrContent.Content = strings.Replace(noteOrContent.Content, 
-						baseUrl + "/api/file/getAttach?fileId="+file.LocalFileId, 
-						"/api/file/getAttach?fileId="+file.FileId, -1)
+						noteOrContent.Content = strings.Replace(noteOrContent.Content,
+							baseUrl + "/api/file/getAttach?fileId="+file.LocalFileId,
+							"/api/file/getAttach?fileId="+file.FileId, -1)
 					*/
 				}
 			}
@@ -213,13 +214,13 @@ func (c ApiNote) GetNoteContent(noteId string) revel.Result {
 // 添加笔记
 // [OK]
 func (c ApiNote) AddNote(noteOrContent info.ApiNote) revel.Result {
-	userId := bson.ObjectIdHex(c.getUserId())
+	userId := db.MustObjectIDFromHex(c.getUserId())
 	re := info.NewRe()
 	myUserId := userId
 	// 为共享新建?
 	/*
 		if noteOrContent.FromUserId != "" {
-			userId = bson.ObjectIdHex(noteOrContent.FromUserId)
+			userId = db.MustObjectIDFromHex(noteOrContent.FromUserId)
 		}
 	*/
 	//	Log(noteOrContent.Title)
@@ -234,12 +235,12 @@ func (c ApiNote) AddNote(noteOrContent info.ApiNote) revel.Result {
 		}
 	*/
 	//	return c.RenderJSON(re)
-	if noteOrContent.NotebookId == "" || !bson.IsObjectIdHex(noteOrContent.NotebookId) {
+	if noteOrContent.NotebookId == "" || !db.IsValidObjectIDHex(noteOrContent.NotebookId) {
 		re.Msg = "notebookIdNotExists"
 		return c.RenderJSON(re)
 	}
 
-	noteId := bson.NewObjectId()
+	noteId := db.NewObjectID()
 	// TODO 先上传图片/附件, 如果不成功, 则返回false
 	//
 	attachNum := 0
@@ -286,7 +287,7 @@ func (c ApiNote) AddNote(noteOrContent info.ApiNote) revel.Result {
 
 	note := info.Note{UserId: userId,
 		NoteId:     noteId,
-		NotebookId: bson.ObjectIdHex(noteOrContent.NotebookId),
+		NotebookId: db.MustObjectIDFromHex(noteOrContent.NotebookId),
 		Title:      noteOrContent.Title,
 		Tags:       noteOrContent.Tags,
 		Desc:       noteOrContent.Desc,
@@ -316,7 +317,7 @@ func (c ApiNote) AddNote(noteOrContent info.ApiNote) revel.Result {
 
 	note = noteService.AddNoteAndContentApi(note, noteContent, myUserId)
 
-	if note.NoteId == "" {
+	if note.NoteId.IsZero() {
 		re.Ok = false
 		return c.RenderJSON(re)
 	}
@@ -366,7 +367,7 @@ func (c ApiNote) UpdateNote(noteOrContent info.ApiNote) revel.Result {
 	// 先判断USN的问题, 因为很可能添加完附件后, 会有USN冲突, 这时附件就添错了
 	userId := c.getUserId()
 	note := noteService.GetNote(noteId, userId)
-	if note.NoteId == "" {
+	if note.NoteId.IsZero() {
 		re.Msg = "notExists"
 		return c.RenderJSON(re)
 	}
@@ -465,9 +466,9 @@ func (c ApiNote) UpdateNote(noteOrContent info.ApiNote) revel.Result {
 	}
 
 	if c.Has("NotebookId") {
-		if bson.IsObjectIdHex(noteOrContent.NotebookId) {
+		if db.IsValidObjectIDHex(noteOrContent.NotebookId) {
 			needUpdateNote = true
-			noteUpdate["NotebookId"] = bson.ObjectIdHex(noteOrContent.NotebookId)
+			noteUpdate["NotebookId"] = db.MustObjectIDFromHex(noteOrContent.NotebookId)
 		}
 	}
 
@@ -573,7 +574,7 @@ func (c ApiNote) ExportPdf(noteId string) revel.Result {
 	}
 
 	note := noteService.GetNoteById(noteId)
-	if note.NoteId == "" {
+	if note.NoteId.IsZero() {
 		re.Msg = "noteNotExists"
 		return c.RenderJSON(re)
 	}

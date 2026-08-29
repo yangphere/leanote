@@ -2,7 +2,7 @@ package member
 
 import (
 	//	"github.com/revel/revel"
-	//	"gopkg.in/mgo.v2/bson"
+	//	"go.mongodb.org/mongo-driver/v2/bson"
 	//	"encoding/json"
 	"github.com/yangphere/leanote/app/controllers"
 	. "github.com/yangphere/leanote/app/lea"

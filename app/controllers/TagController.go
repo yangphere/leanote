@@ -3,7 +3,7 @@ package controllers
 import (
 	"github.com/revel/revel"
 	//	"encoding/json"
-	//	"gopkg.in/mgo.v2/bson"
+	//	"go.mongodb.org/mongo-driver/v2/bson"
 	//	. "github.com/yangphere/leanote/app/lea"
 	"github.com/yangphere/leanote/app/info"
 	//	"os/exec"

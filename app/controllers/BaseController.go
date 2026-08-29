@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"encoding/json"
-	"github.com/yangphere/leanote/app/info"
-	"github.com/yangphere/leanote/app/lea/i18n"
 	"github.com/revel/revel"
-	"gopkg.in/mgo.v2/bson"
-	//	. "github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/db"
+	"github.com/yangphere/leanote/app/info"
+	. "github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/lea/i18n"
 	//	"io/ioutil"
 	//	"fmt"
 	"bytes"
@@ -37,12 +37,12 @@ func (c BaseController) HasLogined() bool {
 	return c.GetUserId() != ""
 }
 
-func (c BaseController) GetObjectUserId() bson.ObjectId {
+func (c BaseController) GetObjectUserId() ObjectID {
 	userId := c.GetUserId()
 	if userId != "" {
-		return bson.ObjectIdHex(userId)
+		return db.MustObjectIDFromHex(userId)
 	}
-	return ""
+	return ObjectID{}
 }
 
 func (c BaseController) GetEmail() string {
@@ -61,7 +61,7 @@ func (c BaseController) GetUsername() string {
 
 // 得到用户信息
 func (c BaseController) GetUserInfo() info.User {
-    userId := c.GetUserId()
+	userId := c.GetUserId()
 	if userId != "" {
 		return userService.GetUserInfo(userId)
 	}
@@ -69,7 +69,7 @@ func (c BaseController) GetUserInfo() info.User {
 }
 
 func (c BaseController) GetUserAndBlogUrl() info.UserAndBlogUrl {
-    userId := c.GetUserId()
+	userId := c.GetUserId()
 	if userId != "" {
 		return userService.GetUserAndBlogUrl(userId)
 	}
@@ -157,7 +157,7 @@ func (c BaseController) GetTotalPage(page, count int) int {
 	return int(math.Ceil(float64(count) / float64(page)))
 }
 
-//-------------
+// -------------
 func (c BaseController) E404() revel.Result {
 	c.ViewArgs["title"] = "404"
 	return c.NotFound("")
@@ -208,7 +208,7 @@ func (c BaseController) RenderTemplateStr(templatePath string) string {
 	}
 
 	tpl := &revel.RenderTemplateResult{
-		Template:   template,
+		Template: template,
 		ViewArgs: c.ViewArgs, // 把args给它
 	}
 

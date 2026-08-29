@@ -42,11 +42,23 @@ func TestAssertTestConfigurationAcceptsDatabaseURLWithUnsupportedMgoOption(t *te
 	}
 }
 
-func TestAssertTestConfigurationRejectsUnsafeDatabaseFromUnsupportedMgoOption(t *testing.T) {
+func TestAssertTestConfigurationRejectsUnsafeDatabaseFromOptionPath(t *testing.T) {
+	// db.Init derives the database from the URL's final path segment, so an
+	// option value containing slashes (tlsCAFile=/etc/ssl/leanote) misleads it
+	// into selecting "leanote" instead of the fixture database. The independent
+	// URI parser resolves the true database, so the combination must be rejected.
 	repoRoot := writeTestConfigFixture(t, "[test]\nhttp.addr=127.0.0.1\ndb.url=mongodb://localhost:27017/leanote_test?tlsCAFile=/etc/ssl/leanote\ndb.dbname=leanote_test\nsite.url=http://127.0.0.1:28017\n")
 	err := assertTestConfiguration(repoRoot)
-	if err == nil || !strings.Contains(err.Error(), "db.Init selects database") || !strings.Contains(err.Error(), "mgo.ParseURL also failed") {
-		t.Fatalf("assertTestConfiguration() error = %v, want distinct db.Init/mgo.ParseURL error", err)
+	if err == nil || !strings.Contains(err.Error(), "db.Init selects database") || !strings.Contains(err.Error(), "URI parse selects") {
+		t.Fatalf("assertTestConfiguration() error = %v, want distinct db.Init/URI parse error", err)
+	}
+}
+
+func TestAssertTestConfigurationRejectsUnparsableDatabaseURL(t *testing.T) {
+	repoRoot := writeTestConfigFixture(t, "[test]\nhttp.addr=127.0.0.1\ndb.url=mongodb://127.0.0.1:27017:bad/leanote_other\ndb.dbname=leanote_test\nsite.url=http://127.0.0.1:28017\n")
+	err := assertTestConfiguration(repoRoot)
+	if err == nil || !strings.Contains(err.Error(), "db.Init selects database") || !strings.Contains(err.Error(), "URI parse also failed") {
+		t.Fatalf("assertTestConfiguration() error = %v, want distinct db.Init/URI parse error", err)
 	}
 }
 

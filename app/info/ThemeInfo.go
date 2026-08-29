@@ -1,15 +1,15 @@
 package info
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/lea"
 	"time"
 )
 
 // 主题, 每个用户有多个主题, 这里面有主题的配置信息
 // 模板, css, js, images, 都在路径Path下
 type Theme struct {
-	ThemeId   bson.ObjectId          `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
-	UserId    bson.ObjectId          `bson:"UserId"`
+	ThemeId   lea.ObjectID           `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
+	UserId    lea.ObjectID           `bson:"UserId"`
 	Name      string                 `bson:"Name"`
 	Version   string                 `bson:"Version"`
 	Author    string                 `bson:"Author"`

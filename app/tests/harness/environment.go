@@ -11,7 +11,7 @@ import (
 
 const (
 	MongoContainerName = "leanote-test-mongo"
-	MongoImage         = "mongo:5.0"
+	MongoImage         = "mongo:8.0"
 	MongoFixtureDB     = "leanote_test"
 )
 

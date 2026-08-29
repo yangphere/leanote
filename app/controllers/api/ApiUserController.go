@@ -5,14 +5,13 @@ import (
 	//	"encoding/json"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
 	//	"github.com/yangphere/leanote/app/types"
 	"io/ioutil"
 	//	"fmt"
 	//	"math"
 	"os"
-
 	//	"path"
 	//	"strconv"
 )
@@ -27,7 +26,7 @@ func (c ApiUser) Info() revel.Result {
 	re := info.NewApiRe()
 
 	userInfo := c.getUserInfo()
-	if userInfo.UserId == "" {
+	if userInfo.UserId.IsZero() {
 		return c.RenderJSON(re)
 	}
 	apiUser := info.ApiUser{

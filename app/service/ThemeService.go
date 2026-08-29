@@ -3,12 +3,12 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
 	"github.com/yangphere/leanote/app/lea/archive"
-	"github.com/revel/revel"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"html/template"
 	"io/ioutil"
 	"os"
@@ -99,7 +99,7 @@ func (this *ThemeService) getUserThemePath2(userId, themeId string) string {
 // 新建主题
 // 复制默认主题到文件夹下
 func (this *ThemeService) CopyDefaultTheme(userBlog info.UserBlog) (ok bool, themeId string) {
-	newThemeId := bson.NewObjectId()
+	newThemeId := db.NewObjectID()
 	themeId = newThemeId.Hex()
 	userId := userBlog.UserId.Hex()
 	themePath := this.getUserThemePath(userId, themeId)
@@ -120,7 +120,7 @@ func (this *ThemeService) CopyDefaultTheme(userBlog info.UserBlog) (ok bool, the
 	theme.Path = this.getUserThemePath2(userId, themeId)
 	theme.CreatedTime = time.Now()
 	theme.UpdatedTime = theme.CreatedTime
-	theme.UserId = bson.ObjectIdHex(userId)
+	theme.UserId = db.MustObjectIDFromHex(userId)
 
 	ok = db.Insert(db.Themes, theme)
 	return ok, themeId
@@ -131,7 +131,7 @@ func (this *ThemeService) CopyDefaultTheme(userBlog info.UserBlog) (ok bool, the
 func (this *ThemeService) NewThemeForFirst(userBlog info.UserBlog) (ok bool, themeId string) {
 	ok, themeId = this.CopyDefaultTheme(userBlog)
 	this.ActiveTheme(userBlog.UserId.Hex(), themeId)
-	// db.UpdateByQField(db.Themes, bson.M{"_id": bson.ObjectIdHex(themeId)}, "IsActive", true)
+	// db.UpdateByQField(db.Themes, bson.M{"_id": db.MustObjectIDFromHex(themeId)}, "IsActive", true)
 	return
 }
 
@@ -139,7 +139,7 @@ func (this *ThemeService) NewThemeForFirst(userBlog info.UserBlog) (ok bool, the
 func (this *ThemeService) NewTheme(userId string) (ok bool, themeId string) {
 	userBlog := blogService.GetUserBlog(userId)
 	// 如果还没有主题, 那先复制旧的主题
-	if userBlog.ThemeId == "" {
+	if userBlog.ThemeId.IsZero() {
 		themeService.NewThemeForFirst(userBlog)
 	}
 	// 再copy一个默认主题
@@ -192,12 +192,12 @@ func (this *ThemeService) getThemeConfig(themePath string) (theme info.Theme, er
 
 func (this *ThemeService) GetTheme(userId, themeId string) info.Theme {
 	theme := info.Theme{}
-	db.GetByQ(db.Themes, bson.M{"_id": bson.ObjectIdHex(themeId), "UserId": bson.ObjectIdHex(userId)}, &theme)
+	db.GetByQ(db.Themes, bson.M{"_id": db.MustObjectIDFromHex(themeId), "UserId": db.MustObjectIDFromHex(userId)}, &theme)
 	return theme
 }
 func (this *ThemeService) GetThemeById(themeId string) info.Theme {
 	theme := info.Theme{}
-	db.GetByQ(db.Themes, bson.M{"_id": bson.ObjectIdHex(themeId)}, &theme)
+	db.GetByQ(db.Themes, bson.M{"_id": db.MustObjectIDFromHex(themeId)}, &theme)
 	return theme
 }
 
@@ -211,7 +211,7 @@ func (this *ThemeService) GetThemeInfo(themeId, style string) map[string]interfa
 		q["Style"] = style
 		q["IsDefault"] = true
 	} else {
-		q["_id"] = bson.ObjectIdHex(themeId)
+		q["_id"] = db.MustObjectIDFromHex(themeId)
 	}
 	theme := info.Theme{}
 	db.GetByQ(db.Themes, q, &theme)
@@ -225,10 +225,10 @@ func (this *ThemeService) GetUserThemes(userId string) (theme info.Theme, themes
 	theme = info.Theme{}
 	themes = []info.Theme{}
 
-	//	db.ListByQ(db.Themes, bson.M{"UserId": bson.ObjectIdHex(userId)}, &themes)
+	//	db.ListByQ(db.Themes, bson.M{"UserId": db.MustObjectIDFromHex(userId)}, &themes)
 
 	// 创建时间逆序
-	query := bson.M{"UserId": bson.ObjectIdHex(userId)}
+	query := bson.M{"UserId": db.MustObjectIDFromHex(userId)}
 	q := db.Themes.Find(query)
 	q.Sort("-CreatedTime").All(&themes)
 	if len(themes) == 0 {
@@ -264,22 +264,20 @@ func (this *ThemeService) GetDefaultThemes() (themes []info.Theme) {
 	return
 }
 
-
 func validateFilename(filename string) bool {
 	// 防止用"../../来获取其它文件"
-	if (strings.Contains(filename, "..")) {
+	if strings.Contains(filename, "..") {
 		return false
 	}
 	return true
 }
 
-
 // 得到模板内容
 func (this *ThemeService) GetTplContent(userId, themeId, filename string) string {
-	if (!validateFilename(filename)) {
+	if !validateFilename(filename) {
 		return ""
 	}
-	
+
 	path := this.GetThemeAbsolutePath(userId, themeId) + "/" + filename
 	return GetFileStrContent(path)
 }
@@ -287,7 +285,7 @@ func (this *ThemeService) GetTplContent(userId, themeId, filename string) string
 // 得到主题的绝对路径
 func (this *ThemeService) GetThemeAbsolutePath(userId, themeId string) string {
 	theme := info.Theme{}
-	db.GetByQWithFields(db.Themes, bson.M{"_id": bson.ObjectIdHex(themeId), "UserId": bson.ObjectIdHex(userId)}, []string{"Path"}, &theme)
+	db.GetByQWithFields(db.Themes, bson.M{"_id": db.MustObjectIDFromHex(themeId), "UserId": db.MustObjectIDFromHex(userId)}, []string{"Path"}, &theme)
 	if theme.Path != "" {
 		return revel.BasePath + "/" + theme.Path
 	}
@@ -295,7 +293,7 @@ func (this *ThemeService) GetThemeAbsolutePath(userId, themeId string) string {
 }
 func (this *ThemeService) GetThemePath(userId, themeId string) string {
 	theme := info.Theme{}
-	db.GetByQWithFields(db.Themes, bson.M{"_id": bson.ObjectIdHex(themeId), "UserId": bson.ObjectIdHex(userId)}, []string{"Path"}, &theme)
+	db.GetByQWithFields(db.Themes, bson.M{"_id": db.MustObjectIDFromHex(themeId), "UserId": db.MustObjectIDFromHex(userId)}, []string{"Path"}, &theme)
 	if theme.Path != "" {
 		return theme.Path
 	}
@@ -304,8 +302,8 @@ func (this *ThemeService) GetThemePath(userId, themeId string) string {
 
 // 更新模板内容
 func (this *ThemeService) UpdateTplContent(userId, themeId, filename, content string) (ok bool, msg string) {
-	if (!validateFilename(filename)) {
-		return 
+	if !validateFilename(filename) {
+		return
 	}
 
 	basePath := this.GetThemeAbsolutePath(userId, themeId)
@@ -326,7 +324,7 @@ func (this *ThemeService) UpdateTplContent(userId, themeId, filename, content st
 			return false, fmt.Sprintf("%v", err)
 		}
 		// 正确, 更新theme信息
-		ok = db.UpdateByQMap(db.Themes, bson.M{"_id": bson.ObjectIdHex(themeId), "UserId": bson.ObjectIdHex(userId)},
+		ok = db.UpdateByQMap(db.Themes, bson.M{"_id": db.MustObjectIDFromHex(themeId), "UserId": db.MustObjectIDFromHex(userId)},
 			bson.M{
 				"Name":      theme.Name,
 				"Version":   theme.Version,
@@ -344,7 +342,7 @@ func (this *ThemeService) UpdateTplContent(userId, themeId, filename, content st
 }
 
 func (this *ThemeService) DeleteTpl(userId, themeId, filename string) (ok bool) {
-	if (!validateFilename(filename)) {
+	if !validateFilename(filename) {
 		return
 	}
 
@@ -371,14 +369,14 @@ func (this *ThemeService) mustTpl(filename, content string) (ok bool, msg string
 
 // 使用主题
 func (this *ThemeService) ActiveTheme(userId, themeId string) (ok bool) {
-	if db.Has(db.Themes, bson.M{"_id": bson.ObjectIdHex(themeId), "UserId": bson.ObjectIdHex(userId)}) {
+	if db.Has(db.Themes, bson.M{"_id": db.MustObjectIDFromHex(themeId), "UserId": db.MustObjectIDFromHex(userId)}) {
 		// 之前的设为false
-		db.UpdateByQField(db.Themes, bson.M{"UserId": bson.ObjectIdHex(userId), "IsActive": true}, "IsActive", false)
+		db.UpdateByQField(db.Themes, bson.M{"UserId": db.MustObjectIDFromHex(userId), "IsActive": true}, "IsActive", false)
 		// 现在的设为true
-		db.UpdateByQField(db.Themes, bson.M{"_id": bson.ObjectIdHex(themeId)}, "IsActive", true)
+		db.UpdateByQField(db.Themes, bson.M{"_id": db.MustObjectIDFromHex(themeId)}, "IsActive", true)
 
 		// UserBlog ThemeId
-		db.UpdateByQField(db.UserBlogs, bson.M{"_id": bson.ObjectIdHex(userId)}, "ThemeId", bson.ObjectIdHex(themeId))
+		db.UpdateByQField(db.UserBlogs, bson.M{"_id": db.MustObjectIDFromHex(userId)}, "ThemeId", db.MustObjectIDFromHex(themeId))
 		return true
 	}
 	return false
@@ -386,7 +384,7 @@ func (this *ThemeService) ActiveTheme(userId, themeId string) (ok bool) {
 
 // 删除主题
 func (this *ThemeService) DeleteTheme(userId, themeId string) (ok bool) {
-	return db.Delete(db.Themes, bson.M{"_id": bson.ObjectIdHex(themeId), "UserId": bson.ObjectIdHex(userId), "IsActive": false})
+	return db.Delete(db.Themes, bson.M{"_id": db.MustObjectIDFromHex(themeId), "UserId": db.MustObjectIDFromHex(userId), "IsActive": false})
 }
 
 // 公开主题, 只有管理员才有权限, 之前没公开的变成公开
@@ -395,7 +393,7 @@ func (this *ThemeService) PublicTheme(userId, themeId string) (ok bool) {
 	userInfo := userService.GetUserInfo(userId)
 	if userInfo.Username == configService.GetAdminUsername() {
 		theme := this.GetThemeById(themeId)
-		return db.UpdateByQField(db.Themes, bson.M{"UserId": bson.ObjectIdHex(userId), "_id": bson.ObjectIdHex(themeId)}, "IsDefault", !theme.IsDefault)
+		return db.UpdateByQField(db.Themes, bson.M{"UserId": db.MustObjectIDFromHex(userId), "_id": db.MustObjectIDFromHex(themeId)}, "IsDefault", !theme.IsDefault)
 	}
 	return false
 }
@@ -434,7 +432,7 @@ func (this *ThemeService) ExportTheme(userId, themeId string) (ok bool, path str
 // 导入主题
 // path == /llllllll/..../public/upload/.../aa.zip, 绝对路径
 func (this *ThemeService) ImportTheme(userId, path string) (ok bool, msg string) {
-	themeIdO := bson.NewObjectId()
+	themeIdO := db.NewObjectID()
 	themeId := themeIdO.Hex()
 	targetPath := this.getUserThemePath(userId, themeId) // revel.BasePath + "/public/upload/" + userId + "/themes/" + themeId
 
@@ -467,7 +465,7 @@ func (this *ThemeService) ImportTheme(userId, path string) (ok bool, msg string)
 	theme.Path = this.getUserThemePath2(userId, themeId)
 	theme.CreatedTime = time.Now()
 	theme.UpdatedTime = theme.CreatedTime
-	theme.UserId = bson.ObjectIdHex(userId)
+	theme.UserId = db.MustObjectIDFromHex(userId)
 
 	ok = db.Insert(db.Themes, theme)
 	if !ok {
@@ -496,12 +494,12 @@ func (this *ThemeService) upgradeThemeBeta2(userId, style string, isActive bool)
 		ok = false
 		return
 	}
-	themeIdO := bson.NewObjectId()
+	themeIdO := db.NewObjectID()
 	theme.ThemeId = themeIdO
 	theme.Path = targetPath // public
 	theme.CreatedTime = time.Now()
 	theme.UpdatedTime = theme.CreatedTime
-	theme.UserId = bson.ObjectIdHex(userId)
+	theme.UserId = db.MustObjectIDFromHex(userId)
 	theme.IsActive = isActive
 	theme.IsDefault = true
 	theme.Style = style
@@ -520,12 +518,12 @@ func (this *ThemeService) InstallTheme(userId, themeId string) (ok bool) {
 
 	// 用户之前是否有主题?
 	userBlog := blogService.GetUserBlog(userId)
-	if userBlog.ThemeId == "" {
+	if userBlog.ThemeId.IsZero() {
 		this.NewThemeForFirst(userBlog)
 	}
 
 	// 生成新主题
-	newThemeId := bson.NewObjectId()
+	newThemeId := db.NewObjectID()
 	themeId = newThemeId.Hex()
 	themePath := this.getUserThemePath(userId, themeId)
 	err := os.MkdirAll(themePath, 0755)
@@ -545,7 +543,7 @@ func (this *ThemeService) InstallTheme(userId, themeId string) (ok bool) {
 	theme.Path = this.getUserThemePath2(userId, themeId)
 	theme.CreatedTime = time.Now()
 	theme.UpdatedTime = theme.CreatedTime
-	theme.UserId = bson.ObjectIdHex(userId)
+	theme.UserId = db.MustObjectIDFromHex(userId)
 
 	ok = db.Insert(db.Themes, theme)
 

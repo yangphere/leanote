@@ -1,10 +1,10 @@
 package api
 
 import (
+	"github.com/revel/revel"
+	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"github.com/revel/revel"
-	"gopkg.in/mgo.v2/bson"
 	//	"io/ioutil"
 )
 
@@ -67,12 +67,12 @@ func (c ApiNotebook) GetNotebooks() revel.Result {
 // 添加notebook
 // [OK]
 func (c ApiNotebook) AddNotebook(title, parentNotebookId string, seq int) revel.Result {
-	notebook := info.Notebook{NotebookId: bson.NewObjectId(),
+	notebook := info.Notebook{NotebookId: db.NewObjectID(),
 		Title:  title,
 		Seq:    seq,
-		UserId: bson.ObjectIdHex(c.getUserId())}
-	if parentNotebookId != "" && bson.IsObjectIdHex(parentNotebookId) {
-		notebook.ParentNotebookId = bson.ObjectIdHex(parentNotebookId)
+		UserId: db.MustObjectIDFromHex(c.getUserId())}
+	if parentNotebookId != "" && db.IsValidObjectIDHex(parentNotebookId) {
+		notebook.ParentNotebookId = db.MustObjectIDFromHex(parentNotebookId)
 	}
 	re := info.NewRe()
 	re.Ok, notebook = notebookService.AddNotebook(notebook)

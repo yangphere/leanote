@@ -4,7 +4,7 @@ import (
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	// . "github.com/yangphere/leanote/app/lea"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
 	//	"strings"
 )
@@ -27,8 +27,8 @@ func (this *SessionService) Get(sessionId string) info.Session {
 	db.GetByQ(db.Sessions, bson.M{"SessionId": sessionId}, &session)
 
 	// 如果没有session, 那么插入一条之
-	if session.Id == "" {
-		session.Id = bson.NewObjectId()
+	if session.Id.IsZero() {
+		session.Id = db.NewObjectID()
 		session.SessionId = sessionId
 		session.CreatedTime = time.Now()
 		session.UpdatedTime = session.CreatedTime
@@ -58,7 +58,7 @@ func (this *SessionService) IncrLoginTimes(sessionId string) bool {
 	return this.Update(sessionId, "LoginTimes", session.LoginTimes+1)
 }
 
-//----------
+// ----------
 // 验证码
 func (this *SessionService) GetCaptcha(sessionId string) string {
 	session := this.Get(sessionId)
@@ -73,7 +73,7 @@ func (this *SessionService) SetCaptcha(sessionId, captcha string) bool {
 	return ok
 }
 
-//-----------
+// -----------
 // API
 func (this *SessionService) GetUserId(sessionId string) string {
 	session := this.Get(sessionId)

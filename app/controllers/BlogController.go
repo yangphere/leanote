@@ -8,7 +8,7 @@ import (
 	"github.com/yangphere/leanote/app/info"
 	// . "github.com/yangphere/leanote/app/lea"
 	"github.com/yangphere/leanote/app/lea/blog"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	//	"github.com/yangphere/leanote/app/types"
 	//	"io/ioutil"
 	//	"math"
@@ -82,7 +82,7 @@ func (c Blog) domain() (ok bool, userBlog info.UserBlog) {
 	if strings.Contains(host, configService.GetDefaultDomain()) {
 		// 有二级域名 a.leanoe.com 3个
 		if len(hostArr) > 2 {
-			if userBlog = blogService.GetUserBlogBySubDomain(hostArr[0]); userBlog.UserId != "" {
+			if userBlog = blogService.GetUserBlogBySubDomain(hostArr[0]); !userBlog.UserId.IsZero() {
 				ok = true
 				return
 			}
@@ -91,7 +91,7 @@ func (c Blog) domain() (ok bool, userBlog info.UserBlog) {
 		// 自定义域名
 		// 把:9000去掉
 		hostArr2 := strings.Split(host, ":")
-		if userBlog = blogService.GetUserBlogByDomain(hostArr2[0]); userBlog.UserId != "" {
+		if userBlog = blogService.GetUserBlogByDomain(hostArr2[0]); !userBlog.UserId.IsZero() {
 			ok = true
 			return
 		}
@@ -210,7 +210,7 @@ func (c Blog) getCates(userBlog info.UserBlog) {
 		for _, cateId := range cateIds {
 			if n, ok := notebooksMap[cateId]; ok {
 				parentNotebookId := ""
-				if n.ParentNotebookId != "" {
+				if !n.ParentNotebookId.IsZero() {
 					parentNotebookId = n.ParentNotebookId.Hex()
 				}
 				cates[i] = &info.Cate{Title: n.Title, UrlTitle: c.getCateUrlTitle(&n), CateId: n.NotebookId.Hex(), ParentCateId: parentNotebookId}
@@ -226,7 +226,7 @@ func (c Blog) getCates(userBlog info.UserBlog) {
 		id := n.NotebookId.Hex()
 		if !has[id] {
 			parentNotebookId := ""
-			if n.ParentNotebookId != "" {
+			if !n.ParentNotebookId.IsZero() {
 				parentNotebookId = n.ParentNotebookId.Hex()
 			}
 			cates[i] = &info.Cate{Title: n.Title, UrlTitle: c.getCateUrlTitle(&n), CateId: id, ParentCateId: parentNotebookId}
@@ -309,9 +309,9 @@ func (c Blog) setPaging(pageInfo info.Page) {
 
 // 公共
 func (c Blog) blogCommon(userId string, userBlog info.UserBlog, userInfo info.User) (ok bool, ub info.UserBlog) {
-	if userInfo.UserId == "" {
+	if userInfo.UserId.IsZero() {
 		userInfo = userService.GetUserInfoByAny(userId)
-		if userInfo.UserId == "" {
+		if userInfo.UserId.IsZero() {
 			return false, userBlog
 		}
 	}
@@ -327,7 +327,7 @@ func (c Blog) blogCommon(userId string, userBlog info.UserBlog, userInfo info.Us
 	c.SetLocale()
 
 	// 得到博客设置信息
-	if userBlog.UserId == "" {
+	if userBlog.UserId.IsZero() {
 		userBlog = blogService.GetUserBlog(userId)
 	}
 	c.setBlog(userBlog, userInfo)
@@ -626,7 +626,7 @@ func (c Blog) Post(userIdOrEmail, noteId string) (re revel.Result) {
 	if ok, userBlog = c.blogCommon(userId, userBlog, userInfo); !ok {
 		return c.e404(userBlog.ThemePath) // 404 TODO 使用用户的404
 	}
-	if blogInfo.NoteId == "" {
+	if blogInfo.NoteId.IsZero() {
 		return c.e404(userBlog.ThemePath) // 404 TODO 使用用户的404
 	}
 
@@ -678,7 +678,7 @@ func (c Blog) Single(userIdOrEmail, singleId string) (re revel.Result) {
 	if ok, userBlog = c.blogCommon(userId, userBlog, userInfo); !ok {
 		return c.e404(userBlog.ThemePath) // 404 TODO 使用用户的404
 	}
-	if single.SingleId == "" {
+	if single.SingleId.IsZero() {
 		panic("")
 	}
 

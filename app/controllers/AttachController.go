@@ -6,9 +6,9 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"fmt"
+	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"gopkg.in/mgo.v2/bson"
 	"io"
 	"io/ioutil"
 	"os"
@@ -99,13 +99,13 @@ func (c Attach) uploadAttach(noteId string) (re info.Re) {
 	filesize := GetFilesize(toPath)
 	fileInfo = info.Attach{Name: filename,
 		Title:        handel.Filename,
-		NoteId:       bson.ObjectIdHex(noteId),
+		NoteId:       db.MustObjectIDFromHex(noteId),
 		UploadUserId: c.GetObjectUserId(),
 		Path:         filePath + "/" + filename,
 		Type:         fileType,
 		Size:         filesize}
 
-	id := bson.NewObjectId()
+	id := db.NewObjectID()
 	fileInfo.AttachId = id
 	fileId = id.Hex()
 	Ok, resultMsg = attachService.AddAttach(fileInfo, false)
@@ -151,7 +151,7 @@ func (c Attach) Download(attachId string) revel.Result {
 
 func (c Attach) DownloadAll(noteId string) revel.Result {
 	note := noteService.GetNoteById(noteId)
-	if note.NoteId == "" {
+	if note.NoteId.IsZero() {
 		return c.RenderText("")
 	}
 	// 得到文件列表

@@ -3,8 +3,8 @@ package controllers
 import (
 	"github.com/revel/revel"
 	//	"encoding/json"
+	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
-	"gopkg.in/mgo.v2/bson"
 	//	. "github.com/yangphere/leanote/app/lea"
 	//	"io/ioutil"
 )
@@ -33,7 +33,7 @@ func (c Album) DeleteAlbum(albumId string) revel.Result {
 // add album
 func (c Album) AddAlbum(name string) revel.Result {
 	album := info.Album{
-		AlbumId: bson.NewObjectId(),
+		AlbumId: db.NewObjectID(),
 		Name:    name,
 		Seq:     -1,
 		UserId:  c.GetObjectUserId()}

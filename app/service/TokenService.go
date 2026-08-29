@@ -4,7 +4,7 @@ import (
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
 )
 
@@ -17,7 +17,7 @@ type TokenService struct {
 
 // 生成token
 func (this *TokenService) NewToken(userId string, email string, tokenType int) string {
-	token := info.Token{UserId: bson.ObjectIdHex(userId), Token: NewGuidWith(email), CreatedTime: time.Now(), Email: email, Type: tokenType}
+	token := info.Token{UserId: db.MustObjectIDFromHex(userId), Token: NewGuidWith(email), CreatedTime: time.Now(), Email: email, Type: tokenType}
 
 	if db.Upsert(db.Tokens, bson.M{"_id": token.UserId}, token) {
 		return token.Token
@@ -28,7 +28,7 @@ func (this *TokenService) NewToken(userId string, email string, tokenType int) s
 
 // 删除token
 func (this *TokenService) DeleteToken(userId string, tokenType int) bool {
-	return db.Delete(db.Tokens, bson.M{"_id": bson.ObjectIdHex(userId), "Type": tokenType})
+	return db.Delete(db.Tokens, bson.M{"_id": db.MustObjectIDFromHex(userId), "Type": tokenType})
 }
 
 func (this *TokenService) GetOverHours(tokenType int) float64 {
@@ -53,7 +53,7 @@ func (this *TokenService) VerifyToken(token string, tokenType int) (ok bool, msg
 
 	db.GetByQ(db.Tokens, bson.M{"Token": token}, &tokenInfo)
 
-	if tokenInfo.UserId == "" {
+	if tokenInfo.UserId.IsZero() {
 		msg = "不存在"
 		return
 	}

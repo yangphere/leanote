@@ -3,7 +3,7 @@ package controllers
 import (
 	"github.com/revel/revel"
 	//	"encoding/json"
-	//	"gopkg.in/mgo.v2/bson"
+	//	"go.mongodb.org/mongo-driver/v2/bson"
 	. "github.com/yangphere/leanote/app/lea"
 	"github.com/yangphere/leanote/app/lea/captcha"
 	//	"github.com/yangphere/leanote/app/types"
@@ -13,8 +13,8 @@ import (
 	//	"os"
 	//	"path"
 	//	"strconv"
-	"net/http"
 	"io"
+	"net/http"
 )
 
 // 验证码服务

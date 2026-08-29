@@ -1,8 +1,8 @@
 package member
 
 import (
-	"github.com/yangphere/leanote/app/info"
 	"github.com/revel/revel"
+	"github.com/yangphere/leanote/app/info"
 )
 
 // 分组管理
@@ -42,7 +42,7 @@ func (c MemberGroup) DeleteGroup(groupId string) revel.Result {
 func (c MemberGroup) AddUser(groupId, email string) revel.Result {
 	re := info.NewRe()
 	userInfo := userService.GetUserInfoByAny(email)
-	if userInfo.UserId == "" {
+	if userInfo.UserId.IsZero() {
 		re.Msg = "userNotExists"
 	} else {
 		re.Ok, re.Msg = groupService.AddUser(c.GetUserId(), groupId, userInfo.UserId.Hex())

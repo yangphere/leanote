@@ -2,11 +2,11 @@ package service
 
 import (
 	"fmt"
+	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"github.com/revel/revel"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"os"
 	"os/exec"
 	"strconv"
@@ -43,7 +43,7 @@ func (this *ConfigService) InitGlobalConfigs() bool {
 	this.siteUrl, _ = revel.Config.String("site.url")
 
 	userInfo := userService.GetUserInfoByAny(this.adminUsername)
-	if userInfo.UserId == "" {
+	if userInfo.UserId.IsZero() {
 		return false
 	}
 	this.adminUserId = userInfo.UserId.Hex()
@@ -96,8 +96,8 @@ func (this *ConfigService) updateGlobalConfig(userId, key string, value interfac
 	// 判断是否存在
 	if _, ok := this.GlobalAllConfigs[key]; !ok {
 		// 需要添加
-		config := info.Config{ConfigId: bson.NewObjectId(),
-			UserId:      bson.ObjectIdHex(userId), // 没用
+		config := info.Config{ConfigId: db.NewObjectID(),
+			UserId:      db.MustObjectIDFromHex(userId), // 没用
 			Key:         key,
 			IsArr:       isArr,
 			IsMap:       isMap,
@@ -142,7 +142,7 @@ func (this *ConfigService) updateGlobalConfig(userId, key string, value interfac
 			i["ValueStr"] = v
 			this.GlobalStringConfigs[key] = v
 		}
-		// return db.UpdateByQMap(db.Configs, bson.M{"UserId": bson.ObjectIdHex(userId), "Key": key}, i)
+		// return db.UpdateByQMap(db.Configs, bson.M{"UserId": db.MustObjectIDFromHex(userId), "Key": key}, i)
 		return db.UpdateByQMap(db.Configs, bson.M{"Key": key}, i)
 	}
 }
@@ -191,7 +191,7 @@ func (this *ConfigService) IsOpenRegister() bool {
 	return this.GetGlobalStringConfig("openRegister") != ""
 }
 
-//-------
+// -------
 // 修改共享笔记的配置
 func (this *ConfigService) UpdateShareNoteConfig(registerSharedUserId string,
 	registerSharedNotebookPerms, registerSharedNotePerms []int,
@@ -212,7 +212,7 @@ func (this *ConfigService) UpdateShareNoteConfig(registerSharedUserId string,
 		return
 	} else {
 		user := userService.GetUserInfo(registerSharedUserId)
-		if user.UserId == "" {
+		if user.UserId.IsZero() {
 			ok = false
 			msg = "no such user: " + registerSharedUserId
 			return
@@ -231,7 +231,7 @@ func (this *ConfigService) UpdateShareNoteConfig(registerSharedUserId string,
 				continue
 			}
 			notebook := notebookService.GetNotebook(notebookId, registerSharedUserId)
-			if notebook.NotebookId == "" {
+			if notebook.NotebookId.IsZero() {
 				ok = false
 				msg = "The user has no such notebook: " + notebookId
 				return
@@ -256,7 +256,7 @@ func (this *ConfigService) UpdateShareNoteConfig(registerSharedUserId string,
 				continue
 			}
 			note := noteService.GetNote(noteId, registerSharedUserId)
-			if note.NoteId == "" {
+			if note.NoteId.IsZero() {
 				ok = false
 				msg = "The user has no such note: " + noteId
 				return
@@ -281,7 +281,7 @@ func (this *ConfigService) UpdateShareNoteConfig(registerSharedUserId string,
 				continue
 			}
 			note := noteService.GetNote(noteId, registerSharedUserId)
-			if note.NoteId == "" {
+			if note.NoteId.IsZero() {
 				ok = false
 				msg = "The user has no such note: " + noteId
 				return
@@ -462,7 +462,7 @@ func (this *ConfigService) GetBackup(createdTime string) (map[string]string, boo
 	return backup, true
 }
 
-//--------------
+// --------------
 // sub domain
 var defaultDomain string
 var schema = "http://"

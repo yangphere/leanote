@@ -1,11 +1,11 @@
 package service
 
 import (
+	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"github.com/revel/revel"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"os"
 	"strings"
 	"time"
@@ -25,7 +25,7 @@ func (this *AttachService) AddAttach(attach info.Attach, fromApi bool) (ok bool,
 
 	// api调用时, 添加attach之前是没有note的
 	var userId string
-	if note.NoteId != "" {
+	if !note.NoteId.IsZero() {
 		userId = note.UserId.Hex()
 	} else {
 		userId = attach.UploadUserId.Hex()
@@ -46,7 +46,7 @@ func (this *AttachService) AddAttach(attach info.Attach, fromApi bool) (ok bool,
 
 // 更新笔记的附件个数
 // addNum 1或-1
-func (this *AttachService) updateNoteAttachNum(noteId bson.ObjectId, addNum int) bool {
+func (this *AttachService) updateNoteAttachNum(noteId ObjectID, addNum int) bool {
 	num := db.Count(db.Attachs, bson.M{"NoteId": noteId})
 	/*
 		note := info.Note{}
@@ -71,19 +71,19 @@ func (this *AttachService) ListAttachs(noteId, userId string) []info.Attach {
 
 	// 笔记是否是自己的
 	note := noteService.GetNoteByIdAndUserId(noteId, userId)
-	if note.NoteId == "" {
+	if note.NoteId.IsZero() {
 		return attachs
 	}
 
 	// TODO 这里, 优化权限控制
 
-	db.ListByQ(db.Attachs, bson.M{"NoteId": bson.ObjectIdHex(noteId)}, &attachs)
+	db.ListByQ(db.Attachs, bson.M{"NoteId": db.MustObjectIDFromHex(noteId)}, &attachs)
 
 	return attachs
 }
 
 // api调用, 通过noteIds得到note's attachs, 通过noteId归类返回
-func (this *AttachService) getAttachsByNoteIds(noteIds []bson.ObjectId) map[string][]info.Attach {
+func (this *AttachService) getAttachsByNoteIds(noteIds []ObjectID) map[string][]info.Attach {
 	attachs := []info.Attach{}
 	db.ListByQ(db.Attachs, bson.M{"NoteId": bson.M{"$in": noteIds}}, &attachs)
 	noteAttchs := make(map[string][]info.Attach)
@@ -107,7 +107,7 @@ func (this *AttachService) DeleteAllAttachs(noteId, userId string) bool {
 	note := noteService.GetNoteById(noteId)
 	if note.UserId.Hex() == userId {
 		attachs := []info.Attach{}
-		db.ListByQ(db.Attachs, bson.M{"NoteId": bson.ObjectIdHex(noteId)}, &attachs)
+		db.ListByQ(db.Attachs, bson.M{"NoteId": db.MustObjectIDFromHex(noteId)}, &attachs)
 		for _, attach := range attachs {
 			attach.Path = strings.TrimLeft(attach.Path, "/")
 			os.Remove(revel.BasePath + "/" + attach.Path)
@@ -124,13 +124,13 @@ func (this *AttachService) DeleteAttach(attachId, userId string) (bool, string) 
 	attach := info.Attach{}
 	db.Get(db.Attachs, attachId, &attach)
 
-	if attach.AttachId != "" {
+	if !attach.AttachId.IsZero() {
 		// 判断是否有权限为笔记添加附件
 		if !shareService.HasUpdateNotePerm(attach.NoteId.Hex(), userId) {
 			return false, "No Perm"
 		}
 
-		if db.Delete(db.Attachs, bson.M{"_id": bson.ObjectIdHex(attachId)}) {
+		if db.Delete(db.Attachs, bson.M{"_id": db.MustObjectIDFromHex(attachId)}) {
 			this.updateNoteAttachNum(attach.NoteId, -1)
 			attach.Path = strings.TrimLeft(attach.Path, "/")
 			err := os.Remove(revel.BasePath + "/" + attach.Path)
@@ -190,12 +190,12 @@ func (this *AttachService) GetAttach(attachId, userId string) (attach info.Attac
 // noteService调用, 权限已判断
 func (this *AttachService) CopyAttachs(noteId, toNoteId, toUserId string) bool {
 	attachs := []info.Attach{}
-	db.ListByQ(db.Attachs, bson.M{"NoteId": bson.ObjectIdHex(noteId)}, &attachs)
+	db.ListByQ(db.Attachs, bson.M{"NoteId": db.MustObjectIDFromHex(noteId)}, &attachs)
 
 	// 复制之
-	toNoteIdO := bson.ObjectIdHex(toNoteId)
+	toNoteIdO := db.MustObjectIDFromHex(toNoteId)
 	for _, attach := range attachs {
-		attach.AttachId = ""
+		attach.AttachId = ObjectID{}
 		attach.NoteId = toNoteIdO
 
 		// 文件复制一份

@@ -1,15 +1,15 @@
 package service
 
 import (
-	"crypto/tls"
-	"net"
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"html/template"
+	"net"
 	"net/smtp"
 	"strconv"
 	"strings"
@@ -43,62 +43,62 @@ func InitEmailFromDb() {
 	}
 }
 
-//return a smtp client
+// return a smtp client
 func dial(addr string) (*smtp.Client, error) {
-    conn, err := tls.Dial("tcp", addr, nil)
-    if err != nil {
-        LogW("Dialing Error:", err)
-        return nil, err
-    }
-    //分解主机端口字符串
-    host, _, _ := net.SplitHostPort(addr)
-    return smtp.NewClient(conn, host)
+	conn, err := tls.Dial("tcp", addr, nil)
+	if err != nil {
+		LogW("Dialing Error:", err)
+		return nil, err
+	}
+	//分解主机端口字符串
+	host, _, _ := net.SplitHostPort(addr)
+	return smtp.NewClient(conn, host)
 }
- 
-func SendEmailWithSSL (auth smtp.Auth, to []string, msg []byte) (err error) {
-    //create smtp client
-    c, err := dial(host + ":" + emailPort)
-    if err != nil {
-        LogW("Create smpt client error:", err)
-        return err
-    }
-    defer c.Close()
 
-    if auth != nil {
-        if ok, _ := c.Extension("AUTH"); ok {
-            if err = c.Auth(auth); err != nil {
-                LogW("Error during AUTH", err)
-                return err
-            }
-        }
-    }
- 
-    if err = c.Mail(username); err != nil {
-        return err
-    }
- 
-    for _, addr := range to {
-        if err = c.Rcpt(addr); err != nil {
-            return err
-        }
-    }
- 
-    w, err := c.Data()
-    if err != nil {
-        return err
-    }
- 
-    _, err = w.Write(msg)
-    if err != nil {
-        return err
-    }
- 
-    err = w.Close()
-    if err != nil {
-        return err
-    }
- 
-    return c.Quit()
+func SendEmailWithSSL(auth smtp.Auth, to []string, msg []byte) (err error) {
+	//create smtp client
+	c, err := dial(host + ":" + emailPort)
+	if err != nil {
+		LogW("Create smpt client error:", err)
+		return err
+	}
+	defer c.Close()
+
+	if auth != nil {
+		if ok, _ := c.Extension("AUTH"); ok {
+			if err = c.Auth(auth); err != nil {
+				LogW("Error during AUTH", err)
+				return err
+			}
+		}
+	}
+
+	if err = c.Mail(username); err != nil {
+		return err
+	}
+
+	for _, addr := range to {
+		if err = c.Rcpt(addr); err != nil {
+			return err
+		}
+	}
+
+	w, err := c.Data()
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write(msg)
+	if err != nil {
+		return err
+	}
+
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+
+	return c.Quit()
 }
 
 func (this *EmailService) SendEmail(to, subject, body string) (ok bool, e string) {
@@ -127,7 +127,7 @@ func (this *EmailService) SendEmail(to, subject, body string) (ok bool, e string
 		err = SendEmailWithSSL(auth, send_to, msg)
 	} else {
 		Log("no ssl")
-		err = smtp.SendMail(host + ":" + emailPort, auth, username, send_to, msg)
+		err = smtp.SendMail(host+":"+emailPort, auth, username, send_to, msg)
 	}
 
 	if err != nil {
@@ -286,7 +286,7 @@ func (this *EmailService) SendCommentEmail(note info.Note, comment info.BlogComm
 
 	toUserId := note.UserId.Hex()
 	// 表示回复回复的内容, 那么发送给之前回复的
-	if comment.CommentId != "" {
+	if !comment.CommentId.IsZero() {
 		toUserId = comment.UserId.Hex()
 	}
 	toUserInfo := userService.GetUserInfo(toUserId) // 被评论者
@@ -510,16 +510,16 @@ func (this *EmailService) SendEmailToEmails(emails []string, subject, body strin
 
 // 添加邮件日志
 func (this *EmailService) AddEmailLog(email, subject, body string, ok bool, msg string) {
-	log := info.EmailLog{LogId: bson.NewObjectId(), Email: email, Subject: subject, Body: body, Ok: ok, Msg: msg, CreatedTime: time.Now()}
+	log := info.EmailLog{LogId: db.NewObjectID(), Email: email, Subject: subject, Body: body, Ok: ok, Msg: msg, CreatedTime: time.Now()}
 	db.Insert(db.EmailLogs, log)
 }
 
 // 展示邮件日志
 
 func (this *EmailService) DeleteEmails(ids []string) bool {
-	idsO := make([]bson.ObjectId, len(ids))
+	idsO := make([]ObjectID, len(ids))
 	for i, id := range ids {
-		idsO[i] = bson.ObjectIdHex(id)
+		idsO[i] = db.MustObjectIDFromHex(id)
 	}
 	db.DeleteAll(db.EmailLogs, bson.M{"_id": bson.M{"$in": idsO}})
 
@@ -530,7 +530,7 @@ func (this *EmailService) ListEmailLogs(pageNumber, pageSize int, sortField stri
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 	query := bson.M{}
 	if email != "" {
-		query["Email"] = bson.M{"$regex": bson.RegEx{Pattern: ".*?" + email + ".*", Options: "i"}}
+		query["Email"] = bson.M{"$regex": bson.Regex{Pattern: ".*?" + email + ".*", Options: "i"}}
 	}
 	q := db.EmailLogs.Find(query)
 	// 总记录数

@@ -1,13 +1,13 @@
 package info
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/lea"
 	"time"
 )
 
 // http://docs.mongodb.org/manual/tutorial/expire-data/
 type Session struct {
-	Id bson.ObjectId `bson:"_id,omitempty"` // 没有意义
+	Id lea.ObjectID `bson:"_id,omitempty"` // 没有意义
 
 	SessionId string `bson:"SessionId"` // SessionId
 

@@ -3,6 +3,22 @@ package info
 // Code generated from the pre-migration behavior snapshot (Phase 0/1 of 08-25-go-toolchain).
 // Source of truth: go vet snapshot + mgo v1.0 behavior probes captured on 2026-08-26.
 // DO NOT EDIT expectations by hand; regenerate from a fresh probe instead.
+//
+// 2026-08-29 (08-25-mongo-driver-migration): the 17 ObjectID fields frozen as
+// zeroMarshalError are updated to zeroPresent. mgo's ObjectId (string kind, zero
+// value "") failed to marshal when zero; mongo-driver/v2's lea.ObjectID ([12]byte)
+// marshals a zero value as ObjectId(000000000000000000000000). Writes of zero
+// ObjectID fields failed loudly under mgo, so no working path depended on the old
+// behavior; the change is sanctioned as part of the driver migration.
+//
+// 2026-08-29 (same migration): UserAndBlogUrl's embedded User key moves
+// "user" -> "User". mgo lowercased anonymous field names; mongo-driver v2
+// keys non-inline anonymous struct fields by their Go type name and ignores
+// any tag name, so the emitted key is "User" no matter what. The explicit
+// bson tag on the field exists only to satisfy the explicit-tag contract
+// scan and was chosen to match the emitted key. Neither UserAndBlog nor
+// UserAndBlogUrl is ever inserted into or decoded from MongoDB (view
+// assemblies only), so the key casing is inert outside this probe.
 
 import (
 	"fmt"
@@ -10,7 +26,8 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/lea"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 const (
@@ -30,8 +47,8 @@ type legacyTagSpec struct {
 
 var legacyTagInventory = []legacyTagSpec{
 	{"ApiNoteContent", "Content", "Content", false, false, zeroPresent},
-	{"BlogComment", "NoteId", "NoteId", false, true, zeroMarshalError},
-	{"BlogComment", "UserId", "UserId", false, true, zeroMarshalError},
+	{"BlogComment", "NoteId", "NoteId", false, true, zeroPresent},
+	{"BlogComment", "UserId", "UserId", false, true, zeroPresent},
 	{"BlogComment", "Content", "Content", false, false, zeroPresent},
 	{"BlogComment", "ToCommentId", "ToCommendId", true, true, zeroAbsent},
 	{"BlogComment", "ToUserId", "ToUserId", true, true, zeroAbsent},
@@ -41,7 +58,7 @@ var legacyTagInventory = []legacyTagSpec{
 	{"BlogStat", "ReadNum", "ReadNum", true, false, zeroAbsent},
 	{"BlogStat", "LikeNum", "LikeNum", true, false, zeroAbsent},
 	{"BlogStat", "CommentNum", "CommentNum", true, false, zeroAbsent},
-	{"NoteTag", "UserId", "UserId", false, true, zeroMarshalError},
+	{"NoteTag", "UserId", "UserId", false, true, zeroPresent},
 	{"NoteTag", "Tag", "Tag", false, false, zeroPresent},
 	{"NoteTag", "Usn", "Usn", false, false, zeroPresent},
 	{"NoteTag", "Count", "Count", false, false, zeroPresent},
@@ -60,7 +77,7 @@ var legacyTagInventory = []legacyTagSpec{
 	{"ApiNotebook", "UpdatedTime", "UpdatedTime", true, false, zeroAbsent},
 	{"ApiNotebook", "Usn", "Usn", false, false, zeroPresent},
 	{"ApiNotebook", "IsDeleted", "IsDeleted", false, false, zeroPresent},
-	{"BlogSingle", "UserId", "UserId", false, true, zeroMarshalError},
+	{"BlogSingle", "UserId", "UserId", false, true, zeroPresent},
 	{"BlogSingle", "Title", "Title", false, false, zeroPresent},
 	{"BlogSingle", "UrlTitle", "UrlTitle", false, false, zeroPresent},
 	{"BlogSingle", "Content", "Content", false, false, zeroPresent},
@@ -97,7 +114,7 @@ var legacyTagInventory = []legacyTagSpec{
 	{"Attach", "Type", "Type", false, false, zeroPresent},
 	{"Attach", "Path", "Path", false, false, zeroPresent},
 	{"Attach", "CreatedTime", "CreatedTime", false, false, zeroPresent},
-	{"Group", "UserId", "UserId", false, true, zeroMarshalError},
+	{"Group", "UserId", "UserId", false, true, zeroPresent},
 	{"Group", "Title", "Title", false, false, zeroPresent},
 	{"Group", "UserCount", "UserCount", false, false, zeroPresent},
 	{"Group", "CreatedTime", "CreatedTime", false, false, zeroPresent},
@@ -105,10 +122,10 @@ var legacyTagInventory = []legacyTagSpec{
 	{"NoteContentHistory", "Histories", "Histories", false, false, zeroPresent},
 	{"UserAndBlogUrl", "BlogUrl", "BlogUrl", false, false, zeroPresent},
 	{"UserAndBlogUrl", "PostUrl", "PostUrl", false, false, zeroPresent},
-	{"BlogLike", "NoteId", "NoteId", false, true, zeroMarshalError},
-	{"BlogLike", "UserId", "UserId", false, true, zeroMarshalError},
+	{"BlogLike", "NoteId", "NoteId", false, true, zeroPresent},
+	{"BlogLike", "UserId", "UserId", false, true, zeroPresent},
 	{"BlogLike", "CreatedTime", "CreatedTime", false, false, zeroPresent},
-	{"Config", "UserId", "UserId", false, true, zeroMarshalError},
+	{"Config", "UserId", "UserId", false, true, zeroPresent},
 	{"Config", "Key", "Key", false, false, zeroPresent},
 	{"Config", "ValueStr", "ValueStr", true, false, zeroAbsent},
 	{"Config", "ValueArr", "ValueArr", true, false, zeroAbsent},
@@ -118,8 +135,8 @@ var legacyTagInventory = []legacyTagSpec{
 	{"Config", "IsMap", "IsMap", false, false, zeroPresent},
 	{"Config", "IsArrMap", "IsArrMap", false, false, zeroPresent},
 	{"Config", "UpdatedTime", "UpdatedTime", false, false, zeroPresent},
-	{"Report", "NoteId", "NoteId", false, true, zeroMarshalError},
-	{"Report", "UserId", "UserId", false, true, zeroMarshalError},
+	{"Report", "NoteId", "NoteId", false, true, zeroPresent},
+	{"Report", "UserId", "UserId", false, true, zeroPresent},
 	{"Report", "Reason", "Reason", false, false, zeroPresent},
 	{"Report", "CommentId", "CommendId", true, true, zeroAbsent},
 	{"Report", "CreatedTime", "CreatedTime", false, false, zeroPresent},
@@ -130,7 +147,7 @@ var legacyTagInventory = []legacyTagSpec{
 	{"Session", "UpdatedTime", "UpdatedTime", false, false, zeroPresent},
 	{"ShareNote", "ToGroup", "ToGroup", true, false, zeroPresent},
 	{"ShareNote", "CreatedTime", "CreatedTime", false, false, zeroPresent},
-	{"TagCount", "UserId", "UserId", false, true, zeroMarshalError},
+	{"TagCount", "UserId", "UserId", false, true, zeroPresent},
 	{"TagCount", "Tag", "Tag", false, false, zeroPresent},
 	{"TagCount", "IsBlog", "IsBlog", false, false, zeroPresent},
 	{"TagCount", "Count", "Count", false, false, zeroPresent},
@@ -138,11 +155,11 @@ var legacyTagInventory = []legacyTagSpec{
 	{"Album", "Type", "Type", false, false, zeroPresent},
 	{"Album", "Seq", "Seq", false, false, zeroPresent},
 	{"Album", "CreatedTime", "CreatedTime", false, false, zeroPresent},
-	{"EachHistory", "UpdatedUserId", "UpdatedUserId", false, true, zeroMarshalError},
+	{"EachHistory", "UpdatedUserId", "UpdatedUserId", false, true, zeroPresent},
 	{"EachHistory", "UpdatedTime", "UpdatedTime", false, false, zeroPresent},
 	{"EachHistory", "Content", "Content", false, false, zeroPresent},
-	{"GroupUser", "GroupId", "GroupId", false, true, zeroMarshalError},
-	{"GroupUser", "UserId", "UserId", false, true, zeroMarshalError},
+	{"GroupUser", "GroupId", "GroupId", false, true, zeroPresent},
+	{"GroupUser", "UserId", "UserId", false, true, zeroPresent},
 	{"GroupUser", "CreatedTime", "CreatedTime", false, false, zeroPresent},
 	{"Note", "Title", "Title", false, false, zeroPresent},
 	{"Note", "Desc", "Desc", false, false, zeroPresent},
@@ -211,7 +228,7 @@ var legacyTagInventory = []legacyTagSpec{
 	{"EmailLog", "Msg", "Msg", false, false, zeroPresent},
 	{"EmailLog", "Ok", "Ok", false, false, zeroPresent},
 	{"EmailLog", "CreatedTime", "CreatedTime", false, false, zeroPresent},
-	{"Theme", "UserId", "UserId", false, true, zeroMarshalError},
+	{"Theme", "UserId", "UserId", false, true, zeroPresent},
 	{"Theme", "Name", "Name", false, false, zeroPresent},
 	{"Theme", "Version", "Version", false, false, zeroPresent},
 	{"Theme", "Author", "Author", false, false, zeroPresent},
@@ -231,7 +248,7 @@ var legacyTagInventory = []legacyTagSpec{
 	{"NoteContent", "Abstract", "Abstract", false, false, zeroPresent},
 	{"NoteContent", "CreatedTime", "CreatedTime", false, false, zeroPresent},
 	{"NoteContent", "UpdatedTime", "UpdatedTime", false, false, zeroPresent},
-	{"Suggestion", "UserId", "UserId", false, true, zeroMarshalError},
+	{"Suggestion", "UserId", "UserId", false, true, zeroPresent},
 	{"Suggestion", "Addr", "Addr", false, false, zeroPresent},
 	{"Suggestion", "Suggestion", "Suggestion", false, false, zeroPresent},
 }
@@ -252,7 +269,7 @@ var fixtureKeySets = map[string]string{
 	"Attach":             "CreatedTime,Name,NoteId,Path,Size,Title,Type,UploadUserId,_id",
 	"Group":              "CreatedTime,Title,UserCount,UserId,Users,_id",
 	"NoteContentHistory": "Histories,UserId,_id",
-	"UserAndBlogUrl":     "BlogUrl,PostUrl,user",
+	"UserAndBlogUrl":     "BlogUrl,PostUrl,User",
 	"BlogLike":           "CreatedTime,NoteId,UserId,_id",
 	"Config":             "IsArr,IsArrMap,IsMap,Key,UpdatedTime,UserId,ValueArr,ValueArrMap,ValueMap,ValueStr,_id",
 	"Report":             "CommendId,CreatedTime,NoteId,Reason,UserId,_id",
@@ -403,18 +420,35 @@ var contractRegistry = map[string]reflect.Type{
 	"Suggestion":         reflect.TypeOf(Suggestion{}),
 }
 
-var oidType = reflect.TypeOf(bson.ObjectId(""))
+var oidType = reflect.TypeOf(lea.ObjectID{})
+
+func leaMustOid(hex string) lea.ObjectID {
+	oid, err := bson.ObjectIDFromHex(hex)
+	if err != nil {
+		panic(err)
+	}
+	return lea.ObjectID(oid)
+}
+
+func mustOid(hex string) lea.ObjectID {
+	oid, err := bson.ObjectIDFromHex(hex)
+	if err != nil {
+		panic(err)
+	}
+	return lea.ObjectID(oid)
+}
+
 var timeType = reflect.TypeOf(time.Time{})
 
 var counter int32
 
-func nextOid() bson.ObjectId {
+func nextOid() lea.ObjectID {
 	counter++
-	return bson.ObjectIdHex(fmt.Sprintf("54d7620d99c37b0306000%03x", counter%1000))
+	return mustOid(fmt.Sprintf("54d7620d99c37b0306000%03x", counter%1000))
 }
 
-func oid(n int) bson.ObjectId {
-	return bson.ObjectIdHex(fmt.Sprintf("54d7620d99c37b0306000%03x", n))
+func oid(n int) lea.ObjectID {
+	return mustOid(fmt.Sprintf("54d7620d99c37b0306000%03x", n))
 }
 
 func ts() time.Time { return time.Date(2020, 5, 6, 7, 8, 9, 0, time.UTC) }

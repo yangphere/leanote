@@ -3,7 +3,7 @@ package controllers
 import (
 	"github.com/revel/revel"
 	//	"encoding/json"
-	//	"gopkg.in/mgo.v2/bson"
+	//	"go.mongodb.org/mongo-driver/v2/bson"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
 	//	"github.com/yangphere/leanote/app/types"
@@ -132,7 +132,7 @@ func (c User) ActiveEmail(token string) revel.Result {
 	return c.RenderTemplate("user/active_email.html")
 }
 
-//-----------------
+// -----------------
 // 用户偏爱
 func (c User) UpdateColumnWidth(notebookWidth, noteListWidth, mdEditorWidth int) revel.Result {
 	re := info.NewRe()

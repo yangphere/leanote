@@ -1,6 +1,7 @@
 package info
 
 import (
+	"bytes"
 	"encoding/json"
 	"reflect"
 	"sort"
@@ -8,7 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/lea"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // effectiveBSONTag mirrors mgo's getStructInfo tag resolution: an explicit
@@ -106,6 +108,17 @@ func TestLegacyTagZeroBehavior(t *testing.T) {
 	}
 }
 
+// marshalWithLeaRegistry encodes v exactly like the driver does in
+// production (client registry includes the explicit ObjectID codecs).
+func marshalWithLeaRegistry(v interface{}) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := bson.NewEncoder(bson.NewDocumentWriter(&buf))
+	enc.SetRegistry(lea.CodecRegistry)
+	if err := enc.Encode(v); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
 func sortedKeys(m bson.M) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
@@ -190,9 +203,9 @@ func TestFixtureBSONKeysAndRoundTrip(t *testing.T) {
 		if reflect.TypeOf(raw) != rt {
 			t.Fatalf("fixture %q type %T != registry %s", name, raw, rt)
 		}
-		data, err := bson.Marshal(raw)
-		if err != nil {
-			t.Fatalf("%s marshal: %v", name, err)
+		data, marshalErr := marshalWithLeaRegistry(raw)
+		if marshalErr != nil {
+			t.Fatalf("%s marshal: %v", name, marshalErr)
 		}
 		var m bson.M
 		if err := bson.Unmarshal(data, &m); err != nil {
@@ -205,7 +218,9 @@ func TestFixtureBSONKeysAndRoundTrip(t *testing.T) {
 			t.Errorf("%s keys:\n got %v\nwant %v", name, got, want)
 		}
 		back := reflect.New(rt)
-		if err := bson.Unmarshal(data, back.Interface()); err != nil {
+		dec := bson.NewDecoder(bson.NewDocumentReader(bytes.NewReader(data)))
+		dec.SetRegistry(lea.CodecRegistry)
+		if err := dec.Decode(back.Interface()); err != nil {
 			t.Fatalf("%s unmarshal: %v", name, err)
 		}
 		if !timeAwareEqual(raw, back.Elem().Interface()) {
@@ -242,6 +257,24 @@ func TestJSONContractFrozen(t *testing.T) {
 		}
 		if string(zdata) != jsonZeroGoldens[name] {
 			t.Errorf("%s zero json drift\n got %s\nwant %s", name, zdata, jsonZeroGoldens[name])
+		}
+	}
+}
+
+// TestAllRegistryFieldsHaveExplicitBsonTags enforces the migration rule on
+// every registered db-facing model: the driver matches untagged fields by
+// lowercased name (mgo kept Go casing), so any field added later without an
+// explicit bson tag must fail here, not in production data.
+func TestAllRegistryFieldsHaveExplicitBsonTags(t *testing.T) {
+	for name, rt := range contractRegistry {
+		for i := 0; i < rt.NumField(); i++ {
+			field := rt.Field(i)
+			if field.PkgPath != "" {
+				continue // unexported
+			}
+			if _, ok := field.Tag.Lookup("bson"); !ok {
+				t.Errorf("%s.%s has no explicit bson tag", name, field.Name)
+			}
 		}
 	}
 }

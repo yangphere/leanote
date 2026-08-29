@@ -3,8 +3,7 @@ package service
 import (
 	"github.com/yangphere/leanote/app/db"
 	. "github.com/yangphere/leanote/app/lea"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -133,9 +132,9 @@ func getUniqueUrlTitle(userId string, urlTitle string, types string, padding int
 	if padding > 1 {
 		urlTitle2 = urlTitle + "-" + strconv.Itoa(padding)
 	}
-	userIdO := bson.ObjectIdHex(userId)
+	userIdO := db.MustObjectIDFromHex(userId)
 
-	var collection *mgo.Collection
+	var collection *db.Collection
 	if types == "note" {
 		collection = db.Notes
 	} else if types == "notebook" {
@@ -169,7 +168,7 @@ func GetUrTitle(userId string, title string, types string, id string) string {
 			urlTitle = subIdHalf(id)
 		}
 		// 不允许title是ObjectId
-	} else if bson.IsObjectIdHex(title) {
+	} else if db.IsValidObjectIDHex(title) {
 		urlTitle = subIdHalf(id)
 	}
 

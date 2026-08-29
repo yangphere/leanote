@@ -4,7 +4,7 @@ import (
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"strings"
 	"time"
 )
@@ -16,27 +16,27 @@ type UserService struct {
 // 每次notebook,note添加, 修改, 删除, 都要修改
 func (this *UserService) IncrUsn(userId string) int {
 	user := info.User{}
-	query := bson.M{"_id": bson.ObjectIdHex(userId)}
+	query := bson.M{"_id": db.MustObjectIDFromHex(userId)}
 	db.GetByQWithFields(db.Users, query, []string{"Usn"}, &user)
 	usn := user.Usn
 	usn += 1
 	Log("inc Usn")
 	db.UpdateByQField(db.Users, query, "Usn", usn)
 	return usn
-	//	return db.Update(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId)}, bson.M{"$inc": bson.M{"ReadNum": 1}})
+	//	return db.Update(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId)}, bson.M{"$inc": bson.M{"ReadNum": 1}})
 }
 
 func (this *UserService) GetUsn(userId string) int {
 	user := info.User{}
-	query := bson.M{"_id": bson.ObjectIdHex(userId)}
+	query := bson.M{"_id": db.MustObjectIDFromHex(userId)}
 	db.GetByQWithFields(db.Users, query, []string{"Usn"}, &user)
 	return user.Usn
 }
 
 // 添加用户
 func (this *UserService) AddUser(user info.User) bool {
-	if user.UserId == "" {
-		user.UserId = bson.NewObjectId()
+	if user.UserId.IsZero() {
+		user.UserId = db.NewObjectID()
 	}
 	user.CreatedTime = time.Now()
 
@@ -65,12 +65,12 @@ func (this *UserService) GetUserId(email string) string {
 // 得到用户名
 func (this *UserService) GetUsername(userId string) string {
 	user := info.User{}
-	db.GetByQWithFields(db.Users, bson.M{"_id": bson.ObjectIdHex(userId)}, []string{"Username"}, &user)
+	db.GetByQWithFields(db.Users, bson.M{"_id": db.MustObjectIDFromHex(userId)}, []string{"Username"}, &user)
 	return user.Username
 }
 
 // 得到用户名
-func (this *UserService) GetUsernameById(userId bson.ObjectId) string {
+func (this *UserService) GetUsernameById(userId ObjectID) string {
 	user := info.User{}
 	db.GetByQWithFields(db.Users, bson.M{"_id": userId}, []string{"Username"}, &user)
 	return user.Username
@@ -155,7 +155,7 @@ func (this *UserService) GetUserInfoByThirdUserId(thirdUserId string) info.User 
 	this.setUserLogo(&user)
 	return user
 }
-func (this *UserService) ListUserInfosByUserIds(userIds []bson.ObjectId) []info.User {
+func (this *UserService) ListUserInfosByUserIds(userIds []ObjectID) []info.User {
 	users := []info.User{}
 	db.ListByQ(db.Users, bson.M{"_id": bson.M{"$in": userIds}}, &users)
 	return users
@@ -167,11 +167,11 @@ func (this *UserService) ListUserInfosByEmails(emails []string) []info.User {
 }
 
 // 用户信息即可
-func (this *UserService) MapUserInfoByUserIds(userIds []bson.ObjectId) map[bson.ObjectId]info.User {
+func (this *UserService) MapUserInfoByUserIds(userIds []ObjectID) map[ObjectID]info.User {
 	users := []info.User{}
 	db.ListByQ(db.Users, bson.M{"_id": bson.M{"$in": userIds}}, &users)
 
-	userMap := make(map[bson.ObjectId]info.User, len(users))
+	userMap := make(map[ObjectID]info.User, len(users))
 	for _, user := range users {
 		this.setUserLogo(&user)
 		userMap[user.UserId] = user
@@ -180,19 +180,19 @@ func (this *UserService) MapUserInfoByUserIds(userIds []bson.ObjectId) map[bson.
 }
 
 // 用户信息和博客设置信息
-func (this *UserService) MapUserInfoAndBlogInfosByUserIds(userIds []bson.ObjectId) map[bson.ObjectId]info.User {
+func (this *UserService) MapUserInfoAndBlogInfosByUserIds(userIds []ObjectID) map[ObjectID]info.User {
 	return this.MapUserInfoByUserIds(userIds)
 }
 
 // 返回info.UserAndBlog
-func (this *UserService) MapUserAndBlogByUserIds(userIds []bson.ObjectId) map[string]info.UserAndBlog {
+func (this *UserService) MapUserAndBlogByUserIds(userIds []ObjectID) map[string]info.UserAndBlog {
 	users := []info.User{}
 	db.ListByQ(db.Users, bson.M{"_id": bson.M{"$in": userIds}}, &users)
 
 	userBlogs := []info.UserBlog{}
 	db.ListByQ(db.UserBlogs, bson.M{"_id": bson.M{"$in": userIds}}, &userBlogs)
 
-	userBlogMap := make(map[bson.ObjectId]info.UserBlog, len(userBlogs))
+	userBlogMap := make(map[ObjectID]info.UserBlog, len(userBlogs))
 	for _, user := range userBlogs {
 		userBlogMap[user.UserId] = user
 	}
@@ -251,16 +251,16 @@ func (this *UserService) GetUserAndBlog(userId string) info.UserAndBlog {
 }
 
 // 通过ids得到users, 按id的顺序组织users
-func (this *UserService) GetUserInfosOrderBySeq(userIds []bson.ObjectId) []info.User {
+func (this *UserService) GetUserInfosOrderBySeq(userIds []ObjectID) []info.User {
 	users := []info.User{}
 	db.ListByQ(db.Users, bson.M{"_id": bson.M{"$in": userIds}}, &users)
 
-	usersMap := map[bson.ObjectId]info.User{}
+	usersMap := map[ObjectID]info.User{}
 	for _, user := range users {
 		usersMap[user.UserId] = user
 	}
 
-	hasAppend := map[bson.ObjectId]bool{} // 为了防止userIds有重复的
+	hasAppend := map[ObjectID]bool{} // 为了防止userIds有重复的
 	users2 := []info.User{}
 	for _, userId := range userIds {
 		if user, ok := usersMap[userId]; ok && !hasAppend[userId] {
@@ -294,7 +294,7 @@ func (this *UserService) UpdateUsername(userId, username string) (bool, string) 
 	username = strings.ToLower(username)
 
 	// 先判断是否存在
-	userIdO := bson.ObjectIdHex(userId)
+	userIdO := db.MustObjectIDFromHex(userId)
 	if db.Has(db.Users, bson.M{"Username": username, "_id": bson.M{"$ne": userIdO}}) {
 		return false, "usernameIsExisted"
 	}
@@ -305,11 +305,11 @@ func (this *UserService) UpdateUsername(userId, username string) (bool, string) 
 
 // 修改头像
 func (this *UserService) UpdateAvatar(userId, avatarPath string) bool {
-	userIdO := bson.ObjectIdHex(userId)
+	userIdO := db.MustObjectIDFromHex(userId)
 	return db.UpdateByQField(db.Users, bson.M{"_id": userIdO}, "Logo", avatarPath)
 }
 
-//----------------------
+// ----------------------
 // 已经登录了的用户修改密码
 func (this *UserService) UpdatePwd(userId, oldPwd, pwd string) (bool, string) {
 	userInfo := this.GetUserInfo(userId)
@@ -322,7 +322,7 @@ func (this *UserService) UpdatePwd(userId, oldPwd, pwd string) (bool, string) {
 		return false, "GenerateHash error"
 	}
 
-	ok := db.UpdateByQField(db.Users, bson.M{"_id": bson.ObjectIdHex(userId)}, "Pwd", passwd)
+	ok := db.UpdateByQField(db.Users, bson.M{"_id": db.MustObjectIDFromHex(userId)}, "Pwd", passwd)
 	return ok, ""
 }
 
@@ -336,20 +336,20 @@ func (this *UserService) ResetPwd(adminUserId, userId, pwd string) (ok bool, msg
 	if passwd == "" {
 		return false, "GenerateHash error"
 	}
-	ok = db.UpdateByQField(db.Users, bson.M{"_id": bson.ObjectIdHex(userId)}, "Pwd", passwd)
+	ok = db.UpdateByQField(db.Users, bson.M{"_id": db.MustObjectIDFromHex(userId)}, "Pwd", passwd)
 	return
 }
 
 // 修改主题
 func (this *UserService) UpdateTheme(userId, theme string) bool {
-	ok := db.UpdateByQField(db.Users, bson.M{"_id": bson.ObjectIdHex(userId)}, "Theme", theme)
+	ok := db.UpdateByQField(db.Users, bson.M{"_id": db.MustObjectIDFromHex(userId)}, "Theme", theme)
 	return ok
 }
 
 // 帐户类型设置
 func (this *UserService) UpdateAccount(userId, accountType string, accountStartTime, accountEndTime time.Time,
 	maxImageNum, maxImageSize, maxAttachNum, maxAttachSize, maxPerAttachSize int) bool {
-	return db.UpdateByQI(db.Users, bson.M{"_id": bson.ObjectIdHex(userId)}, info.UserAccount{
+	return db.UpdateByQI(db.Users, bson.M{"_id": db.MustObjectIDFromHex(userId)}, info.UserAccount{
 		AccountType:      accountType,
 		AccountStartTime: accountStartTime,
 		AccountEndTime:   accountEndTime,
@@ -371,7 +371,7 @@ func (this *UserService) ActiveEmail(token string) (ok bool, msg, email string) 
 		// 修改之后的邮箱
 		email = tokenInfo.Email
 		userInfo := this.GetUserInfoByEmail(email)
-		if userInfo.UserId == "" {
+		if userInfo.UserId.IsZero() {
 			ok = false
 			msg = "不存在该用户"
 			return
@@ -417,16 +417,16 @@ func (this *UserService) UpdateEmail(token string) (ok bool, msg, email string) 
 
 // 宽度
 func (this *UserService) UpdateColumnWidth(userId string, notebookWidth, noteListWidth, mdEditorWidth int) bool {
-	return db.UpdateByQMap(db.Users, bson.M{"_id": bson.ObjectIdHex(userId)},
+	return db.UpdateByQMap(db.Users, bson.M{"_id": db.MustObjectIDFromHex(userId)},
 		bson.M{"NotebookWidth": notebookWidth, "NoteListWidth": noteListWidth, "MdEditorWidth": mdEditorWidth})
 }
 
 // 左侧是否隐藏
 func (this *UserService) UpdateLeftIsMin(userId string, leftIsMin bool) bool {
-	return db.UpdateByQMap(db.Users, bson.M{"_id": bson.ObjectIdHex(userId)}, bson.M{"LeftIsMin": leftIsMin})
+	return db.UpdateByQMap(db.Users, bson.M{"_id": db.MustObjectIDFromHex(userId)}, bson.M{"LeftIsMin": leftIsMin})
 }
 
-//-------------
+// -------------
 // user admin
 func (this *UserService) ListUsers(pageNumber, pageSize int, sortField string, isAsc bool, email string) (page info.Page, users []info.User) {
 	users = []info.User{}
@@ -434,8 +434,8 @@ func (this *UserService) ListUsers(pageNumber, pageSize int, sortField string, i
 	query := bson.M{}
 	if email != "" {
 		orQ := []bson.M{
-			bson.M{"Email": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + email + ".*", Options: "i"}}},
-			bson.M{"Username": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + email + ".*", Options: "i"}}},
+			bson.M{"Email": bson.M{"$regex": bson.Regex{Pattern: ".*?" + email + ".*", Options: "i"}}},
+			bson.M{"Username": bson.M{"$regex": bson.Regex{Pattern: ".*?" + email + ".*", Options: "i"}}},
 		}
 		query["$or"] = orQ
 	}
@@ -460,8 +460,8 @@ func (this *UserService) GetAllUserByFilter(userFilterEmail, userFilterWhiteList
 
 	orQ := []bson.M{}
 	if userFilterEmail != "" {
-		orQ = append(orQ, bson.M{"Email": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + userFilterEmail + ".*", Options: "i"}}},
-			bson.M{"Username": bson.M{"$regex": bson.RegEx{Pattern: ".*?" + userFilterEmail + ".*", Options: "i"}}},
+		orQ = append(orQ, bson.M{"Email": bson.M{"$regex": bson.Regex{Pattern: ".*?" + userFilterEmail + ".*", Options: "i"}}},
+			bson.M{"Username": bson.M{"$regex": bson.Regex{Pattern: ".*?" + userFilterEmail + ".*", Options: "i"}}},
 		)
 	}
 	if userFilterWhiteList != "" {

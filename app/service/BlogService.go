@@ -4,7 +4,7 @@ import (
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	//	"time"
 	//	"sort"
 	"strconv"
@@ -45,7 +45,7 @@ func (this *BlogService) GetBlogByIdAndUrlTitle(userId string, noteIdOrUrlTitle 
 		return this.GetBlog(noteIdOrUrlTitle)
 	}
 	note := info.Note{}
-	db.GetByQ(db.Notes, bson.M{"UserId": bson.ObjectIdHex(userId), "UrlTitle": encodeValue(noteIdOrUrlTitle),
+	db.GetByQ(db.Notes, bson.M{"UserId": db.MustObjectIDFromHex(userId), "UrlTitle": encodeValue(noteIdOrUrlTitle),
 		"IsBlog":  true,
 		"IsTrash": false, "IsDeleted": false}, &note)
 	return this.GetBlogItem(note)
@@ -57,7 +57,7 @@ func (this *BlogService) GetBlog(noteId string) (blog info.BlogItem) {
 	return this.GetBlogItem(note)
 }
 func (this *BlogService) GetBlogItem(note info.Note) (blog info.BlogItem) {
-	if note.NoteId == "" || !note.IsBlog {
+	if note.NoteId.IsZero() || !note.IsBlog {
 		return info.BlogItem{}
 	}
 
@@ -78,7 +78,7 @@ func (this *BlogService) ListBlogNotebooks(userId string) []info.Notebook {
 		bson.M{"IsDeleted": false},
 		bson.M{"IsDeleted": bson.M{"$exists": false}},
 	}
-	db.ListByQ(db.Notebooks, bson.M{"UserId": bson.ObjectIdHex(userId), "IsBlog": true, "$or": orQ}, &notebooks)
+	db.ListByQ(db.Notebooks, bson.M{"UserId": db.MustObjectIDFromHex(userId), "IsBlog": true, "$or": orQ}, &notebooks)
 	return notebooks
 }
 
@@ -92,7 +92,7 @@ func (this *BlogService) ListBlogs(userId, notebookId string, page, pageSize int
 	}
 
 	// 得到content, 并且每个都要substring
-	noteIds := make([]bson.ObjectId, len(notes))
+	noteIds := make([]ObjectID, len(notes))
 	for i, note := range notes {
 		noteIds[i] = note.NoteId
 	}
@@ -100,7 +100,7 @@ func (this *BlogService) ListBlogs(userId, notebookId string, page, pageSize int
 	// 直接得到noteContents表的abstract
 	// 这里可能是乱序的
 	noteContents := noteService.ListNoteAbstractsByNoteIds(noteIds) // 返回[info.NoteContent]
-	noteContentsMap := make(map[bson.ObjectId]info.NoteContent, len(noteContents))
+	noteContentsMap := make(map[ObjectID]info.NoteContent, len(noteContents))
 	for _, noteContent := range noteContents {
 		noteContentsMap[noteContent.NoteId] = noteContent
 	}
@@ -134,7 +134,7 @@ func (this *BlogService) GetBlogTags(userId string) []info.TagCount {
 	// 得到所有博客
 	tagCounts := []info.TagCount{}
 	// tag不能为空
-	query := bson.M{"UserId": bson.ObjectIdHex(userId), "IsBlog": true, "Tag": bson.M{"$ne": ""}}
+	query := bson.M{"UserId": db.MustObjectIDFromHex(userId), "IsBlog": true, "Tag": bson.M{"$ne": ""}}
 	db.TagCounts.Find(query).Sort("-Count").All(&tagCounts)
 	return tagCounts
 }
@@ -144,7 +144,7 @@ func (this *BlogService) GetBlogTags(userId string) []info.TagCount {
 func (this *BlogService) ReCountBlogTags(userId string) bool {
 	// 得到所有博客
 	notes := []info.Note{}
-	userIdO := bson.ObjectIdHex(userId)
+	userIdO := db.MustObjectIDFromHex(userId)
 	query := bson.M{"UserId": userIdO, "IsTrash": false, "IsDeleted": false, "IsBlog": true}
 	db.ListByQWithFields(db.Notes, query, []string{"Tags"}, &notes)
 
@@ -187,9 +187,9 @@ Posts: []
 */
 func (this *BlogService) ListBlogsArchive(userId, notebookId string, year, month int, sortField string, isAsc bool) []info.Archive {
 	//	_, notes := noteService.ListNotes(userId, notebookId, false, 1, 99999, sortField, isAsc, true);
-	q := bson.M{"UserId": bson.ObjectIdHex(userId), "IsBlog": true, "IsTrash": false, "IsDeleted": false}
+	q := bson.M{"UserId": db.MustObjectIDFromHex(userId), "IsBlog": true, "IsTrash": false, "IsDeleted": false}
 	if notebookId != "" {
-		q["NotebookId"] = bson.ObjectIdHex(notebookId)
+		q["NotebookId"] = db.MustObjectIDFromHex(notebookId)
 	}
 	if year > 0 {
 		now := time.Now()
@@ -293,7 +293,7 @@ func (this *BlogService) SearchBlogByTags(tags []string, userId string, pageNumb
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 
 	// 不是trash的
-	query := bson.M{"UserId": bson.ObjectIdHex(userId),
+	query := bson.M{"UserId": db.MustObjectIDFromHex(userId),
 		"IsTrash":   false,
 		"IsDeleted": false,
 		"IsBlog":    true,
@@ -320,7 +320,7 @@ func (this *BlogService) SearchBlogByTags(tags []string, userId string, pageNumb
 
 func (this *BlogService) notes2BlogItems(notes []info.Note) []info.BlogItem {
 	// 得到content, 并且每个都要substring
-	noteIds := make([]bson.ObjectId, len(notes))
+	noteIds := make([]ObjectID, len(notes))
 	for i, note := range notes {
 		noteIds[i] = note.NoteId
 	}
@@ -328,7 +328,7 @@ func (this *BlogService) notes2BlogItems(notes []info.Note) []info.BlogItem {
 	// 直接得到noteContents表的abstract
 	// 这里可能是乱序的
 	noteContents := noteService.ListNoteContentByNoteIds(noteIds) // 返回[info.NoteContent]
-	noteContentsMap := make(map[bson.ObjectId]info.NoteContent, len(noteContents))
+	noteContentsMap := make(map[ObjectID]info.NoteContent, len(noteContents))
 	for _, noteContent := range noteContents {
 		noteContentsMap[noteContent.NoteId] = noteContent
 	}
@@ -363,7 +363,7 @@ func (this *BlogService) SearchBlog(key, userId string, page, pageSize int, sort
 // sorterField, baseTime是基准, sorterField=PublicTime, title
 // isAsc是用户自定义的排序方式
 func (this *BlogService) PreNextBlog(userId string, sorterField string, isAsc bool, noteId string, baseTime interface{}) (info.Post, info.Post) {
-	userIdO := bson.ObjectIdHex(userId)
+	userIdO := db.MustObjectIDFromHex(userId)
 
 	var sortFieldT1, sortFieldT2 bson.M
 	var sortFieldR1, sortFieldR2 string
@@ -404,15 +404,15 @@ func (this *BlogService) PreNextBlog(userId string, sorterField string, isAsc bo
 		"IsTrash":   false,
 		"IsDeleted": false,
 		"IsBlog":    true,
-		"_id":       bson.M{"$ne": bson.ObjectIdHex(noteId)},
+		"_id":       bson.M{"$ne": db.MustObjectIDFromHex(noteId)},
 		sorterField: sortFieldT1,
 	}
 	q := db.Notes.Find(query)
 	q.Sort(sortFieldR1).Limit(1).One(&note)
 
 	// 下一篇, 比基时间要大, 但是是第一篇, 所以是升序
-	if note.NoteId != "" {
-		query["_id"] = bson.M{"$nin": []bson.ObjectId{bson.ObjectIdHex(noteId), note.NoteId}}
+	if !note.NoteId.IsZero() {
+		query["_id"] = bson.M{"$nin": []ObjectID{db.MustObjectIDFromHex(noteId), note.NoteId}}
 	}
 	note2 := info.Note{}
 	query[sorterField] = sortFieldT2
@@ -425,7 +425,7 @@ func (this *BlogService) PreNextBlog(userId string, sorterField string, isAsc bo
 	return this.FixNote(note), this.FixNote(note2)
 }
 
-//-------
+// -------
 // p
 // 平台 lea+
 // 博客列表
@@ -441,19 +441,19 @@ func (this *BlogService) ListAllBlogs(userId, tag string, keywords string, isRec
 		query["Tags"] = bson.M{"$in": []string{tag}}
 	}
 	if userId != "" {
-		query["UserId"] = bson.ObjectIdHex(userId)
+		query["UserId"] = db.MustObjectIDFromHex(userId)
 	}
 	// 不是demo的博客
 	demoUserId := configService.GetGlobalStringConfig("demoUserId")
 	if userId == "" && demoUserId != "" {
-		query["UserId"] = bson.M{"$ne": bson.ObjectIdHex(demoUserId)}
+		query["UserId"] = bson.M{"$ne": db.MustObjectIDFromHex(demoUserId)}
 	}
 
 	if isRecommend {
 		query["IsRecommend"] = isRecommend
 	}
 	if keywords != "" {
-		query["Title"] = bson.M{"$regex": bson.RegEx{Pattern: ".*?" + keywords + ".*", Options: "i"}}
+		query["Title"] = bson.M{"$regex": bson.Regex{Pattern: ".*?" + keywords + ".*", Options: "i"}}
 	}
 	q := db.Notes.Find(query)
 
@@ -470,8 +470,8 @@ func (this *BlogService) ListAllBlogs(userId, tag string, keywords string, isRec
 	}
 
 	// 得到content, 并且每个都要substring
-	noteIds := make([]bson.ObjectId, len(notes))
-	userIds := make([]bson.ObjectId, len(notes))
+	noteIds := make([]ObjectID, len(notes))
+	userIds := make([]ObjectID, len(notes))
 	for i, note := range notes {
 		noteIds[i] = note.NoteId
 		userIds[i] = note.UserId
@@ -482,7 +482,7 @@ func (this *BlogService) ListAllBlogs(userId, tag string, keywords string, isRec
 	// 这里可能是乱序的
 	/*
 		noteContents := noteService.ListNoteAbstractsByNoteIds(noteIds) // 返回[info.NoteContent]
-		noteContentsMap := make(map[bson.ObjectId]info.NoteContent, len(noteContents))
+		noteContentsMap := make(map[ObjectID]info.NoteContent, len(noteContents))
 		for _, noteContent := range noteContents {
 			noteContentsMap[noteContent.NoteId] = noteContent
 		}
@@ -512,7 +512,7 @@ func (this *BlogService) ListAllBlogs(userId, tag string, keywords string, isRec
 	return pageInfo, blogs
 }
 
-//------------------------
+// ------------------------
 // 博客设置
 func (this *BlogService) fixUserBlog(userBlog *info.UserBlog) {
 	// Logo路径问题, 有些有http: 有些没有
@@ -532,7 +532,7 @@ func (this *BlogService) fixUserBlog(userBlog *info.UserBlog) {
 	if userBlog.Style == "" {
 		userBlog.Style = defaultStyle
 	}
-	if userBlog.ThemeId == "" {
+	if userBlog.ThemeId.IsZero() {
 		userBlog.ThemePath = themeService.GetDefaultThemePath(userBlog.Style)
 	} else {
 		userBlog.ThemePath = themeService.GetThemePath(userBlog.UserId.Hex(), userBlog.ThemeId.Hex())
@@ -552,14 +552,14 @@ func (this *BlogService) UpdateUserBlog(userBlog info.UserBlog) bool {
 
 // 修改之UserBlogBase
 func (this *BlogService) UpdateUserBlogBase(userId string, userBlog info.UserBlogBase) bool {
-	ok := db.UpdateByQMap(db.UserBlogs, bson.M{"_id": bson.ObjectIdHex(userId)}, userBlog)
+	ok := db.UpdateByQMap(db.UserBlogs, bson.M{"_id": db.MustObjectIDFromHex(userId)}, userBlog)
 	return ok
 }
 func (this *BlogService) UpdateUserBlogComment(userId string, userBlog info.UserBlogComment) bool {
-	return db.UpdateByQMap(db.UserBlogs, bson.M{"_id": bson.ObjectIdHex(userId)}, userBlog)
+	return db.UpdateByQMap(db.UserBlogs, bson.M{"_id": db.MustObjectIDFromHex(userId)}, userBlog)
 }
 func (this *BlogService) UpdateUserBlogStyle(userId string, userBlog info.UserBlogStyle) bool {
-	return db.UpdateByQMap(db.UserBlogs, bson.M{"_id": bson.ObjectIdHex(userId)}, userBlog)
+	return db.UpdateByQMap(db.UserBlogs, bson.M{"_id": db.MustObjectIDFromHex(userId)}, userBlog)
 }
 
 // 分页与排序
@@ -567,7 +567,7 @@ func (this *BlogService) UpdateUserBlogPaging(userId string, perPageSize int, so
 	if ok, msg = Vds(map[string]string{"perPageSize": strconv.Itoa(perPageSize), "sortField": sortField}); !ok {
 		return
 	}
-	ok = db.UpdateByQMap(db.UserBlogs, bson.M{"_id": bson.ObjectIdHex(userId)},
+	ok = db.UpdateByQMap(db.UserBlogs, bson.M{"_id": db.MustObjectIDFromHex(userId)},
 		bson.M{"PerPageSize": perPageSize, "SortField": sortField, "IsAsc": isAsc})
 	return
 }
@@ -594,7 +594,7 @@ func (this *BlogService) SetRecommend(noteId string, isRecommend bool) bool {
 	if isRecommend {
 		data["RecommendTime"] = time.Now()
 	}
-	return db.UpdateByQMap(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId), "IsBlog": true}, data)
+	return db.UpdateByQMap(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId), "IsBlog": true}, data)
 }
 
 //----------------------
@@ -607,7 +607,7 @@ func (this *BlogService) ListLikedUsers(noteId string, isAll bool) ([]info.UserA
 	skipNum, sortFieldR := parsePageAndSort(1, pageSize, "CreatedTime", false)
 
 	likes := []info.BlogLike{}
-	query := bson.M{"NoteId": bson.ObjectIdHex(noteId)}
+	query := bson.M{"NoteId": db.MustObjectIDFromHex(noteId)}
 	q := db.BlogLikes.Find(query)
 
 	// 总记录数
@@ -623,7 +623,7 @@ func (this *BlogService) ListLikedUsers(noteId string, isAll bool) ([]info.UserA
 	}
 
 	// 得到所有userIds
-	userIds := make([]bson.ObjectId, len(likes))
+	userIds := make([]ObjectID, len(likes))
 	for i, like := range likes {
 		userIds[i] = like.UserId
 	}
@@ -642,7 +642,7 @@ func (this *BlogService) IsILikeIt(noteId, userId string) bool {
 	if userId == "" {
 		return false
 	}
-	if db.Has(db.BlogLikes, bson.M{"NoteId": bson.ObjectIdHex(noteId), "UserId": bson.ObjectIdHex(userId)}) {
+	if db.Has(db.BlogLikes, bson.M{"NoteId": db.MustObjectIDFromHex(noteId), "UserId": db.MustObjectIDFromHex(userId)}) {
 		return true
 	}
 	return false
@@ -652,7 +652,7 @@ func (this *BlogService) IsILikeIt(noteId, userId string) bool {
 func (this *BlogService) IncReadNum(noteId string) bool {
 	note := noteService.GetNoteById(noteId)
 	if note.IsBlog {
-		return db.Update(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId)}, bson.M{"$inc": bson.M{"ReadNum": 1}})
+		return db.Update(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId)}, bson.M{"$inc": bson.M{"ReadNum": 1}})
 	}
 	return false
 }
@@ -671,18 +671,18 @@ func (this *BlogService) LikeBlog(noteId, userId string) (ok bool, isLike bool) 
 		return
 	}
 
-	noteIdO := bson.ObjectIdHex(noteId)
-	userIdO := bson.ObjectIdHex(userId)
+	noteIdO := db.MustObjectIDFromHex(noteId)
+	userIdO := db.MustObjectIDFromHex(userId)
 	if !db.Has(db.BlogLikes, bson.M{"NoteId": noteIdO, "UserId": userIdO}) {
 		// 添加之
-		db.Insert(db.BlogLikes, info.BlogLike{LikeId: bson.NewObjectId(), NoteId: noteIdO, UserId: userIdO, CreatedTime: time.Now()})
+		db.Insert(db.BlogLikes, info.BlogLike{LikeId: db.NewObjectID(), NoteId: noteIdO, UserId: userIdO, CreatedTime: time.Now()})
 		isLike = true
 	} else {
 		// 已点过, 那么删除之
 		db.Delete(db.BlogLikes, bson.M{"NoteId": noteIdO, "UserId": userIdO})
 		isLike = false
 	}
-	
+
 	count := db.Count(db.BlogLikes, bson.M{"NoteId": noteIdO})
 	ok = db.UpdateByQI(db.Notes, bson.M{"_id": noteIdO}, bson.M{"LikeNum": count})
 
@@ -703,9 +703,9 @@ func (this *BlogService) Comment(noteId, toCommentId, userId, content string) (b
 		return false, comment
 	}
 
-	comment = info.BlogComment{CommentId: bson.NewObjectId(),
-		NoteId:      bson.ObjectIdHex(noteId),
-		UserId:      bson.ObjectIdHex(userId),
+	comment = info.BlogComment{CommentId: db.NewObjectID(),
+		NoteId:      db.MustObjectIDFromHex(noteId),
+		UserId:      db.MustObjectIDFromHex(userId),
 		Content:     content,
 		CreatedTime: time.Now(),
 	}
@@ -713,7 +713,7 @@ func (this *BlogService) Comment(noteId, toCommentId, userId, content string) (b
 	if toCommentId != "" {
 		comment2 = info.BlogComment{}
 		db.Get(db.BlogComments, toCommentId, &comment2)
-		if comment2.CommentId != "" {
+		if !comment2.CommentId.IsZero() {
 			comment.ToCommentId = comment2.CommentId
 			comment.ToUserId = comment2.UserId
 		}
@@ -723,7 +723,7 @@ func (this *BlogService) Comment(noteId, toCommentId, userId, content string) (b
 	ok := db.Insert(db.BlogComments, comment)
 	if ok {
 		// 评论+1
-		db.Update(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId)}, bson.M{"$inc": bson.M{"CommentNum": 1}})
+		db.Update(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId)}, bson.M{"$inc": bson.M{"CommentNum": 1}})
 	}
 
 	if userId != note.UserId.Hex() || toCommentId != "" {
@@ -777,14 +777,14 @@ func (this *BlogService) DeleteComment(noteId, commentId, userId string) bool {
 	comment := info.BlogComment{}
 	db.Get(db.BlogComments, commentId, &comment)
 
-	if comment.CommentId == "" {
+	if comment.CommentId.IsZero() {
 		return false
 	}
 
 	if userId == configService.GetAdminUserId() || note.UserId.Hex() == userId || comment.UserId.Hex() == userId {
-		if db.Delete(db.BlogComments, bson.M{"_id": bson.ObjectIdHex(commentId)}) {
+		if db.Delete(db.BlogComments, bson.M{"_id": db.MustObjectIDFromHex(commentId)}) {
 			// 评论-1
-			db.Update(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId)}, bson.M{"$inc": bson.M{"CommentNum": -1}})
+			db.Update(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId)}, bson.M{"$inc": bson.M{"CommentNum": -1}})
 			return true
 		}
 	}
@@ -805,13 +805,13 @@ func (this *BlogService) LikeComment(commentId, userId string) (ok bool, isILike
 	if comment.LikeUserIds != nil && len(comment.LikeUserIds) > 0 && InArray(comment.LikeUserIds, userId) {
 		n = -1
 		// 从点赞名单删除
-		db.Update(db.BlogComments, bson.M{"_id": bson.ObjectIdHex(commentId)},
+		db.Update(db.BlogComments, bson.M{"_id": db.MustObjectIDFromHex(commentId)},
 			bson.M{"$pull": bson.M{"LikeUserIds": userId}})
 		isILike = false
 	} else {
 		n = 1
 		// 添加之
-		db.Update(db.BlogComments, bson.M{"_id": bson.ObjectIdHex(commentId)},
+		db.Update(db.BlogComments, bson.M{"_id": db.MustObjectIDFromHex(commentId)},
 			bson.M{"$push": bson.M{"LikeUserIds": userId}})
 		isILike = true
 	}
@@ -822,7 +822,7 @@ func (this *BlogService) LikeComment(commentId, userId string) (ok bool, isILike
 		num = len(comment.LikeUserIds) + n
 	}
 
-	ok = db.Update(db.BlogComments, bson.M{"_id": bson.ObjectIdHex(commentId)},
+	ok = db.Update(db.BlogComments, bson.M{"_id": db.MustObjectIDFromHex(commentId)},
 		bson.M{"$set": bson.M{"LikeNum": num}})
 
 	return
@@ -838,7 +838,7 @@ func (this *BlogService) ListComments(userId, noteId string, page, pageSize int)
 
 	skipNum, sortFieldR := parsePageAndSort(page, pageSize, "CreatedTime", false)
 
-	query := bson.M{"NoteId": bson.ObjectIdHex(noteId)}
+	query := bson.M{"NoteId": db.MustObjectIDFromHex(noteId)}
 	q := db.BlogComments.Find(query)
 
 	// 总记录数
@@ -861,14 +861,14 @@ func (this *BlogService) ListComments(userId, noteId string, page, pageSize int)
 	note := noteService.GetNoteById(noteId)
 
 	// 得到用户信息
-	userIdsMap := map[bson.ObjectId]bool{note.UserId: true}
+	userIdsMap := map[ObjectID]bool{note.UserId: true}
 	for _, comment := range comments {
 		userIdsMap[comment.UserId] = true
-		if comment.ToUserId != "" { // 可能为空
+		if !comment.ToUserId.IsZero() { // 可能为空
 			userIdsMap[comment.ToUserId] = true
 		}
 	}
-	userIds := make([]bson.ObjectId, len(userIdsMap))
+	userIds := make([]ObjectID, len(userIdsMap))
 	i := 0
 	for userId, _ := range userIdsMap {
 		userIds[i] = userId
@@ -889,14 +889,14 @@ func (this *BlogService) Report(noteId, commentId, reason, userId string) bool {
 		return false
 	}
 
-	report := info.Report{ReportId: bson.NewObjectId(),
-		NoteId:      bson.ObjectIdHex(noteId),
-		UserId:      bson.ObjectIdHex(userId),
+	report := info.Report{ReportId: db.NewObjectID(),
+		NoteId:      db.MustObjectIDFromHex(noteId),
+		UserId:      db.MustObjectIDFromHex(userId),
 		Reason:      reason,
 		CreatedTime: time.Now(),
 	}
 	if commentId != "" {
-		report.CommentId = bson.ObjectIdHex(commentId)
+		report.CommentId = db.MustObjectIDFromHex(commentId)
 	}
 	return db.Insert(db.Reports, report)
 }
@@ -906,7 +906,7 @@ func (this *BlogService) Report(noteId, commentId, reason, userId string) bool {
 
 // CateIds
 func (this *BlogService) UpateCateIds(userId string, cateIds []string) bool {
-	return db.UpdateByQField(db.UserBlogs, bson.M{"_id": bson.ObjectIdHex(userId)}, "CateIds", cateIds)
+	return db.UpdateByQField(db.UserBlogs, bson.M{"_id": db.MustObjectIDFromHex(userId)}, "CateIds", cateIds)
 }
 
 // 修改笔记本urlTitle
@@ -973,7 +973,7 @@ func (this *BlogService) GetSingleByUserIdAndUrlTitle(userId, singleIdOrUrlTitle
 	if IsObjectId(singleIdOrUrlTitle) {
 		db.Get(db.BlogSingles, singleIdOrUrlTitle, &page)
 	} else {
-		db.GetByQ(db.BlogSingles, bson.M{"UserId": bson.ObjectIdHex(userId), "UrlTitle": encodeValue(singleIdOrUrlTitle)}, &page)
+		db.GetByQ(db.BlogSingles, bson.M{"UserId": db.MustObjectIDFromHex(userId), "UrlTitle": encodeValue(singleIdOrUrlTitle)}, &page)
 	}
 	return page
 }
@@ -1013,7 +1013,7 @@ func (this *BlogService) updateBlogSingles(userId string, isDelete bool, isAdd b
 		// 是添加, 直接添加到最后
 		singles = append(singles, map[string]string{"SingleId": singleId, "Title": title, "UrlTitle": urlTitle})
 	}
-	return db.UpdateByQField(db.UserBlogs, bson.M{"_id": bson.ObjectIdHex(userId)}, "Singles", singles)
+	return db.UpdateByQField(db.UserBlogs, bson.M{"_id": db.MustObjectIDFromHex(userId)}, "Singles", singles)
 }
 
 // 删除页面
@@ -1065,8 +1065,8 @@ func (this *BlogService) AddOrUpdateSingle(userId, singleId, title, content stri
 	}
 	// 添加
 	page := info.BlogSingle{
-		SingleId:    bson.NewObjectId(),
-		UserId:      bson.ObjectIdHex(userId),
+		SingleId:    db.NewObjectID(),
+		UserId:      db.MustObjectIDFromHex(userId),
 		Title:       title,
 		Content:     content,
 		UrlTitle:    GetUrTitle(userId, title, "single", singleId),
@@ -1102,22 +1102,22 @@ func (this *BlogService) SortSingles(userId string, singleIds []string) (ok bool
 		singles2[i] = singlesMap[singleId]
 	}
 
-	return db.UpdateByQField(db.UserBlogs, bson.M{"_id": bson.ObjectIdHex(userId)}, "Singles", singles2)
+	return db.UpdateByQField(db.UserBlogs, bson.M{"_id": db.MustObjectIDFromHex(userId)}, "Singles", singles2)
 }
 
 // 得到用户的博客url
 func (this *BlogService) GetUserBlogUrl(userBlog *info.UserBlog, username string) string {
 	/*
-	if userBlog != nil {
-		if userBlog.Domain != "" && configService.AllowCustomDomain() {
-			return configService.GetUserUrl(userBlog.Domain)
-		} else if userBlog.SubDomain != "" {
-			return configService.GetUserSubUrl(userBlog.SubDomain)
+		if userBlog != nil {
+			if userBlog.Domain != "" && configService.AllowCustomDomain() {
+				return configService.GetUserUrl(userBlog.Domain)
+			} else if userBlog.SubDomain != "" {
+				return configService.GetUserSubUrl(userBlog.SubDomain)
+			}
+			if username == "" {
+				username = userBlog.UserId.Hex()
+			}
 		}
-		if username == "" {
-			username = userBlog.UserId.Hex()
-		}
-	}
 	*/
 	return configService.GetBlogUrl() + "/" + username
 }
@@ -1125,47 +1125,47 @@ func (this *BlogService) GetUserBlogUrl(userBlog *info.UserBlog, username string
 // 得到所有url
 func (this *BlogService) GetBlogUrls(userBlog *info.UserBlog, userInfo *info.User) info.BlogUrls {
 	var indexUrl, postUrl, searchUrl, cateUrl, singleUrl, tagsUrl, archiveUrl, tagPostsUrl string
-	
+
 	/*
-	if userBlog.Domain != "" && configService.AllowCustomDomain() { // http://demo.com
-		// ok
-		indexUrl = configService.GetUserUrl(userBlog.Domain)
-		cateUrl = indexUrl + "/cate"     // /xxxxx
-		postUrl = indexUrl + "/post"     // /xxxxx
-		searchUrl = indexUrl + "/search" // /xxxxx
-		singleUrl = indexUrl + "/single"
-		archiveUrl = indexUrl + "/archives"
-		tagsUrl = indexUrl + "/tags"
-		tagPostsUrl = indexUrl + "/tag"
-	} else if userBlog.SubDomain != "" { // demo.leanote.com
-		indexUrl = configService.GetUserSubUrl(userBlog.SubDomain)
-		cateUrl = indexUrl + "/cate"     // /xxxxx
-		postUrl = indexUrl + "/post"     // /xxxxx
-		searchUrl = indexUrl + "/search" // /xxxxx
-		singleUrl = indexUrl + "/single"
-		archiveUrl = indexUrl + "/archives"
-		tagsUrl = indexUrl + "/tags"
-		tagPostsUrl = indexUrl + "/tag"
-	} else {
-		*/
-		// ok
-		blogUrl := configService.GetBlogUrl() // blog.leanote.com
-		userIdOrEmail := ""
-		if userInfo.Username != "" {
-			userIdOrEmail = userInfo.Username
-		} else if userInfo.Email != "" {
-			userIdOrEmail = userInfo.Email
+		if userBlog.Domain != "" && configService.AllowCustomDomain() { // http://demo.com
+			// ok
+			indexUrl = configService.GetUserUrl(userBlog.Domain)
+			cateUrl = indexUrl + "/cate"     // /xxxxx
+			postUrl = indexUrl + "/post"     // /xxxxx
+			searchUrl = indexUrl + "/search" // /xxxxx
+			singleUrl = indexUrl + "/single"
+			archiveUrl = indexUrl + "/archives"
+			tagsUrl = indexUrl + "/tags"
+			tagPostsUrl = indexUrl + "/tag"
+		} else if userBlog.SubDomain != "" { // demo.leanote.com
+			indexUrl = configService.GetUserSubUrl(userBlog.SubDomain)
+			cateUrl = indexUrl + "/cate"     // /xxxxx
+			postUrl = indexUrl + "/post"     // /xxxxx
+			searchUrl = indexUrl + "/search" // /xxxxx
+			singleUrl = indexUrl + "/single"
+			archiveUrl = indexUrl + "/archives"
+			tagsUrl = indexUrl + "/tags"
+			tagPostsUrl = indexUrl + "/tag"
 		} else {
-			userIdOrEmail = userInfo.UserId.Hex()
-		}
-		indexUrl = blogUrl + "/" + userIdOrEmail
-		cateUrl = blogUrl + "/cate/" + userIdOrEmail        // /username/notebookId
-		postUrl = blogUrl + "/post/" + userIdOrEmail        // /username/xxxxx
-		searchUrl = blogUrl + "/search/" + userIdOrEmail    // blog.leanote.com/search/username
-		singleUrl = blogUrl + "/single/" + userIdOrEmail    // blog.leanote.com/single/username/singleId
-		archiveUrl = blogUrl + "/archives/" + userIdOrEmail // blog.leanote.com/archive/username
-		tagsUrl = blogUrl + "/tags/" + userIdOrEmail
-		tagPostsUrl = blogUrl + "/tag/" + userIdOrEmail // blog.leanote.com/archive/username
+	*/
+	// ok
+	blogUrl := configService.GetBlogUrl() // blog.leanote.com
+	userIdOrEmail := ""
+	if userInfo.Username != "" {
+		userIdOrEmail = userInfo.Username
+	} else if userInfo.Email != "" {
+		userIdOrEmail = userInfo.Email
+	} else {
+		userIdOrEmail = userInfo.UserId.Hex()
+	}
+	indexUrl = blogUrl + "/" + userIdOrEmail
+	cateUrl = blogUrl + "/cate/" + userIdOrEmail        // /username/notebookId
+	postUrl = blogUrl + "/post/" + userIdOrEmail        // /username/xxxxx
+	searchUrl = blogUrl + "/search/" + userIdOrEmail    // blog.leanote.com/search/username
+	singleUrl = blogUrl + "/single/" + userIdOrEmail    // blog.leanote.com/single/username/singleId
+	archiveUrl = blogUrl + "/archives/" + userIdOrEmail // blog.leanote.com/archive/username
+	tagsUrl = blogUrl + "/tags/" + userIdOrEmail
+	tagPostsUrl = blogUrl + "/tag/" + userIdOrEmail // blog.leanote.com/archive/username
 	// }
 
 	return info.BlogUrls{
@@ -1218,7 +1218,7 @@ func (this *BlogService) FixBlog(blog info.BlogItem) info.Post {
 }
 
 func (this *BlogService) FixNote(note info.Note) info.Post {
-	if note.NoteId == "" {
+	if note.NoteId.IsZero() {
 		return info.Post{}
 	}
 	urlTitle := note.UrlTitle

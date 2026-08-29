@@ -8,7 +8,7 @@ import (
 	//	"github.com/yangphere/leanote/app/info"
 	//	. "github.com/yangphere/leanote/app/lea"
 	//	"github.com/yangphere/leanote/app/lea/blog"
-	//	"gopkg.in/mgo.v2/bson"
+	//	"go.mongodb.org/mongo-driver/v2/bson"
 	//	"github.com/yangphere/leanote/app/types"
 	//	"io/ioutil"
 	//	"math"

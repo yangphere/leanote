@@ -1,7 +1,7 @@
 package info
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/lea"
 	"time"
 )
 
@@ -12,13 +12,13 @@ const (
 )
 
 type User struct {
-	UserId      bson.ObjectId `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
-	Email       string        `bson:"Email"`         // 全是小写
-	Verified    bool          `bson:"Verified"`      // Email是否已验证过?
-	Username    string        `bson:"Username"`      // 不区分大小写, 全是小写
-	UsernameRaw string        `bson:"UsernameRaw"`   // 可能有大小写
-	Pwd         string        `bson:"Pwd" json:"-"`
-	CreatedTime time.Time     `bson:"CreatedTime"`
+	UserId      lea.ObjectID `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
+	Email       string       `bson:"Email"`         // 全是小写
+	Verified    bool         `bson:"Verified"`      // Email是否已验证过?
+	Username    string       `bson:"Username"`      // 不区分大小写, 全是小写
+	UsernameRaw string       `bson:"UsernameRaw"`   // 可能有大小写
+	Pwd         string       `bson:"Pwd" json:"-"`
+	CreatedTime time.Time    `bson:"CreatedTime"`
 
 	Logo string `bson:"Logo"` // 9-24
 	// 主题
@@ -37,11 +37,11 @@ type User struct {
 
 	// 用户的帐户类型
 
-	ImageNum   int           `bson:"ImageNum" json:"-"`    // 图片数量
-	ImageSize  int           `bson:"ImageSize" json:"-"`   // 图片大小
-	AttachNum  int           `bson:"AttachNum" json:"-"`   // 附件数量
-	AttachSize int           `bson:"AttachSize" json:"-"`  // 附件大小
-	FromUserId bson.ObjectId `bson:"FromUserId,omitempty"` // 邀请的用户
+	ImageNum   int          `bson:"ImageNum" json:"-"`    // 图片数量
+	ImageSize  int          `bson:"ImageSize" json:"-"`   // 图片大小
+	AttachNum  int          `bson:"AttachNum" json:"-"`   // 附件数量
+	AttachSize int          `bson:"AttachSize" json:"-"`  // 附件大小
+	FromUserId lea.ObjectID `bson:"FromUserId,omitempty"` // 邀请的用户
 
 	AccountType      string    `bson:"AccountType" json:"-"`      // normal(为空), premium
 	AccountStartTime time.Time `bson:"AccountStartTime" json:"-"` // 开始日期
@@ -72,20 +72,20 @@ type UserAccount struct {
 
 // note主页需要
 type UserAndBlogUrl struct {
-	User
+	User    `bson:"User"`
 	BlogUrl string `bson:"BlogUrl"`
 	PostUrl string `bson:"PostUrl"`
 }
 
 // 用户与博客信息结合, 公开
 type UserAndBlog struct {
-	UserId    bson.ObjectId `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
-	Email     string        `bson:"Email"`         // 全是小写
-	Username  string        `bson:"Username"`      // 不区分大小写, 全是小写
-	Logo      string        `bson:"Logo"`
-	BlogTitle string        `bson:"BlogTitle"` // 博客标题
-	BlogLogo  string        `bson:"BlogLogo"`  // 博客Logo
-	BlogUrl   string        `bson:"BlogUrl"`   // 博客链接, 主页
+	UserId    lea.ObjectID `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
+	Email     string       `bson:"Email"`         // 全是小写
+	Username  string       `bson:"Username"`      // 不区分大小写, 全是小写
+	Logo      string       `bson:"Logo"`
+	BlogTitle string       `bson:"BlogTitle"` // 博客标题
+	BlogLogo  string       `bson:"BlogLogo"`  // 博客Logo
+	BlogUrl   string       `bson:"BlogUrl"`   // 博客链接, 主页
 
-	BlogUrls // 各个页面
+	BlogUrls `bson:"blogurls"` // 各个页面, mgo 对匿名嵌入字段取小写键
 }

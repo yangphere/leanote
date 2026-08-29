@@ -1,61 +1,61 @@
 package db
 
 import (
-	"fmt"
-	. "github.com/yangphere/leanote/app/lea"
-	"github.com/revel/revel"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"context"
+	"errors"
 	"strings"
+
+	"github.com/revel/revel"
+	. "github.com/yangphere/leanote/app/lea"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // Init mgo and the common DAO
 
-// 数据连接
-var Session *mgo.Session
-
 // 各个表的Collection对象
-var Notebooks *mgo.Collection
-var Notes *mgo.Collection
-var NoteContents *mgo.Collection
-var NoteContentHistories *mgo.Collection
+var Notebooks *Collection
+var Notes *Collection
+var NoteContents *Collection
+var NoteContentHistories *Collection
 
-var ShareNotes *mgo.Collection
-var ShareNotebooks *mgo.Collection
-var HasShareNotes *mgo.Collection
-var Blogs *mgo.Collection
-var Users *mgo.Collection
-var Groups *mgo.Collection
-var GroupUsers *mgo.Collection
+var ShareNotes *Collection
+var ShareNotebooks *Collection
+var HasShareNotes *Collection
 
-var Tags *mgo.Collection
-var NoteTags *mgo.Collection
-var TagCounts *mgo.Collection
+var Blogs *Collection
+var Users *Collection
+var Groups *Collection
+var GroupUsers *Collection
 
-var UserBlogs *mgo.Collection
+var Tags *Collection
+var NoteTags *Collection
+var TagCounts *Collection
 
-var Tokens *mgo.Collection
+var UserBlogs *Collection
 
-var Suggestions *mgo.Collection
+var Tokens *Collection
+
+var Suggestions *Collection
 
 // Album & file(image)
-var Albums *mgo.Collection
-var Files *mgo.Collection
-var Attachs *mgo.Collection
+var Albums *Collection
+var Files *Collection
+var Attachs *Collection
 
-var NoteImages *mgo.Collection
-var Configs *mgo.Collection
-var EmailLogs *mgo.Collection
+var NoteImages *Collection
+var Configs *Collection
+var EmailLogs *Collection
 
 // blog
-var BlogLikes *mgo.Collection
-var BlogComments *mgo.Collection
-var Reports *mgo.Collection
-var BlogSingles *mgo.Collection
-var Themes *mgo.Collection
+var BlogLikes *Collection
+var BlogComments *Collection
+var Reports *Collection
+var BlogSingles *Collection
+var Themes *Collection
 
 // session
-var Sessions *mgo.Collection
+var Sessions *Collection
 
 // 初始化时连接数据库
 func Init(url, dbname string) {
@@ -101,80 +101,96 @@ func Init(url, dbname string) {
 	}
 	Log(url)
 
-	// [mongodb://][user:pass@]host1[:port1][,host2[:port2],...][/database][?options]
-	// mongodb://myuser:mypass@localhost:40001,otherhost:40001/mydb
-	var err error
-	Session, err = mgo.Dial(url)
-	if err != nil {
+	if err := dialMongo(url); err != nil {
 		panic(err)
 	}
 
-	// Optional. Switch the session to a monotonic behavior.
-	Session.SetMode(mgo.Monotonic, true)
+	database = client.Database(dbname)
 
 	// notebook
-	Notebooks = Session.DB(dbname).C("notebooks")
+	Notebooks = wrapCollection(database.Collection("notebooks"))
 
 	// notes
-	Notes = Session.DB(dbname).C("notes")
+	Notes = wrapCollection(database.Collection("notes"))
 
 	// noteContents
-	NoteContents = Session.DB(dbname).C("note_contents")
-	NoteContentHistories = Session.DB(dbname).C("note_content_histories")
+	NoteContents = wrapCollection(database.Collection("note_contents"))
+	NoteContentHistories = wrapCollection(database.Collection("note_content_histories"))
 
 	// share
-	ShareNotes = Session.DB(dbname).C("share_notes")
-	ShareNotebooks = Session.DB(dbname).C("share_notebooks")
-	HasShareNotes = Session.DB(dbname).C("has_share_notes")
+	ShareNotes = wrapCollection(database.Collection("share_notes"))
+	ShareNotebooks = wrapCollection(database.Collection("share_notebooks"))
+	HasShareNotes = wrapCollection(database.Collection("has_share_notes"))
 
 	// user
-	Users = Session.DB(dbname).C("users")
+	Users = wrapCollection(database.Collection("users"))
 	// group
-	Groups = Session.DB(dbname).C("groups")
-	GroupUsers = Session.DB(dbname).C("group_users")
+	Groups = wrapCollection(database.Collection("groups"))
+	GroupUsers = wrapCollection(database.Collection("group_users"))
 
 	// blog
-	Blogs = Session.DB(dbname).C("blogs")
+	Blogs = wrapCollection(database.Collection("blogs"))
 
 	// tag
-	Tags = Session.DB(dbname).C("tags")
-	NoteTags = Session.DB(dbname).C("note_tags")
-	TagCounts = Session.DB(dbname).C("tag_count")
+	Tags = wrapCollection(database.Collection("tags"))
+	NoteTags = wrapCollection(database.Collection("note_tags"))
+	TagCounts = wrapCollection(database.Collection("tag_count"))
 
 	// blog
-	UserBlogs = Session.DB(dbname).C("user_blogs")
-	BlogSingles = Session.DB(dbname).C("blog_singles")
-	Themes = Session.DB(dbname).C("themes")
+	UserBlogs = wrapCollection(database.Collection("user_blogs"))
+	BlogSingles = wrapCollection(database.Collection("blog_singles"))
+	Themes = wrapCollection(database.Collection("themes"))
 
 	// find password
-	Tokens = Session.DB(dbname).C("tokens")
+	Tokens = wrapCollection(database.Collection("tokens"))
 
 	// Suggestion
-	Suggestions = Session.DB(dbname).C("suggestions")
+	Suggestions = wrapCollection(database.Collection("suggestions"))
 
 	// Album & file
-	Albums = Session.DB(dbname).C("albums")
-	Files = Session.DB(dbname).C("files")
-	Attachs = Session.DB(dbname).C("attachs")
+	Albums = wrapCollection(database.Collection("albums"))
+	Files = wrapCollection(database.Collection("files"))
+	Attachs = wrapCollection(database.Collection("attachs"))
 
-	NoteImages = Session.DB(dbname).C("note_images")
+	NoteImages = wrapCollection(database.Collection("note_images"))
 
-	Configs = Session.DB(dbname).C("configs")
-	EmailLogs = Session.DB(dbname).C("email_logs")
+	Configs = wrapCollection(database.Collection("configs"))
+	EmailLogs = wrapCollection(database.Collection("email_logs"))
 
 	// 社交
-	BlogLikes = Session.DB(dbname).C("blog_likes")
-	BlogComments = Session.DB(dbname).C("blog_comments")
+	BlogLikes = wrapCollection(database.Collection("blog_likes"))
+	BlogComments = wrapCollection(database.Collection("blog_comments"))
 
 	// 举报
-	Reports = Session.DB(dbname).C("reports")
+	Reports = wrapCollection(database.Collection("reports"))
 
 	// session
-	Sessions = Session.DB(dbname).C("sessions")
+	Sessions = wrapCollection(database.Collection("sessions"))
 }
 
 func close() {
-	Session.Close()
+	if client != nil {
+		_ = client.Disconnect(context.Background())
+	}
+}
+
+// FindInCollection runs a find against an arbitrary database. It exists for
+// test-support paths only (e2e run markers) and must not be used for
+// business data access.
+func FindInCollection(database, collection string, filter, result interface{}) error {
+	ctx, cancel := operationContext()
+	defer cancel()
+	cursor, err := client.Database(database).Collection(collection).Find(ctx, filter)
+	if err != nil {
+		Logf("mongo find failed on %s.%s [%s]: %v", database, collection, classifyError(err), err)
+		return err
+	}
+	defer func() {
+		if cerr := cursor.Close(ctx); cerr != nil {
+			Logf("mongo cursor close failed on %s.%s [%s]: %v", database, collection, classifyError(cerr), cerr)
+		}
+	}()
+	return cursor.All(ctx, result)
 }
 
 // common DAO
@@ -182,61 +198,56 @@ func close() {
 
 //----------------------
 
-func Insert(collection *mgo.Collection, i interface{}) bool {
-	err := collection.Insert(i)
-	return Err(err)
+func Insert(collection *Collection, i interface{}) bool {
+	return Err(collection.Insert(i))
 }
 
 //----------------------
 
 // 适合一条记录全部更新
-func Update(collection *mgo.Collection, query interface{}, i interface{}) bool {
-	err := collection.Update(query, i)
-	return Err(err)
+func Update(collection *Collection, query interface{}, i interface{}) bool {
+	return Err(collection.Update(query, i))
 }
-func Upsert(collection *mgo.Collection, query interface{}, i interface{}) bool {
+func Upsert(collection *Collection, query interface{}, i interface{}) bool {
 	_, err := collection.Upsert(query, i)
 	return Err(err)
 }
-func UpdateAll(collection *mgo.Collection, query interface{}, i interface{}) bool {
+func UpdateAll(collection *Collection, query interface{}, i interface{}) bool {
 	_, err := collection.UpdateAll(query, i)
 	return Err(err)
 }
-func UpdateByIdAndUserId(collection *mgo.Collection, id, userId string, i interface{}) bool {
-	err := collection.Update(GetIdAndUserIdQ(id, userId), i)
-	return Err(err)
+func UpdateByIdAndUserId(collection *Collection, id, userId string, i interface{}) bool {
+	return Err(collection.Update(GetIdAndUserIdQ(id, userId), i))
 }
 
-func UpdateByIdAndUserId2(collection *mgo.Collection, id, userId bson.ObjectId, i interface{}) bool {
-	err := collection.Update(GetIdAndUserIdBsonQ(id, userId), i)
-	return Err(err)
+func UpdateByIdAndUserId2(collection *Collection, id, userId ObjectID, i interface{}) bool {
+	return Err(collection.Update(GetIdAndUserIdBsonQ(id, userId), i))
 }
-func UpdateByIdAndUserIdField(collection *mgo.Collection, id, userId, field string, value interface{}) bool {
+func UpdateByIdAndUserIdField(collection *Collection, id, userId, field string, value interface{}) bool {
 	return UpdateByIdAndUserId(collection, id, userId, bson.M{"$set": bson.M{field: value}})
 }
-func UpdateByIdAndUserIdMap(collection *mgo.Collection, id, userId string, v bson.M) bool {
+func UpdateByIdAndUserIdMap(collection *Collection, id, userId string, v bson.M) bool {
 	return UpdateByIdAndUserId(collection, id, userId, bson.M{"$set": v})
 }
 
-func UpdateByIdAndUserIdField2(collection *mgo.Collection, id, userId bson.ObjectId, field string, value interface{}) bool {
+func UpdateByIdAndUserIdField2(collection *Collection, id, userId ObjectID, field string, value interface{}) bool {
 	return UpdateByIdAndUserId2(collection, id, userId, bson.M{"$set": bson.M{field: value}})
 }
-func UpdateByIdAndUserIdMap2(collection *mgo.Collection, id, userId bson.ObjectId, v bson.M) bool {
+func UpdateByIdAndUserIdMap2(collection *Collection, id, userId ObjectID, v bson.M) bool {
 	return UpdateByIdAndUserId2(collection, id, userId, bson.M{"$set": v})
 }
 
-//
-func UpdateByQField(collection *mgo.Collection, q interface{}, field string, value interface{}) bool {
+func UpdateByQField(collection *Collection, q interface{}, field string, value interface{}) bool {
 	_, err := collection.UpdateAll(q, bson.M{"$set": bson.M{field: value}})
 	return Err(err)
 }
-func UpdateByQI(collection *mgo.Collection, q interface{}, v interface{}) bool {
+func UpdateByQI(collection *Collection, q interface{}, v interface{}) bool {
 	_, err := collection.UpdateAll(q, bson.M{"$set": v})
 	return Err(err)
 }
 
 // 查询条件和值
-func UpdateByQMap(collection *mgo.Collection, q interface{}, v interface{}) bool {
+func UpdateByQMap(collection *Collection, q interface{}, v interface{}) bool {
 	_, err := collection.UpdateAll(q, bson.M{"$set": v})
 	return Err(err)
 }
@@ -244,56 +255,53 @@ func UpdateByQMap(collection *mgo.Collection, q interface{}, v interface{}) bool
 //------------------------
 
 // 删除一条
-func Delete(collection *mgo.Collection, q interface{}) bool {
-	err := collection.Remove(q)
-	return Err(err)
+func Delete(collection *Collection, q interface{}) bool {
+	return Err(collection.Remove(q))
 }
-func DeleteByIdAndUserId(collection *mgo.Collection, id, userId string) bool {
-	err := collection.Remove(GetIdAndUserIdQ(id, userId))
-	return Err(err)
+func DeleteByIdAndUserId(collection *Collection, id, userId string) bool {
+	return Err(collection.Remove(GetIdAndUserIdQ(id, userId)))
 }
-func DeleteByIdAndUserId2(collection *mgo.Collection, id, userId bson.ObjectId) bool {
-	err := collection.Remove(GetIdAndUserIdBsonQ(id, userId))
-	return Err(err)
+func DeleteByIdAndUserId2(collection *Collection, id, userId ObjectID) bool {
+	return Err(collection.Remove(GetIdAndUserIdBsonQ(id, userId)))
 }
 
 // 删除所有
-func DeleteAllByIdAndUserId(collection *mgo.Collection, id, userId string) bool {
+func DeleteAllByIdAndUserId(collection *Collection, id, userId string) bool {
 	_, err := collection.RemoveAll(GetIdAndUserIdQ(id, userId))
 	return Err(err)
 }
-func DeleteAllByIdAndUserId2(collection *mgo.Collection, id, userId bson.ObjectId) bool {
+func DeleteAllByIdAndUserId2(collection *Collection, id, userId ObjectID) bool {
 	_, err := collection.RemoveAll(GetIdAndUserIdBsonQ(id, userId))
 	return Err(err)
 }
 
-func DeleteAll(collection *mgo.Collection, q interface{}) bool {
+func DeleteAll(collection *Collection, q interface{}) bool {
 	_, err := collection.RemoveAll(q)
 	return Err(err)
 }
 
 //-------------------------
 
-func Get(collection *mgo.Collection, id string, i interface{}) {
-	collection.FindId(bson.ObjectIdHex(id)).One(i)
+func Get(collection *Collection, id string, i interface{}) {
+	collection.FindId(MustObjectIDFromHex(id)).One(i)
 }
-func Get2(collection *mgo.Collection, id bson.ObjectId, i interface{}) {
+func Get2(collection *Collection, id ObjectID, i interface{}) {
 	collection.FindId(id).One(i)
 }
 
-func GetByQ(collection *mgo.Collection, q interface{}, i interface{}) {
+func GetByQ(collection *Collection, q interface{}, i interface{}) {
 	collection.Find(q).One(i)
 }
-func ListByQ(collection *mgo.Collection, q interface{}, i interface{}) {
+func ListByQ(collection *Collection, q interface{}, i interface{}) {
 	collection.Find(q).All(i)
 }
 
-func ListByQLimit(collection *mgo.Collection, q interface{}, i interface{}, limit int) {
+func ListByQLimit(collection *Collection, q interface{}, i interface{}, limit int) {
 	collection.Find(q).Limit(limit).All(i)
 }
 
 // 查询某些字段, q是查询条件, fields是字段名列表
-func GetByQWithFields(collection *mgo.Collection, q bson.M, fields []string, i interface{}) {
+func GetByQWithFields(collection *Collection, q bson.M, fields []string, i interface{}) {
 	selector := make(bson.M, len(fields))
 	for _, field := range fields {
 		selector[field] = true
@@ -302,28 +310,28 @@ func GetByQWithFields(collection *mgo.Collection, q bson.M, fields []string, i i
 }
 
 // 查询某些字段, q是查询条件, fields是字段名列表
-func ListByQWithFields(collection *mgo.Collection, q bson.M, fields []string, i interface{}) {
+func ListByQWithFields(collection *Collection, q bson.M, fields []string, i interface{}) {
 	selector := make(bson.M, len(fields))
 	for _, field := range fields {
 		selector[field] = true
 	}
 	collection.Find(q).Select(selector).All(i)
 }
-func GetByIdAndUserId(collection *mgo.Collection, id, userId string, i interface{}) {
+func GetByIdAndUserId(collection *Collection, id, userId string, i interface{}) {
 	collection.Find(GetIdAndUserIdQ(id, userId)).One(i)
 }
-func GetByIdAndUserId2(collection *mgo.Collection, id, userId bson.ObjectId, i interface{}) {
+func GetByIdAndUserId2(collection *Collection, id, userId ObjectID, i interface{}) {
 	collection.Find(GetIdAndUserIdBsonQ(id, userId)).One(i)
 }
 
 // 按field去重
-func Distinct(collection *mgo.Collection, q bson.M, field string, i interface{}) {
+func Distinct(collection *Collection, q bson.M, field string, i interface{}) {
 	collection.Find(q).Distinct(field, i)
 }
 
 //----------------------
 
-func Count(collection *mgo.Collection, q interface{}) int {
+func Count(collection *Collection, q interface{}) int {
 	cnt, err := collection.Find(q).Count()
 	if err != nil {
 		Err(err)
@@ -331,7 +339,7 @@ func Count(collection *mgo.Collection, q interface{}) int {
 	return cnt
 }
 
-func Has(collection *mgo.Collection, q interface{}) bool {
+func Has(collection *Collection, q interface{}) bool {
 	if Count(collection, q) > 0 {
 		return true
 	}
@@ -342,38 +350,22 @@ func Has(collection *mgo.Collection, q interface{}) bool {
 
 // 得到主键和userId的复合查询条件
 func GetIdAndUserIdQ(id, userId string) bson.M {
-	return bson.M{"_id": bson.ObjectIdHex(id), "UserId": bson.ObjectIdHex(userId)}
+	return bson.M{"_id": MustObjectIDFromHex(id), "UserId": MustObjectIDFromHex(userId)}
 }
-func GetIdAndUserIdBsonQ(id, userId bson.ObjectId) bson.M {
+func GetIdAndUserIdBsonQ(id, userId ObjectID) bson.M {
 	return bson.M{"_id": id, "UserId": userId}
 }
 
 // DB处理错误
+// Err maps a driver error onto the legacy bool contract: nil and no-documents
+// ("not found") are successes; every other error fails. Failures are logged
+// with collection and operation by the Collection methods themselves.
 func Err(err error) bool {
-	if err != nil {
-		fmt.Println(err)
-		// 删除时, 查找
-		if err.Error() == "not found" {
-			return true
-		}
-		return false
+	if err == nil {
+		return true
 	}
-	return true
-}
-
-// 检查mognodb是否lost connection
-// 每个请求之前都要检查!!
-func CheckMongoSessionLost() {
-	// fmt.Println("检查CheckMongoSessionLostErr")
-	err := Session.Ping()
-	if err != nil {
-		Log("Lost connection to db!")
-		Session.Refresh()
-		err = Session.Ping()
-		if err == nil {
-			Log("Reconnect to db successful.")
-		} else {
-			Log("重连失败!!!! 警告")
-		}
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return true
 	}
+	return false
 }

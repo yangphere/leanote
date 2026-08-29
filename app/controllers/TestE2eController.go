@@ -11,7 +11,7 @@ import (
 
 	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/db"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // Test-mode-only E2E identity contract (jquery-upgrade PRD R-jQ3).
@@ -53,10 +53,7 @@ func (c TestE2e) Identity() revel.Result {
 		return c.NotFound("")
 	}
 
-	databaseName := ""
-	if db.Users != nil && db.Users.Database != nil {
-		databaseName = db.Users.Database.Name
-	}
+	databaseName := db.DatabaseName()
 
 	status := evaluateE2eIdentity(revel.RunMode, host, databaseName, os.Getenv(e2eRunTokenEnv), loadE2eRunMarkers(databaseName), time.Now())
 	if status == http.StatusNotFound {
@@ -73,13 +70,11 @@ func (c TestE2e) Identity() revel.Result {
 }
 
 func loadE2eRunMarkers(databaseName string) []e2eRunMarker {
-	if databaseName == "" || db.Session == nil {
+	if databaseName == "" {
 		return nil
 	}
-	session := db.Session.Copy()
-	defer session.Close()
 	markers := []e2eRunMarker{}
-	if err := session.DB(databaseName).C("e2e_runs").Find(bson.M{"kind": e2eRunKind}).All(&markers); err != nil {
+	if err := db.FindInCollection(databaseName, "e2e_runs", bson.M{"kind": e2eRunKind}, &markers); err != nil {
 		return nil
 	}
 	return markers

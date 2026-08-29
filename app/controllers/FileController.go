@@ -4,10 +4,10 @@ import (
 	"github.com/revel/revel"
 	//	"encoding/json"
 	"fmt"
+	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
 	"github.com/yangphere/leanote/app/lea/netutil"
-	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"os"
 	//	"strconv"
@@ -39,7 +39,7 @@ func (c File) PasteImage(noteId string) revel.Result {
 	if noteId != "" {
 		userId := c.GetUserId()
 		note := noteService.GetNoteById(noteId)
-		if note.UserId != "" {
+		if !note.UserId.IsZero() {
 			noteUserId := note.UserId.Hex()
 			if noteUserId != userId {
 				// 是否是有权限协作的
@@ -117,7 +117,6 @@ func (c File) uploadImage(from, albumId string) (re info.Re) {
 	// defer file.Close()
 
 	// data, err := ioutil.ReadAll(file)
-	
 
 	// 生成上传路径
 	newGuid := NewGuid()
@@ -197,7 +196,7 @@ func (c File) uploadImage(from, albumId string) (re info.Re) {
 		Path:  fileUrlPath,
 		Size:  filesize}
 
-	id := bson.NewObjectId()
+	id := db.NewObjectID()
 	fileInfo.FileId = id
 	fileId = id.Hex()
 
@@ -282,7 +281,7 @@ func (c File) CopyHttpImage(src string) revel.Result {
 		Path:  fileUrlPath + "/" + filename,
 		Size:  filesize}
 
-	id := bson.NewObjectId()
+	id := db.NewObjectID()
 	fileInfo.FileId = id
 
 	re.Id = id.Hex()

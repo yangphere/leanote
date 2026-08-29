@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -31,8 +32,9 @@ import (
 
 	"github.com/yangphere/leanote/app/lea"
 	"github.com/yangphere/leanote/app/tests/harness"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 const (
@@ -192,12 +194,19 @@ func run(args []string) (childExitError error) {
 		}
 	}()
 
-	session, err := mgo.DialWithTimeout(fixtureDatabaseURL, 10*time.Second)
+	client, err := mongo.Connect(options.Client().ApplyURI(fixtureDatabaseURL).SetConnectTimeout(10 * time.Second).
+		SetRegistry(lea.CodecRegistry).SetBSONOptions(&options.BSONOptions{DefaultDocumentM: true}))
 	if err != nil {
 		return fmt.Errorf("connect fixture database: %w", err)
 	}
-	defer session.Close()
-	database := session.DB(fixtureDatabaseName)
+	defer func() { _ = client.Disconnect(context.Background()) }()
+	pingCtx, pingCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	if err := client.Ping(pingCtx, nil); err != nil {
+		pingCancel()
+		return fmt.Errorf("ping fixture database: %w", err)
+	}
+	pingCancel()
+	database := client.Database(fixtureDatabaseName)
 
 	runToken, err := randomToken()
 	if err != nil {
@@ -211,31 +220,35 @@ func run(args []string) (childExitError error) {
 	// Publish the selector before writing the marker so an interrupt at any
 	// point during the insert can still remove only this run's marker.
 	supervisor.setMarker(runId, tokenSha256)
-	if err := database.C("e2e_runs").Insert(bson.M{
+	insertCtx, insertCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	if _, err := database.Collection("e2e_runs").InsertOne(insertCtx, bson.M{
 		"runId":       runId,
 		"kind":        e2eRunKind,
 		"tokenSha256": tokenSha256,
 		"createdAt":   time.Now().UTC(),
 	}); err != nil {
+		insertCancel()
 		return fmt.Errorf("write e2e_runs marker: %w", err)
 	}
+	insertCancel()
 
 	var admin struct {
-		UserId   bson.ObjectId `bson:"_id"`
-		Email    string        `bson:"Email"`
-		Username string        `bson:"Username"`
+		UserId   lea.ObjectID `bson:"_id"`
+		Email    string       `bson:"Email"`
+		Username string       `bson:"Username"`
 	}
-	if err := database.C("users").Find(bson.M{"Username": adminUsername}).One(&admin); err != nil {
+	adminCtx, adminCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer adminCancel()
+	if err := database.Collection("users").FindOne(adminCtx, bson.M{"Username": adminUsername}).Decode(&admin); err != nil {
 		return fmt.Errorf("locate fixture admin %q: %w", adminUsername, err)
 	}
 	password, err := randomToken()
 	if err != nil {
 		return fmt.Errorf("generate admin password: %w", err)
 	}
-	if err := database.C("users").UpdateId(admin.UserId, bson.M{"$set": bson.M{"Pwd": lea.GenPwd(password)}}); err != nil {
+	if err := database.Collection("users").FindOneAndUpdate(adminCtx, bson.M{"_id": admin.UserId}, bson.M{"$set": bson.M{"Pwd": lea.GenPwd(password)}}).Err(); err != nil {
 		return fmt.Errorf("rotate fixture admin password: %w", err)
 	}
-	session.Close()
 
 	mask(runToken)
 	mask(password)
@@ -273,14 +286,17 @@ func run(args []string) (childExitError error) {
 func teardown() []error {
 	var errs []error
 	if selector, ok := supervisor.markerSelector(); ok {
-		session, err := mgo.DialWithTimeout(fixtureDatabaseURL, 10*time.Second)
+		client, err := mongo.Connect(options.Client().ApplyURI(fixtureDatabaseURL).SetConnectTimeout(10 * time.Second).
+			SetRegistry(lea.CodecRegistry).SetBSONOptions(&options.BSONOptions{DefaultDocumentM: true}))
 		if err != nil {
 			errs = append(errs, fmt.Errorf("connect fixture database for marker removal: %w", err))
 		} else {
-			if _, err := session.DB(fixtureDatabaseName).C("e2e_runs").RemoveAll(selector); err != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			if _, err := client.Database(fixtureDatabaseName).Collection("e2e_runs").DeleteMany(ctx, selector); err != nil {
 				errs = append(errs, fmt.Errorf("delete e2e_runs marker: %w", err))
 			}
-			session.Close()
+			cancel()
+			_ = client.Disconnect(context.Background())
 		}
 	}
 	root, rootErr := harness.RepositoryRoot()

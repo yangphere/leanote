@@ -3,7 +3,7 @@ package service
 import (
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // 回收站
@@ -62,14 +62,14 @@ func (this *TrashService) recoverNote(noteId, notebookId, userId string) bool {
 	re := db.UpdateByIdAndUserId(db.Notes, noteId, userId,
 		bson.M{"$set": bson.M{"IsTrash": false,
 			"Usn":        userService.IncrUsn(userId),
-			"NotebookId": bson.ObjectIdHex(notebookId)}})
+			"NotebookId": db.MustObjectIDFromHex(notebookId)}})
 	return re
 }
 
 // 删除trash
 func (this *TrashService) DeleteTrash(noteId, userId string) bool {
 	note := noteService.GetNote(noteId, userId)
-	if note.NoteId == "" {
+	if note.NoteId.IsZero() {
 		return false
 	}
 	// delete note's attachs
@@ -98,7 +98,7 @@ func (this *TrashService) DeleteTrash(noteId, userId string) bool {
 func (this *TrashService) DeleteTrashApi(noteId, userId string, usn int) (bool, string, int) {
 	note := noteService.GetNote(noteId, userId)
 
-	if note.NoteId == "" || note.IsDeleted {
+	if note.NoteId.IsZero() || note.IsDeleted {
 		return false, "notExists", 0
 	}
 

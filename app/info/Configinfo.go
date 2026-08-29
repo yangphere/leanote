@@ -1,14 +1,14 @@
 package info
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/lea"
 	"time"
 )
 
 // 配置, 每一个配置一行记录
 type Config struct {
-	ConfigId    bson.ObjectId       `bson:"_id"`
-	UserId      bson.ObjectId       `bson:"UserId"`
+	ConfigId    lea.ObjectID        `bson:"_id"`
+	UserId      lea.ObjectID        `bson:"UserId"`
 	Key         string              `bson:"Key"`
 	ValueStr    string              `bson:"ValueStr,omitempty"`    // "1"
 	ValueArr    []string            `bson:"ValueArr,omitempty"`    // ["1","b","c"]

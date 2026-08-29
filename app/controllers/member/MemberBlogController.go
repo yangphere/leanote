@@ -2,9 +2,9 @@ package member
 
 import (
 	"fmt"
+	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"github.com/revel/revel"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -263,7 +263,7 @@ func (c MemberBlog) UpdateTheme(themeId string, isNew int) revel.Result {
 	userId := c.GetUserId()
 
 	theme := themeService.GetTheme(userId, themeId)
-	if theme.ThemeId == "" {
+	if theme.ThemeId.IsZero() {
 		return c.E404()
 	}
 	c.ViewArgs["theme"] = theme
@@ -406,7 +406,6 @@ func (c MemberBlog) uploadImage(themeId string) (re info.Re) {
 	return re
 }
 
-//
 // 使用主题
 func (c MemberBlog) ActiveTheme(themeId string) revel.Result {
 	re := info.NewRe()
@@ -515,8 +514,7 @@ func (c MemberBlog) NewTheme() revel.Result {
 	return c.Redirect("/member/blog/updateTheme?isNew=1&themeId=" + themeId)
 }
 
-//-----------
-//
+// -----------
 func (c MemberBlog) SetUserBlogBase(userBlog info.UserBlogBase) revel.Result {
 	re := info.NewRe()
 	re.Ok = blogService.UpdateUserBlogBase(c.GetUserId(), userBlog)

@@ -1,24 +1,24 @@
 package info
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/lea"
 	"time"
 )
 
 // 在数据库中每个
 // 修改字段必须要在NotebookService中修改ParseAndSortNotebooks(没有匿名字段), 以后重构
 type Notebook struct {
-	NotebookId       bson.ObjectId `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
-	UserId           bson.ObjectId `bson:"UserId"`
-	ParentNotebookId bson.ObjectId `bson:"ParentNotebookId,omitempty"` // 上级
-	Seq              int           `bson:"Seq"`                        // 排序
-	Title            string        `bson:"Title"`                      // 标题
-	UrlTitle         string        `bson:"UrlTitle"`                   // Url标题 2014/11.11加
-	NumberNotes      int           `bson:"NumberNotes"`                // 笔记数
-	IsTrash          bool          `bson:"IsTrash,omitempty"`          // 是否是trash, 默认是false
-	IsBlog           bool          `bson:"IsBlog,omitempty"`           // 是否是Blog 2013/12/29 新加
-	CreatedTime      time.Time     `bson:"CreatedTime,omitempty"`
-	UpdatedTime      time.Time     `bson:"UpdatedTime,omitempty"`
+	NotebookId       lea.ObjectID `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
+	UserId           lea.ObjectID `bson:"UserId"`
+	ParentNotebookId lea.ObjectID `bson:"ParentNotebookId,omitempty"` // 上级
+	Seq              int          `bson:"Seq"`                        // 排序
+	Title            string       `bson:"Title"`                      // 标题
+	UrlTitle         string       `bson:"UrlTitle"`                   // Url标题 2014/11.11加
+	NumberNotes      int          `bson:"NumberNotes"`                // 笔记数
+	IsTrash          bool         `bson:"IsTrash,omitempty"`          // 是否是trash, 默认是false
+	IsBlog           bool         `bson:"IsBlog,omitempty"`           // 是否是Blog 2013/12/29 新加
+	CreatedTime      time.Time    `bson:"CreatedTime,omitempty"`
+	UpdatedTime      time.Time    `bson:"UpdatedTime,omitempty"`
 
 	// 2015/1/15, 更新序号
 	Usn       int  `bson:"Usn"` // UpdateSequenceNum

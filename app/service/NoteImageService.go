@@ -4,7 +4,7 @@ import (
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"regexp"
 	//	"time"
 )
@@ -13,12 +13,12 @@ type NoteImageService struct {
 }
 
 // 通过id, userId得到noteIds
-func (this *NoteImageService) GetNoteIds(imageId string) []bson.ObjectId {
+func (this *NoteImageService) GetNoteIds(imageId string) []ObjectID {
 	noteImages := []info.NoteImage{}
-	db.ListByQWithFields(db.NoteImages, bson.M{"ImageId": bson.ObjectIdHex(imageId)}, []string{"NoteId"}, &noteImages)
+	db.ListByQWithFields(db.NoteImages, bson.M{"ImageId": db.MustObjectIDFromHex(imageId)}, []string{"NoteId"}, &noteImages)
 
 	if noteImages != nil && len(noteImages) > 0 {
-		noteIds := make([]bson.ObjectId, len(noteImages))
+		noteIds := make([]ObjectID, len(noteImages))
 		cnt := len(noteImages)
 		for i := 0; i < cnt; i++ {
 			noteIds[i] = noteImages[i].NoteId
@@ -44,11 +44,11 @@ func (this *NoteImageService) UpdateNoteImages(userId, noteId, imgSrc, content s
 	find := reg.FindAllStringSubmatch(content, -1) // 查找所有的
 
 	// 删除旧的
-	db.DeleteAll(db.NoteImages, bson.M{"NoteId": bson.ObjectIdHex(noteId)})
+	db.DeleteAll(db.NoteImages, bson.M{"NoteId": db.MustObjectIDFromHex(noteId)})
 
 	// 添加新的
 	var fileId string
-	noteImage := info.NoteImage{NoteId: bson.ObjectIdHex(noteId)}
+	noteImage := info.NoteImage{NoteId: db.MustObjectIDFromHex(noteId)}
 	hasAdded := make(map[string]bool)
 	if find != nil && len(find) > 0 {
 		for _, each := range find {
@@ -59,7 +59,7 @@ func (this *NoteImageService) UpdateNoteImages(userId, noteId, imgSrc, content s
 					Log(fileId)
 					// 判断是否是我的文件
 					if fileService.IsMyFile(userId, fileId) {
-						noteImage.ImageId = bson.ObjectIdHex(fileId)
+						noteImage.ImageId = db.MustObjectIDFromHex(fileId)
 						db.Insert(db.NoteImages, noteImage)
 					}
 					hasAdded[fileId] = true
@@ -76,7 +76,7 @@ func (this *NoteImageService) CopyNoteImages(fromNoteId, fromUserId, newNoteId, 
 	/* 弃用之
 	// 得到fromNoteId的noteImages, 如果为空, 则直接返回content
 	noteImages := []info.NoteImage{}
-	db.ListByQWithFields(db.NoteImages, bson.M{"NoteId": bson.ObjectIdHex(fromNoteId)}, []string{"ImageId"}, &noteImages)
+	db.ListByQWithFields(db.NoteImages, bson.M{"NoteId": db.MustObjectIDFromHex(fromNoteId)}, []string{"ImageId"}, &noteImages)
 	if len(noteImages) == 0 {
 		return content;
 	}
@@ -103,7 +103,7 @@ func (this *NoteImageService) CopyNoteImages(fromNoteId, fromUserId, newNoteId, 
 		fileId := each[len(each)-24:] // 得到后24位, 也即id
 
 		if _, ok := replaceMap[fileId]; !ok {
-			if bson.IsObjectIdHex(fileId) {
+			if db.IsValidObjectIDHex(fileId) {
 				ok2, newImageId := fileService.CopyImage(fromUserId, fileId, toUserId)
 				if ok2 {
 					replaceMap[fileId] = newImageId
@@ -128,13 +128,12 @@ func (this *NoteImageService) CopyNoteImages(fromNoteId, fromUserId, newNoteId, 
 	return content
 }
 
-//
-func (this *NoteImageService) getImagesByNoteIds(noteIds []bson.ObjectId) map[string][]info.File {
+func (this *NoteImageService) getImagesByNoteIds(noteIds []ObjectID) map[string][]info.File {
 	noteNoteImages := []info.NoteImage{}
 	db.ListByQ(db.NoteImages, bson.M{"NoteId": bson.M{"$in": noteIds}}, &noteNoteImages)
 
 	// 得到imageId, 再去files表查所有的Files
-	imageIds := []bson.ObjectId{}
+	imageIds := []ObjectID{}
 
 	// 图片1 => N notes
 	imageIdNotes := map[string][]string{} // imageId => [noteId1, noteId2, ...]

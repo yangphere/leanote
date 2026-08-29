@@ -61,7 +61,7 @@ func (c AdminSetting) DoDemo(demoUsername, demoPassword string) revel.Result {
 		fmt.Println(err)
 		return c.RenderJSON(info.Re{Ok: false})
 	}
-	if userInfo.UserId == "" {
+	if userInfo.UserId.IsZero() {
 		re.Msg = "The User is Not Exists"
 		return c.RenderJSON(re)
 	}

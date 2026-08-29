@@ -1,12 +1,12 @@
 package info
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/lea"
 )
 
 // 笔记内部图片
 type NoteImage struct {
-	NoteImageId bson.ObjectId `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
-	NoteId      bson.ObjectId `bson:"NoteId"`        // 笔记
-	ImageId     bson.ObjectId `bson:"ImageId"`       // 图片fileId
+	NoteImageId lea.ObjectID `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
+	NoteId      lea.ObjectID `bson:"NoteId"`        // 笔记
+	ImageId     lea.ObjectID `bson:"ImageId"`       // 图片fileId
 }

@@ -4,7 +4,7 @@ import (
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
 )
 
@@ -115,7 +115,7 @@ func (this *UpgradeService) moveTag() {
 		if tagTitles != nil && len(tagTitles) > 0 {
 			for _, tagTitle := range tagTitles {
 				noteTag := info.NoteTag{}
-				noteTag.TagId = bson.NewObjectId()
+				noteTag.TagId = db.NewObjectID()
 				noteTag.Count = 1
 				noteTag.Tag = tagTitle
 				noteTag.UserId = eachTag.UserId
