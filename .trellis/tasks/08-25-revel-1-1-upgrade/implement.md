@@ -62,10 +62,12 @@
   （双版本 replay Golden 聚合 hash 与基线零差异；npm test 63/63；build 后零漂移。）
 - [x] 对比 `conf/routes`、`conf/app.conf`、`app/init.go`、四套 controller `init.go`、`tools.go`、`sh/*.sh`、`.travis.yml`：确认无语义改动（结构基线计数见 PRD Confirmed Facts）。
   （git diff --name-only 仅 go.mod/go.sum/tools.go；tools.go 仅新增一行钉住 + 注释，业务与配置零改动。）
-- [ ] C-a PR 的 regression-baseline workflow 双版本 `go-replay` 真实运行绿色（AC-Ca9 取证）。
-  （**pending-push 取证**，沿用 A 的回填先例：本实现提交尚在本地 dev 未推送（发布前留给用户独立评审），
-  与 A 期 08-27 push run 33041448799 / 08-28 dispatch run 33179138645 双版本 go-replay 绿同构的
-  套件已在本机双版本全绿；下次 push 后以真实运行回填本项。）
+- [x] C-a PR 的 regression-baseline workflow 双版本 `go-replay` 真实运行绿色（AC-Ca9 取证）。
+  （**2026-08-29 push run [33223459179](https://github.com/yangphere/leanote/actions/runs/33223459179)
+  回填**：C-a push 提交 `318a1f0` 上 `go-replay (1.26.7)` 与 `go-replay (1.27.0)` 双 job 均 success；
+  1.27.0 首跑因 proxy.golang.org 下载瞬断（stream INTERNAL_ERROR）失败，`--failed` 重跑后通过（网络抖动，非代码差异）。
+  同 run 的 node-tests 失败属 **E-jQ 门禁域**（详见下注），不落入 AC-Ca9 的 go-replay 判据。
+  归档按用户条件（整 run 绿）暂缓，待 E-jQ 发现处置后执行。）
 - [x] `gofmt`、`git diff --check` 通过；逐项核对 AC-Ca1..AC-Ca10；diff 不含 C-b 架构代码。
   （tools.go blob gofmt 零 diff；AC 逐项核对见 implement 末尾验收清单。
   **2026-08-28 评审修正**：此前对干净工作树的无范围 `git diff --check` 是空核（恒过、不可复现）；
@@ -75,3 +77,14 @@
 ## Rollback Point
 
 回滚 `go.mod`、`go.sum` 与必要编译适配即可恢复 A 交付的 v1.0 基线；生成文件不入库，不参与回滚。任一不可解释差异（Golden 差异、Cookie 字节不兼容、A 生成契约破坏、双版本编译失败）停止 C-a，回退并在 C-b 设计中记录，不改 Golden 强行接受。
+
+## 归档备注（2026-08-29）
+
+- AC-Ca9 取证已回填（push run 33223459179 双版本 go-replay 绿，见 Task 4）。C-a 归档暂缓：同 run 的
+  node-tests 失败属 **E-jQ（08-25-jquery-upgrade）门禁域**，非本任务改动（前端资产零变化）：
+  CI headless Chromium 下诊断 E2E 断言"第一方脚本不得触发 JQMIGRATE warning"失败，offender 为
+  `JQMIGRATE: DEPRECATED: jQuery.fn.focus() event shorthand`（本地有头 Chrome/Edge/Firefox 未触发；
+  该弃用告警由运行时调用触发，环境相关）。候选第一方调用点：`public/js/common.js:1275`
+  （`target.focus()`）、`public/admin/js/admin.js:149`（`input.focus()`）——是否为 jQuery 对象待
+  E-jQ 以其归因数据确认；修复方向按 R-jQ5 为第一方直接现代化（程序性聚焦改 `.trigger("focus")`）。
+- 归档前置条件：E-jQ 发现修复后整 run 绿（用户条件），届时本任务一并归档。
