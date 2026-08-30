@@ -39,6 +39,6 @@
 ## 实现复核补充（2026-08-30）
 
 - 已将 `public/md/main-v2.js` 中剩余的第一方 jQuery focus 简写改为显式 `.trigger('focus')`，并用锁定的 esbuild 重新生成 `public/md/main-v2.min.js`；随后 `npm run build` 再生 `public/js/markdown-v2.min.js`。
-- 本地复核通过：`npm test` 63/63、`go test ./app/controllers ./app/db ./app/tests/harness/...`、`task.py validate 08-25-jquery-upgrade`、`git diff --check` 和 Node 语法检查均通过。
+- 本地复核通过：`npm test` 63/63、`go test -p 1 ./app/controllers ./app/db ./app/tests/harness/...`、`task.py validate 08-25-jquery-upgrade`、`git diff --check` 和 Node 语法检查均通过。harness 主包与 `cmd/e2e` 子包共享固定 Docker 容器名和生成目录，验证时必须使用 `-p 1` 或分别串行运行，不能把 `./app/tests/harness/...` 作为并行 wildcard 命令。
 - 规格审核阶段未运行真实 Docker/MongoDB/Revel/Playwright E2E；该阶段不以缺失环境证据宣称通过。实现阶段的真实 E2E 证据应以同一任务的最新实现记录和复核输出为准。
 - 真实 Safari 与前一主版本浏览器 smoke 仍是 AC-jQ9 的外部发布阻断项；本地环境未伪造其通过证据。
