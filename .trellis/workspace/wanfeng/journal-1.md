@@ -277,3 +277,25 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 12: Bootstrap 5.3 升级收口
+<!-- trellis-session: v=2 fp=93fc7d3db8a5663a -->
+
+**Date**: 2026-08-30
+**Task**: Bootstrap 5.3 升级收口
+**Branch**: `codex/bootstrap-5-3-upgrade`
+
+### Summary
+
+完成 Bootstrap 5.3.8 资源、模板、博客主题、图片 iframe 与 BootstrapDialog 兼容迁移，补充组件/跨 iframe/资源契约测试并清理 Bootstrap 3 副本。npm run build、npm test 与 Chromium 组件/iframe 测试通过；build-smoke、真实服务 E2E 和多浏览器 smoke 因环境变量、服务和凭据缺失保持阻断。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `619b569` | fix: 完成 Bootstrap 5.3 升级与兼容修复 |
+
+### Status
+
+[OK] **Completed**
