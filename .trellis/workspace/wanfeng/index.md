@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 10
+- **Total Sessions**: 11
 - **Last Active**: 2026-08-30
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~257 | Active |
+| `journal-1.md` | ~279 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 11 | 2026-08-30 | jQuery 3.7 升级提交与归档 | `69eefae` | `dev` |
 | 10 | 2026-08-30 | Revel 迁移规划复核、提交与归档 | `4ae8578` | `dev` |
 | 9 | 2026-08-30 | C-b 需求规格审核：确认唯一 ready 叶并落盘规格修订 | `3bc0ff9` | `dev` |
 | 8 | 2026-08-29 | C-b revel-migration：规格审核三轮 + Task 1/2 实现与三轮四层评审 | `6f44a9c` | `dev` |

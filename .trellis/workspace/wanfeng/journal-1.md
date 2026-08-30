@@ -255,3 +255,25 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Next Steps
 
 - 按归档 implement.md 中的主站批次前置框架项继续实现。
+
+
+## Session 11: jQuery 3.7 升级提交与归档
+<!-- trellis-session: v=2 fp=eedb0decc8d92218 -->
+
+**Date**: 2026-08-30
+**Task**: jQuery 3.7 升级提交与归档
+**Branch**: `dev`
+
+### Summary
+
+完成 jQuery 3.7.1 运行时升级、E2E 隔离与门禁修复；通过 npm/Go/任务校验，修正串行 harness 验证记录；提交 69eefae，随后归档任务。Safari 与前一主版本浏览器 smoke 仍是外部发布阻断项。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `69eefae` | fix: 完成 jQuery 3.7 升级与 E2E 门禁修复 |
+
+### Status
+
+[OK] **Completed**
