@@ -11,7 +11,7 @@
 <div class="m-b-md"> <h3 class="m-b-none">{{msg . "group"}}</h3></div>
 
 <p>
-	<a class="btn btn-default btn-add-group"><span class="fa fa-plus"></span> {{msg . "newGroup"}}</a>
+	<a class="btn btn-secondary btn-add-group"><span class="fa fa-plus"></span> {{msg . "newGroup"}}</a>
 </p>
 
 
@@ -19,21 +19,21 @@
 	<li class="list-group-item" data-id="[[:UserId]]">
 		[[:Username]] [[if Email != Username]]([[:Email]])[[/if]]
 		<a title="{{msg . "deleteMember"}}" class="delete-user">
-			<span class="fa fa-remove pull-right text-xs m-t-sm"></span>
+			<span class="fa fa-remove float-end text-xs m-t-sm"></span>
 		</a>
 	</li>
 </script>
 
 <script type="text/x-jsrender" id="tGroup">
 	<div class="col-sm-4 each-group" data-id="[[:GroupId]]">
-		<section class="panel panel-default">
-		<header class="panel-heading bg-success lt no-border">
+		<section class="card">
+		<header class="card-header bg-success lt no-border">
 			<div class="clearfix">
 				<div class="clear">
 					<div class="h3 m-t-xs m-b-xs text-white">
 						 <input type="text" data-ever="[[:Title]]" value="[[:Title]]" class="group-title" />
 						 <a title="{{msg . "deleteGroup"}}" class="delete-group">
-							 <i class="fa fa-remove text-white pull-right text-xs m-t-sm"></i>
+							 <i class="fa fa-remove text-white float-end text-xs m-t-sm"></i>
 						 </a>
 					</div>
 				</div>
@@ -53,14 +53,14 @@
 <div class="row" id="groups">
 	{{range .groups}}
 	<div class="col-sm-4 each-group" data-id="{{.GroupId.Hex}}">
-		<section class="panel panel-default">
-		<header class="panel-heading bg-success lt no-border">
+		<section class="card">
+		<header class="card-header bg-success lt no-border">
 			<div class="clearfix">
 				<div class="clear">
 					<div class="h3 m-t-xs m-b-xs text-white">
 						 <input type="text" data-ever="{{.Title}}" value="{{.Title}}" class="group-title" />
 						 <a title="{{msg $ "deleteGroup"}}" class="delete-group">
-							 <i class="fa fa-remove text-white pull-right text-xs m-t-sm"></i>
+							 <i class="fa fa-remove text-white float-end text-xs m-t-sm"></i>
 						 </a>
 					</div>
 				</div>
@@ -72,7 +72,7 @@
 			<li class="list-group-item" data-id="{{.UserId.Hex}}">
 				{{.Username}} {{if not (eq .Email .Username)}}({{.Email}}){{end}}
 				<a title="{{msg $ "deleteMember"}}" class="delete-user">
-					<span class="fa fa-remove pull-right text-xs m-t-sm"></span>
+					<span class="fa fa-remove float-end text-xs m-t-sm"></span>
 				</a>
 			</li>
 			{{end}}
@@ -104,7 +104,7 @@ var group = {
 		var classes = ["bg-warning", "bg-danger", "bg-success", "bg-dark", "bg-primary"];
 		var i = 0;
 		var len = classes.length;
-		$(".panel-heading").each(function() {
+		$(".card-header").each(function() {
 			$(this).removeClass("bg-success").addClass(classes[i%len]);
 			i++;
 		});

@@ -5,15 +5,15 @@
 
 <div class="col-sm-6">
 	<form id="add_user_form">
-		<section class="panel panel-default">
-			<div class="panel-body">
-				Current Version: <span class="label label-success">leanote v{{.version}}</span>
+		<section class="card">
+			<div class="card-body">
+				Current Version: <span class="badge text-bg-success">leanote v{{.version}}</span>
 				<ul>
 					<li>Api support (Enable Leanote Desktop App to connect server))</li>
 					<li>Update tags</li>
 				</ul>
 			</div>
-			<footer class="panel-footer text-right bg-light lter">
+			<footer class="card-footer text-end bg-light lter">
 				<button type="submit" id="submit" class="btn btn-success btn-s-xs">Upgrade to v1.0-beta.4</button>
 			</footer>
 		</section>
@@ -29,14 +29,17 @@ $("#submit").on('click', function(e) {
 	e.preventDefault();
 	var t = this;
 	art.confirm("Are you sure to upgrade to v1.0-beta.4 ? Please don't try to upgrade twice.", function() {
-		$(t).button('loading');
+		setButtonLoading(t, true);
 		ajaxPost("/adminUpgrade/UpgradeBeta3ToBeta4", {}, function(ret){
-			$(t).button('reset')
+			setButtonLoading(t, false)
 			if(!ret.Ok) {
 				art.alert(ret.Msg)
 			} else {
 				art.tips("Success");
 			}
+		}, function() {
+			setButtonLoading(t, false);
+			alert("leanote出现了错误!");
 		});
 	});
 });

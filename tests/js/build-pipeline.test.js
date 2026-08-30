@@ -22,6 +22,14 @@ function copyBuildTree() {
       return relative === '' || relative === 'package.json' || relative.split(path.sep)[0] === 'dist';
     },
   });
+  // Bootstrap is a direct npm input for the canonical core and bundles.
+  fs.cpSync(path.join(ROOT, 'node_modules', 'bootstrap'), path.join(temp, 'node_modules', 'bootstrap'), {
+    recursive: true,
+    filter: (source) => {
+      const relative = path.relative(path.join(ROOT, 'node_modules', 'bootstrap'), source);
+      return relative === '' || relative === 'package.json' || relative === 'LICENSE' || relative.split(path.sep)[0] === 'dist';
+    },
+  });
   // Same for the blueimp-file-upload dist files consumed by the plugins/album bundles.
   fs.cpSync(path.join(ROOT, 'node_modules', 'blueimp-file-upload'), path.join(temp, 'node_modules', 'blueimp-file-upload'), {
     recursive: true,
@@ -33,10 +41,10 @@ function copyBuildTree() {
   return temp;
 }
 
-test('manifest declares the complete 34-output contract', async () => {
+test('manifest declares the complete 38-output contract', async () => {
   const { MANIFEST, BUILD_OUTPUTS, validateManifest } = await import('../../scripts/build/manifest.mjs');
-  assert.equal(BUILD_OUTPUTS.length, 34);
-  assert.equal(new Set(BUILD_OUTPUTS).size, 34);
+  assert.equal(BUILD_OUTPUTS.length, 38);
+  assert.equal(new Set(BUILD_OUTPUTS).size, 38);
   assert.equal(MANIFEST.i18nDerivedInputExclusions.includes('public/md/main-v2.min.js'), true);
   validateManifest(MANIFEST);
   for (const output of BUILD_OUTPUTS) {
@@ -44,6 +52,51 @@ test('manifest declares the complete 34-output contract', async () => {
   }
   const nonCanonical = { ...MANIFEST, js: MANIFEST.js.map((entry, index) => index === 0 ? { ...entry, output: 'public//js/dep.min.js' } : entry) };
   assert.throws(() => validateManifest(nonCanonical), /invalid output/);
+});
+
+test('manifest locks Bootstrap 5.3.8 inputs and publishes the dialog compatibility asset', async () => {
+  const { MANIFEST } = await import('../../scripts/build/manifest.mjs');
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  assert.equal(pkg.dependencies?.bootstrap, '5.3.8');
+  const entries = new Map(MANIFEST.js.map((entry) => [entry.name, entry]));
+  assert.deepEqual(entries.get('bootstrap-js')?.inputs, ['node_modules/bootstrap/dist/js/bootstrap.bundle.js']);
+  assert.equal(entries.get('bootstrap-js')?.stripSourceMappingURL, true);
+  assert.deepEqual(entries.get('bootstrap-js-min')?.inputs, ['node_modules/bootstrap/dist/js/bootstrap.bundle.min.js']);
+  assert.equal(entries.get('bootstrap-js-min')?.stripSourceMappingURL, true);
+  assert.deepEqual(entries.get('bootstrap-dialog')?.inputs, ['public/js/bootstrap-dialog-source.js']);
+  assert.equal(entries.get('bootstrap-dialog')?.output, 'public/js/bootstrap-dialog.js');
+  assert.equal(entries.get('bootstrap-dialog')?.stripSourceMappingURL, true);
+  const cssEntries = new Map(MANIFEST.css.map((entry) => [entry.name, entry]));
+  assert.deepEqual(cssEntries.get('bootstrap-css')?.inputs, ['node_modules/bootstrap/dist/css/bootstrap.css']);
+  assert.equal(cssEntries.get('bootstrap-css')?.stripSourceMappingURL, true);
+  assert.deepEqual(cssEntries.get('bootstrap-css-min')?.inputs, ['node_modules/bootstrap/dist/css/bootstrap.min.css']);
+  assert.equal(cssEntries.get('bootstrap-css-min')?.stripSourceMappingURL, true);
+});
+
+test('manifest keeps declared source inputs separate from generated outputs', async () => {
+  const { MANIFEST } = await import('../../scripts/build/manifest.mjs');
+  for (const entry of [...MANIFEST.js, ...MANIFEST.css, ...MANIFEST.i18n, MANIFEST.noteHtml]) {
+    assert.equal(entry.inputs.includes(entry.output), false, `${entry.name} must not use its generated output as an input`);
+  }
+});
+
+test('published Bootstrap outputs are byte-derived from the locked npm 5.3.8 inputs', () => {
+  const stripSourceMappingURL = (source) => source
+    .replace(/^\s*\/\*[#@]\s*sourceMappingURL=[^*]+\*\/\s*$/gm, '')
+    .replace(/^\s*\/\/[#@]\s*sourceMappingURL=[^\r\n]+\s*$/gm, '')
+    .replace(/\n{3,}/g, '\n\n');
+  const pairs = [
+    ['node_modules/bootstrap/dist/css/bootstrap.css', 'public/css/bootstrap.css'],
+    ['node_modules/bootstrap/dist/css/bootstrap.min.css', 'public/css/bootstrap-min.css'],
+    ['node_modules/bootstrap/dist/js/bootstrap.bundle.js', 'public/js/bootstrap.js'],
+    ['node_modules/bootstrap/dist/js/bootstrap.bundle.min.js', 'public/js/bootstrap-min.js'],
+  ];
+  for (const [input, output] of pairs) {
+    const expected = stripSourceMappingURL(fs.readFileSync(path.join(ROOT, input), 'utf8').replace(/\r\n?/g, '\n'));
+    const actual = fs.readFileSync(path.join(ROOT, output), 'utf8').replace(/\r\n?/g, '\n');
+    assert.equal(actual, expected, `${output} must be generated from ${input}`);
+    assert.match(actual, /Bootstrap\s+v?5\.3\.8/);
+  }
 });
 
 test('node guard rejects unsupported versions before build', async () => {
@@ -75,7 +128,7 @@ test('i18n scanner excludes generated markdown derivative', async () => {
   assert.equal(scan.keys.some((key) => key.key === '{{msg . '), false);
   assert.equal(scan.dynamic.some((item) => item.path === 'public/md/main-v2.js' && item.line === 17417), true);
   assert.deepEqual(scan.dynamic.map(({ path, line, column }) => ({ path, line, column })), [
-    { path: 'public/js/common.js', line: 1164, column: 11 },
+    { path: 'public/js/common.js', line: 1234, column: 11 },
     { path: 'public/md/main-v2.js', line: 17417, column: 23 },
   ]);
 });
@@ -435,6 +488,19 @@ test('CSS generator emits a non-empty minified bundle', async () => {
   fs.writeFileSync(path.join(temp, 'style.css'), '.foo { color: red; }');
   const output = await buildCss({ name: 'css', inputs: ['style.css'], output: 'out.css' }, temp, temp);
   assert.match(fs.readFileSync(output, 'utf8'), /\.foo\{color:red\}/);
+  fs.rmSync(temp, { recursive: true, force: true });
+});
+
+test('asset generators strip dangling source map comments when requested', async () => {
+  const { buildJavaScript } = await import('../../scripts/build/js.mjs');
+  const { buildCss } = await import('../../scripts/build/css.mjs');
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'leanote-build-test-'));
+  fs.writeFileSync(path.join(temp, 'source.js'), 'window.asset = true;\n//# sourceMappingURL=source.js.map\n');
+  fs.writeFileSync(path.join(temp, 'source.css'), '.asset { color: red; }\n/*# sourceMappingURL=source.css.map */\n');
+  const jsOutput = await buildJavaScript({ name: 'js', transform: 'concat', stripSourceMappingURL: true, inputs: ['source.js'], output: 'out.js' }, temp, temp);
+  const cssOutput = await buildCss({ name: 'css', transform: 'copy', stripSourceMappingURL: true, inputs: ['source.css'], output: 'out.css' }, temp, temp);
+  assert.doesNotMatch(fs.readFileSync(jsOutput, 'utf8'), /sourceMappingURL=/);
+  assert.doesNotMatch(fs.readFileSync(cssOutput, 'utf8'), /sourceMappingURL=/);
   fs.rmSync(temp, { recursive: true, force: true });
 });
 

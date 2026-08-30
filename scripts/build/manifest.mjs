@@ -17,14 +17,23 @@ const js = [
   { name: 'jquery-runtime', kind: 'js', transform: 'concat', inputs: [
     'node_modules/jquery/dist/jquery.min.js',
   ], output: 'public/js/jquery-1.9.0.min.js', url: '/js/jquery-1.9.0.min.js' },
+  { name: 'bootstrap-js', kind: 'js', transform: 'concat', inputs: [
+    'node_modules/bootstrap/dist/js/bootstrap.bundle.js',
+  ], stripSourceMappingURL: true, output: 'public/js/bootstrap.js', url: '/js/bootstrap.js' },
+  { name: 'bootstrap-js-min', kind: 'js', transform: 'concat', inputs: [
+    'node_modules/bootstrap/dist/js/bootstrap.bundle.min.js',
+  ], stripSourceMappingURL: true, output: 'public/js/bootstrap-min.js', url: '/js/bootstrap-min.js' },
+  { name: 'bootstrap-dialog', kind: 'js', transform: 'concat', inputs: [
+    'public/js/bootstrap-dialog-source.js',
+  ], stripSourceMappingURL: true, output: 'public/js/bootstrap-dialog.js', url: '/js/bootstrap-dialog.js' },
   { name: 'dep', kind: 'js', transform: 'concat', inputs: [
     'node_modules/jquery/dist/jquery.min.js',
     'public/js/jquery.ztree.all-3.5-min.js',
     'public/js/jQuery-slimScroll-1.3.0/jquery.slimscroll-min.js',
     'public/js/contextmenu/jquery.contextmenu-min.js',
-    'public/js/bootstrap-min.js',
+    'node_modules/bootstrap/dist/js/bootstrap.bundle.min.js',
     'public/js/object_id.js',
-  ], output: 'public/js/dep.min.js', url: '/js/dep.min.js' },
+  ], stripSourceMappingURL: true, output: 'public/js/dep.min.js', url: '/js/dep.min.js' },
   { name: 'app', kind: 'js', transform: 'esbuild-concat', inputs: [
     'public/js/common.js', 'public/js/app/note.js', 'public/js/app/page.js',
     'public/js/app/tag.js', 'public/js/app/notebook.js', 'public/js/app/share.js',
@@ -39,7 +48,7 @@ const js = [
     'public/js/require.js', 'public/md/main-v2.min.js',
   ], output: 'public/js/markdown-v2.min.js', url: '/js/markdown-v2.min.js' },
   { name: 'album', kind: 'js', transform: 'esbuild-concat', inputs: [
-    'node_modules/jquery/dist/jquery.min.js', 'public/js/bootstrap-min.js',
+    'node_modules/jquery/dist/jquery.min.js', 'node_modules/bootstrap/dist/js/bootstrap.bundle.min.js',
     ...fileuploadInputs, 'public/js/jquery.pagination.js',
     'public/album/js/main.js',
   ], amdGuard: fileuploadInputs, output: 'public/album/js/main.all.js', url: '/public/album/js/main.all.js' },
@@ -47,7 +56,8 @@ const js = [
 
 const css = [
   { name: 'album-css', kind: 'css', inputs: ['public/album/css/style.css'], output: 'public/album/css/style-min.css', url: '/public/album/css/style-min.css' },
-  { name: 'bootstrap-css', kind: 'css', inputs: ['public/css/bootstrap.css'], output: 'public/css/bootstrap-min.css', url: '/css/bootstrap-min.css' },
+  { name: 'bootstrap-css', kind: 'css', transform: 'copy', inputs: ['node_modules/bootstrap/dist/css/bootstrap.css'], stripSourceMappingURL: true, output: 'public/css/bootstrap.css', url: '/css/bootstrap.css' },
+  { name: 'bootstrap-css-min', kind: 'css', transform: 'copy', inputs: ['node_modules/bootstrap/dist/css/bootstrap.min.css'], stripSourceMappingURL: true, output: 'public/css/bootstrap-min.css', url: '/css/bootstrap-min.css' },
   { name: 'font-awesome-css', kind: 'css', inputs: ['public/css/font-awesome-4.2.0/css/font-awesome.css'], output: 'public/css/font-awesome-4.2.0/css/font-awesome-min.css', url: '/css/font-awesome-4.2.0/css/font-awesome-min.css' },
   { name: 'ztree-css', kind: 'css', inputs: ['public/css/zTreeStyle/zTreeStyle.css'], output: 'public/css/zTreeStyle/zTreeStyle-min.css', url: '/css/zTreeStyle/zTreeStyle-min.css' },
   { name: 'markdown-css', kind: 'css', inputs: ['public/md/themes/default.css'], output: 'public/md/themes/default-min.css', url: '/public/md/themes/default-min.css' },
@@ -75,7 +85,7 @@ const manifest = {
   ],
   i18nMessageFiles: ['msg', 'member', 'markdown', 'album', 'blog', 'tinymce_editor'],
   dynamicKeyExceptions: [
-    { path: 'public/js/common.js', line: 1164, column: 11 },
+    { path: 'public/js/common.js', line: 1234, column: 11 },
     { path: 'public/md/main-v2.js', line: 17417, column: 23 },
   ],
 };
@@ -111,7 +121,7 @@ export function validateManifest(input = manifest) {
       }
     }
   }
-  if (outputs.length !== 34) throw new Error(`expected 34 outputs, got ${outputs.length}`);
+  if (outputs.length !== 38) throw new Error(`expected 38 outputs, got ${outputs.length}`);
   for (const root of input.i18nScanRoots) validateRelative(root, 'scan root');
   const exclusions = input.i18nDerivedInputExclusions ?? [];
   const normalizedExclusions = exclusions.map((item) => validateRelative(item, 'i18n derived input exclusion'));

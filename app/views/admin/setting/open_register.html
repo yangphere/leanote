@@ -5,15 +5,15 @@
 
 <div class="col-sm-6">
 	<form id="form_data">
-		<section class="panel panel-default">
-			<div class="panel-body">
-				<div class="form-group">
+		<section class="card">
+			<div class="card-body">
+				<div class="mb-3">
 					<label>Open ?</label>
 					<input type="checkbox" class="form-control" name="openRegister" {{if .str.openRegister}}checked="checked"{{end}} value="1">
 				</div>
 			</div>
 			
-			<footer class="panel-footer text-right bg-light lter">
+			<footer class="card-footer text-end bg-light lter">
 				<button type="submit" id="submit" class="btn btn-success btn-s-xs">Submit</button>
 			</footer>
 		</section>
@@ -31,15 +31,18 @@ $(function() {
 		e.preventDefault();
 		var t = this;
 		if($("#form_data").valid()) {
-			$(t).button('loading');
+			setButtonLoading(t, true);
 			ajaxPost("/adminSetting/openRegister", getFormJsonData("form_data"), function(ret){
-				$(t).button('reset')
+				setButtonLoading(t, false)
 				if(!ret.Ok) {
 					art.alert(ret.Msg)
-				} else {
-					art.tips("Success");
-				}
-			});
+			} else {
+				art.tips("Success");
+			}
+		}, function() {
+			setButtonLoading(t, false);
+			alert("leanote出现了错误!");
+		});
 		}
 	});
 });

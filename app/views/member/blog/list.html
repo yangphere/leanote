@@ -5,7 +5,7 @@
 	width: 260px;
 }
 </style>
-<section class="panel panel-default">
+<section class="card">
 	<div class="row wrapper">
 		<div class="col-sm-5 m-b-xs">
 		</div>
@@ -15,7 +15,7 @@
 			<div class="input-group search-group">
 				<input type="text" class="input-sm form-control" placeholder="{{msg . "title"}}" id="keywords" value="{{.keywords}}" />
 				<span class="input-group-btn">
-					<button class="btn btn-sm btn-default" type="button" data-url="/member/blog/index">{{leaMsg $ "Search"}}</button>
+					<button class="btn btn-sm btn-secondary" type="button" data-url="/member/blog/index">{{leaMsg $ "Search"}}</button>
 				</span>
 			</div>
 		</div>
@@ -118,7 +118,7 @@
 							class="btn btn-sm btn-success"
 						{{else}}
 							title="{{msg $ "noSelfDefined"}}"
-							class="btn btn-sm btn-default"
+							class="btn btn-sm btn-secondary"
 						{{end}}
 						href="/member/blog/updateBlogAbstract?noteId={{.NoteId.Hex}}">{{msg $ "setAbstract"}}</a>
 					</td>
@@ -127,15 +127,15 @@
 			</tbody>
 		</table>
 	</div>
-	<footer class="panel-footer">
+	<footer class="card-footer">
 		<div class="row">
-			<div class="col-sm-4 hidden-xs">
+			<div class="col-sm-4 d-none d-sm-block">
 			</div>
 			<div class="col-sm-4 text-center">
 				<small class="text-muted inline m-t-sm m-b-sm">
 				</small>
 			</div>
-			<div class="col-sm-4 text-right text-center-xs">
+			<div class="col-sm-4 text-end text-center-xs">
 				{{set . "url" (urlConcat "/member/blog/index" "sorter" .sorter "keywords" .keywords)}}
 				{{template "member/blog/page.html" .}}
 			</div>

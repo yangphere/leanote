@@ -160,7 +160,7 @@ define('editor_drop_paste', [], function() {
 	        // This function is called when a file is added to the queue;
 	        // either via the browse button, or via drag/drop:
 	        add: function(e, data) {
-	            var tpl = $('<li><div class="alert alert-info"><img class="loader" src="/images/ajax-loader.gif"> <a class="close" data-dismiss="alert">×</a></div></li>');
+            var tpl = $('<li><div class="alert alert-info"><img class="loader" src="/images/ajax-loader.gif"> <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	
 	            // Append the file name and file size
 	            tpl.find('div').append(data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small>');
@@ -182,7 +182,7 @@ define('editor_drop_paste', [], function() {
 	                insertImage(data2);
 	            } else {
 	                data.context.empty();
-	                var tpl = $('<li><div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div></li>');
+                var tpl = $('<li><div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	                tpl.find('div').append('<b>' + getMsg('Error') + ':</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.result.Msg);
 	                data.context.append(tpl);
 	                setTimeout((function(tpl) {
@@ -195,7 +195,7 @@ define('editor_drop_paste', [], function() {
 	        },
 	        fail: function(e, data) {
 	            data.context.empty();
-	            var tpl = $('<li><div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div></li>');
+            var tpl = $('<li><div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	            tpl.find('div').append('<b>' + getMsg('Error') + ':</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.errorThrown);
 	            data.context.append(tpl);
 	            setTimeout((function(tpl) {

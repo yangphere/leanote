@@ -8,12 +8,12 @@ define('tips', [], function() {
             '<div class="modal-dialog modal-sm">',
                 '<div class="modal-content">',
                     '<div class="modal-header">',
-                        '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>',
+                        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="' + getMsg('close') + '"></button>',
                         '<h4 class="modal-title" class="modalTitle">' + getMsg('editorTips') + '</h4>',
                     '</div>',
                     '<div class="modal-body">' + getMsg('editorTipsInfo') + '</div>',
                     '<div class="modal-footer">',
-                        '<button type="button" class="btn btn-default" data-dismiss="modal">' + getMsg('close') + '</button>',
+                        '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">' + getMsg('close') + '</button>',
                     '</div>',
                 '</div>',
             '</div>',
@@ -23,7 +23,7 @@ define('tips', [], function() {
     var view = {
         init: function () {
             $("#tipsBtn").on('click', function() {
-                $tpl.modal({show: true});
+                showBootstrapModal($tpl[0]);
             });
         }
     };

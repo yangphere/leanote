@@ -1981,14 +1981,17 @@ var Attach = {
 			var attachId = $(this).closest('li').data("id");
 			var t = this;
 			if(confirm(getMsg("Are you sure to delete it ?"))) {
-				$(t).button("loading");
+				setButtonLoading(t, true);
 				ajaxPost("/attach/deleteAttach", {attachId: attachId}, function(re) {
-					$(t).button("reset");
+					setButtonLoading(t, false);
 					if(reIsOk(re)) {
 						self.deleteAttach(attachId);
 					} else {
 						alert(re.Msg);
 					}
+				}, function() {
+					setButtonLoading(t, false);
+					alert("leanote出现了错误!");
 				});
 			}
 		});
@@ -2089,7 +2092,7 @@ var Attach = {
 						'<div class="attach-process"> ' +
 						'	  <button class="btn btn-sm btn-warning delete-attach" data-loading-text="..." title="' + titleDelete + '"><i class="fa fa-trash-o"></i></button> ' + 
 						'	  <button type="button" class="btn btn-sm btn-primary download-attach" title="' + titleDownload + '"><i class="fa fa-download"></i></button> ' +
-						'	  <button type="button" class="btn btn-sm btn-default link-attach" title="' + titleLink + '"><i class="fa fa-link"></i></button> ' +
+						'	  <button type="button" class="btn btn-sm btn-secondary link-attach" title="' + titleLink + '"><i class="fa fa-link"></i></button> ' +
 						'</div>' + 
 					'</li>';
 			self.attachsMap[each.AttachId] = each;

@@ -1,3 +1,5 @@
 {"file": ".trellis/tasks/08-25-bootstrap-upgrade/prd.md", "reason": "检查 Bootstrap 5.3.8 版本唯一性、模板/iframe 行为和无视觉重设计。"}
 {"file": ".trellis/tasks/08-25-bootstrap-upgrade/design.md", "reason": "检查 data API、事件、插件和销毁路径没有旧 Bootstrap 兼容残留。"}
-{"file": ".trellis/tasks/08-25-jquery-upgrade/prd.md", "reason": "核对 Bootstrap 只依赖已完成的 jQuery 子任务。"}
+{"file": ".trellis/tasks/08-25-bootstrap-upgrade/research/bootstrap3-usage.md", "reason": "核对实际 3.0.2/3.0.3/3.2.0 基线、全部 URL/页面/iframe、插件所有权和允许保留的非 Bootstrap data 属性。"}
+{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "核对 manifest 唯一事实源、生成物零漂移和前端库升级顺序。"}
+{"file": ".trellis/tasks/archive/2026-08/08-25-jquery-upgrade/prd.md", "reason": "核对 Bootstrap 只依赖已完成的 jQuery 子任务及其 E2E/URL 契约。"}

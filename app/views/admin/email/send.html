@@ -5,16 +5,16 @@
 
 <div class="col-sm-12">
 	<form id="formContainer">
-		<section class="panel panel-default">
-			<header class="panel-heading font-bold">Email</header>
-			<div class="panel-body">
-				<div class="form-group">
+		<section class="card">
+			<header class="card-header font-bold">Email</header>
+			<div class="card-body">
+				<div class="mb-3">
 					<label>Email List</label>
 					<textarea type="text" rows="10" class="form-control" name="sendEmails">{{.str.sendEmails}}</textarea>
 					input email line by line
 				</div>
 				
-				<div class="form-group">
+				<div class="mb-3">
 					<label>Select Old Email</label>
 					<select class="form-control old-emails">
 						<option value="">---Select---</option>
@@ -26,19 +26,19 @@
 					</select>
 				</div>
 				
-				<div class="form-group">
+				<div class="mb-3">
 					<label>Subject</label>
 					<input type="text" class="form-control" id="latestEmailSubject" name="latestEmailSubject" value="{{$.str.latestEmailSubject}}">
 				</div>
 				
-				<div class="form-group">
+				<div class="mb-3">
 					<label>Body</label>
 					<textarea type="text" rows="10" id="latestEmailBody" class="form-control" name="latestEmailBody">{{$.str.latestEmailBody}}</textarea>
 				</div>
 				<label class="checkbox-inline"> <input type="checkbox" id="saveAsOldEmail" name="saveAsOldEmail" value="1"> Save As Old Email </label>
 			</div>
 			
-			<footer class="panel-footer text-right bg-light lter">
+			<footer class="card-footer text-end bg-light lter">
 				<button type="submit" id="submit" class="btn btn-success btn-s-xs">Submit</button>
 			</footer>
 		</section>
@@ -68,14 +68,17 @@ $(function() {
 			e.preventDefault();
 			var t = this;
 			if($("#formContainer").valid()) {
-				$(t).button('loading');
+		setButtonLoading(t, true);
 				ajaxPost("/adminEmail/sendEmailToEmails", getFormJsonData("formContainer"), function(ret){
-					$(t).button('reset')
+			setButtonLoading(t, false)
 					if(!ret.Ok) {
 						art.alert(ret.Msg)
 					} else {
 						art.tips("Success");
 					}
+				}, function() {
+					setButtonLoading(t, false);
+					alert("leanote出现了错误!");
 				});
 			}
 		});

@@ -72,7 +72,7 @@ define('attachment_upload', [], function(){
 	        		return;
 	        	}
 
-	            var tpl = $('<div class="alert alert-info"><img class="loader" src="/images/ajax-loader.gif"> <a class="close" data-dismiss="alert">×</a></div>');
+            var tpl = $('<div class="alert alert-info"><img class="loader" src="/images/ajax-loader.gif"> <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
 	
 	            // Append the file name and file size
 	            tpl.append(data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small>');
@@ -113,7 +113,7 @@ define('attachment_upload', [], function(){
 	            } else {
 	                var re = data.result;
 	                data.context.html("");
-	                var tpl = $('<div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div>');
+                var tpl = $('<div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
 	                tpl.append('<b>Error:</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.result.Msg);
 	                data.context.html(tpl);
 	                setTimeout((function(tpl) {
@@ -126,7 +126,7 @@ define('attachment_upload', [], function(){
 	        },
 	        fail: function(e, data) {
                 data.context.html("");
-	            var tpl = $('<div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div>');
+            var tpl = $('<div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
 	            tpl.append('<b>Error:</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.errorThrown);
 	            data.context.html(tpl);
 	            setTimeout((function(tpl) {

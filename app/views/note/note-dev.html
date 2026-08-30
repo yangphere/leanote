@@ -47,20 +47,20 @@ function log(o) {
 			<!-- <div id="headerContainer"> -->
 			<div id="header">
 
-				<a id="logo" href="/" title="Leanote {{msg . "home"}}" class="pull-left"></a>
-				<div id="switcher" class="pull-left">
+				<a id="logo" href="/" title="Leanote {{msg . "home"}}" class="float-start"></a>
+				<div id="switcher" class="float-start">
 					 <i class="fa fa-dedent" id="leftSwitcher" title="{{msg . "leftHidden"}}"></i>
 					 <span id="leftSwitcher2" class="fa fa-indent" title="{{msg . "leftShow"}}"></span>
 				</div>
 				<!-- search -->
-				<div class="pull-left" id="searchWrap">
-					<form class="navbar-form form-inline col-lg-2" id="searchNote">
+				<div class="float-start" id="searchWrap">
+					<form class="d-flex col-lg-2" id="searchNote">
 						<input class="form-control" placeholder="{{msg . "SearchNote"}}" type="text" id="searchNoteInput">
 					</form>
 				</div>
 
 				<!-- 全局按钮 -->
-				<div class="pull-left" style="" id="newNoteWrap">
+				<div class="float-start" style="" id="newNoteWrap">
 					<!-- 新建笔记 -->
 					<div id="newMyNote">
 						<a class="new-note" id="newNoteBtn" title="{{msg . "newNote"}}">
@@ -80,7 +80,7 @@ function log(o) {
 						<!--
 						<div class="dropdown" style="display: inline-block">
 							<a class="ios7-a dropdown-toggle"
-id="listNotebookDropdownMenu" data-toggle="dropdown">
+id="listNotebookDropdownMenu" data-bs-toggle="dropdown">
 								<i class="fa fa-angle-down"></i>
 							</a>
 							<div class="dropdown-menu dropdown-list" id="searchNotebookForAddDropdownList">
@@ -110,7 +110,7 @@ id="listNotebookDropdownMenu" data-toggle="dropdown">
 
 						<!--
 						<div class="dropdown" style="display: inline-block">
-<a id="listShareNotebookDropdownMenu" class="ios7-a dropdown-toggle" data-toggle="dropdown">
+<a id="listShareNotebookDropdownMenu" class="ios7-a dropdown-toggle" data-bs-toggle="dropdown">
 								<i class="fa fa-angle-down"></i>
 							</a>
 							<div class="dropdown-menu dropdown-list" id="searchNotebookForAddShareDropdownList" >
@@ -121,15 +121,15 @@ id="listNotebookDropdownMenu" data-toggle="dropdown">
 </div>
 				</div>
 
-				<div class="pull-left" id="leanoteMsg">
+				<div class="float-start" id="leanoteMsg">
 					<span id="msg" style="display: inline-block;"></span>
 					<span id="loading">
 					</span>
 				</div>
 
-				<div class="pull-right" id="myProfile">
+				<div class="float-end" id="myProfile">
 					<div class="dropdown">
-<a class="dropdown-toggle profile-img" title="{{.userInfo.Username}}" data-toggle="dropdown">
+<a class="dropdown-toggle profile-img" title="{{.userInfo.Username}}" data-bs-toggle="dropdown">
 <img alt="{{.userInfo.Username}}" title="{{.userInfo.Username}}" src="{{if .userInfo.Logo}}{{.userInfo.Logo}}{{else}}/images/blog/default_avatar.png{{end}}" id="myAvatar"/>
 							<span class="username">
 								{{.userInfo.Username}}
@@ -151,7 +151,7 @@ id="listNotebookDropdownMenu" data-toggle="dropdown">
 								</a>
 							</li>
 
-							<li role="presentation" class="divider"></li>
+							<li role="presentation" class="dropdown-divider"></li>
 							<li role="presentation">
 								<a href="/member/blog/index" target="_blank">
 <i class="fa fa-bold"></i>
@@ -165,14 +165,14 @@ id="listNotebookDropdownMenu" data-toggle="dropdown">
 								{{msg . "myBlog"}}</a>
 							</li>
 
-							<li role="presentation" class="divider my-link writing-mobile-hide"></li>
+							<li role="presentation" class="dropdown-divider my-link writing-mobile-hide"></li>
 							<li role="presentation" class="my-link toggle-editor-mode writing-mobile-hide" >
 								<a href="#writing" title="{{msg . "writingMode"}} ctrl/cmd+e"><i class="fa fa-rocket"></i>
 								{{msg . "writingMode"}}</a>
 							</li>
 
 							{{if .isAdmin}}
-							<li role="presentation" class="divider"></li>
+							<li role="presentation" class="dropdown-divider"></li>
 							<li role="presentation">
 								<a target="_blank" title="{{msg . "admin"}}" href="/admin/index">
 <i class="fa fa-dashboard"></i>
@@ -180,7 +180,7 @@ id="listNotebookDropdownMenu" data-toggle="dropdown">
 								</a>
 							</li>
 							{{end}}
-							<li role="presentation" class="divider"></li>
+							<li role="presentation" class="dropdown-divider"></li>
 							<li role="presentation" onclick="logout()">
 <i class="fa fa-sign-out"></i>
 								{{msg . "logout"}}
@@ -189,25 +189,25 @@ id="listNotebookDropdownMenu" data-toggle="dropdown">
 					</div>
 				</div>
 
-				<div class="pull-right top-nav writting-hide lea-blog">
+				<div class="float-end top-nav writting-hide lea-blog">
 <a target="_blank" href="http://lea.leanote.com">
 						{{msg . "Explore"}}
 					</a>
 				</div>
 
-				<div class="pull-right top-nav writting-hide" id="myBlog">
+				<div class="float-end top-nav writting-hide" id="myBlog">
 <a target="_blank" href="{{$.blogUrl}}/{{.userInfo.Username}}">
 						{{msg . "myBlog"}}
 					</a>
 				</div>
 
-				<div class="pull-right toggle-editor-mode top-nav" id="toggleEditorMode">
+				<div class="float-end toggle-editor-mode top-nav" id="toggleEditorMode">
 					<a href="#writing"><span>{{msg . "writingMode"}}</span></a>
 				</div>
 
 				{{if eq .userInfo.Email "demo@leanote.com"}}
 {{if .openRegister}}
-				<div class="pull-right top-nav" id="demoRegister">
+				<div class="float-end top-nav" id="demoRegister">
 					<span>
 						{{msg . "demoRegister"}}
 					</span>
@@ -216,9 +216,9 @@ id="listNotebookDropdownMenu" data-toggle="dropdown">
 				{{end}}
 
 				<!--
-				<ul id="setting" class="pull-right">
+				<ul id="setting" class="float-end">
 					<li class="dropdown messages">
-<a class="dropdown-toggle" data-toggle="dropdown">
+<a class="dropdown-toggle" data-bs-toggle="dropdown">
 							<span aria-hidden="true" class="icon se7en-flag"></span>
 							<div class="sr-only">Messages</div>
 							<p class="counter">3</p>
@@ -230,7 +230,7 @@ id="listNotebookDropdownMenu" data-toggle="dropdown">
 					</li>
 
 					<li class="dropdown settings">
-<a class="dropdown-toggle" data-toggle="dropdown">
+<a class="dropdown-toggle" data-bs-toggle="dropdown">
 							<span aria-hidden="true" class="icon se7en-gear"></span>
 							<div class="sr-only">Settings</div>
 						</a>
@@ -260,11 +260,11 @@ id="listNotebookDropdownMenu" data-toggle="dropdown">
 					<div id="notebook">
 						<div class="folderNote opened" id="myNotebooks">
 							<div class="folderHeader clearfix">
-<i class="fa fa-book pull-left fa-left"></i>
-								<span class="pull-left">
+<i class="fa fa-book float-start fa-left"></i>
+								<span class="float-start">
 									{{msg . "notebook"}}
 								</span>
-								<div class="pull-right" id="addNotebookPlus" title="{{msg . "addNotebook"}}">
+								<div class="float-end" id="addNotebookPlus" title="{{msg . "addNotebook"}}">
 									<i class="fa  fa-plus" title="{{msg . "addNotebook"}}"></i>
 								</div>
 							</div>
@@ -346,7 +346,7 @@ id="listNotebookDropdownMenu" data-toggle="dropdown">
 					<div id="noteList">
 					<div class="clearfix" id="notesAndSort" style="position: relative">
 
-						<div class="pull-left">
+						<div class="float-start">
 							<!-- 我的笔记本 -->
 							<div class="dropdown" id="myNotebookNavForListNav">
 								<a class="ios7-a">
@@ -363,13 +363,13 @@ id="listNotebookDropdownMenu" data-toggle="dropdown">
 						</div>
 
 						<!-- tag search -->
-						<div class="pull-left" id="tagSearch"></div>
+						<div class="float-start" id="tagSearch"></div>
 
 						<!-- sort type -->
 						<div id="sortType">
 							<div class="dropdown">
 								<a class="ios7-a dropdown-toggle" id="dropdownMenu1"
-data-toggle="dropdown">
+data-bs-toggle="dropdown">
 									</i><i class="fa fa-th-list"></i>
 								</a>
 								<ul class="dropdown-menu" role="menu"
@@ -384,7 +384,7 @@ data-toggle="dropdown">
 										<i class="fa fa-check"></i>
 										{{leaMsg . "List View"}}
 									</a></li>
-									<li role="presentation" class="divider"></li>
+									<li role="presentation" class="dropdown-divider"></li>
 									<li role="presentation"><a data-sorter="dateCreatedASC" class="sorter-style sorter-dateCreatedASC" role="menuitem">
 										<i class="fa fa-check"></i>
 										{{leaMsg . "Date Created"}} <i class="fa fa-sort-alpha-asc"></i>
@@ -393,7 +393,7 @@ data-toggle="dropdown">
 										<i class="fa fa-check"></i>
 										{{leaMsg . "Date Created"}} <i class="fa fa-sort-alpha-desc"></i>
 									</a></li>
-									<li role="presentation" class="divider"></li>
+									<li role="presentation" class="dropdown-divider"></li>
 									<li role="presentation"><a data-sorter="dateUpdatedASC" class="sorter-style sorter-dateUpdatedASC" role="menuitem">
 										<i class="fa fa-check"></i>
 										{{leaMsg . "Date Updated"}} <i class="fa fa-sort-alpha-asc"></i>
@@ -402,7 +402,7 @@ data-toggle="dropdown">
 										<i class="fa fa-check"></i>
 										{{leaMsg . "Date Updated"}} <i class="fa fa-sort-alpha-desc"></i>
 									</a></li>
-									<li role="presentation" class="divider"></li>
+									<li role="presentation" class="dropdown-divider"></li>
 									<li role="presentation"><a data-sorter="titleASC" class="sorter-style sorter-titleASC" role="menuitem">
 										<i class="fa fa-check"></i>
 										{{leaMsg . "Title"}} <i class="fa fa-sort-alpha-asc"></i>
@@ -466,12 +466,12 @@ data-toggle="dropdown">
 							<!-- tag可以参考 mac的文件tag, 预定义一些颜色, 用户也可以自己输入-->
 
 							<!--
-							<div class="pull-left" id="noteTitleDiv">
+							<div class="float-start" id="noteTitleDiv">
 								<input name="noteTitle" id="noteTitle" value="" placeholder="无标题">
 							</div>
 							-->
 
-							<div class="pull-left" id="tag">
+							<div class="float-start" id="tag">
 								<div id="tags" style="display: inline-block; line-height: 25px;">
 								</div>
 
@@ -479,7 +479,7 @@ data-toggle="dropdown">
 									id="tagDropdown">
 <i class="fa fa-bookmark-o"></i>
 									<a
-										class="metro-a dropdown-toggle" data-toggle="dropdown"
+										class="metro-a dropdown-toggle" data-bs-toggle="dropdown"
 										id="addTagTrigger" style="cursor: text; padding-left: 0">
 										<span class="add-tag-text">
 										{{msg . "clickAddTag"}}
@@ -497,24 +497,24 @@ data-toggle="dropdown">
 								</div>
 							</div>
 
-							<ul class="pull-right" id="editorTool">
+							<ul class="float-end" id="editorTool">
 								<li><a class="ios7-a " id="editBtn"
-									data-toggle="dropdown" title="ctrl/cmd+e {{leaMsg . "Toggle Modify with Readonly"}}">
+									data-bs-toggle="dropdown" title="ctrl/cmd+e {{leaMsg . "Toggle Modify with Readonly"}}">
 									<span class="fa"></span></a></li>
 
 								<li><a class="ios7-a " id="saveBtn"
-									data-toggle="dropdown" title="ctrl/cmd+s {{msg . "save"}}">
+									data-bs-toggle="dropdown" title="ctrl/cmd+s {{msg . "save"}}">
 									<span class="fa fa-save"></span></a></li>
 
 								<li class="dropdown" id="noteInfoDropdown">
-									<a class="ios7-a dropdown-toggle" data-toggle="dropdown" title="{{msg . "Information"}}">
+									<a class="ios7-a dropdown-toggle" data-bs-toggle="dropdown" title="{{msg . "Information"}}">
 										<span class="fa fa-info"></span>
 									</a>
 									<div class="dropdown-menu" id="noteInfo"></div>
 								</li>
 
 								<li class="dropdown" id="attachDropdown">
-									<a class="ios7-a dropdown-toggle" data-toggle="dropdown" id="showAttach" title="{{msg . "attachments"}}">
+									<a class="ios7-a dropdown-toggle" data-bs-toggle="dropdown" id="showAttach" title="{{msg . "attachments"}}">
 										<span class="fa fa-paperclip"></span>
 										<span id="attachNum"></span>
 									</a>
@@ -527,7 +527,7 @@ data-toggle="dropdown">
 													<i class="fa fa-upload"></i>
 <span>{{msg . "Choose File"}}</span>
 							                    </a>
-							                    <a class="btn btn-default" id="downloadAllBtn">
+							                    <a class="btn btn-secondary" id="downloadAllBtn">
 								                    <i class="fa fa-download"></i>
 <span>{{msg . "Download All"}}</span>
 							                    </a>
@@ -541,10 +541,10 @@ data-toggle="dropdown">
 								</li>
 
 								<li><a class="ios7-a " id="contentHistory"
-									data-toggle="dropdown" title="{{msg . "history"}}">
+									data-bs-toggle="dropdown" title="{{msg . "history"}}">
 									<span class="fa fa-history"></span></a></li>
 								<li><a class="ios7-a " id="tipsBtn"
-									data-toggle="dropdown" title="{{msg . "editorTips"}}">
+									data-bs-toggle="dropdown" title="{{msg . "editorTips"}}">
 									<span class="fa fa-question"></span></a></li>
 							</ul>
 						</div>
@@ -613,7 +613,7 @@ data-toggle="dropdown">
 						<div class="layout-wrapper-l1">
 						    <div class="layout-wrapper-l2">
 						        <div class="navbar navbar-default">
-						            <div class="navbar-inner" id="wmd-button-bar">
+						            <div class="navbar" id="wmd-button-bar">
 <div id="mdInfoToolbar" class="info-toolbar invisible">
 							              <span class="lang">{{msg . "created"}}</span>: <span class="created-time"></span>
 							              <span class="lang">{{msg . "updated"}}</span>: <span class="updated-time"></span>
@@ -640,7 +640,7 @@ data-toggle="dropdown">
 							                </ul>
 
 							               <!--
-							                <ul class="nav pull-right right-buttons">
+							                <ul class="nav float-end right-buttons">
 							                    <li class="offline-status hide">
 							                        <div class="text-danger">
 							                            <i class="icon-attention-circled"></i>offline
@@ -648,7 +648,7 @@ data-toggle="dropdown">
 							                    </li>
 							                    <li class="extension-buttons"></li>
 							                </ul>
-							                <ul class="nav pull-right title-container">
+							                <ul class="nav float-end title-container">
 							                    <li><div class="working-indicator"></div></li>
 							                    <li><a class="btn btn-success file-title-navbar" href="#"
 							                        title="Rename document"> </a></li>
@@ -722,17 +722,17 @@ data-toggle="dropdown">
 			    <div class="modal-dialog"  style="width: 840px;max-width:100%;">
 			        <div class="modal-content">
 			            <div class="modal-header">
-			                <button type="button" class="close" data-dismiss="modal"
-			                    aria-hidden="true">&times;</button>
+			                <button type="button" class="btn-close" data-bs-dismiss="modal"
+			                    aria-label="{{leaMsg . \"close\"}}"></button>
 			                <h4 class="modal-title">{{leaMsg . "Image"}}</h4>
 			            </div>
 			            <div class="modal-body" style="padding-top: 0; padding-bottom: 0">
 <iframe name="mdImageManager" style="width: 100%; height: 350px" scrolling="no" id="leauiIfrForMD" src="" frameborder="0"></iframe>
 			            </div>
 			            <div class="modal-footer">
-			                 <a href="#" class="btn btn-default"
-			                    data-dismiss="modal">{{leaMsg . "Cancel"}}</a> <a href="#"
-			                    class="btn btn-primary action-insert-image" data-dismiss="modal">{{leaMsg . "Insert Image"}}</a>
+			                 <a href="#" class="btn btn-secondary"
+			                    data-bs-dismiss="modal">{{leaMsg . "Cancel"}}</a> <a href="#"
+			                    class="btn btn-primary action-insert-image" data-bs-dismiss="modal">{{leaMsg . "Insert Image"}}</a>
 			            </div>
 			        </div>
 			    </div>
@@ -744,14 +744,14 @@ data-toggle="dropdown">
 				    <div class="modal-content">
 
 				      <div class="modal-header">
-				        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				        <h4 class="modal-title" id="editorDialog-title"></h4>
 				      </div>
 
 				      <div class="modal-body">
 							<p></p>
 							<div class="input-group">
-							  <span class="input-group-addon">
+							  <span class="input-group-text">
 <i></i>
 							  </span>
 							  <input type="text" class="form-control" placeholder="">
@@ -759,7 +759,7 @@ data-toggle="dropdown">
 				      </div>
 
 				      <div class="modal-footer">
-				        <button type="button" class="btn btn-default" data-dismiss="modal">{{msg . "cancel"}}</button>
+				        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{msg . "cancel"}}</button>
 				        <button type="button" class="btn btn-primary" id="editorDialog-confirm">{{msg . "confirm"}}</button>
 				      </div>
 
@@ -775,7 +775,7 @@ data-toggle="dropdown">
 			    <div class="modal-content">
 
 			      <div class="modal-header">
-			        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+			        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			        <h4 class="modal-title" id="modalTitle">操作</h4>
 			      </div>
 
@@ -784,7 +784,7 @@ data-toggle="dropdown">
 			      </div>
 
 			      <div class="modal-footer">
-			        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 			        <button type="button" class="btn btn-primary">Save changes</button>
 			      </div>
 
@@ -797,13 +797,13 @@ data-toggle="dropdown">
 			    <div class="modal-content">
 
 			      <div class="modal-header">
-			        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+			        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			        <h4 class="modal-title" class="modalTitle">邀请好友</h4>
 			      </div>
 
 				   <div class="modal-body">
 						<form role="form">
-						  <div class="form-group">
+						  <div class="mb-3">
 <div id="registerEmailMsg" class="alert alert-warning" style="display: none">
 </div>
 <input type="hidden" id="toEmail"/>
@@ -813,7 +813,7 @@ data-toggle="dropdown">
 						</form>
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
 						<button type="button" class="btn btn-success" id="registerEmailBtn">发送</button>
 					</div>
 
@@ -826,7 +826,7 @@ data-toggle="dropdown">
 			  <div class="modal-dialog modal-sm">
 			    <div class="modal-content">
 				  <div class="modal-header">
-			        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+			        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			        <h4 class="modal-title" class="modalTitle">{{msg . "theme"}}</h4>
 			      </div>
 					<div class="modal-body">
@@ -850,7 +850,7 @@ data-toggle="dropdown">
 </table>
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal">{{msg . "close"}}</button>
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{msg . "close"}}</button>
 					</div>
 			    </div><!-- /.modal-content -->
 			  </div><!-- /.modal-dialog -->

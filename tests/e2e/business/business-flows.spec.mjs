@@ -81,6 +81,90 @@ test('wrong credentials are rejected by /login', async ({ page }) => {
   expect(new URL(page.url()).pathname, 'wrong password must not authenticate').toMatch(/login/i);
 });
 
+test('leaui_image preserves the real parent iframe boundary and TinyMCE insertion callback', async ({ page }) => {
+  test.setTimeout(120_000);
+  const env = await ensureE2EIdentity();
+  const seededImageSrc = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+
+  // This is an actual same-origin parent document with the application iframe
+  // URL. The parent owns the values that the production plugin exposes across
+  // frames; navigating first establishes the service origin before replacing
+  // the body with the controlled parent shell.
+  await page.goto(new URL('/_test/e2e/identity', env.baseUrl).href, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(({ baseUrl, src }) => {
+    window.UrlPrefix = baseUrl;
+    window.LEAUI_DATAS = [{ src, width: '120', height: '60', title: 'seeded image', constrain: 1 }];
+    window.GlobalConfigs = { uploadImageSize: 100 };
+    window.getMsg = (key) => key;
+    document.body.innerHTML = `<iframe id="contract-frame" src="${new URL('/tinymce/plugins/leaui_image/index.html', baseUrl).href}" frameborder="0"></iframe>`;
+  }, { baseUrl: env.baseUrl, src: seededImageSrc });
+  const frame = page.frameLocator('#contract-frame');
+  await expect(frame.locator('#preview img')).toHaveAttribute('src', seededImageSrc, { timeout: 30_000 });
+  await expect(frame.locator('#preview img')).toHaveAttribute('data-width', '120');
+  await expect(frame.locator('#preview img')).toHaveAttribute('data-height', '60');
+  await expect(frame.locator('#preview img')).toHaveAttribute('data-title', 'seeded image');
+  expect(await frame.locator('body').evaluate((body) => ({
+    jquery: body.ownerDocument.defaultView.jQuery?.fn?.jquery,
+    fileupload: Boolean(body.ownerDocument.defaultView.jQuery?.fn?.fileupload),
+    parentData: body.ownerDocument.defaultView.top.LEAUI_DATAS?.[0]?.title,
+    parentLimit: body.ownerDocument.defaultView.parent.GlobalConfigs?.uploadImageSize,
+  }))).toEqual({ jquery: expect.stringMatching(/^3\./), fileupload: true, parentData: 'seeded image', parentLimit: 100 });
+
+  // Load the real first-party plugin into a controlled TinyMCE shell. The
+  // shell implements only the public editor methods used by this plugin, so
+  // the callback traverses the same iframe and calls editor.insertContent.
+  await page.evaluate(() => {
+    window.__pluginFactory = null;
+    window.tinymce = { PluginManager: { add: (_name, factory) => { window.__pluginFactory = factory; } } };
+  });
+  await page.addScriptTag({ url: new URL('/tinymce/plugins/leaui_image/plugin.js', env.baseUrl).href });
+  await page.evaluate((src) => {
+    window.__inserted = [];
+    window.__closed = false;
+    const editor = {
+      selection: { getContent: () => `<img src="${src}" width="120" height="60" title="seeded image" />` },
+      dom: {
+        getAttrib: (element, name) => element.getAttribute(name) || '',
+        createHTML: (tag, attrs) => {
+          const element = document.createElement(tag);
+          Object.entries(attrs).forEach(([name, value]) => element.setAttribute(name, value));
+          return element.outerHTML;
+        },
+        get: (id) => document.getElementById(id),
+        setAttrib: (element, name, value) => {
+          if (!element) return;
+          if (value == null) element.removeAttribute(name); else element.setAttribute(name, value);
+        },
+      },
+      insertContent: (html) => window.__inserted.push(html),
+      addButton: (_name, config) => { window.__button = config; },
+      addMenuItem: () => {},
+      windowManager: {
+        open: (config) => {
+          window.__dialogConfig = config;
+          const holder = document.createElement('div');
+          holder.innerHTML = config.html;
+          document.body.append(...holder.childNodes);
+          return {};
+        },
+      },
+    };
+    window.__pluginFactory(editor);
+    window.__button.onclick();
+  }, seededImageSrc);
+  await expect(page.locator('#leauiIfr')).toHaveCount(1, { timeout: 30_000 });
+  await expect(page.frameLocator('#leauiIfr').locator('#preview img')).toHaveAttribute('src', seededImageSrc, { timeout: 30_000 });
+  await page.evaluate(() => {
+    const context = { parent: () => ({ parent: () => ({ close: () => { window.__closed = true; } }) }) };
+    window.__dialogConfig.buttons[1].onclick.call(context, {});
+  });
+  await expect.poll(() => page.evaluate(() => window.__inserted.length)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => ({ closed: window.__closed, inserted: window.__inserted[0] }))).toEqual({
+    closed: true,
+    inserted: expect.stringContaining('__mcenew0'),
+  });
+});
+
 test('business flows: login, permission gates, note list/search, note+tag write, notebook, dialog, uploads, album, blog, admin, member, leaui iframe', async ({ page }) => {
   test.setTimeout(300_000);
   const request = page.request;
@@ -256,7 +340,7 @@ test('business flows: login, permission gates, note list/search, note+tag write,
     // --- dialog (theme settings modal; #setTheme lives inside a collapsed dropdown) ---
     await page.evaluate(() => window.jQuery('#setTheme').trigger('click'));
     await expect(page.locator('#setThemeDialog')).toBeVisible({ timeout: 15_000 });
-    await page.locator('#setThemeDialog .close, #setThemeDialog [data-dismiss="modal"]').first().click();
+    await page.locator('#setThemeDialog .btn-close, #setThemeDialog [data-bs-dismiss="modal"]').first().click();
     await expect(page.locator('#setThemeDialog')).toBeHidden({ timeout: 15_000 });
 
     // --- real attachment upload through the plugins bundle upload stack ---
@@ -364,6 +448,15 @@ test('business flows: login, permission gates, note list/search, note+tag write,
     expect(new URL(page.url()).pathname, '/blog must not redirect to login').not.toMatch(/\/login(?:\/|$)/);
 
     // --- leaui_image iframe document (private fileupload copies + shared runtime URL) ---
+    // Seed the same top-level selection contract that TinyMCE's plugin uses
+    // when opening the iframe, then verify the iframe preserves image
+    // metadata and exposes the selected source back to the parent.
+    const seededImageSrc = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    await page.addInitScript(({ src }) => {
+      window.LEAUI_DATAS = [{ src, width: '120', height: '60', title: 'seeded image', constrain: 1 }];
+      window.GlobalConfigs = window.GlobalConfigs || { uploadImageSize: 100 };
+      window.getMsg = window.getMsg || ((key) => key);
+    }, { src: seededImageSrc });
     await page.goto(new URL('/tinymce/plugins/leaui_image/index.html', baseUrl).href, { waitUntil: 'domcontentloaded' });
     const leaui = await page.evaluate(() => ({
       jquery: window.jQuery && window.jQuery.fn && window.jQuery.fn.jquery,
@@ -371,6 +464,29 @@ test('business flows: login, permission gates, note list/search, note+tag write,
     }));
     expect(leaui.jquery, 'leaui_image shared runtime jQuery major').toMatch(/^3\./);
     expect(leaui.fileupload, 'leaui_image fileupload registered').toBe(true);
+    await expect(page.locator('#preview img')).toHaveAttribute('src', seededImageSrc);
+    await expect(page.locator('#preview img')).toHaveAttribute('data-width', '120');
+    await expect(page.locator('#preview img')).toHaveAttribute('data-height', '60');
+    await expect(page.locator('#preview img')).toHaveAttribute('data-title', 'seeded image');
+    expect(await page.evaluate(() => mdGetImgSrc()), 'leaui_image selected source crosses the iframe boundary').toBe(seededImageSrc);
+    await page.locator('#preview li').first().click();
+    await expect(page.locator('#attrTitle')).toBeEnabled();
+    await expect(page.locator('#attrTitle')).toHaveValue('seeded image');
+    await page.locator('#attrTitle').fill('edited image');
+    await page.locator('#attrTitle').press('End');
+    await expect(page.locator('#preview img')).toHaveAttribute('data-title', 'edited image');
+    await page.locator('#attrWidth').fill('240');
+    await page.locator('#attrWidth').press('End');
+    await expect(page.locator('#preview img')).toHaveAttribute('data-width', '240');
+    await page.locator('#attrConstrain').check();
+    await page.locator('#attrHeight').fill('120');
+    await page.locator('#attrHeight').press('End');
+    await expect(page.locator('#preview img')).toHaveAttribute('data-height', '120');
+    await page.locator('#myTab a[href="#url"]').click();
+    const urlImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+    await page.locator('#imageUrl').fill(urlImage);
+    await page.locator('#addImageUrlBtn').click();
+    await expect.poll(() => page.locator('#preview img').evaluateAll((images, src) => images.filter((image) => image.getAttribute('src') === src).length, urlImage)).toBe(1);
     summary.pages.push({ url: '/tinymce/plugins/leaui_image/index.html', status: 200, finalPath: '/tinymce/plugins/leaui_image/index.html', authenticated: false });
     // The standalone document must not request missing resources (a missing
     // UrlPrefix used to produce undefined/... 404s).

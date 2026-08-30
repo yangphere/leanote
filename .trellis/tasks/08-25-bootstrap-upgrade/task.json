@@ -2,8 +2,8 @@
   "id": "bootstrap-upgrade",
   "name": "bootstrap-upgrade",
   "title": "Bootstrap 5.3 升级",
-  "description": "升级到 Bootstrap 5.3.8，迁移模板、插件和图片 iframe，保持现有视觉与交互语义。",
-  "status": "planning",
+  "description": "升级仓库内多套 Bootstrap 3.0.2/3.0.3/3.2.0 资源到 5.3.8，迁移模板、内置博客插件和图片 iframe，保持公开 URL 与交互语义。",
+  "status": "in_progress",
   "dev_type": "frontend",
   "scope": "Bootstrap markup, styles and plugins",
   "package": null,
@@ -12,7 +12,7 @@
   "assignee": "wanfeng",
   "createdAt": "2026-08-25",
   "completedAt": null,
-  "branch": null,
+  "branch": "codex/bootstrap-5-3-upgrade",
   "base_branch": "dev",
   "worktree_path": null,
   "commit": null,
@@ -22,12 +22,23 @@
   "parent": "08-25-frontend-libs",
   "relatedFiles": [
     "package.json",
+    "package-lock.json",
+    "scripts/build/manifest.mjs",
     "app/views",
     "public/css",
     "public/js",
-    "public/tinymce/plugins/leaui_image"
+    "public/md/main-v2.js",
+    "public/blog/js",
+    "public/blog/themes",
+    "public/tinymce/plugins/image/dialog.htm",
+    "public/tinymce/plugins/leaui_image",
+    "tests/js",
+    "tests/e2e/business",
+    "tests/e2e/business/jquery-diagnostics.spec.mjs",
+    "docs/modernization/browser-smoke/bootstrap-5.3.md",
+    ".trellis/tasks/08-25-bootstrap-upgrade/research/bootstrap3-usage.md"
   ],
-  "notes": "不做视觉重设计；TinyMCE core 由后续任务负责。",
+  "notes": "不做视觉重设计；实际基线为主站 3.0.2、leaui_image 3.0.3、admin 3.2.0；保留当前引用的 bootstrap.css/bootstrap-min.css/bootstrap.js/bootstrap-min.js URL。TinyMCE core、bridge、mindmap 和用户上传主题内容由边界约束排除。",
   "meta": {
     "depends_on": [
       "08-25-jquery-upgrade"

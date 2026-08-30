@@ -147,7 +147,7 @@ ul.dropdown-menu {
   visibility: hidden;
   opacity: 0;
 }
-.open ul.dropdown-menu {
+ul.dropdown-menu.show {
   -webkit-animation: pulldown .2s;
   animation: pulldown .2s;
   visibility: visible;

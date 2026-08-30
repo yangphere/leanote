@@ -333,7 +333,7 @@ background-position:-1px -670px
   font-weight: 400;
   src: local('Open Sans Italic'), local('OpenSans-Italic'), url('../../fonts/open-sans2/xjAJXh38I15wypJXxuGMBobN6UDyHWBl620a-IRfuBk.woff') format('woff');
 }
-.close:focus {
+.btn-close:focus {
   outline: none;
 }
 .invisible {
@@ -382,17 +382,17 @@ background-position:-1px -670px
 .dropdown-submenu:hover > a:after {
   border-left-color: #fff;
 }
-.dropdown-submenu.pull-left {
+.dropdown-submenu.float-start {
   float: none;
 }
-.dropdown-submenu.pull-left > .dropdown-menu {
+.dropdown-submenu.float-start > .dropdown-menu {
   left: -100%;
   margin-left: 10px;
   -webkit-border-radius: 6px 0 6px 6px;
   -moz-border-radius: 6px 0 6px 6px;
   border-radius: 6px 0 6px 6px;
 }
-.open > .dropdown-menu,
+.show > .dropdown-menu,
 .dropdown-submenu:hover > .dropdown-menu {
   visibility: visible;
   -webkit-animation: pulldown .2s;
@@ -2209,7 +2209,7 @@ textarea#wmd-input {
   right: 0;
   left: 200px;
 }
-.history-modal .modal-dialog .modal-content .modal-body .history-content-wrap .close {
+.history-modal .modal-dialog .modal-content .modal-body .history-content-wrap .btn-close {
   padding: 10px 15px;
 }
 .history-modal .modal-dialog .modal-content .modal-body .history-content-wrap .back {

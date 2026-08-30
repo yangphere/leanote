@@ -5,23 +5,23 @@
 
 <div class="col-sm-6">
 	<form id="formContainer">
-		<section class="panel panel-default">
-			<div class="panel-body">
-				<div class="form-group">
+		<section class="card">
+			<div class="card-body">
+				<div class="mb-3">
 					<label>Shared UserId</label>
 					<input type="text" class="form-control" name="registerSharedUserId" value="{{.str.registerSharedUserId}}">
 				</div>
-				<div class="form-group">
+				<div class="mb-3">
 					<label>Shared Notebooks</label>
 					<div class="clearfix" id="notebooks">
 						{{range $notebook := .arrMap.registerSharedNotebooks}}
 						<div class="row">
-						  <div class="col-xs-8">
+						  <div class="col-8">
 							<input type="text" class="form-control" placeholder="notebookId" name="registerSharedNotebookIds[]"
 								value="{{$notebook.notebookId}}"
 							>
 						  </div>
-						  <div class="col-xs-4">
+						  <div class="col-4">
 	  						<select class="form-control" name="registerSharedNotebookPerms[]">
 								<option value="0" {{if eq $notebook.perm "0"}}selected{{end}}>Read Only</option>
 								<option value="1" {{if eq $notebook.perm "1"}}selected{{end}}>Writable</option>
@@ -32,10 +32,10 @@
 						
 							
 						<div class="row">
-						  <div class="col-xs-8">
+						  <div class="col-8">
 							<input type="text" class="form-control" placeholder="notebookId" name="registerSharedNotebookIds[]">
 						  </div>
-						  <div class="col-xs-4">
+						  <div class="col-4">
 	  						<select class="form-control" name="registerSharedNotebookPerms[]">
 								<option value="0">Read Only</option>
 								<option value="1">Writable</option>
@@ -43,10 +43,10 @@
 						  </div>
 						</div>
 						<div class="row">
-						  <div class="col-xs-8">
+						  <div class="col-8">
 							<input type="text" class="form-control" placeholder="notebookId" name="registerSharedNotebookIds[]">
 						  </div>
-						  <div class="col-xs-4">
+						  <div class="col-4">
 	  						<select class="form-control" name="registerSharedNotebookPerms[]">
 								<option value="0">Read Only</option>
 								<option value="1">Writable</option>
@@ -57,17 +57,17 @@
 					The notebooks will shared to register user
 				</div>
 				
-				<div class="form-group">
+				<div class="mb-3">
 					<label>Shared Notes</label>
 					<div class="clearfix" id="notebooks">
 						{{range $note := .arrMap.registerSharedNotes}}
 						<div class="row">
-						  <div class="col-xs-8">
+						  <div class="col-8">
 							<input type="text" class="form-control" name="registerSharedNoteIds[]"
 								value="{{$note.noteId}}"
 							/>
 						  </div>
-						  <div class="col-xs-4">
+						  <div class="col-4">
 	  						<select class="form-control" name="registerSharedNotePerms[]">
 								<option value="0" {{if eq $note.perm "0"}}selected{{end}}>Read Only</option>
 								<option value="1" {{if eq $note.perm "1"}}selected{{end}}>Writable</option>
@@ -77,10 +77,10 @@
 						{{end}}
 						
 						<div class="row">
-						  <div class="col-xs-8">
+						  <div class="col-8">
 							<input type="text" class="form-control" placeholder="noteId" name="registerSharedNoteIds[]">
 						  </div>
-						  <div class="col-xs-4">
+						  <div class="col-4">
 	  						<select class="form-control" name="registerSharedNotePerms[]">
 								<option value="0">Read Only</option>
 								<option value="1">Writable</option>
@@ -89,10 +89,10 @@
 						</div>
 						
 						<div class="row">
-						  <div class="col-xs-8">
+						  <div class="col-8">
 							<input type="text" class="form-control" placeholder="noteId" name="registerSharedNoteIds[]">
 						  </div>
-						  <div class="col-xs-4">
+						  <div class="col-4">
 	  						<select class="form-control" name="registerSharedNotePerms[]">
 								<option value="0">Read Only</option>
 								<option value="1">Writable</option>
@@ -103,12 +103,12 @@
 					The notes will shared to register user
 				</div>
 				
-				<div class="form-group">
+				<div class="mb-3">
 					<label>Copy Notes</label>
 					<div class="clearfix" id="notebooks">
 						{{range $noteId := .arr.registerCopyNoteIds}}
 						<div class="row">
-						  <div class="col-xs-12">
+						  <div class="col-12">
 							<input type="text" class="form-control" name="registerCopyNoteIds[]"
 								value="{{$noteId}}"
 								placeholder="noteId"
@@ -118,13 +118,13 @@
 						{{end}}
 						
 						<div class="row">
-						  <div class="col-xs-12">
+						  <div class="col-12">
 							<input type="text" class="form-control" name="registerCopyNoteIds[]" placeholder="noteId"/>
 						  </div>
 						</div>
 						
 						<div class="row">
-						  <div class="col-xs-12">
+						  <div class="col-12">
 							<input type="text" class="form-control" name="registerCopyNoteIds[]" placeholder="noteId"/>
 						  </div>
 						</div>
@@ -133,7 +133,7 @@
 				</div>
 			</div>
 			
-			<footer class="panel-footer text-right bg-light lter">
+			<footer class="card-footer text-end bg-light lter">
 				<button type="submit" id="submit" class="btn btn-success btn-s-xs">Submit</button>
 			</footer>
 		</section>
@@ -156,14 +156,17 @@ $(function() {
 			e.preventDefault();
 			var t = this;
 			if($("#formContainer").valid()) {
-				$(t).button('loading');
+				setButtonLoading(t, true);
 				ajaxPost("/adminSetting/shareNote", getFormJsonData("formContainer"), function(ret){
-					$(t).button('reset')
+					setButtonLoading(t, false)
 					if(!ret.Ok) {
 						art.alert(ret.Msg)
 					} else {
 						art.tips(ret.Msg || "Success");
 					}
+				}, function() {
+					setButtonLoading(t, false);
+					alert("leanote出现了错误!");
 				});
 			}
 		});

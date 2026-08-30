@@ -5,21 +5,21 @@
 
 <div class="col-sm-6">
 	<form id="data_form">
-		<section class="panel panel-default">
-			<div class="panel-body">
-				<div class="form-group">
+		<section class="card">
+			<div class="card-body">
+				<div class="mb-3">
 					<label>mongodump path</label>
 					<input type="text" class="form-control" name="mongodumpPath" value="{{.str.mongodumpPath}}" placeholder="">
 					Please input the bin mongodump's absolute path
 				</div>
-				<div class="form-group">
+				<div class="mb-3">
 					<label>mongorestore path</label>
 					<input type="text" class="form-control" name="mongorestorePath" value="{{.str.mongorestorePath}}" placeholder="">
 					Please input the bin mongorestore's absolute path
 				</div>
 			</div>
 			
-			<footer class="panel-footer text-right bg-light lter">
+			<footer class="card-footer text-end bg-light lter">
 				<button type="submit" id="submit" class="btn btn-success btn-s-xs">Submit</button>
 			</footer>
 		</section>
@@ -38,14 +38,17 @@ $(function() {
 			e.preventDefault();
 			var t = this;
 			if($("#data_form").valid()) {
-				$(t).button('loading');
+			setButtonLoading(t, true);
 				ajaxPost("/adminSetting/mongodb", getFormJsonData("data_form"), function(ret){
-					$(t).button('reset')
+				setButtonLoading(t, false)
 					if(!ret.Ok) {
 						art.alert(ret.Msg)
 					} else {
 						art.tips("Success");
 					}
+				}, function() {
+					setButtonLoading(t, false);
+					alert("leanote出现了错误!");
 				});
 			}
 		});

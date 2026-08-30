@@ -213,6 +213,9 @@ function _ajaxCallback(ret, successFunc, failureFunc) {
 		if(ret && typeof ret == "object") {
 			if(ret.Msg == "NOTLOGIN") {
 				alert(getMsg("Please sign in firstly!"));
+				if(typeof failureFunc == "function") {
+					failureFunc(ret);
+				}
 				return;
 			}
 		}
@@ -567,54 +570,108 @@ function showDialog(id, options) {
 	$("#leanoteDialog .modal-footer").html($("#" + id + " .modal-footer").html());
 	delete options.title;
 	options.show = true;
-	$("#leanoteDialog").modal(options);
+	showBootstrapModal(document.getElementById("leanoteDialog"), options);
 }
 function hideDialog(timeout) {
 	if(!timeout) {
 		timeout = 0;
 	}
 	setTimeout(function() {
-		$("#leanoteDialog").modal('hide');
+		hideBootstrapModal(document.getElementById("leanoteDialog"));
 	}, timeout);
 }
 
 // 更通用
 function closeDialog() {
-	$(".modal").modal('hide');
+	$(".modal").each(function() { hideBootstrapModal(this); });
 }
 
 // 原生的
 function showDialog2(id, options) {
 	options = options || {};
-	options.show = true;
-	$(id).modal(options);
+	showBootstrapModal(document.querySelector(id), options);
 }
 function hideDialog2(id, timeout) {
 	if(!timeout) {
 		timeout = 0;
 	}
 	setTimeout(function() {
-		$(id).modal('hide');
+		hideBootstrapModal(document.querySelector(id));
 	}, timeout);
+}
+
+function clearBootstrapModal(element) {
+	if(!element || !window.bootstrap || !window.bootstrap.Modal) {
+		return;
+	}
+	var instance = window.bootstrap.Modal.getInstance(element);
+	if(instance) {
+		instance.hide();
+		instance.dispose();
+	}
+	element.classList.remove("show");
+	element.style.display = "none";
+	element.setAttribute("aria-hidden", "true");
+	element.removeAttribute("aria-modal");
+	if(!document.querySelector(".modal.show")) {
+		document.body.classList.remove("modal-open");
+		document.body.style.removeProperty("padding-right");
+		Array.prototype.forEach.call(document.querySelectorAll(".modal-backdrop"), function(backdrop) {
+			backdrop.remove();
+		});
+	}
 }
 
 // 远程
 function showDialogRemote(url, data) {
 	data = data || {};
-	url += "?";
-	for(var i in data) {
-		url += i + "=" + data[i] + "&";
+	var container = document.getElementById("leanoteDialogRemote");
+	if(!container) throw new Error("remote dialog container is missing");
+	clearBootstrapModal(container);
+	var requestNumber = Number(container.getAttribute("data-remote-request")) + 1;
+	container.setAttribute("data-remote-request", requestNumber);
+	var requestUrl;
+	try {
+		var parsedUrl = new URL(url, document.baseURI);
+		Object.keys(data).forEach(function(key) {
+			var value = data[key];
+			var values = Array.isArray(value) ? value : [value];
+			values.forEach(function(item) {
+				parsedUrl.searchParams.append(key, item == null ? "" : String(item));
+			});
+		});
+		requestUrl = parsedUrl.href;
+	} catch(error) {
+		throw new Error("invalid remote dialog URL: " + error.message);
 	}
-	$("#leanoteDialogRemote").modal({remote: url});
+	container.innerHTML = "";
+	container.setAttribute("aria-busy", "true");
+	return fetch(requestUrl, {credentials: "same-origin"}).then(function(response) {
+		if(!response.ok) throw new Error("remote dialog request failed: " + response.status);
+		return response.text();
+	}).then(function(html) {
+		if(Number(container.getAttribute("data-remote-request")) !== requestNumber) return;
+		if(!html || !html.trim()) throw new Error("remote dialog response is empty");
+		container.innerHTML = html;
+		container.removeAttribute("aria-busy");
+		showBootstrapModal(container);
+	}).catch(function(error) {
+		if(Number(container.getAttribute("data-remote-request")) !== requestNumber) return;
+		container.removeAttribute("aria-busy");
+		container.innerHTML = '<div class="modal-dialog"><div class="modal-content"><div class="modal-body"><div class="alert alert-danger" role="alert">Unable to load content</div></div></div></div>';
+		showBootstrapModal(container);
+		setTimeout(function() { hideBootstrapModal(container); }, 3000);
+		if(window.console && console.error) console.error(error);
+	});
 }
 
 function hideDialogRemote(timeout) {
 	if(timeout) {
 		setTimeout(function() {
-			$("#leanoteDialogRemote").modal('hide');
+			hideBootstrapModal(document.getElementById("leanoteDialogRemote"));
 		}, timeout);
 	} else {
-		$("#leanoteDialogRemote").modal('hide');
+		hideBootstrapModal(document.getElementById("leanoteDialogRemote"));
 	}
 }
 //---------------
@@ -796,22 +853,35 @@ function hideAlert(id, timeout) {
 // return {Ok, Msg, Data}
 // btnId 是按钮包括#
 function post(url, param, func, btnId) {
-	var btnPreText;
-	if(btnId) {
-		$(btnId).button("loading"); // html("正在处理").addClass("disabled");
-	}
-	ajaxPost(url, param, function(ret) {
+	var resetButton = function() {
 		if(btnId) {
-			$(btnId).button("reset");
+			setButtonLoading(btnId, false);
 		}
-		if (typeof ret == "object") {
-			if(typeof func == "function") {
-				func(ret);
-			}
-		} else {
+	};
+	var handleFailure = function(ret) {
+		resetButton();
+		if(!ret || ret.Msg != "NOTLOGIN") {
 			alert("leanote出现了错误!");
 		}
-	});
+	};
+	if(btnId) {
+		setButtonLoading(btnId);
+	}
+	try {
+		ajaxPost(url, param, function(ret) {
+			resetButton();
+			if (typeof ret == "object") {
+				if(typeof func == "function") {
+					func(ret);
+				}
+			} else {
+				alert("leanote出现了错误!");
+			}
+		}, handleFailure);
+	} catch(error) {
+		resetButton();
+		throw error;
+	}
 }
 
 // 是否是正确的email
@@ -1346,3 +1416,76 @@ var trimTitle = function(title) {
 	return title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 	// return title.replace(/<.*?script.*?>/g, '');
 };
+
+function bootstrapInstance(name, element, options) {
+	if(!window.bootstrap || !window.bootstrap[name]) throw new Error("Bootstrap 5 is not loaded");
+	var target = element && element.jquery ? element[0] : element;
+	if(!target) throw new Error("Bootstrap target is required");
+	return window.bootstrap[name].getOrCreateInstance(target, options);
+}
+function showBootstrapModal(element, options) {
+	var target = element && element.jquery ? element[0] : element;
+	var instance = bootstrapInstance("Modal", target, options);
+	instance.show();
+	// Preserve the project's postShow hook used by shared dialog callers.
+	if(options && typeof options.postShow == "function") {
+		options.postShow();
+		if(window.jQuery) {
+			window.jQuery(target).find(".alert").hide();
+		}
+	}
+	return instance;
+}
+function hideBootstrapModal(element) {
+	var target = element && element.jquery ? element[0] : element;
+	var instance = window.bootstrap && window.bootstrap.Modal && window.bootstrap.Modal.getInstance(target);
+	if(instance) instance.hide();
+}
+function showBootstrapTab(element) { bootstrapInstance("Tab", element).show(); }
+var buttonLoadingState = typeof WeakMap === "function" ? new WeakMap() : null;
+function setButtonLoading(element, loading) {
+	var target = element && element.jquery ? element[0] : element;
+	if(typeof target == "string") {
+		target = document.querySelector(target);
+	}
+	if(!target) return;
+	if(loading === undefined) loading = true;
+	if(loading) {
+		if(buttonLoadingState && !buttonLoadingState.has(target)) buttonLoadingState.set(target, {
+			html: target.innerHTML,
+			disabled: target.disabled,
+			ariaBusy: target.getAttribute("aria-busy"),
+			ariaDisabled: target.getAttribute("aria-disabled"),
+			tabIndex: target.getAttribute("tabindex"),
+			wasDisabledClass: target.classList.contains("disabled")
+		});
+		target.disabled = true;
+		target.setAttribute("aria-busy", "true");
+		if(target.tagName == "A") {
+			target.classList.add("disabled");
+			target.setAttribute("aria-disabled", "true");
+			target.setAttribute("tabindex", "-1");
+		}
+		target.classList.add("is-loading"); return;
+	}
+	var state = buttonLoadingState && buttonLoadingState.get(target);
+	if(state) {
+		target.innerHTML = state.html;
+		target.disabled = state.disabled;
+		if(state.ariaBusy === null) target.removeAttribute("aria-busy"); else target.setAttribute("aria-busy", state.ariaBusy);
+		if(state.ariaDisabled === null) target.removeAttribute("aria-disabled"); else target.setAttribute("aria-disabled", state.ariaDisabled);
+		if(state.tabIndex === null) target.removeAttribute("tabindex"); else target.setAttribute("tabindex", state.tabIndex);
+		if(target.tagName == "A" && !state.wasDisabledClass) target.classList.remove("disabled");
+		buttonLoadingState.delete(target);
+	}
+	else {
+		target.disabled = false;
+		target.removeAttribute("aria-busy");
+		if(target.tagName == "A") {
+			target.classList.remove("disabled");
+			target.removeAttribute("aria-disabled");
+			target.removeAttribute("tabindex");
+		}
+	}
+	target.classList.remove("is-loading");
+}

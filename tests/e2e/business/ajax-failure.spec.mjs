@@ -60,7 +60,8 @@ test('note search failure dismisses loading and alerts', async ({ page }) => {
   await page.locator('#searchNoteInput').press('Enter');
   // The .fail branch must hide the loading overlays and alert.
   await expect.poll(() => dialogs, { timeout: 15_000 }).toContain('error!');
-  await expect(page.locator('#searchNoteInput')).toBeVisible();
+  await expect.poll(() => page.locator('#loading').evaluate((element) => getComputedStyle(element).visibility), { timeout: 15_000 }).toBe('hidden');
+  await expect(page.locator('#noteAndEditorMask')).toBeHidden({ timeout: 15_000 });
 });
 
 test('admin dialog openDialog failure renders an error message in the dialog', async ({ page }) => {

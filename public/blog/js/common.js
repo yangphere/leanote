@@ -33,10 +33,10 @@ function ajaxPost(url, param, func) {
 function ajaxGetP(url, param, callback) {
 	ajaxP("GET", url, param, callback)
 }
-function ajaxPostP(url, param, callback) {
-	ajaxP("POST", url, param, callback)
+function ajaxPostP(url, param, callback, failureCallback) {
+	ajaxP("POST", url, param, callback, failureCallback)
 }
-function ajaxP(method, url, param, callback) {
+function ajaxP(method, url, param, callback, failureCallback) {
 	param = param || {};
 	callback = callback || function() {};
 	$.ajax({ 
@@ -46,7 +46,8 @@ function ajaxP(method, url, param, callback) {
         data: param,
         jsonp: "callback",
 		jsonpCallback: "jsonpCallback",
-        success: callback
+        success: callback,
+		error: failureCallback
     });
 }
 
@@ -391,9 +392,9 @@ function likePost(noteId, callback) {
 	ajaxPostP(getLeanoteUrl() + "/blog/likePost", {noteId: noteId}, callback)
 }
 // 提交评论
-function commentPost(noteId, commentId, content, callback) {
+function commentPost(noteId, commentId, content, callback, failureCallback) {
 	var data = {noteId: self.noteId, toCommentId: commentId, content: content};
-	ajaxPostP(getLeanoteUrl() + "/blog/commentPost", data, callback);
+	ajaxPostP(getLeanoteUrl() + "/blog/commentPost", data, callback, failureCallback);
 }
 // 删除评论
 function deleteComment(noteId, commentId, callback) {

@@ -1098,7 +1098,7 @@ a:hover .caret-white {
 .input-s-lg {
   width: 250px;
 }
-.input-group-addon {
+.input-group-text {
   border-color: #d9d9d9;
   background-color: #f9f9f9;
 }
@@ -1310,10 +1310,10 @@ a:hover .caret-white {
 .dropdown-submenu:focus > .dropdown-menu {
   display: block;
 }
-.dropdown-submenu.pull-left {
+.dropdown-submenu.float-start {
   float: none !important;
 }
-.dropdown-submenu.pull-left > .dropdown-menu {
+.dropdown-submenu.float-start > .dropdown-menu {
   left: -100%;
   margin-left: 10px;
 }
@@ -1449,7 +1449,7 @@ a:hover .caret-white {
 .navbar-inverse .navbar-form {
   border-color: transparent;
 }
-.navbar-fixed-top + * {
+.fixed-top + * {
   padding-top: 50px;
 }
 @media (min-width: 768px) {

@@ -103,7 +103,9 @@ $(function() {
 		$("#imageWidth").val(oldWidth);
 		$("#imageHeight").val(oldHeight);
 		
-		$('#myTab a:last').tab('show');
+		if (window.bootstrap && window.bootstrap.Tab) {
+			window.bootstrap.Tab.getOrCreateInstance($('#myTab a:last')[0]).show();
+		}
 	} else {
 		imgElm = null;
 	}
@@ -188,7 +190,7 @@ function closeWin() {
 // 插入之
 var insertImage = function() {
 	// 判断是否是第二个tab active
-	if($("#myTab li:last").attr("class") != "active") {
+	if(!$("#myTab a:last").hasClass("active")) {
 		closeWin();
 		return;
 	}

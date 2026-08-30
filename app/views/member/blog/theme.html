@@ -11,12 +11,12 @@
 
 <div class="row">
 <div class="col-sm-12 theme-container">
-	<section class="panel panel-default">
-		<div class="panel-body">
+	<section class="card">
+		<div class="card-body">
 			<div>
 			<form id="uploadAvatar" method="post" action="/member/blog/importTheme" enctype="multipart/form-data">
 		    	<div id="dropAvatar" class="dropzone">
-			    	<a class="btn btn-default btn-new" href="/member/blog/newTheme"><span class="fa fa-plus"></span> {{msg . "addTheme"}}</a>
+				<a class="btn btn-secondary btn-new" href="/member/blog/newTheme"><span class="fa fa-plus"></span> {{msg . "addTheme"}}</a>
                     <a class="btn btn-success btn-choose-file">
 						<span class="fa fa-upload"></span> {{msg . "importTheme"}}(.zip)
                     </a>
@@ -29,7 +29,7 @@
 			{{msg . "currentTheme"}}:
 			</p>
 			<div class="themes clearfix">
-				<div class="theme pull-left">	
+				<div class="theme float-start">
 				    <a class="choose-theme" data-method="put" href="#" rel="nofollow">
 				      <div class="theme-thumb thumb active-theme">
 					      <img src="/{{.activeTheme.Path}}/images/screenshot.png" alt="preview">
@@ -41,10 +41,10 @@
 				    </span>
 				    <div class="theme-btns">
 				    	<div class="btn-group" data-id="{{.activeTheme.ThemeId.Hex}}">
-					    	<a class="btn btn-default btn-sm btn-export"><span class="fa fa-download"></span> {{msg $ "export"}}</a>
+						<a class="btn btn-secondary btn-sm btn-export"><span class="fa fa-download"></span> {{msg $ "export"}}</a>
 					    	<!-- 必须是自己的主题 -->
 					    	{{if .activeTheme.ThemeId}}
-						    	<a class="btn btn-default btn-sm" href="/preview?themeId={{.activeTheme.ThemeId.Hex}}" target="_blank"><span class="fa fa-eye"></span> {{msg $ "preview"}}</a>
+							<a class="btn btn-secondary btn-sm" href="/preview?themeId={{.activeTheme.ThemeId.Hex}}" target="_blank"><span class="fa fa-eye"></span> {{msg $ "preview"}}</a>
 					    	{{end}}
 					    	<a class="btn btn-primary btn-sm" target="_blank" href="/member/blog/updateTheme?themeId={{if .activeTheme.ThemeId}}{{.activeTheme.ThemeId.Hex}}{{end}}"><span class="fa fa-pencil"></span> {{msg $ "edit"}}</a>
 				    	</div>
@@ -52,7 +52,7 @@
 			    </div>
 			    {{if .activeTheme.Info.Desc}}
 			    <!-- 描述 -->
-			    <div class="pull-left theme-desc">
+			    <div class="float-start theme-desc">
 			    	{{.activeTheme.Info.Desc|raw}}
 			    </div>
 			    {{end}}
@@ -82,13 +82,13 @@
 				    </span>
 				    <div class="theme-btns">
 				    	<div class="btn-group" data-id="{{.ThemeId.Hex}}">
-					    	<a class="btn btn-default btn-sm btn-delete" data-loading-text="..."><span class="fa fa-remove"></span> {{msg $ "delete"}}</a>
-					    	<a class="btn btn-default btn-sm btn-export"><span class="fa fa-download"></span> {{msg $ "export"}}</a>
-					    	<a class="btn btn-default btn-sm" href="/preview?themeId={{.ThemeId.Hex}}" target="_blank"><span class="fa fa-eye"></span> {{msg $ "preview"}}</a>
-					    	<a class="btn btn-default btn-sm"  target="_blank" href="/member/blog/updateTheme?themeId={{.ThemeId.Hex}}"><span class="fa fa-pencil"></span> {{msg $ "edit"}}</a>
+						<a class="btn btn-secondary btn-sm btn-delete" data-loading-text="..."><span class="fa fa-remove"></span> {{msg $ "delete"}}</a>
+						<a class="btn btn-secondary btn-sm btn-export"><span class="fa fa-download"></span> {{msg $ "export"}}</a>
+						<a class="btn btn-secondary btn-sm" href="/preview?themeId={{.ThemeId.Hex}}" target="_blank"><span class="fa fa-eye"></span> {{msg $ "preview"}}</a>
+						<a class="btn btn-secondary btn-sm"  target="_blank" href="/member/blog/updateTheme?themeId={{.ThemeId.Hex}}"><span class="fa fa-pencil"></span> {{msg $ "edit"}}</a>
 					    	<a class="btn btn-primary btn-sm btn-active" data-loading-text="..."><span class="fa fa-check"></span> {{msg $ "use"}}</a>
 					    	{{if $.isAdmin}}
-						    	<a class="btn btn-default btn-sm btn-public" data-loading-text="...">
+							<a class="btn btn-secondary btn-sm btn-public" data-loading-text="...">
 						    	{{if .IsDefault}}
 							    	公开
 						    	{{else}}
@@ -146,15 +146,18 @@ $(function() {
 $(".btn-active").on('click', function() {
 	var id = $(this).parent().data('id');
 	var t = $(this);
-	t.button("loading");
+	setButtonLoading(t, true);
 	ajaxPost("/member/blog/activeTheme", {themeId: id}, function(re) {
-		t.button("reset");
+		setButtonLoading(t, false);
 		if(reIsOk(re)) {
 			art.tips("Success");
 			location.reload();
 		} else {
 			art.alert("Error");
 		}
+	}, function() {
+		setButtonLoading(t, false);
+		alert("leanote出现了错误!");
 	});
 });
 
@@ -170,15 +173,18 @@ $(".btn-delete").on('click', function() {
 	var id = $(this).parent().data('id');
 	var t = $(this);
 	art.confirm(getMsg("Are you sure ?"), function() {
-		t.button("loading");
+		setButtonLoading(t, true);
 		ajaxPost("/member/blog/deleteTheme", {themeId: id}, function(re) {
-			t.button("reset");
+			setButtonLoading(t, false);
 			if(reIsOk(re)) {
 				art.tips("Success");
 				location.reload();
 			} else {
 				art.alert("Error");
 			}
+		}, function() {
+			setButtonLoading(t, false);
+			alert("leanote出现了错误!");
 		});
 	});
 });
@@ -188,15 +194,18 @@ $(".btn-install").on('click', function() {
 	var id = $(this).parent().data('id');
 	var t = $(this);
 	art.confirm(getMsg("Are you sure to install it ?"), function() {
-		t.button("loading");
+		setButtonLoading(t, true);
 		ajaxPost("/member/blog/installTheme", {themeId: id}, function(re) {
-			t.button("reset");
+			setButtonLoading(t, false);
 			if(reIsOk(re)) {
 				art.tips(getMsg("Success"));
 				location.reload();
 			} else {
 				art.alert(getMsg("Error"));
 			}
+		}, function() {
+			setButtonLoading(t, false);
+			alert("leanote出现了错误!");
 		});
 	});
 });
@@ -207,15 +216,18 @@ $(".btn-public").on('click', function() {
 	var id = $(this).parent().data('id');
 	var t = $(this);
 	art.confirm(getMsg("Are you sure ?"), function() {
-		t.button("loading");
+		setButtonLoading(t, true);
 		ajaxPost("/member/blog/publicTheme", {themeId: id}, function(re) {
-			t.button("reset");
+			setButtonLoading(t, false);
 			if(reIsOk(re)) {
 				art.tips(getMsg("Success"));
 				location.reload();
 			} else {
 				art.alert(getMsg("Error"));
 			}
+		}, function() {
+			setButtonLoading(t, false);
+			alert("leanote出现了错误!");
 		});
 	});
 });

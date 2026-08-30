@@ -16820,10 +16820,10 @@ define('core',[
     window['MD'] = {'eventMgr': eventMgr};
 
     var insertLinkO = $('<div class="modal fade modal-insert-link"><div class="modal-dialog"><div class="modal-content">'
-            + '<div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>'
+            + '<div class="modal-header"><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="' + getMsg('close') + '"></button>'
             + '<h4 class="modal-title">' + getMsg('Hyperlink') + '</h4></div>'
             + '<div class="modal-body"><p>' + getMsg('Please provide the link URL and an optional title') + ':</p>'
-            + '<div class="input-group"><span class="input-group-addon"><i class="fa fa-link"></i></span><input id="input-insert-link" type="text" class="col-sm-5 form-control" placeholder="http://example.com  ' + getMsg('optional title') + '"></div></div><div class="modal-footer"><a href="#" class="btn btn-default" data-dismiss="modal">' + getMsg('Cancel') + '</a> <a href="#" class="btn btn-primary action-insert-link" data-dismiss="modal">' + getMsg('OK') + '</a></div></div></div></div>');
+            + '<div class="input-group"><span class="input-group-text"><i class="fa fa-link"></i></span><input id="input-insert-link" type="text" class="col-sm-5 form-control" placeholder="http://example.com  ' + getMsg('optional title') + '"></div></div><div class="modal-footer"><a href="#" class="btn btn-secondary" data-bs-dismiss="modal">' + getMsg('Cancel') + '</a> <a href="#" class="btn btn-primary action-insert-link" data-bs-dismiss="modal">' + getMsg('OK') + '</a></div></div></div></div>');
 
     var actionInsertLinkO = insertLinkO.find('.action-insert-link');
 
@@ -16966,7 +16966,7 @@ define('core',[
         editor.hooks.set("insertLinkDialog", function(callback) {
             core.insertLinkCallback = callback;
             utils.resetModalInputs();
-            insertLinkO.modal();
+            showBootstrapModal(insertLinkO[0]);
             return true;
         });
         // Custom insert image dialog
@@ -16980,7 +16980,7 @@ define('core',[
             if(!ifr.attr('src')) {
                 ifr.attr('src', '/album/index?md=1');
             }
-            $(".modal-insert-image").modal();
+            showBootstrapModal(document.querySelector('.modal-insert-image'));
             return true;
         });
 
@@ -17468,14 +17468,14 @@ define('core',[
         // 可以切换
         if (!window.lightModeForce) {
             $('.wmd-button-group4').html(['<div class="btn-group">',
-                    '<button type="button" class="wmd-button btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="' + getMsg('Edit mode') + '">',
+                    '<button type="button" class="wmd-button btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="' + getMsg('Edit mode') + '">',
                       '<i class="fa fa-gear"></i> <i id="md-keyboard-mode"></i>',
                     '</button>',
                     '<ul class="dropdown-menu wmd-mode">',
                       '<li><a href="#" data-mode="Normal"><i class="fa fa-check"></i> ' + getMsg('Normal mode') + '</a></li>',
                       '<li><a href="#" data-mode="Vim"><i class="fa"></i> ' + getMsg('Vim mode') + '</a></li>',
                       '<li><a href="#" data-mode="Emacs"><i class="fa"></i> ' + getMsg('Emacs mode') + '</a></li>',
-                      '<li role="separator" class="divider"></li>',
+                      '<li role="separator" class="dropdown-divider"></li>',
                       '<li><a href="#" data-mode="Light"><i class="fa"></i> ' + getMsg('Light editor') + '</a></li>',
                     '</ul>',
                   '</div>'].join(''));

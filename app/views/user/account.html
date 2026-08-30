@@ -1,16 +1,16 @@
 <div class="modal-dialog modal-sm" id="accountInfoDialog">
 	<div class="modal-content">
       <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{msg . "close"}}"></button>
         <h4 class="modal-title" id="modalTitle">{{msg . "accountSetting"}}</h4>
       </div>
       
       {{if .userInfo.Email}}
 		<div class="modal-body">
 			<ul class="nav nav-tabs" id="infoTabs">
-			  <li class="active"><a href="#baseInfo" data-toggle="tab">{{msg . "basicInfo"}}</a></li>
-			  <li><a href="#emailInfo" data-toggle="tab">{{msg . "updateEmail"}}</a></li>
-			  <li><a href="#updatePwd" data-toggle="tab">{{msg . "updatePassword"}}</a></li>
+			  <li class="nav-item"><a class="nav-link active" href="#baseInfo" data-bs-toggle="tab">{{msg . "basicInfo"}}</a></li>
+			  <li class="nav-item"><a class="nav-link" href="#emailInfo" data-bs-toggle="tab">{{msg . "updateEmail"}}</a></li>
+			  <li class="nav-item"><a class="nav-link" href="#updatePwd" data-bs-toggle="tab">{{msg . "updatePassword"}}</a></li>
 			</ul>
 			<div class="tab-content">
 			
@@ -70,7 +70,7 @@
 			  <form>
 				<div class="alert alert-danger" id="pwdMsg" style="display: none"></div>
 				
-				<div class="form-group">
+				<div class="mb-3">
 					<label class="control-label" for="oldPwd">{{msg . "oldPassword"}}</label>
 					 <input type="password" class="form-control" id="oldPwd" name="oldPwd"
 				    	data-rules='[
@@ -79,7 +79,7 @@
 				    	data-msg_target="#pwdMsg"
 				    />
 				</div>
-				<div class="form-group"> 
+				<div class="mb-3">
 					<label class="control-label" for="pwd">{{msg . "newPassword"}}</label>
 					<input type="password" class="form-control" id="pwd" name="pwd"
 					    data-rules='[
@@ -90,7 +90,7 @@
 				    >
 					{{msg . "passwordTips"}}
 				</div>
-				<div class="form-group"> 
+				<div class="mb-3">
 					<label class="control-label" for="pwd2">{{msg . "password2"}}</label>
 					 <input type="password" class="form-control" id="pwd2" name="pwd2"
 					    data-rules='[
@@ -109,14 +109,14 @@
 		{{else}}
 		<div class="modal-body">
 			<ul class="nav nav-tabs" id="thirdMyTabs">
-			  <li class="active"><a href="#accountInfo" data-toggle="tab">{{msg . "createAccount"}}</a></li>
+			  <li class="nav-item"><a class="nav-link active" href="#accountInfo" data-bs-toggle="tab">{{msg . "createAccount"}}</a></li>
 			</ul>
 			<div class="tab-content">
 			  <div class="tab-pane active" id="accountInfo">
 			  {{msg . "thirdCreateAcountTips"}}
 			  <form>
 				<div class="alert alert-danger" id="thirdAccountMsg" style="display: none"></div> 
-				<div class="form-group">
+				<div class="mb-3">
 					<label class="control-label" for="thirdEmail">{{msg . "email"}}</label>
 					<input type="text" class="form-control" id="thirdEmail" name="email"
 						data-rules='[
@@ -126,7 +126,7 @@
 				    	data-msg_target="#thirdAccountMsg"
 					> 
 				</div>
-				<div class="form-group"> 
+				<div class="mb-3">
 					<label class="control-label" for="thirdPwd">{{msg . "password"}}</label>
 					<input type="password" class="form-control" id="thirdPwd" name="pwd"
 					  data-rules='[
@@ -137,7 +137,7 @@
 					/>
 					{{msg . "passwordTips"}} 
 				</div>
-				<div class="form-group"> 
+				<div class="mb-3">
 					<label class="control-label" for="thirdPwd2">{{msg . "password2"}}</label>
 					<input type="password" class="form-control" id="thirdPwd2" name="pwd2" 
 					 	data-rules='[
@@ -156,13 +156,16 @@
 		{{end}}
 		
 		<div class="modal-footer">
-			<button type="button" class="btn btn-default" data-dismiss="modal">{{msg . "close"}}</button>
+			<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{msg . "close"}}</button>
 		</div>
 	</div>
 </div>
 
 <script>
-$('#infoTabs a').eq({{.tab}}).tab('show');
+var accountTab = $('#infoTabs a').eq({{.tab}})[0];
+if (accountTab && window.bootstrap && window.bootstrap.Tab) {
+	window.bootstrap.Tab.getOrCreateInstance(accountTab).show();
+}
 
 //--------------
 // 第三方账号设置

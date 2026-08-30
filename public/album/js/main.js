@@ -288,7 +288,7 @@ alert(getMsg("error"));
 				html += '<li ' + classes + '>';
 				html += '<a title="" href="javascript:;" class="a-img"><img  alt="" src="' + src + '" data-original="' + src + '" ></a>';
 				// html += '<div class="tools"><a href="javascript:;" class="del" data-id="' + each.FileId + '"><span class="fa fa-trash"></span></a></div>';
-				html += '<div class="tools clearfix" data-id="' + each.FileId + '"><div class="file-title pull-left">' + each.Title + '</div><div class="pull-right"><a href="javascript:;" class="del" data-id="' + each.FileId + '"><span class="fa fa-trash"></span></a></div></div>';
+				html += '<div class="tools clearfix" data-id="' + each.FileId + '"><div class="file-title float-start">' + each.Title + '</div><div class="float-end"><a href="javascript:;" class="del" data-id="' + each.FileId + '"><span class="fa fa-trash"></span></a></div></div>';
 				html += "</li>";
 			}
 				
@@ -508,14 +508,14 @@ alert(getMsg("error"));
 		// 
 		$("#goAddImageBtn").on('click', function() {
 			$("#albumsForUpload").val($("#albumsForList").val());
-			$('#myTab li:eq(1) a').tab('show');
+			window.bootstrap.Tab.getOrCreateInstance($('#myTab li:eq(1) a')[0]).show();
 		});
 
 		// toggle tab
 		// refresh 
 		$('#myTab a').on('shown.bs.tab', function(e) {
 			e.preventDefault()
-			$(this).tab('show');
+			window.bootstrap.Tab.getOrCreateInstance(this).show();
 			var href = $(this).attr("href");
 
 			if(self.needRefresh && href == "#images") {
@@ -766,13 +766,13 @@ alert(getMsg("error"));
 				var size = data.files[0].size;
 	            var maxFileSize = +parent.GlobalConfigs["uploadImageSize"] || 100;
 	            if(typeof size == 'number' && size > 1024 * 1024 * maxFileSize) {
-	                var tpl = $('<li><div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div></li>');
+	                var tpl = $('<li><div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	                tpl.find('div').append('<b>Warning:</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>] is bigger than ' + maxFileSize + 'M</small> ');
 	                tpl.appendTo(ul);
 	            	return;
 	            }
 	            
-	            var tpl = $('<li><div class="alert alert-info"><img class="loader" src="/public/album/images/ajax-loader.gif"> <a class="close" data-dismiss="alert">×</a></div></li>');
+	            var tpl = $('<li><div class="alert alert-info"><img class="loader" src="/public/album/images/ajax-loader.gif"> <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	            // Append the file name and file size
 	            tpl.find('div').append(data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small>');
 
@@ -796,7 +796,7 @@ alert(getMsg("error"));
 	                self.uploadRefreshImageList();
 	            } else {
 	                data.context.empty();
-	                var tpl = $('<li><div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div></li>');
+	                var tpl = $('<li><div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	                tpl.find('div').append('<b>' + getMsg('Error') + ':</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.result.Msg);
 	                data.context.append(tpl);
 	                setTimeout((function(tpl) {
@@ -809,7 +809,7 @@ alert(getMsg("error"));
 	        },
 	        fail: function(e, data) {
 	            data.context.empty();
-	            var tpl = $('<li><div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div></li>');
+	            var tpl = $('<li><div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	            tpl.find('div').append('<b>Error:</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.errorThrown);
 	            data.context.append(tpl);
 

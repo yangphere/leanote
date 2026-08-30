@@ -51,15 +51,15 @@
 
 <body>
 	<ul id="myTab" class="nav nav-tabs">
-        <li class="active"><a href="#upload" data-toggle="tab">上传图片</a></li>
-        <li class=""><a href="#url" data-toggle="tab">图片URL</a></li>
+        <li class="nav-item"><a class="nav-link active" href="#upload" data-bs-toggle="tab">上传图片</a></li>
+        <li class="nav-item"><a class="nav-link" href="#url" data-bs-toggle="tab">图片URL</a></li>
 	</ul>
 	<!-- Tab panes -->
 	<div class="tab-content">
 
 	  <div class="tab-pane active" id="upload" style="margin-top: 10px;">
 		<!--ci/index.php/upload/english-->
-		<form class="form-inline" id="upl" name="upl" action="/file/uploadImage" method="post" enctype="multipart/form-data" target="upload_target" onsubmit="jbImagesDialog.inProgress();">
+		<form class="d-flex flex-wrap align-items-center gap-2" id="upl" name="upl" action="/file/uploadImage" method="post" enctype="multipart/form-data" target="upload_target" onsubmit="jbImagesDialog.inProgress();">
 			
 			<div id="upload_in_progress" class="upload_infobar">
 				<img src="img/spinner.gif" width="16" height="16" class="spinner">Upload in progress&hellip; 
@@ -86,7 +86,7 @@
 	  </div>
 
 	  <div class="tab-pane" id="url" style="margin-top: 10px;">
-	  	<form class="form-inline" id="imageSrc2">
+		<form class="d-flex flex-wrap align-items-center gap-2" id="imageSrc2">
 		  	<table style="width: 100%">
 		  		<tr>
 			  		<th style="width: 50px"><label for="imageSrc">地址</label></th>
@@ -112,7 +112,7 @@
 	<div id="bottomBtns">
 		<div>
 			<button class="btn btn-success" id="insertCodeBtn" onclick="insertImage();">确定</button>
-			<button class="btn btn-default" id="closeBtn" onclick="closeWin()">关闭</button>
+			<button class="btn btn-secondary" id="closeBtn" onclick="closeWin()">关闭</button>
 		</div>
 	</div>
 	

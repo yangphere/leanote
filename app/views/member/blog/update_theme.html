@@ -8,7 +8,7 @@
 		- 
 		{{.theme.Name}}
 		{{end}}
-		<a class="btn btn-default" href="/preview?themeId={{.themeId}}" target="_blank"><span class="fa fa-eye"></span> {{msg . "preview"}}</a>
+		<a class="btn btn-secondary" href="/preview?themeId={{.themeId}}" target="_blank"><span class="fa fa-eye"></span> {{msg . "preview"}}</a>
 		
 		<small>
 		
@@ -45,11 +45,11 @@
 </style>
 <div class="row">
 <div class="col-sm-4">
-	<section class="panel panel-default">
-		<header class="panel-heading">
+	<section class="card">
+		<header class="card-header">
 			{{msg . "tplStyleScript"}}:
 		</header>
-		<div class="panel-body" style="<!--height:430px;-->overflow: auto;">
+		<div class="card-body" style="<!--height:430px;-->overflow: auto;">
 	
 	<div class="list-group bg-white file-list">
 		{{range .myTpls}}
@@ -62,22 +62,22 @@
 		
 		</div>
 	</div>
-	<footer class="panel-footer text-right bg-light lter">
-		<a class="btn btn-default" id="newFile">{{msg . "newFile"}}</a>
+	<footer class="card-footer text-end bg-light lter">
+		<a class="btn btn-secondary" id="newFile">{{msg . "newFile"}}</a>
 	</footer>
 	</section>
 </div>
 
 <div class="col-sm-8">
-	<section class="panel panel-default">
-		<header class="panel-heading">
+	<section class="card">
+		<header class="card-header">
 			{{msg . "currentFile"}}: <span id="curTpl">header.html</span>
 			<span id="msg"></span>
 		</header>
-		<div class="panel-body">
+		<div class="card-body">
 			<div id="tplContent" class="form-control" style="width: 100%; height: 500px;"></div>
 		</div>
-		<footer class="panel-footer text-right bg-light lter">
+		<footer class="card-footer text-end bg-light lter">
 		    <button type="submit" id="saveBtn" class="btn btn-success">{{msg . "save"}}</button>
 		</footer>
 	</section>
@@ -86,15 +86,15 @@
 
 <div class="row">
 <div class="col-sm-12">
-	<section class="panel panel-default">
-		<header class="panel-heading">
+	<section class="card">
+		<header class="card-header">
 			{{msg . "image"}}: images/
 		</header>
-		<div class="panel-body">
+		<div class="card-body">
 			<ul class="image-list" id="imageList">
 			</ul>
 		</div>
-		<footer class="panel-footer text-right bg-light lter">
+		<footer class="card-footer text-end bg-light lter">
 			<form id="formLogo" action="/member/blog/uploadThemeImage" method="post"
 				enctype="multipart/form-data" target="logoTarget">
 				<input type="hidden" name="themeId" value="{{.themeId}}" />
@@ -235,12 +235,12 @@ var theme = {
 		}
 		
 		if(t) {
-			t.button("loading");
+			setButtonLoading(t, true);
 		}
 		self.msgO.html("...");
 		ajaxPost("/member/blog/updateTplContent", {themeId: themeId, filename: self.curTpl, content: content}, function(re) {
 			if(t) {
-				t.button("reset");
+				setButtonLoading(t, false);
 			}
 			if(reIsOk(re)) {
 				self.cache[filename] = content;
@@ -252,6 +252,11 @@ var theme = {
 			} else {
 				art.alert(re.Msg);
 			}
+		}, function() {
+			if(t) {
+				setButtonLoading(t, false);
+			}
+			alert("leanote出现了错误!");
 		});
 	},
 	renderContent: function(name, content) {
@@ -327,7 +332,7 @@ var theme = {
 			var image = images[i];
 			var path = themeBasePath + "/images/" + image;
 			
-			html += '<li><div class="thumb"><img src="' + path + '"></div><div class="op"><span>' + image + '</span><br /><a class="btn btn-xs btn-warning delete-image" data-image="' + image + '"><span class="fa fa-remove"></span></a></div></li>';
+			html += '<li><div class="thumb"><img src="' + path + '"></div><div class="op"><span>' + image + '</span><br /><a class="btn btn-sm btn-warning delete-image" data-image="' + image + '"><span class="fa fa-remove"></span></a></div></li>';
 		}
 		self.imageListO.html(html);
 	},

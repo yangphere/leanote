@@ -17,27 +17,27 @@
 
     <div class="tabs">
       <ul id="myTab" class="nav nav-tabs">
-        <li class="active"><a href="#images" data-toggle="tab">{{leaMsg . "Images"}}</a></li>
-        <li class=""><a href="#uploadTab" data-toggle="tab">{{leaMsg . "Upload"}}</a></li>
-        <li class=""><a href="#url" data-toggle="tab">{{leaMsg . "Image URL"}}</a></li>
+        <li class="nav-item"><a class="nav-link active" href="#images" data-bs-toggle="tab">{{leaMsg . "Images"}}</a></li>
+        <li class="nav-item"><a class="nav-link" href="#uploadTab" data-bs-toggle="tab">{{leaMsg . "Upload"}}</a></li>
+        <li class="nav-item"><a class="nav-link" href="#url" data-bs-toggle="tab">{{leaMsg . "Image URL"}}</a></li>
       </ul>
       <div id="myTabContent" class="tab-content">
-        <div class="tab-pane fade active in" id="images">
+        <div class="tab-pane fade show active" id="images">
         	<!-- tools -->
         	<div>
-				<form class="form-inline" role="form">
-				  <div class="form-group">
+				<form class="album-form d-flex flex-wrap align-items-center gap-2" role="form">
+				  <div class="mb-3">
 				    <label class="control-label" for="albums">{{leaMsg . "Albums"}}:</label>
 				  </div>
-				  <div class="form-group">
+				  <div class="mb-3">
 				    	<select class="form-control" id="albumsForList">
 				    		<option value="">{{leaMsg . "Default"}}</option>
 						</select>
 				  </div>
-				  <div class="form-group">
+				  <div class="mb-3">
 				  	<input class="form-control" type="text" id="key" placeholder="{{leaMsg . "File title search"}}"/>
 				  </div>
-				  <div class="form-group">
+				  <div class="mb-3">
 				  	&nbsp;&nbsp;<a href="javascript:;" title="refresh" id="refresh"><span class="fa fa-refresh"></span></a>
 				  </div>
 				</form>
@@ -56,7 +56,7 @@
 				<div id="imageMask">
 					<div id="noImages">
 						<p>{{msg . "No Images"}}!</p>
-						<btn class="btn btn-default" id="goAddImageBtn">{{leaMsg . "Go to upload images"}}</btn>
+						<button type="button" class="btn btn-secondary" id="goAddImageBtn">{{leaMsg . "Go to upload images"}}</button>
 					</div>
 					<div id="loading">
 						loading....
@@ -66,8 +66,8 @@
         </div>
         <div class="tab-pane fade" id="uploadTab">
             <div>
-               <form class="form-inline" role="form">
-				  <div class="form-group" id="albumSelect">
+               <form class="album-form d-flex flex-wrap align-items-center gap-2" role="form">
+				  <div class="mb-3" id="albumSelect">
 					    <label class="control-label" for="albums">{{leaMsg . "Albums"}}:</label>
 					    
 				    	<select class="form-control" id="albumsForUpload">
@@ -80,13 +80,13 @@
 				  </div>
 				  
 				  <!-- rename or add album -->
-				  <div class="form-group" style="display: none" id="addOrUpdateAlbumForm">
+				  <div class="mb-3" style="display: none" id="addOrUpdateAlbumForm">
 				      <input type="text" class="form-control" style="width: 150px" id="albumName">
 				      <button class="btn btn-success" type="button" id="addOrUpdateAlbumBtn">{{leaMsg . "Add Album"}}</button>
-				      <button class="btn btn-default" type="button" id="cancelAlbumBtn">{{leaMsg . "Cancel"}}</button>
+				      <button class="btn btn-secondary" type="button" id="cancelAlbumBtn">{{leaMsg . "Cancel"}}</button>
 				  </div>
 
-				  <div class="form-group">
+				  <div class="mb-3">
 			        <span id="msg" class="alert alert-success" style="padding: 3px; display: none"></span>
 				  </div>
 				</form> 
@@ -94,7 +94,7 @@
 
             <form id="upload" method="post" action="/file/uploadImageLeaui" enctype="multipart/form-data" style="margin-top: 5px;">
                 <div id="drop">
-                    <a class="btn btn-default">
+                    <a class="btn btn-secondary">
                         {{leaMsg . "Click to upload images Or Drop images to here"}}
                     </a>
                     <input type="file" name="file" multiple />
@@ -105,17 +105,17 @@
         </div>
 
         <div class="tab-pane fade" id="url">
-        	<form class="form-inline" id="imageUrlForm" style="">
-        		<div class="form-group">
+		<form class="album-form d-flex flex-wrap align-items-center justify-content-center gap-2" id="imageUrlForm" style="">
+		<div class="mb-3">
 				    <label class="control-label" for="imageUrl">{{leaMsg . "Image URL"}}:</label>
 				</div>
-				<div class="form-group">
+				<div class="mb-3">
 					<input type="text" class="form-control" id="imageUrl" size="51"/>
 				</div>
-				<div class="form-group">
+				<div class="mb-3">
 					<button class="btn btn-success" id="addImageUrlBtn">{{leaMsg . "Add Image"}}</button>
 				</div>
-				<div class="form-group">
+				<div class="mb-3">
 					<div class="alert alert-danger" id="msgForUrl" 
         			style="display: none; padding: 5px; width: 150px;">
         				{{leaMsg . "Can't load this url"}}
@@ -131,8 +131,8 @@
 
 	<!--
     <div id="previewAttrs" style="margin-left: 10px">
-    	<form class="form-inline" role="form">
-		  <div class="form-group">
+		<form class="album-form d-flex flex-wrap align-items-center gap-2" role="form">
+		  <div class="mb-3">
 	    	<input class="form-control" id="attrTitle" placeholder="title" size="20" disabled/>
 	    	<input class="form-control" id="attrWidth" placeholder="width" size="5" disabled/> X 
 	    	<input class="form-control" id="attrHeight" placeholder="height" size="5" disabled/>

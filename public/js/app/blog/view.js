@@ -344,10 +344,10 @@ self.commentsMoreO.find("a").on('click', function(){
 				return;
 			}
 			var t = $(this);
-			t.button("loading");
+			setButtonLoading(t[0], true);
 			var data = {noteId: self.noteId, toCommentId: commentId, content: content};
 			ajaxPost(staticUrl + "/blog/comment", data, function(ret) {
-				t.button("reset");
+				setButtonLoading(t[0], false);
 				$content.val("");
 				self.bindCommentNum(1);
 				if(commentId) {
@@ -360,6 +360,9 @@ self.commentsMoreO.find("a").on('click', function(){
 				
 				// 添加一个
 				self.addCommentRender(ret.Item);
+			}, function() {
+				setButtonLoading(t[0], false);
+				alert("leanote出现了错误!");
 			});
 		});
 		

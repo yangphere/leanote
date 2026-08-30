@@ -19,13 +19,13 @@
       "key": "Are you sure ?",
       "namespace": "blog",
       "path": "app/views/member/blog/theme.html",
-      "line": 172
+      "line": 175
     },
     {
       "key": "Are you sure ?",
       "namespace": "blog",
       "path": "app/views/member/blog/theme.html",
-      "line": 209
+      "line": 218
     },
     {
       "key": "Are you sure to delete",
@@ -37,37 +37,37 @@
       "key": "Are you sure to delete",
       "namespace": "blog",
       "path": "app/views/member/blog/update_theme.html",
-      "line": 307
+      "line": 312
     },
     {
       "key": "Are you sure to install it ?",
       "namespace": "blog",
       "path": "app/views/member/blog/theme.html",
-      "line": 190
+      "line": 196
     },
     {
       "key": "cancel",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
-      "line": 421
+      "line": 424
     },
     {
       "key": "chooseReason",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
-      "line": 437
+      "line": 440
     },
     {
       "key": "confirm",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
-      "line": 426
+      "line": 429
     },
     {
       "key": "confirmDeleteComment",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
-      "line": 370
+      "line": 373
     },
     {
       "key": "daysAgo",
@@ -85,7 +85,7 @@
       "key": "error",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
-      "line": 445
+      "line": 448
     },
     {
       "key": "Error",
@@ -127,25 +127,25 @@
       "key": "Error",
       "namespace": "blog",
       "path": "app/views/member/blog/theme.html",
-      "line": 198
+      "line": 204
     },
     {
       "key": "Error",
       "namespace": "blog",
       "path": "app/views/member/blog/theme.html",
-      "line": 217
+      "line": 226
     },
     {
       "key": "Error",
       "namespace": "blog",
       "path": "app/views/member/blog/update_theme.html",
-      "line": 292
+      "line": 297
     },
     {
       "key": "Error",
       "namespace": "blog",
       "path": "app/views/member/blog/update_theme.html",
-      "line": 366
+      "line": 371
     },
     {
       "key": "File exists",
@@ -175,7 +175,7 @@
       "key": "like",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
-      "line": 404
+      "line": 407
     },
     {
       "key": "minutesAgo",
@@ -193,7 +193,7 @@
       "key": "No images",
       "namespace": "blog",
       "path": "app/views/member/blog/update_theme.html",
-      "line": 322
+      "line": 327
     },
     {
       "key": "none",
@@ -205,25 +205,25 @@
       "key": "reportBlog?",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
-      "line": 476
+      "line": 479
     },
     {
       "key": "reportComment?",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
-      "line": 470
+      "line": 473
     },
     {
       "key": "reportSuccess",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
-      "line": 443
+      "line": 446
     },
     {
       "key": "scanQRCode",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
-      "line": 489
+      "line": 492
     },
     {
       "key": "Success",
@@ -253,13 +253,13 @@
       "key": "Success",
       "namespace": "blog",
       "path": "app/views/member/blog/theme.html",
-      "line": 195
+      "line": 201
     },
     {
       "key": "Success",
       "namespace": "blog",
       "path": "app/views/member/blog/theme.html",
-      "line": 214
+      "line": 223
     },
     {
       "key": "Success",
@@ -277,13 +277,13 @@
       "key": "Success",
       "namespace": "blog",
       "path": "app/views/member/blog/update_theme.html",
-      "line": 310
+      "line": 315
     },
     {
       "key": "unlike",
       "namespace": "blog",
       "path": "public/js/app/blog/view.js",
-      "line": 402
+      "line": 405
     },
     {
       "key": "weeksAgo",
@@ -493,7 +493,7 @@
       "key": "checkEmail",
       "namespace": "msg",
       "path": "app/views/user/account.html",
-      "line": 223
+      "line": 226
     },
     {
       "key": "click to remove this image",
@@ -511,13 +511,31 @@
       "key": "close",
       "namespace": "msg",
       "path": "public/js/plugins/history.js",
+      "line": 22
+    },
+    {
+      "key": "close",
+      "namespace": "msg",
+      "path": "public/js/plugins/history.js",
       "line": 28
     },
     {
       "key": "close",
       "namespace": "msg",
       "path": "public/js/plugins/tips.js",
+      "line": 11
+    },
+    {
+      "key": "close",
+      "namespace": "msg",
+      "path": "public/js/plugins/tips.js",
       "line": 16
+    },
+    {
+      "key": "close",
+      "namespace": "msg",
+      "path": "public/md/main-v2.js",
+      "line": 16823
     },
     {
       "key": "Code Sample",
@@ -607,7 +625,7 @@
       "key": "createAccountFailed",
       "namespace": "msg",
       "path": "app/views/user/account.html",
-      "line": 185
+      "line": 188
     },
     {
       "key": "createAccountSuccess",
@@ -619,7 +637,7 @@
       "key": "createAccountSuccess",
       "namespace": "msg",
       "path": "app/views/user/account.html",
-      "line": 180
+      "line": 183
     },
     {
       "key": "datetime",
@@ -679,7 +697,7 @@
       "key": "Delete",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2082
+      "line": 2085
     },
     {
       "key": "Delete Success!",
@@ -703,7 +721,7 @@
       "key": "Download",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2083
+      "line": 2086
     },
     {
       "key": "Edit mode",
@@ -745,7 +763,7 @@
       "key": "emailSendFailed",
       "namespace": "msg",
       "path": "app/views/user/account.html",
-      "line": 225
+      "line": 228
     },
     {
       "key": "Emphasis",
@@ -991,7 +1009,7 @@
       "key": "errorEmail",
       "namespace": "msg",
       "path": "public/js/common.js",
-      "line": 835
+      "line": 905
     },
     {
       "key": "errorPassword",
@@ -1243,7 +1261,7 @@
       "key": "inputEmail",
       "namespace": "msg",
       "path": "public/js/common.js",
-      "line": 833
+      "line": 903
     },
     {
       "key": "inputFriendEmail",
@@ -1327,7 +1345,7 @@
       "key": "Insert link into content",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2084
+      "line": 2087
     },
     {
       "key": "inviteEmailBody",
@@ -1693,7 +1711,7 @@
       "key": "sendFailed",
       "namespace": "msg",
       "path": "app/views/user/account.html",
-      "line": 262
+      "line": 265
     },
     {
       "key": "sendInviteEmailToYourFriend",
@@ -1711,7 +1729,7 @@
       "key": "sendSuccess",
       "namespace": "msg",
       "path": "app/views/user/account.html",
-      "line": 254
+      "line": 257
     },
     {
       "key": "sendSuccess",
@@ -1723,7 +1741,7 @@
       "key": "sendVerifiedEmail",
       "namespace": "msg",
       "path": "app/views/user/account.html",
-      "line": 251
+      "line": 254
     },
     {
       "key": "share",
@@ -1903,7 +1921,7 @@
       "key": "unTitled",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2558
+      "line": 2561
     },
     {
       "key": "update",
@@ -1927,7 +1945,7 @@
       "key": "updatePasswordSuccess",
       "namespace": "msg",
       "path": "app/views/user/account.html",
-      "line": 241
+      "line": 244
     },
     {
       "key": "updateUsernameSuccess",
@@ -1939,7 +1957,7 @@
       "key": "updateUsernameSuccess",
       "namespace": "msg",
       "path": "app/views/user/account.html",
-      "line": 204
+      "line": 207
     },
     {
       "key": "usernameIsExisted",
@@ -1951,7 +1969,7 @@
       "key": "usernameIsExisted",
       "namespace": "msg",
       "path": "app/views/user/account.html",
-      "line": 206
+      "line": 209
     },
     {
       "key": "verifiedEmaiHasSent",
@@ -1963,7 +1981,7 @@
       "key": "verifiedEmaiHasSent",
       "namespace": "msg",
       "path": "app/views/user/account.html",
-      "line": 223
+      "line": 226
     },
     {
       "key": "Vim mode",
@@ -1999,7 +2017,7 @@
   "dynamic": [
     {
       "path": "public/js/common.js",
-      "line": 1164,
+      "line": 1234,
       "column": 11
     },
     {

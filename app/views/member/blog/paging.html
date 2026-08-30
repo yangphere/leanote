@@ -4,12 +4,12 @@
 <div class="row">
 <div class="col-sm-8">
 	<div id="formData">
-		<section class="panel panel-default">
-			<div class="panel-body">
+		<section class="card">
+			<div class="card-body">
   				<div class="alert alert-danger" id="domainMsg" style="display: none"></div>
   				
 				<form  role="form" id="dataFrom">
-					<div class="form-group">
+					<div class="mb-3">
 						<label for="perPageSize">{{msg . "perPageSize"}}</label>
 						  <input type="text" class="form-control"
 								placeholder="10"
@@ -17,7 +17,7 @@
 								name="perPageSize"
 								value="{{.userBlog.PerPageSize}}" />
 					</div>
-					<div class="form-group">
+					<div class="mb-3">
 						<label for="perPageSize" >{{msg . "sortField"}}</label>
 						  <select class="form-control"
 							id="sortField"
@@ -29,7 +29,7 @@
 							<option value="Title" {{if eq $.userBlog.SortField "Title"}}selected{{end}}>{{msg . "title"}}</option>
 						  </select>
 					</div>
-					<div class="form-group">
+					<div class="mb-3">
 						<label>{{msg $ "sortType"}}</label>
 						<div>
 						<label><input type="radio" name="isAsc" value="0" {{if not .userBlog.IsAsc}}checked{{end}}> {{msg . "desc"}}</label>
@@ -38,7 +38,7 @@
 					</div>
 				</form>
 			</div>
-			<footer class="panel-footer text-right bg-light lter">
+			<footer class="card-footer text-end bg-light lter">
 			    <button type="submit" id="baseBtn" class="btn btn-success">{{msg . "submit"}}</button>
 			</footer>
 		</section>

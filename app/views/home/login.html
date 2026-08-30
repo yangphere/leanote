@@ -2,7 +2,7 @@
 
 <!-- 验证码 -->
 <script type="text/x-jsrender" id="tCaptcha">
-	<div class="form-group"> 
+	<div class="mb-3">
 		<label class="control-label">{{rawMsg . "captcha"}}</label>
 	    <input type="text" class="form-control" id="captcha" name="captcha">
 	    <a id="reloadCaptcha" title="{{msg . "reloadCaptcha"}}" onclick="$('#captchaImage').attr('src', '/captcha/get?' + ((new Date()).getTime()))"><img src="/captcha/get" id="captchaImage"/></a>
@@ -21,11 +21,11 @@
 			<form>
 				<div class="alert alert-danger" id="loginMsg"></div>
 				<input id="from" type="hidden" value="{{.from}}" />
-				<div class="form-group">
+				<div class="mb-3">
 					<label class="control-label">{{msg . "usernameOrEmail"}}</label>
 					<input type="text" class="form-control" id="email" name="email" value="{{.email}}"> 
 				</div>
-				<div class="form-group"> 
+				<div class="mb-3">
 					<label class="control-label">{{msg . "password"}}</label>
 				    <input type="password" class="form-control" id="pwd" name="pwd">
 				</div>
@@ -35,13 +35,13 @@
 				</div>
 				
 				<div class="clearfix">
-					<a href="/findPassword" class="pull-right m-t-xs"><small>{{msg . "forgetPassword"}}</small></a>
+					<a href="/findPassword" class="float-end m-t-xs"><small>{{msg . "forgetPassword"}}</small></a>
 					<button id="loginBtn" class="btn btn-success">{{msg . "login"}}</button>
 				</div>
 				<!--
 				<div class="line line-dashed"></div>
 				
-				<a href="#" id="github" class="btn btn-github btn-block m-b-sm"><i class="fa fa-github pull-left"></i>{{msg . "use"}} Github</a>
+				<a href="#" id="github" class="btn btn-github w-100 m-b-sm"><i class="fa fa-github float-start"></i>{{msg . "use"}} Github</a>
 				-->
 				
 				<div class="line line-dashed"></div>
@@ -49,11 +49,11 @@
 				<p class="text-muted text-center"><small>{{msg . "hasAcount"}}</small></p>
 				
 				{{if .openRegister}}
-				<a href="/register" class="btn btn-default btn-block">{{msg . "register"}}</a>
+				<a href="/register" class="btn btn-secondary w-100">{{msg . "register"}}</a>
 				{{msg . "or"}}
 				{{end}}
 				
-				<a id="loginBtn" href="/demo" class="btn btn-default btn-block">{{msg . "try"}}</a>
+				<a id="loginBtn" href="/demo" class="btn btn-secondary w-100">{{msg . "try"}}</a>
 			</form>	
 		</div>
     </div>

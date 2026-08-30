@@ -23,5 +23,8 @@
   "license": "GPL v2",
   "bugs": {
     "url": "https://github.com/yangphere/leanote/issues"
+  },
+  "dependencies": {
+    "bootstrap": "5.3.8"
   }
 }

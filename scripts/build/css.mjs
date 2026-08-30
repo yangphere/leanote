@@ -3,10 +3,25 @@ import path from 'node:path';
 import { transform } from 'esbuild';
 import { resolveRepoPath } from './manifest.mjs';
 
+function stripSourceMappingURL(source) {
+  return source
+    .replace(/^\s*\/\/[#@]\s*sourceMappingURL=[^\r\n]+\s*$/gm, '')
+    .replace(/^\s*\/\*[#@]\s*sourceMappingURL=[^*]+\*\/\s*$/gm, '')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
 export async function buildCss(entry, root, stagingRoot) {
   if (!Array.isArray(entry.inputs) || entry.inputs.length === 0) throw new Error(`empty CSS inputs for ${entry.name}`);
   const sourcePath = resolveRepoPath(root, entry.inputs[0]);
-  const source = await fs.readFile(sourcePath, 'utf8');
+  let source = await fs.readFile(sourcePath, 'utf8');
+  if (entry.stripSourceMappingURL) source = stripSourceMappingURL(source);
+  if (entry.transform === 'copy') {
+    const outputPath = resolveRepoPath(stagingRoot, entry.output);
+    if (!source.trim()) throw new Error(`empty CSS bundle for ${entry.name}`);
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    await fs.writeFile(outputPath, source, 'utf8');
+    return outputPath;
+  }
   const result = await transform(source, {
     loader: 'css', minify: true, sourcemap: false,
     legalComments: 'none', sourcefile: entry.inputs[0],

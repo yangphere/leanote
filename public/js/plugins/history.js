@@ -12,20 +12,20 @@ define('history', [], function() {
                         '<h4 class="modal-title" class="modalTitle">' + + '</h4>',
                     '</div>',
                     '<div class="modal-body clearfix">',
-                        '<div class="history-list-wrap pull-left">',
+                        '<div class="history-list-wrap float-start">',
                             '<div class="history-list-header">' + getMsg('history') +' (<span class="history-num"></span>)</div>',
                             '<div class="history-list list-group"></div>',
                         '</div>',
-                        '<div class="history-content-wrap pull-left">',
+                        '<div class="history-content-wrap float-start">',
                             '<div class="history-content-header">',
                                 '<a class="btn btn-primary back">' + getMsg('restoreFromThisVersion') + '</a>',
-                                '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>',
+                        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="' + getMsg('close') + '"></button>',
                             '</div>',
                             '<div class="history-content"></div>',
                         '</div>',
                     '</div>',
                     '<div class="modal-footer hide">',
-                        '<button type="button" class="btn btn-default" data-dismiss="modal">' + getMsg('close') + '</button>',
+                        '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">' + getMsg('close') + '</button>',
                     '</div>',
                 '</div>',
             '</div>',
@@ -71,7 +71,7 @@ define('history', [], function() {
             this.renderContent(0);
             $historyNum.html(list.length);
             // show
-            $tpl.modal({show: true});
+            showBootstrapModal($tpl[0]);
         },
 
         bind: function () {
@@ -95,7 +95,7 @@ define('history', [], function() {
                     note = Note.cache[Note.curNoteId];
                     setEditorContent(me.list[me.curIndex].Content, note.IsMarkdown);
 
-                    $tpl.modal('hide');
+                    hideBootstrapModal($tpl[0]);
                     // 保存
                     Note.curChangedSaveIt(true);
                 }
@@ -127,7 +127,7 @@ define('history', [], function() {
                     var content = re[i]
                     content.Ab = Note.genAbstract(content.Content, 200);
                     // 为什么不用tt(), 因为content可能含??
-                    str += '<tr><td seq="' +  i + '">#' + (i+1) +'<' + s + ' class="each-content">' + content.Ab + '</' + s + '> <div class="btns">' + getMsg("datetime") + ': <span class="label label-default">' + goNowToDatetime(content.UpdatedTime) + '</span> <button class="btn btn-default all">' + getMsg("unfold") + '</button> <button class="btn btn-primary back">' + getMsg('restoreFromThisVersion') + '</button></div></td></tr>';
+                    str += '<tr><td seq="' +  i + '">#' + (i+1) +'<' + s + ' class="each-content">' + content.Ab + '</' + s + '> <div class="btns">' + getMsg("datetime") + ': <span class="badge text-bg-secondary">' + goNowToDatetime(content.UpdatedTime) + '</span> <button class="btn btn-secondary all">' + getMsg("unfold") + '</button> <button class="btn btn-primary back">' + getMsg('restoreFromThisVersion') + '</button></div></td></tr>';
                 }
                 str += "</table></div>";
                 $content.html(str);

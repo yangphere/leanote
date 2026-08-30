@@ -265,10 +265,10 @@ self.commentsMoreO.find("a").on('click', function(){
 				return;
 			}
 			var t = $(this);
-			t.button("loading");
+			setButtonLoading(t, true);
 			var data = {noteId: self.noteId, toCommentId: commentId, content: content};
 			commentPost(self.noteId, commentId, content, function(ret) {
-				t.button("reset");
+				setButtonLoading(t, false);
 				$content.val("");
 				self.bindCommentNum(1);
 				if(commentId) {
@@ -281,6 +281,9 @@ self.commentsMoreO.find("a").on('click', function(){
 				
 				// 添加一个
 				self.addCommentRender(ret.Item);
+			}, function() {
+				setButtonLoading(t, false);
+				alert("error!");
 			});
 		});
 		

@@ -12,37 +12,37 @@ label {
 </style>
 
 <form id="add_user_form">
-<section class="panel panel-default">
-	<header class="panel-heading bg-light">
+<section class="card">
+	<header class="card-header bg-light">
 		<ul class="nav nav-tabs nav-justified">
-			<li class="active"><a href="#tab1" data-toggle="tab">Layout</a></li>
-			<li class=""><a href="#tab2" data-toggle="tab">Register</a></li>
-			<li class=""><a href="#tab3" data-toggle="tab">Update Email</a></li>
-			<li ><a href="#tab4" data-toggle="tab">Find Passord</a></li>
-			<li ><a href="#tab5" data-toggle="tab">Invite Register</a></li>
-			<li ><a href="#tab6" data-toggle="tab">Blog Comment</a></li>
+			<li class="nav-item"><a class="nav-link active" href="#tab1" data-bs-toggle="tab">Layout</a></li>
+			<li class="nav-item"><a class="nav-link" href="#tab2" data-bs-toggle="tab">Register</a></li>
+			<li class="nav-item"><a class="nav-link" href="#tab3" data-bs-toggle="tab">Update Email</a></li>
+			<li class="nav-item"><a class="nav-link" href="#tab4" data-bs-toggle="tab">Find Passord</a></li>
+			<li class="nav-item"><a class="nav-link" href="#tab5" data-bs-toggle="tab">Invite Register</a></li>
+			<li class="nav-item"><a class="nav-link" href="#tab6" data-bs-toggle="tab">Blog Comment</a></li>
 			
 		</ul>
 	</header>
-	<div class="panel-body">
+	<div class="card-body">
 		<div class="tab-content">
 <div class="tab-pane active" id="tab1">
 	<div class="row">
 		<div class="col-sm-12">
-			<section class="panel panel-default">
-				<div class="panel-body">
+			<section class="card">
+				<div class="card-body">
 					<b>Layout</b>
 					<div>
 						Available tokens: 
 						<code>$.subject</code>
 						<code>$.siteUrl</code>
 					</div>
-					<div class="form-group">
+					<div class="mb-3">
 						<label>Header</label>
 						<textarea type="text" id="emailHeader" rows="10" class="form-control" name="emailTemplateHeader">{{.str.emailTemplateHeader}}</textarea>
 					</div>
 					
-					<div class="form-group">
+					<div class="mb-3">
 						<label>Footer</label>
 						<textarea type="text" id="emailFooter" rows="10" class="form-control" name="emailTemplateFooter">{{.str.emailTemplateFooter}}</textarea>
 					</div>
@@ -54,8 +54,8 @@ label {
 <div class="tab-pane" id="tab2">
 	<div class="row">
 		<div class="col-sm-12">
-			<section class="panel panel-default">
-				<div class="panel-body">
+			<section class="card">
+				<div class="card-body">
 					<b>Register Welcome And Email Validation:</b>
 					<div>
 						Available tokens: 
@@ -69,12 +69,12 @@ label {
 						<code>$.user.email</code>
 						<code>$.user.username</code>
 					</div>
-					<div class="form-group">
+					<div class="mb-3">
 						<label>Subject</label>
 						<input type="text" class="form-control" name="emailTemplateRegisterSubject" value="{{.str.emailTemplateRegisterSubject}}">
 					</div>
 					
-					<div class="form-group">
+					<div class="mb-3">
 						<label>Body</label>
 						<textarea type="text" rows="10" class="form-control" name="emailTemplateRegister">{{.str.emailTemplateRegister}}</textarea>
 					</div>
@@ -91,8 +91,8 @@ label {
 <div class="tab-pane" id="tab3">
 <div class="row">
 		<div class="col-sm-12">
-			<section class="panel panel-default">
-				<div class="panel-body">
+			<section class="card">
+				<div class="card-body">
 					<b>Update Email and Send Active Email</b>
 					<div>
 						Available tokens: 
@@ -107,12 +107,12 @@ label {
 						<code>$.user.username</code>
 					</div>
 				
-					<div class="form-group">
+					<div class="mb-3">
 						<label>Subject</label>
 						<input type="text" class="form-control" name="emailTemplateUpdateEmailSubject" value="{{.str.emailTemplateUpdateEmailSubject}}">
 					</div>
 					
-					<div class="form-group">
+					<div class="mb-3">
 						<label>Body</label>
 						<textarea type="text" rows="10" class="form-control" name="emailTemplateUpdateEmail">{{.str.emailTemplateUpdateEmail}}</textarea>
 					</div>
@@ -131,8 +131,8 @@ label {
 <div class="tab-pane" id="tab4">
 <div class="row">
 		<div class="col-sm-12">
-			<section class="panel panel-default">
-				<div class="panel-body">
+			<section class="card">
+				<div class="card-body">
 					<b>Find Passord</b>
 					<div>
 						Available tokens: 
@@ -144,12 +144,12 @@ label {
 						<code>$.tokenTimeout</code>
 					</div>
 				
-					<div class="form-group">
+					<div class="mb-3">
 						<label>Subject</label>
 						<input type="text" class="form-control" name="emailTemplateFindPasswordSubject" value="{{.str.emailTemplateFindPasswordSubject}}">
 					</div>
 					
-					<div class="form-group">
+					<div class="mb-3">
 						<label>Body</label>
 						<textarea type="text" rows="10" class="form-control" name="emailTemplateFindPassword">{{.str.emailTemplateFindPassword}}</textarea>
 					</div>
@@ -168,8 +168,8 @@ label {
 <div class="tab-pane" id="tab5">
 <div class="row">
 		<div class="col-sm-12">
-			<section class="panel panel-default">
-				<div class="panel-body">
+			<section class="card">
+				<div class="card-body">
 					<b>Invite Register</b>
 					<div>
 						Available tokens: 
@@ -182,12 +182,12 @@ label {
 						<code>$.content</code>
 					</div>
 				
-					<div class="form-group">
+					<div class="mb-3">
 						<label>Subject</label>
 						<input type="text" class="form-control" name="emailTemplateInviteSubject" value="{{.str.emailTemplateInviteSubject}}">
 					</div>
 					
-					<div class="form-group">
+					<div class="mb-3">
 						<label>Body</label>
 						<textarea type="text" rows="10" class="form-control" name="emailTemplateInvite">{{.str.emailTemplateInvite}}</textarea>
 					</div>
@@ -206,8 +206,8 @@ label {
 <div class="tab-pane" id="tab6">
 <div class="row">
 		<div class="col-sm-12">
-			<section class="panel panel-default">
-				<div class="panel-body">
+			<section class="card">
+				<div class="card-body">
 					<b>Blog Comment</b>
 					<div>
 						Available tokens: 
@@ -237,12 +237,12 @@ label {
 						<code>$.commentedUser.isBlogAuthor</code>
 					</div>
 					
-					<div class="form-group">
+					<div class="mb-3">
 						<label>Subject</label>
 						<input type="text" class="form-control" name="emailTemplateCommentSubject" value="{{.str.emailTemplateCommentSubject}}">
 					</div>
 					
-					<div class="form-group">
+					<div class="mb-3">
 						<label>Body</label>
 						<textarea type="text" rows="10" class="form-control" name="emailTemplateComment">{{.str.emailTemplateComment}}</textarea>
 					</div>
@@ -262,7 +262,7 @@ label {
 	</div>
 </section>
 
-<footer class="panel-footer text-right bg-light lter">
+<footer class="card-footer text-end bg-light lter">
 	<button type="submit" id="submit" class="btn btn-success btn-s-xs">Submit</button>
 </footer>
 
@@ -308,14 +308,17 @@ $(function() {
 		e.preventDefault();
 		var t = this;
 		if($("#add_user_form").valid()) {
-			$(t).button('loading');
+			setButtonLoading(t, true);
 			ajaxPost("/adminEmail/template", getFormJsonData("add_user_form"), function(ret){
-				$(t).button('reset')
+				setButtonLoading(t, false)
 				if(!ret.Ok) {
 					art.alert(ret.Msg)
 				} else {
 					art.tips("Success");
 				}
+			}, function() {
+				setButtonLoading(t, false);
+				alert("leanote出现了错误!");
 			});
 		}
 	});

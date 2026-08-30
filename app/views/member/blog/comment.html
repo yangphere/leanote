@@ -4,11 +4,11 @@
 <div class="row">
 <div class="col-sm-8">
 	<div id="formData">
-		<section class="panel panel-default">
-			<div class="panel-body">
+		<section class="card">
+			<div class="card-body">
   				<div class="alert alert-danger" id="baseMsg" style="display: none"></div>
   				<form class="form-horizontal" role="form">
-					<div class="form-group">
+					<div class="mb-3">
 						<div class="col-sm-12">
 							<label>
 								<input type="checkbox" id="CanComment" name="CanComment"
@@ -46,7 +46,7 @@
 				</form>
 				
 			</div>
-			<footer class="panel-footer text-right bg-light lter">
+			<footer class="card-footer text-end bg-light lter">
 			    <button type="submit" id="baseBtn" class="btn btn-success">{{msg . "submit"}}</button>
 			</footer>
 		</section>

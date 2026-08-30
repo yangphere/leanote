@@ -5,13 +5,13 @@
 
 <div class="col-sm-6">
 	<form id="add_user_form">
-		<section class="panel panel-default">
-			<div class="panel-body">
-				<div class="form-group">
+		<section class="card">
+			<div class="card-body">
+				<div class="mb-3">
 					<label>Email</label>
 					<input type="text" class="form-control" name="email" data-rule-required="true" data-rule-email="true">
 				</div>
-				<div class="form-group pull-in clearfix">
+				<div class="mb-3 pull-in clearfix">
 					<div class="col-sm-6">
 						<label>Enter password</label>
 						<input type="password" class="form-control" data-rule-required="true" id="pwd" name="pwd" data-rule-minlength="6">
@@ -22,7 +22,7 @@
 					</div>
 				</div>
 			</div>
-			<footer class="panel-footer text-right bg-light lter">
+			<footer class="card-footer text-end bg-light lter">
 				<button type="submit" id="submit" class="btn btn-success btn-s-xs">Submit</button>
 			</footer>
 		</section>
@@ -41,14 +41,17 @@ $(function() {
 			e.preventDefault();
 			var t = this;
 			if($("#add_user_form").valid()) {
-				$(t).button('loading');
+			setButtonLoading(t, true);
 				ajaxPost("/adminUser/register", getFormJsonData("add_user_form"), function(ret){
-					$(t).button('reset')
+				setButtonLoading(t, false)
 					if(!ret.Ok) {
 						art.alert(ret.Msg);
 					} else {
 						art.tips("Success");
 					}
+				}, function() {
+					setButtonLoading(t, false);
+					alert("leanote出现了错误!");
 				});
 			}
 		});

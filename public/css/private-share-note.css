@@ -29,7 +29,7 @@
 .desc h4 {
   font-size: 16px;
 }
-.input-group-addon {
+.input-group-text {
   background: none;
 }
 #searchInput {
@@ -39,7 +39,7 @@
   border-bottom: 1px solid #ccc;
   background: transparent;
 }
-.input-group-addon {
+.input-group-text {
   border: none;
 }
 @-webkit-keyframes dropdown {
@@ -186,7 +186,7 @@ ul.dropdown-menu {
   visibility: hidden;
   opacity: 0;
 }
-.open ul.dropdown-menu {
+ul.dropdown-menu.show {
   -webkit-animation: pulldown .2s;
   animation: pulldown .2s;
   visibility: visible;

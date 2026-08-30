@@ -5,20 +5,20 @@
 
 <div class="col-sm-6">
 	<form id="form_data">
-		<section class="panel panel-default">
-			<div class="panel-body">
-				<div class="form-group">
+		<section class="card">
+			<div class="card-body">
+				<div class="mb-3">
 					<label><a href="/blog" target="_blank">Admin's Blog Page</a></label>
 					<input type="radio" class="form-control" name="homePage" {{if not .str.homePage}}checked="checked"{{end}} value="0">
 				</div>
 				
-				<div class="form-group">
+				<div class="mb-3">
 					<label><a href="/index" target="_blank">Index Page</a></label>
 					<input type="radio" class="form-control" name="homePage" {{if .str.homePage}}checked="checked"{{end}} value="1">
 				</div>
 			</div>
 			
-			<footer class="panel-footer text-right bg-light lter">
+			<footer class="card-footer text-end bg-light lter">
 				<button type="submit" id="submit" class="btn btn-success btn-s-xs">Submit</button>
 			</footer>
 		</section>
@@ -33,14 +33,17 @@ $(function() {
 	$("#submit").on('click', function(e){
 		e.preventDefault();
 		var t = this;
-		$(t).button('loading');
+		setButtonLoading(t, true);
 		ajaxPost("/adminSetting/homePage", getFormJsonData("form_data"), function(ret){
-			$(t).button('reset');
+			setButtonLoading(t, false);
 			if(!ret.Ok) {
 				art.alert(ret.Msg);
 			} else {
 				art.tips("Success");
 			}
+		}, function() {
+			setButtonLoading(t, false);
+			alert("leanote出现了错误!");
 		});
 	});
 });

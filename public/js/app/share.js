@@ -74,7 +74,7 @@ Share.getNotebooksForNew = function(userId, notebooks) {
 		
 		var eachForNew = "";
 		if(notebook.Perm) {
-			var eachForNew = tt('<li role="presentation" class="clearfix ?" userId="?" notebookId="?"><div class="new-note-left pull-left" title="为该笔记本新建笔记" href="#">?</div><div title="为该笔记本新建markdown笔记" class="new-note-right pull-left">M</div>', classes, userId, notebook.NotebookId, notebook.Title);
+			var eachForNew = tt('<li role="presentation" class="clearfix ?" userId="?" notebookId="?"><div class="new-note-left float-start" title="为该笔记本新建笔记" href="#">?</div><div title="为该笔记本新建markdown笔记" class="new-note-right float-start">M</div>', classes, userId, notebook.NotebookId, notebook.Title);
 			if(subs) {
 				eachForNew  += "<ul class='dropdown-menu'>";
 				eachForNew  += subs;
@@ -575,7 +575,7 @@ function addShareNoteOrNotebook(trSeq) {
 			if(ret.Ok) {
 				var tpl = tt('<td>?</td>', '#');
 				tpl += tt('<td>?</td>', emails);
-				tpl += tt('<td><a href="#" noteOrNotebookId="?" perm="?" toUserId="?" title="' +  getMsg("clickToChangePermission") + '" class="btn btn-default change-perm">?</a></td>', id, perm, ret.Id, !perm || perm == '0' ? getMsg("readOnly") : getMsg("writable"));
+				tpl += tt('<td><a href="#" noteOrNotebookId="?" perm="?" toUserId="?" title="' +  getMsg("clickToChangePermission") + '" class="btn btn-secondary change-perm">?</a></td>', id, perm, ret.Id, !perm || perm == '0' ? getMsg("readOnly") : getMsg("writable"));
 				tpl += tt('<td><a href="#" noteOrNotebookId="?" toUserId="?" class="btn btn-warning delete-share">' + getMsg("delete") +'</a></td>', id, ret.Id);
 				$(trId).html(tpl);
 			} else {

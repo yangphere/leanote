@@ -3,8 +3,8 @@
 
 <div class="row">
 <div class="col-sm-8">
-	<section class="panel panel-default">
-		<div class="panel-body">
+	<section class="card">
+		<div class="card-body">
 		{{msg . "cateIsPublicNotebook"}}
 		<br />
 		{{if .notebooks}}
@@ -12,8 +12,8 @@
         <ul class="list-group gutter list-group-lg list-group-sp sortable">
         	{{range .notebooks}}
           <li class="list-group-item" draggable="true" data-id="{{.NotebookId.Hex}}">
-          	<span class="pull-left media-xs"><i class="fa fa-sort text-muted fa m-r-sm"></i></span>
-          	<div class="pull-right" style="margin-right: 10px">
+	<span class="float-start media-xs"><i class="fa fa-sort text-muted fa m-r-sm"></i></span>
+	<div class="float-end" style="margin-right: 10px">
             	{{msg $ "permanentLink"}}: /cate/<input data-id="{{.NotebookId.Hex}}" class="url-title" type="text" value="{{if .UrlTitle}}{{.UrlTitle|decodeUrlValue}}{{else}}{{.NotebookId.Hex}}{{end}}"/>
             </div>
             {{.Title}}
@@ -26,7 +26,7 @@
       </div>
       
       {{if .notebooks}}
-      <footer class="panel-footer text-right bg-light lter">
+      <footer class="card-footer text-end bg-light lter">
 		    <button type="submit" id="baseBtn" class="btn btn-success">{{msg . "saveSort"}}</button>
 		</footer>
 		{{end}}

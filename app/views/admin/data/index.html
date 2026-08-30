@@ -7,7 +7,7 @@
 	word-wrap:break-word;/*支持IE，chrome，FF*/
 }
 </style>
-<section class="panel panel-default">
+<section class="card">
 	
 	<div class="row wrapper">
 		<div class="col-sm-5 m-b-xs">
@@ -47,7 +47,7 @@
 					</td>
 					<td>
 						<button href="#" class="btn btn-sm btn-danger restore-btn" data-id="{{$each.createdTime}}">Restore</button>
-						<a class="btn btn-sm btn-default download-attach" href="/adminData/download?createdTime={{$each.createdTime}}" target="_blank" title="Download"  data-id=""><i class="fa fa-download"></i></a>
+						<a class="btn btn-sm btn-secondary download-attach" href="/adminData/download?createdTime={{$each.createdTime}}" target="_blank" title="Download"  data-id=""><i class="fa fa-download"></i></a>
 						<button class="btn btn-sm btn-warning delete-btn" title="Delete" data-id="{{$each.createdTime}}"><i class="fa fa-trash-o"></i></button>
 					</td>
 				</tr>

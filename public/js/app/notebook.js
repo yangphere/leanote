@@ -407,7 +407,7 @@ Notebook.getChangedNotebooks = function(notebooks) {
 		if(!isEmpty(notebook.Subs)) {
 			classes = "dropdown-submenu";
 		}
-		var eachForNew = tt('<li role="presentation" class="clearfix ?"><div class="new-note-left pull-left" title="为该笔记本新建笔记" href="#" notebookId="?">?</div><div title="为该笔记本新建markdown笔记" class="new-note-right pull-left" notebookId="?">M</div>', classes, notebook.NotebookId, notebook.Title, notebook.NotebookId);
+		var eachForNew = tt('<li role="presentation" class="clearfix ?"><div class="new-note-left float-start" title="为该笔记本新建笔记" href="#" notebookId="?">?</div><div title="为该笔记本新建markdown笔记" class="new-note-right float-start" notebookId="?">M</div>', classes, notebook.NotebookId, notebook.Title, notebook.NotebookId);
 		
 		if(!isEmpty(notebook.Subs)) {
 			eachForNew  += "<ul class='dropdown-menu'>";

@@ -547,7 +547,7 @@ $(".search-group button").on('click', function(e){
 		$($msg).hide().prependTo($el.find('.list-group')).slideDown().css('display','block');
 	}
 	var $msg = '<a href="#" class="media list-group-item">'+
-                  '<span class="pull-left thumb-sm text-center">'+
+                  '<span class="float-start thumb-sm text-center">'+
                     '<i class="fa fa-envelope-o fa-2x text-success"></i>'+
                   '</span>'+
                   '<span class="media-body block m-b-none">'+

@@ -5,32 +5,32 @@
 
 <div class="col-sm-6">
 	<form id="add_user_form">
-		<section class="panel panel-default">
-			<div class="panel-body">
-				<div class="form-group">
+		<section class="card">
+			<div class="card-body">
+				<div class="mb-3">
 					<label>Host</label>
 					<input type="text" class="form-control" name="emailHost" value="{{.str.emailHost}}" placeholder="eg. smtp.ym.163.com">
 				</div>
-				<div class="form-group">
+				<div class="mb-3">
 					<label>Port</label>
 					<input type="text" class="form-control" name="emailPort" value="{{.str.emailPort}}" placeholder="eg. 25">
 				</div>
-				<div class="form-group">
+				<div class="mb-3">
 					<label>Username</label>
 					<input type="text" class="form-control" name="emailUsername" value="{{.str.emailUsername}}" placeholder="">
 				</div>
 				
-				<div class="form-group">
+				<div class="mb-3">
 					<label>Password</label>
 					<input type="text" class="form-control" name="emailPassword" value="{{.str.emailPassword}}" placeholder="">
 				</div>
-				<div class="form-group">
+				<div class="mb-3">
 					<label>SSL ?</label>
 					<input type="checkbox" class="form-control" name="emailSSL" {{if .str.emailSSL}}checked="checked"{{end}} value="1">
 				</div>
 			</div>
 			
-			<footer class="panel-footer text-right bg-light lter">
+			<footer class="card-footer text-end bg-light lter">
 				<button type="submit" id="submit" class="btn btn-success btn-s-xs">Submit</button>
 			</footer>
 		</section>
@@ -49,14 +49,17 @@ $(function() {
 			e.preventDefault();
 			var t = this;
 			if($("#add_user_form").valid()) {
-				$(t).button('loading');
+				setButtonLoading(t, true);
 				ajaxPost("/adminEmail/set", getFormJsonData("add_user_form"), function(ret){
-					$(t).button('reset')
+					setButtonLoading(t, false)
 					if(!ret.Ok) {
 						art.alert(ret.Msg)
 					} else {
 						art.tips("Success");
 					}
+				}, function() {
+					setButtonLoading(t, false);
+					alert("leanote出现了错误!");
 				});
 			}
 		});

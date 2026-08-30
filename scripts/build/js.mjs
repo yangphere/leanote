@@ -3,6 +3,13 @@ import path from 'node:path';
 import { transform } from 'esbuild';
 import { resolveRepoPath } from './manifest.mjs';
 
+function stripSourceMappingURL(source) {
+  return source
+    .replace(/^\s*\/\/[#@]\s*sourceMappingURL=[^\r\n]+\s*$/gm, '')
+    .replace(/^\s*\/\*[#@]\s*sourceMappingURL=[^*]+\*\/\s*$/gm, '')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
 export async function buildJavaScript(entry, root, stagingRoot) {
   if (!Array.isArray(entry.inputs) || entry.inputs.length === 0) throw new Error(`empty JavaScript inputs for ${entry.name}`);
   const guardedInputs = new Set(entry.amdGuard ?? []);
@@ -13,7 +20,8 @@ export async function buildJavaScript(entry, root, stagingRoot) {
   const chunks = [];
   for (const relative of entry.inputs) {
     const sourcePath = resolveRepoPath(root, relative);
-    const source = (await fs.readFile(sourcePath, 'utf8')).replace(/\r\n?/g, '\n');
+    let source = (await fs.readFile(sourcePath, 'utf8')).replace(/\r\n?/g, '\n');
+    if (entry.stripSourceMappingURL) source = stripSourceMappingURL(source);
     if (entry.transform === 'concat') {
       // Validate legacy concatenation inputs without changing their bytes or execution order.
       await transform(source, {

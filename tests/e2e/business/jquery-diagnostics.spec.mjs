@@ -67,10 +67,6 @@ function diagnosticBundle(bundleName) {
 const DEP_LIB_INPUTS = new Set([
   'public/js/jquery.ztree.all-3.5-min.js',
   'public/js/jQuery-slimScroll-1.3.0/jquery.slimscroll-min.js',
-  'public/js/bootstrap-min.js',
-]);
-const ALBUM_LIB_INPUTS = new Set([
-  'public/js/bootstrap-min.js',
 ]);
 
 // Verbatim upstream npm dist files (byte-sync enforced by
@@ -107,16 +103,13 @@ const MARKDOWN_WAIT_FOR_IMAGES_SIGNATURE = 'jQuery.isFunction() is deprecated';
 const LIB_URL_PATHNAMES = new Set([
   '/tinymce/tinymce.full.min.js', // E-TM owned
   '/tinymce/tinymce.js', // dev core only served on dev pages
-  '/js/bootstrap.js', // login page bootstrap 3 (E-BS owned)
-  '/tinymce/plugins/leaui_image/public/bootstrap3/js/bootstrap.min.js', // E-BS owned
   '/public/admin/js/artDialog/jquery.artDialog.js', // vendored artDialog (admin 区验收处理)
 ]);
 
 // Exclusion categories the visited pages are EXPECTED to exercise on every
-// run; a missing category fails the diagnostic. `album-lib` stays registered
-// in the classification map above (any hit is excused and recorded) but is
-// not expected: the album page's load path has not been observed to trigger
-// bootstrap-min warnings yet — if it ever does, the hit is still exempted.
+// run; a missing category fails the diagnostic. Bootstrap 5 is a first-party
+// npm input and therefore has no exclusion category; any warning attributed
+// to it remains an owned offender.
 const EXPECTED_EXCLUSION_CATEGORIES = new Set([
   'dep-lib', 'verbatim-input', 'verbatim-url', 'lib-url', 'upstream-signature',
   'markdown-waitforimages',
@@ -208,10 +201,6 @@ function classify(warnings, bundleRanges) {
       exclude('dep-lib', warning, id);
       continue;
     }
-    if (offender.kind === 'bundle-input' && ALBUM_LIB_INPUTS.has(id)) {
-      exclude('album-lib', warning, id);
-      continue;
-    }
     if (offender.kind === 'bundle-input' && VERBATIM_UPSTREAM_INPUTS.has(id)) {
       exclude('verbatim-input', warning, id);
       continue;
@@ -283,9 +272,24 @@ test('zero first-party JQMIGRATE warnings with migrate 3.6.0 injected after the 
   ]);
 
   const warnings = [];
+  const legacyBootstrapEvidence = [];
   page.on('console', (message) => {
     if ((message.type() === 'warning' || message.type() === 'error' || message.type() === 'trace') && /JQMIGRATE/.test(message.text())) {
       warnings.push(message.text());
+    }
+  });
+  page.on('request', (request) => {
+    const url = request.url();
+    if (/\/public\/bootstrap3(?:\/|$)|bootstrap\.3\.2\.0|bootstrap-v3/i.test(url)) {
+      legacyBootstrapEvidence.push(`legacy Bootstrap URL: ${url}`);
+    }
+  });
+  page.on('response', async (response) => {
+    const url = response.url();
+    if (!/bootstrap(?:\.min)?\.(?:css|js)/i.test(new URL(url).pathname)) return;
+    const body = await response.body().catch(() => null);
+    if (body && /Bootstrap v?3(?:\.|\s)|bootstrap\.3\./i.test(body.toString('utf8'))) {
+      legacyBootstrapEvidence.push(`legacy Bootstrap bytes: ${url}`);
     }
   });
   await collectMigrationEvidence(page);
@@ -315,7 +319,7 @@ test('zero first-party JQMIGRATE warnings with migrate 3.6.0 injected after the 
   await page.locator('#searchNoteInput').waitFor({ state: 'visible', timeout: 30_000 });
   await page.evaluate(() => window.jQuery('#setTheme').trigger('click'));
   await expect(page.locator('#setThemeDialog')).toBeVisible({ timeout: 15_000 });
-  await page.locator('#setThemeDialog .close, #setThemeDialog [data-dismiss="modal"]').first().click();
+  await page.locator('#setThemeDialog .btn-close, #setThemeDialog [data-bs-dismiss="modal"]').first().click();
 
   // Album page: jQuery lives inside main.all.js; the rebuilt album bundle
   // injects migrate before bootstrap/fileupload/pagination/album main.js.
@@ -404,6 +408,7 @@ test('zero first-party JQMIGRATE warnings with migrate 3.6.0 injected after the 
     const missingCategories = [...EXPECTED_EXCLUSION_CATEGORIES].filter((category) => !exercisedCategories.includes(category));
     expect(missingCategories, `registered exclusion categories must all be exercised; missing: ${missingCategories.join(', ')}; exercised: ${exercisedCategories.join(', ')}`).toEqual([]);
     expect(ownOffenderList, `first-party scripts must not trigger JQMIGRATE warnings:\n${ownOffenderList.join('\n')}`).toEqual([]);
+    expect(legacyBootstrapEvidence, `Bootstrap 3 URLs or signatures must fail closed:\n${legacyBootstrapEvidence.join('\n')}`).toEqual([]);
   } catch (error) {
     primaryError = error;
   } finally {

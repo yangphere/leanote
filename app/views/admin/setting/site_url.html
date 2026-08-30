@@ -5,9 +5,9 @@
 
 <div class="col-sm-6">
     <form id="add_user_form">
-        <section class="panel panel-default">
-            <div class="panel-body">
-                <div class="form-group">
+        <section class="card">
+            <div class="card-body">
+                <div class="mb-3">
                     <label>Site's URL</label>
                     <input type="text" class="form-control" name="siteUrl" value="{{.str.siteUrl}}" placeholder="http://localhost:9000">
                     Please note that if the value isn't blank, it will override the "siteUrl" configuration on app.conf.
@@ -16,7 +16,7 @@
                 </div>
             </div>
             
-            <footer class="panel-footer text-right bg-light lter">
+            <footer class="card-footer text-end bg-light lter">
                 <button type="submit" id="submit" class="btn btn-success btn-s-xs">Submit</button>
             </footer>
         </section>
@@ -34,14 +34,17 @@ $(function() {
         e.preventDefault();
         var t = this;
         if($("#add_user_form").valid()) {
-            $(t).button('loading');
+			setButtonLoading(t, true);
             ajaxPost("/adminSetting/doSiteUrl", getFormJsonData("add_user_form"), function(ret){
-                $(t).button('reset');
+				setButtonLoading(t, false);
                 if(!ret.Ok) {
                     art.alert(ret.Msg);
                 } else {
                     art.tips("Success");
                 }
+            }, function() {
+                setButtonLoading(t, false);
+                alert("leanote出现了错误!");
             });
         }
     });

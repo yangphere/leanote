@@ -14,7 +14,7 @@
 body {font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; text-align:center;}
 h2 {color:#666;}
 
-.form-inline input {
+.d-flex input {
   display: inline-block;
   *display: inline;
   margin-bottom: 0;

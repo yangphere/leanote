@@ -44,10 +44,17 @@ test('manifest publishes jquery-runtime from the npm input to the legacy public 
   assert.equal(runtime.output, RUNTIME_OUTPUT);
   assert.equal(runtime.url, '/js/jquery-1.9.0.min.js');
   validateManifest(MANIFEST);
-  assert.equal(BUILD_OUTPUTS.length, 34);
-  assert.equal(new Set(BUILD_OUTPUTS).size, 34);
+  assert.equal(BUILD_OUTPUTS.length, 38);
+  assert.equal(new Set(BUILD_OUTPUTS).size, 38);
   assert.equal(BUILD_OUTPUTS.includes(RUNTIME_OUTPUT), true);
   assert.equal(MANIFEST.i18nDerivedInputExclusions.includes(RUNTIME_OUTPUT), true);
+});
+
+test('generated Bootstrap assets do not reference absent source maps', () => {
+  for (const file of ['public/css/bootstrap.css', 'public/css/bootstrap-min.css', 'public/js/bootstrap.js', 'public/js/bootstrap-min.js', 'public/js/dep.min.js']) {
+    const content = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    assert.doesNotMatch(content, /sourceMappingURL=/, `${file} must not reference an undeclared source map`);
+  }
 });
 
 test('dep and album bundles consume the npm jquery input, not the generated runtime output', async () => {
@@ -148,6 +155,139 @@ test('markdown sources keep jQuery 3 removed-API cleanup', () => {
     const content = fs.readFileSync(path.join(ROOT, file), 'utf8');
     assert.doesNotMatch(content, /\.andSelf\(/, `${file} must not call andSelf`);
     assert.doesNotMatch(content, /\.bind\(\s*['"`]/, `${file} must not call jQuery .bind`);
+  }
+});
+
+test('Bootstrap 5 dialog and image-tab contracts avoid removed jQuery APIs', () => {
+  const dialog = fs.readFileSync(path.join(ROOT, 'public/js/bootstrap-dialog-source.js'), 'utf8');
+  assert.match(dialog, /appendContent/);
+  assert.match(dialog, /value\.jquery/);
+  assert.match(dialog, /backdrop: this\.options\.closable/);
+  assert.match(dialog, /keyboard: this\.options\.closable/);
+
+  const imageDialog = fs.readFileSync(path.join(ROOT, 'public/tinymce/plugins/image/js/dialog.js'), 'utf8');
+  assert.match(imageDialog, /bootstrap\.Tab\.getOrCreateInstance/);
+  assert.doesNotMatch(imageDialog, /\.tab\(\s*['"]show['"]\s*\)/);
+  assert.match(imageDialog, /#myTab a:last.*hasClass\(["']active["']\)/s);
+});
+
+test('Bootstrap 5 navigation templates expose desktop expansion and a visible toggler icon', () => {
+  const templates = [
+    'app/views/home/header.html',
+    'public/blog/themes/default/header.html',
+    'public/blog/themes/elegant/header.html',
+    'public/blog/themes/nav_fixed/header.html',
+  ];
+  for (const file of templates) {
+    const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    assert.match(html, /navbar-expand-md/, `${file} must keep navigation visible at desktop widths`);
+    assert.match(html, /navbar-toggler-icon/, `${file} must render the Bootstrap 5 toggler icon`);
+    assert.doesNotMatch(html, /icon-bar/, `${file} must not use the removed Bootstrap 3 icon-bar markup`);
+  }
+});
+
+test('application templates do not retain removed Bootstrap 3 layout utilities', () => {
+  const files = walkFiles(path.join(ROOT, 'app/views'), '.html').filter((file) => !file.endsWith('note.html'));
+  for (const file of files) {
+    const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    assert.doesNotMatch(html, /\bnavbar-fixed-top(?!-)\b|\bbtn-block(?!-)\b|\bcol-xs-\d+\b|\btext-right\b/, file);
+  }
+});
+
+test('album and image iframe forms use explicit Bootstrap 5 layout classes', () => {
+  const files = [
+    'app/views/album/index.html',
+    'public/tinymce/plugins/leaui_image/index.html',
+    'public/tinymce/plugins/image/dialog.htm',
+  ];
+  for (const file of files) {
+    const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    assert.doesNotMatch(html, /\bform-inline\b/, `${file} must not depend on removed Bootstrap 3 form-inline`);
+  }
+  for (const file of ['public/album/css/style.css', 'public/tinymce/plugins/leaui_image/public/css/style.css']) {
+    const css = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    assert.doesNotMatch(css, /\.form-inline\s+\.form-(?:group|control)/, `${file} must not retain dead form-inline selectors`);
+    assert.match(css, /\.album-form\s*>\s*\.mb-3[\s\S]*margin-bottom:\s*0\s*!important/, `${file} must keep album fields on one row`);
+    assert.match(css, /\.album-form\s+\.form-control[\s\S]*width:\s*auto/, `${file} must keep compact control widths`);
+  }
+  for (const file of ['app/views/album/index.html', 'public/tinymce/plugins/leaui_image/index.html']) {
+    const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    assert.match(html, /class="album-form\s+d-flex/, `${file} must use the shared album form layout`);
+  }
+});
+
+test('built-in blog themes match Bootstrap 5 dropdown visibility state', () => {
+  for (const theme of ['default', 'elegant', 'nav_fixed']) {
+    const css = fs.readFileSync(path.join(ROOT, `public/blog/themes/${theme}/style.css`), 'utf8');
+    assert.match(css, /ul\.dropdown-menu\.show\s*\{/, `${theme} must reveal the menu state Bootstrap 5 applies`);
+    assert.doesNotMatch(css, /\.show\s+ul\.dropdown-menu\s*\{/, `${theme} must not depend on a parent .show state`);
+  }
+});
+
+test('maintained blog and private-share styles use Bootstrap 5 dropdown visibility state', () => {
+  const files = [
+    'public/css/blog/basic.less',
+    'public/css/blog/blog_default.css',
+    'public/css/blog/blog_daqi.css',
+    'public/css/blog/blog_left_fixed.css',
+    'public/css/private-share-note.less',
+    'public/css/private-share-note.css',
+  ];
+  for (const file of files) {
+    const css = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    assert.match(css, /ul\.dropdown-menu\.show\s*\{/, `${file} must reveal the menu state Bootstrap 5 applies`);
+    assert.doesNotMatch(css, /\.show\s+ul\.dropdown-menu\s*\{/, `${file} must not depend on a parent .show state`);
+  }
+});
+
+test('BootstrapDialog source is tracked because the manifest consumes it', () => {
+  assert.equal(fs.existsSync(path.join(ROOT, 'public/js/bootstrap-dialog-source.js')), true);
+  execGitLsFiles('public/js/bootstrap-dialog-source.js');
+});
+
+test('leaui_image iframe loads the shared Font Awesome stylesheet for its icons', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'public/tinymce/plugins/leaui_image/index.html'), 'utf8');
+  assert.match(html, /href="\/css\/font-awesome-4\.2\.0\/css\/font-awesome\.css"/);
+});
+
+test('runtime sources fail closed on retired Bootstrap 3 URLs and signatures', () => {
+  const roots = [path.join(ROOT, 'app/views'), path.join(ROOT, 'public')];
+  const historical = new Set([
+    path.normalize('public/md/main.js'),
+    path.normalize('public/md/main.min.js'),
+    path.normalize('public/admin/config.codekit'),
+    path.normalize('public/css/config.codekit'),
+  ]);
+  const ignoredDirectories = new Set([
+    path.normalize('public/tinymce/plugins/leaui_mindmap'),
+  ]);
+  const forbidden = [
+    /public[\\/]bootstrap3(?:[\\/]|$)/i,
+    /bootstrap\.3\.2\.0/i,
+    /Bootstrap\s*v?3(?:\.|\s)/i,
+  ];
+
+  function walk(directory) {
+    const files = [];
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const absolute = path.join(directory, entry.name);
+      const relative = path.normalize(path.relative(ROOT, absolute));
+      if (entry.isDirectory()) {
+        if (!ignoredDirectories.has(relative)) files.push(...walk(absolute));
+      } else if (entry.isFile()) {
+        files.push(absolute);
+      }
+    }
+    return files;
+  }
+
+  for (const file of roots.flatMap(walk)) {
+    const relative = path.normalize(path.relative(ROOT, file));
+    if (historical.has(relative)) continue;
+    const content = fs.readFileSync(file, 'utf8');
+    for (const pattern of forbidden) {
+      assert.doesNotMatch(content, pattern, `${path.relative(ROOT, file)} must not retain retired Bootstrap 3 evidence`);
+    }
   }
 });
 
