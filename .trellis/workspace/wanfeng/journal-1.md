@@ -221,3 +221,37 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 10: Revel 迁移规划复核、提交与归档
+<!-- trellis-session: v=2 fp=3c79a99d830c8854 -->
+
+**Date**: 2026-08-30
+**Task**: Revel 迁移规划复核、提交与归档
+**Branch**: `dev`
+
+### Summary
+
+复核审核整改已覆盖参数绑定、ViewArgs、session 标识与 Cookie 写出顺序契约；通过任务校验后提交并归档 08-25-revel-migration。实现余量与主站批次前置项仍保留在归档后的 implement.md。
+
+### Main Changes
+
+- 完成二次 diff review，确认此前问题已修复并同步 design.md/implement.md。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4ae8578` | docs(revel-migration): 修订迁移契约 |
+
+### Testing
+
+- [OK] task.py validate .trellis/tasks/08-25-revel-migration 通过；git diff --check 通过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 按归档 implement.md 中的主站批次前置框架项继续实现。
