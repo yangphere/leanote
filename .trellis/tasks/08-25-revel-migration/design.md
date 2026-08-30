@@ -77,18 +77,70 @@ controller 仍负责 HTTP 编排，service 仍负责业务；service 不依赖 `
 - `AuthInterceptor`（controllers/init.go）以 BEFORE 注册于 Notebook/Note/Share/User/Album/File 等主站 controller；api/admin/member 四个 init.go 各有自己的 BEFORE 集合——**活跃注册 25 处**（27 处文本匹配中 controllers/init.go:144,152 已 `//` 行注释）逐条对照迁入注册表声明，缺一条即鉴权回归；commonUrl 白名单（controllers/init.go 与 admin/init.go）是 AuthInterceptor 的跳过名单，随其迁移。
 - `needValidate(controller, method)` 白名单语义保留。
 - 自定义参数绑定器：lea/binder 的 `MSSBinder`（map[string]string）与 `leanoteStructBinder`（`revel.TypeBinders` 注册，binder.go:148-155）在 request.go 等价重建；ObjectID 参数无绑定器——action 内经 `db.MustObjectIDFromHex` 转换（现状保持）。
+- **参数收集的线格式等价（2026-08-30 审核补充）**：`Params.Values` 与
+  `Params.Files` 必须保留 HTTP 收集到的原始键；不得把它们改写为裸名。
+  `Has("Tags[0]")` 等存在性判断以及 `leanoteStructBinder` 读取
+  `Files[0][LocalFileId]` 等嵌套键必须继续有效。切片绑定视图另行复刻 Revel
+  binder.go 的 `bindSlice`/`processElement`：`name[i]` 按显式索引放入结果，
+  保留稀疏位置；索引大于配置的 `params.max_index`（未配置时默认 4096）时，
+  忽略该参数并记录 binder 诊断，且不得按该索引分配结果切片。`name[]`（jQuery `$.ajax` 默认把数组序列化为
+  `noteIds[]=a&noteIds[]=b`，见 public/js/app/note.js:1311）仅在全部显式索引
+  位置之后追加未索引值。bool 须等价于 `revel.Atob`：先 trim/lower，只有
+  `""`、`false`、`off`、`f`、`0`、`0.0` 为 false，其余任意值均为 true；并提供
+  []string 绑定与 `c.Params.Files` 文件头形态。缺该原始键保留和切片语义，
+  Note.DeleteNote 等数组 action、Files 结构绑定及 `Has` 判断都会回归。
 
 ## 3. Controller 迁移
 
 定义第一方 `Context`、`Result` 与 `BaseController`，吸收原 `revel.Controller` 的 Session、Params、ViewArgs、Message 与 Render* 能力。先让 controller 编译于兼容层，再按响应类型清除残余 Revel 类型。API 包当前按值嵌入 BaseController 的语义必须保留并有回归测试。
 
+**ViewArgs 与框架注入键（2026-08-30 审核补充）**：`Context` 须提供
+`ViewArgs map[string]interface{}`，RenderTemplate/NotFound 以其渲染。
+dispatch 层按 Revel 契约注入框架键：`RunMode`、`DevMode`（controller.go:74
+每请求注入；errors/404.html、errors/500.html 直接引用 RunMode）、`session`
+（SessionFilter 注入，member/top.html 等引用）、`currentLocale`（i18n
+中间件注入；home/login.html 的 19 处 msg + 1 处 rawMsg 依赖该键取文案，
+缺失则整页文案渲染为空）。`Context.NotFound` 须透传 ViewArgs（Revel
+NotFound 渲染 errors/404.html 时带 ViewArgs，E404 预设的 title 不能丢）。
+主站 BaseController 收敛形态：包装 `*httpserver.Context`，全部会话写
+（SetSession(userInfo)/ClearSession/UpdateSession）必须经
+`Context.SetSession/DeleteSession` 落 sessionDirty——直接写 Session map
+不会持久化到 Cookie；`ClearSession` 删小写 `"theme"` 而写入键为 `"Theme"`
+的既有怪癖按原样保留，不顺手"修复"。
+
 ## 4. Session
 
-新 Cookie 使用 `app.secret` 做认证，解析失败视为匿名并记录安全级别日志，不尝试旧 Revel 解码。登录后写入与当前相同的业务键（controllers 实际清单：UserId、Email、Username、UsernameRaw、Verified、Theme、themeId、NotebookWidth、NoteListWidth、LeftIsMin、Logo；API 侧每个请求另写 `_token`/`_userId`，见 api/init.go:81,98）。API token 仍由 `SessionService` 的 MongoDB collection 管理，不迁入 Cookie。API 无 token 时的回退路径读取 `c.Session.ID()`——新 session 须提供等价的会话标识（cookie 值的稳定哈希即可）。旧配置键 `cookie.httponly` 不再读取：新 Cookie 恒 `HttpOnly=true`（R-Cb3）。
+新 Cookie 使用 `app.secret` 做认证，解析失败视为匿名并记录安全级别日志，不尝试旧 Revel 解码。登录后写入与当前相同的业务键（controllers 实际清单：UserId、Email、Username、UsernameRaw、Verified、Theme、themeId、NotebookWidth、NoteListWidth、LeftIsMin、Logo；API 侧每个请求另写 `_token`/`_userId`，见 api/init.go:81,98）。API token 仍由 `SessionService` 的 MongoDB collection 管理，不迁入 Cookie。
+
+**会话标识契约（2026-08-30 审核修订，取代此前"cookie 值的稳定哈希即可"的从宽表述）：**
+新 session 必须提供与 Revel `_ID`（session.SessionIDKey）等价的稳定匿名标识——
+`Context.SessionID` 语义为 `Session["_ID"]`：缺失时惰性生成 crypto 随机
+hex（uuid.New().Hex() 形态，32 字符），并经 SetSession 落入 Cookie 持久化
+（Revel 语义：`Session.ID()` 首访问生成并写回，见 Revel
+session/session.go:47-55 与 session_filter.go 的非空即回写）。依据：
+AuthController 的 LoginTimes/验证码门控与 CaptchaController.go:37 的
+`c.GetSession("_ID")` 都按该标识跨请求在 Mongo sessions 记账；若匿名访客
+无稳定标识（SessionID 恒为 ""），失败计数与验证码将全局共享同一 Mongo 键，
+防爆破门控失效且互相误伤。api 无 token 回退路径（apiAuthBefore）随该语义
+一并稳定（此前用原始 cookie 值做 SessionID，任何一次 SetSession 都会因
+payload/exp 变化使该值漂移，回退命中率恒为零，仅靠 UserId 兜底维持正确）。
+旧配置键 `cookie.httponly` 不再读取：新 Cookie 恒 `HttpOnly=true`（R-Cb3）。
+
+### 4.1 会话写路径与响应提交顺序（2026-08-30 审核登记的实现缺陷前置项）
+
+已交付 dispatch 的 handler 路径（registry.go）在 `ApplyResult` **之后**才调用
+`applySessionCookie`，而所有 Result.Apply 都以 `WriteHeader`/`Write` 立即提交
+响应——net/http 规定 header 变更在提交后无效，故该路径上的一切 Set-Cookie
+（包括已交付 api 批次的 `_token`/`_userId` 回写）当前全部被静默丢弃；
+before-hook 短路路径的顺序是正确的。主站批次的登录/登出语义完全依赖 cookie
+回写，因此**主站批次的前置修复项**：session cookie 写出必须先于响应提交
+（handler 路径调序即可），并补两级回归——登录成功响应含 Set-Cookie 且
+UserId 可在下一请求解出；Logout 后会话 Cookie 匿名化（键清除）。api 余量
+批次收尾时为 `_token`/`_userId` 回写补同类断言。
 
 prod 启动前校验 secret（空或仓库公开默认值 `V85Zz…` 拒绝启动）；dev/test 可使用明确的测试密钥。`Secure` 不从反向代理头猜测，只服从配置。
 
-## 4.1 测试门禁与 CI 移植（合并门禁所在，缺失即失守）
+## 5. 测试门禁与 CI 移植（合并门禁所在，缺失即失守）
 
 G 建立的 Golden/USN/权限/页面 smoke 全部经 `app/tests/harness/server.go` 启动被测服务器：现流程为 `buildServerBinary`（Revel app tmp 构建）+ `serverRunMode`（依赖 Revel CLI）+ `-importPath/-runMode` 子进程参数。C-b 必须：
 
@@ -97,18 +149,18 @@ G 建立的 Golden/USN/权限/页面 smoke 全部经 `app/tests/harness/server.g
 - CI node-tests job 删除 "Build Revel CLI from the main module graph" 及 `ci-revel-cli` 摘要步骤，改为构建 `cmd/leanote`；
 - 移植完成前不得删除任何 Revel 依赖（顺序约束：先移植门禁，再删框架）。
 
-## 5. 配置与模板
+## 6. 配置与模板
 
 复用已存在的 `github.com/robfig/config` 或等价小型兼容层解析 ini；先以测试钉住 section 覆盖、字符串插值、bool/duration。模板继续使用 `html/template`，启动时建立应用模板集；博客主题仍由 `app/lea/blog/Template.go` 独立克隆。
 
-## 6. 错误与关停
+## 7. 错误与关停
 
 - 参数绑定错误返回明确 4xx；未注册路由 404；panic 记录堆栈并返回 500。
 - 响应写入后不能再改状态；统一 result writer 负责这一不变量。
 - SIGTERM 触发 `http.Server.Shutdown`，停止接收新请求并等待 `http.shutdownTimeoutMs`（默认 30000，配置可调）；超时后返回非零错误。
 - 实现期加固（无 Revel 对应物，防御性新增）：`ReadHeaderTimeout` 30s；SIGTERM 与 SIGINT 均触发关停；`Server.Run` 另接受显式 `stop` 通道供测试/编程式停止。
 
-## 6.1 对 B 任务归档设计 §2 的更正（supersession）
+### 7.1 对 B 任务归档设计 §2 的更正（supersession）
 
 B（archive/2026-08/08-25-mongo-driver-migration）design §2 冻结的映射
 `Update → UpdateOne`、`Upsert → UpdateOne + SetUpsert(true)` 在实践中被驱动
@@ -121,6 +173,6 @@ contain key beginning with '$'"），而 mgo 的 Update/Upsert 同时接受算�
 归档设计不可改；以本节为准。回归测试：
 `app/db/mongo_compat_test.go` TestCompatReplacementUpdateAndUpsert。
 
-## 7. 回滚
+## 8. 回滚
 
 C-b 与 B 同策略，工作直落 `dev`（已确认；不另开独立分支）。不保留双 HTTP 栈 feature flag。合并/推送前需通过全部契约与主题测试；Schema 未变，回滚为 revert C-b 的提交序列，不涉及数据。一次性 Web 重登录是已接受部署影响。

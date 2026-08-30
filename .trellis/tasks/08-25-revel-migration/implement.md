@@ -43,6 +43,7 @@
 - [ ] 写路由表测试覆盖显式优先、三类 catch-all、静态文件、路径参数、未注册 controller/action 404。
 - [ ] 建立静态 action 注册表，声明 HTTP 方法、绑定参数、controller 构造器与 BEFORE 钩子（活跃 25 处 InterceptFunc 逐条对照）。
 - [ ] 移植前缀改写、鉴权（commonUrl 白名单随 AuthInterceptor）、i18n、恢复、gzip（CompressFilter 等价）与日志链。
+  - 进度注记（2026-08-30 审核 reconcile）：路由表/registry/catch-all/负例与 Recover/Gzip/LoginRequired 骨架已交付（routes_test.go 存在，api 批次经其跑通）；**本任务仍未关闭**——余量为参数绑定等价物（MSSBinder/leanoteStructBinder/[]键归并，详见 §2.2 线格式）与 i18n 中间件接线，两项随"主站批次前置框架项"落地后本任务方可勾完。
 - [ ] 运行路由负例，证明任意导出方法无法通过 URL 调用。
 
 ### Task 4：Session、BaseController 与 Render API
@@ -56,6 +57,7 @@
 - [ ] 把 Session/Params/ViewArgs/Message/Render* 收敛到第一方 BaseController/Result；Render* 清单含 RenderTemplate/RenderJSON/**RenderJSONP**（BlogController 8 处）/RenderText/binary/file/attachment。
 - [ ] 保持 API BaseController（`ApiBaseContrller`，按值嵌入 `controllers.BaseController`）行为并添加专门回归测试。
   - 进度注记：api 批次（ApiAuth/ApiTag + firstPartyAPIApp 回归 + 真实 Mongo 隔离库测试）已提交（25d4842/65c9054）；主站 BaseController 的收敛仍待主站批次完成。
+  - 审核注记（2026-08-30）：已提交 api 批次的 `_token`/`_userId` session 回写当前被 cookie 写出顺序缺陷（design §4.1）静默丢弃——firstPartyAPIApp 回归走 token 参数路径故未暴露；该缺陷修复落地时须为回写补 Set-Cookie 断言。
 - [ ] 分响应类型迁移 controller，每完成一类就运行对应 Golden，而不是最后一次性验证。
 
 **余量清单（2026-08-29 审核盘点，按 Go 源文件计，`rg --glob '*.go' -l "github.com/revel" app` 现存 64 文件、其中 app/cmd 8 个归 Task 6 删除）：**
@@ -69,11 +71,22 @@
 
 **批次模式（已验证，照抄）：** `type XxxServer struct{}` + `func (s *XxxServer) Action(c *httpserver.Context) httpserver.Result` + `rs.Register("Xxx", "Action", beforeHooks, s.Action)`；`c.Session["_userId"]` 取 API 侧用户、`c.Session["UserId"]` 取 Web 侧用户；BEFORE 钩子 `httpserver.BeforeFunc`，返回 nil 继续。
 
+**主站批次前置框架项（2026-08-30 审核新增，全部完成前 Auth 批次不得开工；依据见 design §4/§4.1/§3/§2.2）：**
+
+- [ ] 修复 session 落 Cookie 顺序：handler 路径 `applySessionCookie` 须先于 `ApplyResult`（现状 Set-Cookie 在响应提交后被 net/http 丢弃，api 批次 `_token`/`_userId` 回写同受影响）；回归：登录成功响应含 Set-Cookie 且下一请求能解出 UserId，Logout 后会话匿名化。
+- [ ] `Context.SessionID` 语义改为 `Session["_ID"]`（缺失时惰性 crypto 随机 hex 并经 SetSession 落 Cookie）；登录次数/验证码门控按其记账，CaptchaController 依赖不变。
+- [ ] `Context` 增加 `ViewArgs` 并在 dispatch 注入框架键 RunMode/DevMode/session/currentLocale；RenderTemplate/NotFound 以 ViewArgs 渲染（NotFound 透传，不传 nil）。
+- [ ] i18n LocaleResolver 接线进 cmd/leanote 的 App：cookie `i18n.cookie`（默认 `cookie.prefix+"_LANG"`）→ Accept-Language 首项 → ""，同时供 Context.Message 与 currentLocale 视图键。
+- [ ] Params 补齐：Bool 等价于 `revel.Atob`（先 trim/lower，只有 `""`、`false`、`off`、`f`、`0`、`0.0` 为 false，其余任意值为 true）；`Params.Values`/`Params.Files` 保留原始键，令 `Has("Tags[0]")` 与 `Files[0][LocalFileId]` 等嵌套 binder 继续可用；[]string 切片视图中 `name[i]` 保留稀疏索引，索引大于 `params.max_index`（默认 4096）时忽略该参数并记录 binder 诊断，且不得按其分配切片；只有 `name[]` 在显式索引位置之后追加未索引值；再补 `Bind`（int/[]byte 文件）与 `Files` 文件头形态。
+- [ ] 主站 BaseController 收敛：包装 `*httpserver.Context`，会话写全经 SetSession/DeleteSession；`ClearSession` 的 `"theme"` 小写怪癖原样保留。
+- [ ] commonUrl 白名单字节级原样迁移（含死注册 Index/Oauth/Blog 条目与 `FindPasswword` 拼写，均不改名不清理）；LoginRequired 按 8 个被拦截 controller 的每个 action 挂 BEFORE。
+- [ ] `RenderTemplateStr` 全仓零调用方，按 TemplateRenderer 等价移植（保留忽略错误的既有怪癖），不删除。
+
 **批次伴随约束（审核新增）：**
 
 - [ ] 每批次就地迁移该批所用 service 的 `revel.Config`/`revel.BasePath` 调用（对应 design §1.1 调用方清单：ConfigService 13、ThemeService 8、FileService 5、html2image 4、AttachService/AuthService 等），避免 Task 6 清扫堆积。
 - [ ] 批次汇合时提取 `needValidateAPI`（api/httpserver.go）与 `needValidateWhitelist`（middleware.go）的字节级重复为单一白名单辅助。
-- [x] 批次收尾在 cmd/leanote 完成 Task 2 注记的三项装配（TemplateSetRenderer + i18n.LoadMessages + DefaultLanguage），主站模板渲染批次即可跑真实页面验证。
+- [x] 批次收尾在 cmd/leanote 完成 Task 2 注记的三项展示层启动装配（TemplateSetRenderer + i18n.LoadMessages + DefaultLanguage）。这不表示主站已可做真实页面验证：当前 `controllers.RegisterHTTP` 仅注册 `TestE2e`，主站 URL 仍返回 404；须先迁入主站 actions 及所需 dispatch 注入，才能验证页面渲染。
 
 ### Task 5：模板、博客和静态资源
 
