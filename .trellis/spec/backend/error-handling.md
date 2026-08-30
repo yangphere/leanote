@@ -18,6 +18,17 @@ Questions to answer:
 
 (To be filled by the team)
 
+- HTTP test-only identity endpoints use an explicit status matrix: requests
+  outside test mode or loopback return `404`; marker, database, token digest,
+  or time-boundary validation failures return `503` without sensitive details.
+- Boundary checks are inclusive at the documented limit. The e2e marker future
+  skew accepts exactly `validationNow + 60s` and rejects any later timestamp.
+- Lower-layer errors are returned to the caller with context; handlers must not
+  convert database initialization or query failures into successful empty data.
+
+- Table-driven tests cover the 404/503 matrix, including the exact future-skew
+  boundary and the smallest representable value beyond it.
+
 ---
 
 ## Error Types
@@ -28,11 +39,7 @@ Questions to answer:
 
 ---
 
-## Error Handling Patterns
-
 <!-- Try-catch patterns, error propagation -->
-
-(To be filled by the team)
 
 ---
 

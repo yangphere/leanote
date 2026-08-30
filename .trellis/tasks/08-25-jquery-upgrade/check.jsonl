@@ -10,3 +10,4 @@
 {"file": "conf/app.conf", "reason": "Verify the test-mode configuration remains loopback-bound and selects the isolated database."}
 {"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "Verify release browser evidence is consistent with the root compatibility matrix."}
 {"file": ".trellis/tasks/08-25-jquery-upgrade/task.json", "reason": "Verify relatedFiles uses the canonical shared-helper path and notes references R-jQ3/R-jQ6."}
+{"file": ".trellis/tasks/08-25-jquery-upgrade/research/spec-audit-2026-08-30.md", "reason": "复核本轮规格修订、外部浏览器证据阻断和 CI 权限缺口。"}

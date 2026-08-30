@@ -17090,7 +17090,7 @@ define('core',[
         MD.clearUndo();
         eventMgr.onToggleMode(editor);
         core._moveCursorTo(pos.row, pos.column);
-        $editorElt.focus();
+        $editorElt.trigger('focus');
         $('#wmd-input').scrollTop(scrollTop);
 
         // 设置API
@@ -17582,11 +17582,11 @@ define('core',[
             var $elt = $(this);
             setTimeout(function() {
                 // When modal opens focus on the first button
-                $elt.find('.btn:first').focus();
+                $elt.find('.btn:first').trigger('focus');
                 // Or on the first link if any
-                $elt.find('button:first').focus();
+                $elt.find('button:first').trigger('focus');
                 // Or on the first input if any
-                $elt.find("input:enabled:visible:first").focus();
+                $elt.find("input:enabled:visible:first").trigger('focus');
             }, 50);
         }).on('hidden.bs.modal', '.modal', function() {
             // Focus on the editor when modal is gone

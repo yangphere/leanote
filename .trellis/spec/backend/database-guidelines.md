@@ -18,13 +18,16 @@ Questions to answer:
 
 (To be filled by the team)
 
----
+- Shared MongoDB helpers must fail closed when the package client has not been
+  initialized. Return an explicit error before dereferencing the client; do not
+  silently return an empty result or create an implicit connection.
+- Read-only test-support queries (for example, `e2e_runs` identity markers)
+  use the current application database session and must propagate connection
+  and query errors to the caller.
 
-## Query Patterns
-
-<!-- How should queries be written? Batch operations? -->
-
-(To be filled by the team)
+- Unit tests cover the uninitialized-client path and assert a non-nil error.
+- Identity/database integration tests distinguish a missing or invalid marker
+  from a database error; both are fail-closed and must not expose credentials.
 
 ---
 

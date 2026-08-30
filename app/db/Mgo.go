@@ -178,6 +178,9 @@ func close() {
 // test-support paths only (e2e run markers) and must not be used for
 // business data access.
 func FindInCollection(database, collection string, filter, result interface{}) error {
+	if client == nil {
+		return errors.New("mongo client is not initialized")
+	}
 	ctx, cancel := operationContext()
 	defer cancel()
 	cursor, err := client.Database(database).Collection(collection).Find(ctx, filter)

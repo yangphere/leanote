@@ -11,3 +11,4 @@
 {"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "Keep the PR Chromium gate and four-browser release smoke evidence consistent across delivery planning."}
 {"file": "docs/modernization/fileupload-provenance.md", "reason": "fileupload 10.32.0 溯源"}
 {"file": "docs/modernization/browser-smoke/jquery-3.7.md", "reason": "R-jQ7 浏览器 smoke 记录"}
+{"file": ".trellis/tasks/08-25-jquery-upgrade/research/spec-audit-2026-08-30.md", "reason": "本轮规格审核结论、身份时间边界、CI 最小权限和未完成浏览器证据。"}

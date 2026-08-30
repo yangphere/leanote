@@ -55,7 +55,7 @@ func (e MongoEnvironment) Up() (err error) {
 	// authoritative startup and must still surface errors.
 	_, _ = e.run("docker", "rm", "-f", MongoContainerName)
 	if _, err := e.run("docker", "run", "-d", "--rm", "--name", MongoContainerName, "-p", "27017:27017", MongoImage); err != nil {
-		return fmt.Errorf("start MongoDB 5.0 fixture: %w", err)
+		return fmt.Errorf("start MongoDB 8.0 fixture: %w", err)
 	}
 	// Once the container has been created, every later setup failure must
 	// remove it so a following test can retry without a name collision.

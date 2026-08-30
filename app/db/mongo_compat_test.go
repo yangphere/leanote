@@ -23,6 +23,17 @@ const (
 	testCollectionName = "compat"
 )
 
+func TestFindInCollectionRequiresInitializedClient(t *testing.T) {
+	saved := client
+	client = nil
+	defer func() { client = saved }()
+
+	var markers []bson.M
+	if err := FindInCollection(testDatabaseName, testCollectionName, bson.M{}, &markers); err == nil {
+		t.Fatal("FindInCollection() with an uninitialized client must fail")
+	}
+}
+
 var (
 	testConnectOnce sync.Once
 	testColl        *Collection
