@@ -2,7 +2,7 @@
   "id": "cicd-delivery",
   "name": "cicd-delivery",
   "title": "CI/CD 与可复现交付",
-  "description": "建立 PR/push 质量门与 v* 标签的 GitHub Release、GHCR Linux/amd64 发布，不自动部署。",
+  "description": "建立 PR/push 质量门与精确 vX.Y.Z 标签的 GitHub Release、GHCR Linux/amd64 发布，不自动部署。",
   "status": "planning",
   "dev_type": "devops",
   "scope": "CI, release packaging and container delivery",

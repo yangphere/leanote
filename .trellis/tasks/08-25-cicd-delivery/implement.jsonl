@@ -1,4 +1,7 @@
-{"file": ".trellis/tasks/08-25-cicd-delivery/prd.md", "reason": "PR/push 质量门、v* 发布、GHCR Linux/amd64、非 root、外部 Mongo 和完整 PDF 需求。"}
-{"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "workflow 分层、版本矩阵、可复现 tarball、容器 smoke 和最小权限设计。"}
+{"file": ".trellis/tasks/08-25-cicd-delivery/prd.md", "reason": "PR/push 质量门、精确 vX.Y.Z 发布、GHCR Linux/amd64、非 root、外部 Mongo 和完整 PDF 需求。"}
+{"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "workflow 分层、严格 SemVer、统一失败摘要、可复现 tarball/OCI 元数据、容器 smoke 和最小权限设计。"}
 {"file": "docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md", "reason": "GitHub Release/GHCR 发布而不自动部署生产的决策。"}
 {"file": "docs/modernization-backlog.md", "reason": "arm64/PDF 延期项 MOD-002 的 owner、触发条件和完成定义。"}
+{"file": ".trellis/tasks/08-25-cicd-delivery/research/spec-review-2026-08-31.md", "reason": "2026-08-31 规格审核证据：ready 阻塞、依赖完成核验、版本来源冲突、CI 唯一入口、健康/确定性/发布安全约束。"}
+{"file": ".trellis/tasks/08-25-cicd-delivery/research/ci-failure-summary-schema.md", "reason": "统一固定 job ID 的质量门失败摘要 schema、always 收尾、早期失败 fallback、service 健康字段、脱敏边界和 artifact allowlist。"}
+{"file": ".trellis/tasks/08-25-cicd-delivery/research/release-matrix-contract.md", "reason": "发布 commit 绑定的四浏览器当前/前一主版本八行 JSON Schema、主版本判定、唯一键和真实环境门禁。"}

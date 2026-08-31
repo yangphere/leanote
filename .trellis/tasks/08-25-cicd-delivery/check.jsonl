@@ -1,4 +1,7 @@
 {"file": ".trellis/tasks/08-25-cicd-delivery/prd.md", "reason": "检查 Go/Node/Mongo/Chromium/漂移/打包/Docker 全部是阻塞门，非 tag 不发布。"}
-{"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "检查权限、tag 版本一致性、非 root、外部 Mongo、持久化和 PDF smoke。"}
+{"file": ".trellis/tasks/08-25-cicd-delivery/design.md", "reason": "检查权限、严格 SemVer、失败摘要、OCI 可复现元数据、非 root、外部 Mongo、持久化和 PDF smoke。"}
 {"file": "docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md", "reason": "核对 release workflow 没有生产部署职责或长期凭据。"}
 {"file": "docs/modernization-backlog.md", "reason": "核对 arm64/PDF 技术债已登记而没有变成隐藏 fallback。"}
+{"file": ".trellis/tasks/08-25-cicd-delivery/research/spec-review-2026-08-31.md", "reason": "2026-08-31 审核清单：验证依赖真实完成证据、版本/tag/健康契约、可复现制品、脱敏 artifact、八行浏览器矩阵与禁止自动部署。"}
+{"file": ".trellis/tasks/08-25-cicd-delivery/research/ci-failure-summary-schema.md", "reason": "校验固定 job ID、摘要 schema、service 健康字段、早期失败 fallback、always 收尾、零测试/清理失败阻断和脱敏 artifact。"}
+{"file": ".trellis/tasks/08-25-cicd-delivery/research/release-matrix-contract.md", "reason": "校验 canonical release matrix JSON Schema、主版本判定、八行唯一键、发布 commit、真实 Safari、门禁字段和禁止占位证据。"}
