@@ -44,7 +44,7 @@ function getImageSize(url, callback) {
 }
 
 var o = {
-	maxSelected: G.maxSelected, 
+	maxSelected: G.maxSelected,
 	selectedZoneO:$("#preview"),
 	previewO: $("#preview"),
 	selectedImages:[], // selected urls
@@ -129,7 +129,7 @@ $("#renameAlbumBtn").on('click', function(){
 		    			$("#albumName").val("");
 		    			self.showMsg("Add Sucess!");
 		    			self.pageAddAlbum(ret);
-		    			
+
 						setTimeout(function() {
 							toggleAddAlbum();
 						}, 200);
@@ -145,7 +145,7 @@ alert("error");
 		    			$("#albumName").val("");
 		    			self.showMsg("Rename Sucess!");
 		    			self.pageUpdateAlbum(curAlbum, albumName);
-		    			
+
 						setTimeout(function() {
 							toggleAddAlbum();
 						}, 200);
@@ -243,7 +243,7 @@ alert("error");
 			});
 		});
 	},
-    
+
 	renderImages: function(albumId, page, needRenderPagination, key, needRender) {
 		var self = this;
 
@@ -290,7 +290,7 @@ alert("error");
 				html += '<div class="tools clearfix" data-id="' + each.FileId + '"><div class="file-title float-start">' + each.Title + '</div><div class="float-end"><a href="javascript:;" class="del" data-id="' + each.FileId + '"><span class="fa fa-trash"></span></a></div></div>';
 				html += "</li>";
 			}
-				
+
     		// var html = $("#tImage").render(datas);
     		$("#imageList").html(html);
 
@@ -316,7 +316,7 @@ alert("error");
 			self.previewO.append("<li>?</li>");
 		}
 	},
-		
+
 	reRenderSelectedImages: function(isRemove, addSrc) {
 		var self = this;
 
@@ -370,7 +370,7 @@ alert("error");
 		if(this.maxSelected > 1 && this.maxSelected <= this.selectedImages.length) {
 			return false;
 		}
-		
+
 		// life 为了图片安全
 		if(typeof $li == "object") {
 			var src = $li.find("img").attr('src');
@@ -383,7 +383,7 @@ alert("error");
 				src = urlPrefix + "/file/outputImage?fileId=" + $li;
 			}
 		}
-		
+
 		// 如果只允许选1个
 		if(this.maxSelected == 1) {
 			// 先把其它的去掉
@@ -392,9 +392,9 @@ alert("error");
 		} else {
 			this.selectedImages.push(src);
 		}
-		
+
 		this.reRenderSelectedImages(false, src);
-	
+
 		return true;
 	},
 	initDataFromTinymce: function() {
@@ -414,25 +414,25 @@ alert("error");
 		}
 	},
 
-	init: function() {	
+	init: function() {
 		var self = this;
-		
+
 		self.processAlbum();
 
 		$("#albumsForList").on('change', function() {
 			var albumId = $(this).val();
 			self.renderImages(albumId, 1, true);
 		});
-		
+
 		$("#imageList").on("click", 'li', function() {
 			if($(this).hasClass("selected")) {
 				$(this).removeClass("selected");
 				self.removeSelectedImage($(this));
 			} else {
-				if(self.addSelectedImage($(this))){ 
+				if(self.addSelectedImage($(this))){
 					$(this).addClass("selected");
 				}
-			}	
+			}
 		});
 
 
@@ -454,7 +454,7 @@ alert("error");
 				}).fail(function() {
 					alert("error");
 				});
-			}	
+			}
 		});
 		// edit file title
 		$("#imageList").on("click", '.file-title', function(e) {
@@ -504,14 +504,14 @@ alert("error");
 			});
 		});
 
-		// 
+		//
 		$("#goAddImageBtn").on('click', function() {
 			$("#albumsForUpload").val($("#albumsForList").val());
 			showBootstrapTab($('#myTab li:eq(1) a')[0]);
 		});
 
 		// toggle tab
-		// refresh 
+		// refresh
 		$('#myTab a').on('shown.bs.tab', function(e) {
 			e.preventDefault()
 			showBootstrapTab(this);
@@ -561,13 +561,13 @@ alert("error");
 			if($(this).hasClass("selected")) {
 				// $(this).removeClass("selected");
 			} else {
-				if($(this).find("img").length){ 
+				if($(this).find("img").length){
 					$("#preview li").removeClass("selected");
 					$(this).addClass("selected");
 
 					self.initAttr($(this));
 				}
-			}	
+			}
 		});
 
 		$("#attrTitle, #attrWidth, #attrHeight").on("keyup", function(){
@@ -581,7 +581,7 @@ alert("error");
 		self.search();
 
 		self.initSelectedZones();
-		
+
 		self.initDataFromTinymce();
 
 		self.renderAlbums();
@@ -616,7 +616,7 @@ alert("error");
 		var curAttrs = self.getCurAttrs();
 		var preWidth = curAttrs.preWidth || curAttrs.width;
 		var preHeight = curAttrs.preHeight || curAttrs.height;
-		
+
 		if(autoScale && preWidth && preHeight) {
 			if(isWidth) {
 				height = parseInt((width/preWidth) * preHeight);
@@ -770,7 +770,7 @@ alert("error");
 	                tpl.appendTo(ul);
 	            	return;
 	            }
-	            
+
 	            var tpl = $('<li><div class="alert alert-info"><img class="loader" src="public/images/ajax-loader.gif"> <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	            // Append the file name and file size
 	            tpl.find('div').append(data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small>');
@@ -783,7 +783,7 @@ alert("error");
 	            // Automatically upload the file once it is added to the queue
 	            var jqXHR = data.submit();
 	        },
-	        
+
 
 	        done: function(e, data) {
 	            if (data.result.Ok == true) {

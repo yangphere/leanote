@@ -101,7 +101,7 @@ const MARKDOWN_WAIT_FOR_IMAGES_SIGNATURE = 'jQuery.isFunction() is deprecated';
 
 // Library assets owned by other tasks (inventory §4.1 ownership table).
 const LIB_URL_PATHNAMES = new Set([
-  '/tinymce/tinymce.full.min.js', // E-TM owned
+  '/tinymce/tinymce.min.js', // E-TM owned
   '/tinymce/tinymce.js', // dev core only served on dev pages
   '/public/admin/js/artDialog/jquery.artDialog.js', // vendored artDialog (admin 区验收处理)
 ]);

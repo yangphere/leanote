@@ -332,7 +332,7 @@ KityMinder.LANG['en-us'] = {
         },
         'link': 'Link',
         'image': 'Image',
-        
+
         'note': 'Note',
         'selectNodeToAddNote': 'Select Note to Add Note',
         'edit': 'Edit',

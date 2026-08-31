@@ -26,6 +26,12 @@ const js = [
   { name: 'bootstrap-dialog', kind: 'js', transform: 'concat', inputs: [
     'public/js/bootstrap-dialog-source.js',
   ], stripSourceMappingURL: true, output: 'public/js/bootstrap-dialog.js', url: '/js/bootstrap-dialog.js' },
+  { name: 'tinymce-config', kind: 'js', transform: 'esbuild-concat', inputs: [
+    'public/js/tinymce-config-source.js',
+  ], output: 'public/js/tinymce-config.js', url: '/js/tinymce-config.js' },
+  { name: 'editor-state', kind: 'js', transform: 'esbuild-concat', inputs: [
+    'public/js/editor-state-source.js',
+  ], output: 'public/js/editor-state.js', url: '/js/editor-state.js' },
   { name: 'dep', kind: 'js', transform: 'concat', inputs: [
     'node_modules/jquery/dist/jquery.min.js',
     'public/js/jquery.ztree.all-3.5-min.js',
@@ -64,6 +70,65 @@ const css = [
   { name: 'contextmenu-css', kind: 'css', inputs: ['public/js/contextmenu/css/contextmenu.css'], output: 'public/js/contextmenu/css/contextmenu-min.css', url: '/js/contextmenu/css/contextmenu-min.css' },
 ];
 
+const tinyMceAssets = [
+  ['tinymce-core', 'node_modules/tinymce/tinymce.js', 'public/tinymce/tinymce.js'],
+  ['tinymce-core-min', 'node_modules/tinymce/tinymce.min.js', 'public/tinymce/tinymce.min.js'],
+  ['tinymce-silver', 'node_modules/tinymce/themes/silver/theme.js', 'public/tinymce/themes/silver/theme.js'],
+  ['tinymce-silver-min', 'node_modules/tinymce/themes/silver/theme.min.js', 'public/tinymce/themes/silver/theme.min.js'],
+  ['tinymce-icons', 'node_modules/tinymce/icons/default/icons.js', 'public/tinymce/icons/default/icons.js'],
+  ['tinymce-icons-min', 'node_modules/tinymce/icons/default/icons.min.js', 'public/tinymce/icons/default/icons.min.js'],
+  ['tinymce-model', 'node_modules/tinymce/models/dom/model.js', 'public/tinymce/models/dom/model.js'],
+  ['tinymce-model-min', 'node_modules/tinymce/models/dom/model.min.js', 'public/tinymce/models/dom/model.min.js'],
+  ['tinymce-oxide-skin', 'node_modules/tinymce/skins/ui/oxide/skin.js', 'public/tinymce/skins/ui/oxide/skin.js'],
+  ['tinymce-oxide-skin-css', 'node_modules/tinymce/skins/ui/oxide/skin.css', 'public/tinymce/skins/ui/oxide/skin.css'],
+  ['tinymce-oxide-skin-min-css', 'node_modules/tinymce/skins/ui/oxide/skin.min.css', 'public/tinymce/skins/ui/oxide/skin.min.css'],
+  ['tinymce-oxide-content-css', 'node_modules/tinymce/skins/ui/oxide/content.css', 'public/tinymce/skins/ui/oxide/content.css'],
+  ['tinymce-oxide-content-min-css', 'node_modules/tinymce/skins/ui/oxide/content.min.css', 'public/tinymce/skins/ui/oxide/content.min.css'],
+  ['tinymce-oxide-inline-css', 'node_modules/tinymce/skins/ui/oxide/content.inline.css', 'public/tinymce/skins/ui/oxide/content.inline.css'],
+  ['tinymce-oxide-inline-min-css', 'node_modules/tinymce/skins/ui/oxide/content.inline.min.css', 'public/tinymce/skins/ui/oxide/content.inline.min.css'],
+];
+const tinyMcePlugins = ['advlist', 'autolink', 'charmap', 'directionality', 'link', 'lists', 'searchreplace', 'table', 'visualblocks', 'visualchars']
+  .flatMap((name) => [
+    [`tinymce-plugin-${name}`, `node_modules/tinymce/plugins/${name}/plugin.js`, `public/tinymce/plugins/${name}/plugin.js`],
+    [`tinymce-plugin-${name}-min`, `node_modules/tinymce/plugins/${name}/plugin.min.js`, `public/tinymce/plugins/${name}/plugin.min.js`],
+  ]);
+const tinyMceFirstParty = ['leaui_image', 'leaui_mindmap', 'leanote_nav', 'leanote_code']
+  .flatMap((name) => [
+    [`first-party-${name}`, `public/tinymce/plugins/${name}/plugin.js`, `public/tinymce/plugins/${name}/plugin.js`],
+    [`first-party-${name}-min`, `public/tinymce/plugins/${name}/plugin.min.js`, `public/tinymce/plugins/${name}/plugin.min.js`],
+  ]);
+function collectFirstPartyStaticFiles(relativeRoot) {
+  const root = path.resolve(relativeRoot);
+  const files = [];
+  const visit = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(absolute);
+      else if (entry.isFile() && !/^(plugin(?:\.min)?\.js|README\.md)$/i.test(entry.name) && !/\.(map|ts)$/i.test(entry.name)) {
+        files.push(posix(path.relative('.', absolute)));
+      }
+    }
+  };
+  visit(root);
+  return files;
+}
+const firstPartyStaticFiles = ['leaui_image', 'leaui_mindmap', 'leanote_nav', 'leanote_code']
+  .flatMap((name) => collectFirstPartyStaticFiles(`public/tinymce/plugins/${name}`));
+const assets = [
+  ...tinyMceAssets,
+  ...tinyMcePlugins,
+  ...tinyMceFirstParty,
+  ...firstPartyStaticFiles.map((file) => [`first-party-static-${file.replaceAll('/', '-')}`, file, file]),
+].map(([name, input, output]) => ({
+  name,
+  kind: 'asset',
+  transform: 'copy',
+  inputs: [input],
+  output,
+  url: `/${output.replaceAll('\\', '/')}`,
+  normalizeTrailingWhitespace: /^node_modules\/tinymce\/.+\.(?:css|js)$/i.test(input),
+}));
+
 const locales = ['de-de', 'en-us', 'es-co', 'fr-fr', 'pt-pt', 'zh-cn', 'zh-hk'];
 const i18n = locales.flatMap((locale) => [
   { name: `msg-${locale}`, kind: 'i18n', namespace: 'msg', locale, inputs: ['msg', 'member', 'markdown', 'album'].map((name) => `messages/${locale}/${name}.conf`), output: `public/js/i18n/msg.${locale}.js`, url: `/js/i18n/msg.${locale}.js` },
@@ -75,17 +140,19 @@ const manifest = {
   version: 1,
   js,
   css,
+  assets,
   i18n,
   noteHtml: { name: 'note-html', kind: 'html', inputs: ['app/views/note/note-dev.html'], output: 'app/views/note/note.html' },
   locales,
   i18nScanRoots: ['public/admin', 'public/blog', 'public/md', 'public/js', 'public/album', 'public/libs', 'public/member', 'public/tinymce', 'app/views'],
   i18nDerivedInputExclusions: [
     ...js.map((entry) => entry.output), ...css.map((entry) => entry.output),
+    ...assets.map((entry) => entry.output),
     ...i18n.map((entry) => entry.output), 'app/views/note/note.html', 'public/md/main-v2.min.js',
   ],
   i18nMessageFiles: ['msg', 'member', 'markdown', 'album', 'blog', 'tinymce_editor'],
   dynamicKeyExceptions: [
-    { path: 'public/js/common.js', line: 1234, column: 11 },
+    { path: 'public/js/common.js', line: 1242, column: 11 },
     { path: 'public/md/main-v2.js', line: 17417, column: 23 },
   ],
 };
@@ -104,8 +171,8 @@ function validateRelative(value, label) {
 
 export function validateManifest(input = manifest) {
   const outputs = [];
-  const canonicalOutputs = new Set([...manifest.js, ...manifest.css, ...manifest.i18n, manifest.noteHtml].map((entry) => entry.output));
-  const entries = [...input.js, ...input.css, ...input.i18n, input.noteHtml];
+  const canonicalOutputs = new Set([...manifest.js, ...manifest.css, ...manifest.assets, ...manifest.i18n, manifest.noteHtml].map((entry) => entry.output));
+  const entries = [...input.js, ...input.css, ...input.assets, ...input.i18n, input.noteHtml];
   for (const entry of entries) {
     const output = validateRelative(entry.output, 'output');
     if (!canonicalOutputs.has(output)) throw new Error(`output is outside canonical manifest: ${output}`);
@@ -121,7 +188,7 @@ export function validateManifest(input = manifest) {
       }
     }
   }
-  if (outputs.length !== 38) throw new Error(`expected 38 outputs, got ${outputs.length}`);
+  if (outputs.length < 81) throw new Error(`expected complete build closure with at least 81 outputs, got ${outputs.length}`);
   for (const root of input.i18nScanRoots) validateRelative(root, 'scan root');
   const exclusions = input.i18nDerivedInputExclusions ?? [];
   const normalizedExclusions = exclusions.map((item) => validateRelative(item, 'i18n derived input exclusion'));
@@ -138,7 +205,7 @@ export function validateManifest(input = manifest) {
 }
 
 validateManifest(manifest);
-export const BUILD_OUTPUTS = Object.freeze([...manifest.js, ...manifest.css, ...manifest.i18n, manifest.noteHtml].map((entry) => entry.output));
+export const BUILD_OUTPUTS = Object.freeze([...manifest.js, ...manifest.css, ...manifest.assets, ...manifest.i18n, manifest.noteHtml].map((entry) => entry.output));
 function deepFreeze(value) {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
   Object.freeze(value);
@@ -174,7 +241,7 @@ export function assertNoSymlinkPath(root, relative, label = 'path') {
   return target;
 }
 
-export function assertInputsExist(root, entries = [...manifest.js, ...manifest.css, ...manifest.i18n, manifest.noteHtml]) {
+export function assertInputsExist(root, entries = [...manifest.js, ...manifest.css, ...manifest.assets, ...manifest.i18n, manifest.noteHtml]) {
   const repository = fs.realpathSync(root);
   if (fs.lstatSync(root).isSymbolicLink()) throw new Error('repository root is symbolic link');
   for (const entry of entries) for (const source of entry.inputs ?? []) {
@@ -185,7 +252,7 @@ export function assertInputsExist(root, entries = [...manifest.js, ...manifest.c
   }
 }
 
-export function assertOutputsSafe(root, entries = [...manifest.js, ...manifest.css, ...manifest.i18n, manifest.noteHtml]) {
+export function assertOutputsSafe(root, entries = [...manifest.js, ...manifest.css, ...manifest.assets, ...manifest.i18n, manifest.noteHtml]) {
   const repository = fs.realpathSync(root);
   const lexicalRoot = path.resolve(root);
   for (const entry of entries) {

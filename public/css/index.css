@@ -6,8 +6,6 @@
   font-style: normal;
 }
 #logo,
-.mce-i-mind,
-.mce-i-ace-pre,
 .lea-icon {
   font-family: 'leanote' !important;
   speak: none;
@@ -20,12 +18,6 @@
 }
 .icon-markdown:before {
   content: "\e604";
-}
-.mce-i-mind:before {
-  content: "\e602";
-}
-.mce-i-ace-pre:before {
-  content: "\e603";
 }
 #logo:before {
   content: "\e901";
@@ -71,16 +63,16 @@
 }
 /*"HelveticaNeue-Light","Helvetica Neue Light","Helvetica Neue", Helvetica, "Microsoft Yahei", Verdana, Simsun, "Segoe UI", "Segoe UI Web Regular", "Segoe UI Symbol",  "BBAlpha Sans", "S60 Sans", Arial, sans-serif;*/
 ::selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 ::-moz-selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 ::-webkit-selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 *,
 body {
@@ -502,7 +494,7 @@ input,
 }
 .btn > i.pull-left,
 .btn > i.pull-right {
-  line-height: 1.428571429;
+  line-height: 1.42857143;
 }
 .m-t-xs {
   margin-top: 5px;

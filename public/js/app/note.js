@@ -234,9 +234,7 @@ Note.curHasChanged = function(force, isRefreshOrCtrls) {
 	// 是否需要检查内容呢?
 
 	var needCheckContent = false;
-	if (cacheNote.IsNew || force || !Note.readOnly) {
-		needCheckContent = true;
-	}
+	if (cacheNote.IsNew || force || !Note.readOnly) needCheckContent = true;
 
 	// 标题, 标签, 内容都没改变
 	if (!hasChanged.hasChanged && !needCheckContent) {
@@ -287,7 +285,9 @@ Note.curHasChanged = function(force, isRefreshOrCtrls) {
 			) 
 		) {
 	*/
-	if (cacheNote.Content != content) {
+	var editorState = window.LeanoteEditorSession;
+	var contentDirty = cacheNote.IsNew || !editorState || editorState.isDirty();
+	if (cacheNote.Content != content && contentDirty) {
 		hasChanged.hasChanged = true;
 		hasChanged.Content = content;
 		
@@ -397,6 +397,47 @@ Note.getImgSrc = function(content) {
 // 定时保存传false
 Note.saveInProcess = {}; // noteId => bool, true表示该note正在保存到服务器, 服务器未响应
 Note.savePool = {}; // 保存池, 以后的保存先放在pool中, id => note
+function currentEditorSerialization() {
+	try {
+		var note = Note.getCurNote();
+		var content = getEditorContent(note && note.IsMarkdown);
+		return isArray(content) ? content[0] : content;
+	} catch(e) {
+		return undefined;
+	}
+}
+function captureEditorSaveContext(noteId) {
+	var context = {noteId: noteId};
+	var session = window.LeanoteEditorSession;
+	if (session && typeof session.snapshot === "function") {
+		context.loadEpoch = session.snapshot().loadEpoch;
+	}
+	return context;
+}
+function isCurrentEditorSaveContext(context) {
+	if (!context || Note.curNoteId !== context.noteId) {
+		return !context;
+	}
+	var session = window.LeanoteEditorSession;
+	return context.loadEpoch === undefined || !session ||
+		typeof session.isCurrentLoad !== "function" ||
+		session.isCurrentLoad(context.loadEpoch);
+}
+function isCurrentEditorSaveCapture(capture) {
+	if (!isCurrentEditorSaveContext(capture)) return false;
+	var session = window.LeanoteEditorSession;
+	if (!capture || !session || typeof session.snapshot !== "function") return true;
+	return capture.revision >= session.snapshot().confirmedRevision;
+}
+function cacheSavedNote(note) {
+	var cacheUpdate = $.extend({}, note);
+	if (typeof cacheUpdate.Tags === 'string') {
+		cacheUpdate.Tags = cacheUpdate.Tags.split(',');
+	}
+	cacheUpdate.UpdatedTime = (new Date()).format("yyyy-MM-ddThh:mm:ss.S");
+	Note.setNoteCache(cacheUpdate, false);
+	Note.clearCacheByNotebookId(cacheUpdate.NotebookId);
+}
 Note.curChangedSaveIt = function(force, callback, isRefreshOrCtrls) {
 	var me = this;
 	// 如果当前没有笔记, 不保存
@@ -430,34 +471,81 @@ Note.curChangedSaveIt = function(force, callback, isRefreshOrCtrls) {
 		}
 		*/
 		
+		var saveContext = captureEditorSaveContext(hasChanged.NoteId);
+		var saveCapture = null;
+		if (hasChanged.Content !== undefined && window.LeanoteEditorSession) {
+			saveCapture = window.LeanoteEditorSession.beginSave(hasChanged.Content);
+		}
+		var submitted = $.extend({}, hasChanged);
 		// 保存之
 		showMsg(getMsg("saving"));
 		
 		me.saveInProcess[hasChanged.NoteId] = true;
 		
-		ajaxPost("/note/updateNoteOrContent", hasChanged, function(ret) {
+		ajaxPost("/note/updateNoteOrContent", submitted, function(ret) {
 			me.saveInProcess[hasChanged.NoteId] = false;
-			if(hasChanged.IsNew) {
+			if(!reIsOk(ret)) {
+				window.LeanoteEditorSession && window.LeanoteEditorSession.failSave(saveCapture);
+				callback && callback(false, ret);
+				showMsg(ret && ret.Msg ? ret.Msg : getMsg("Error"), 3000);
+				return;
+			}
+			// A successful response for a note/load epoch that is no longer active
+			// must not touch the current editor session, but its own cache still
+			// needs the confirmed server state.
+			if (!isCurrentEditorSaveContext(saveContext)) {
+				if (submitted.IsNew) {
+					var staleCreated = ret.Item;
+					if (staleCreated && staleCreated.NoteId) {
+						staleCreated.IsNew = false;
+						Note.setNoteCache(staleCreated, false);
+					}
+				} else {
+					cacheSavedNote(submitted);
+				}
+				return;
+			}
+			if(submitted.IsNew) {
 				// 缓存之, 后台得到其它信息
-				ret.IsNew = false;
-				Note.setNoteCache(ret, false);
+				var created = ret.Item;
+				if (!created || !created.NoteId) {
+					window.LeanoteEditorSession && window.LeanoteEditorSession.failSave(saveCapture);
+					callback && callback(false, {Msg: getMsg("Error")});
+					showMsg(getMsg("Error"), 3000);
+					return;
+				}
+				created.IsNew = false;
+				if(saveCapture && window.LeanoteEditorSession && !isCurrentEditorSaveCapture(saveCapture)) return;
+				if(saveCapture && window.LeanoteEditorSession && !window.LeanoteEditorSession.confirmSave(saveCapture, currentEditorSerialization())) {
+					callback && callback(false, {Msg: getMsg("Error")});
+					showMsg(getMsg("Error"), 3000);
+					return;
+				}
+				Note.setNoteCache(created, false);
 
 				// 新建笔记也要change history
-				Pjax.changeNote(ret);
+				Pjax.changeNote(created);
+			} else {
+				if(saveCapture && window.LeanoteEditorSession && !isCurrentEditorSaveCapture(saveCapture)) return;
+				if(saveCapture && window.LeanoteEditorSession && !window.LeanoteEditorSession.confirmSave(saveCapture, currentEditorSerialization())) {
+					callback && callback(false, {Msg: getMsg("Error")});
+					showMsg(getMsg("Error"), 3000);
+					return;
+				}
+				cacheSavedNote(submitted);
 			}
-			callback && callback();
+			callback && callback(true, ret);
 			showMsg(getMsg("saveSuccess"), 1000);
+		}, function(error) {
+			me.saveInProcess[hasChanged.NoteId] = false;
+			window.LeanoteEditorSession && window.LeanoteEditorSession.failSave(saveCapture);
+			callback && callback(false, error);
+			showMsg(getMsg("Error"), 3000);
 		});
 		
 		if(hasChanged['Tags'] != undefined && typeof hasChanged['Tags'] == 'string') {
 			hasChanged['Tags'] = hasChanged['Tags'].split(',');
 		}
-		// 先缓存, 把markdown的preview也缓存起来
-		Note.setNoteCache(hasChanged, false);
-		// 设置更新时间
-		Note.setNoteCache({"NoteId": hasChanged.NoteId, "UpdatedTime": (new Date()).format("yyyy-MM-ddThh:mm:ss.S")}, false);
-		Note.clearCacheByNotebookId(hasChanged.NotebookId);
-
 		return hasChanged;
 	}
 	else {
@@ -470,17 +558,41 @@ Note.curChangedSaveIt = function(force, callback, isRefreshOrCtrls) {
 // 更新池里的笔记
 Note.updatePoolNote = function() {
 	var me = this;
-	for(var noteId in me.savePool) {
+	for (var noteId in me.savePool) {
 		if(!noteId) {
 			continue;
 		}
-		// 删除之
-		delete me.savePool[noteId];
 		var hasChanged = me.savePool[noteId];
+		delete me.savePool[noteId];
+		if (!hasChanged) continue;
+		var saveContext = captureEditorSaveContext(noteId);
+		var saveCapture = hasChanged.Content !== undefined && noteId === me.curNoteId && window.LeanoteEditorSession
+			? window.LeanoteEditorSession.beginSave(hasChanged.Content) : null;
 		me.saveInProcess[noteId] = true;
-		ajaxPost("/note/updateNoteOrContent", hasChanged, function(ret) {
-			me.saveInProcess[noteId] = false;
+		(function (queuedNoteId, queuedChange, queuedCapture, queuedContext) {
+		ajaxPost("/note/updateNoteOrContent", queuedChange, function(ret) {
+			me.saveInProcess[queuedNoteId] = false;
+			if (!reIsOk(ret)) {
+				window.LeanoteEditorSession && window.LeanoteEditorSession.failSave(queuedCapture);
+				showMsg(ret && ret.Msg ? ret.Msg : getMsg("Error"), 3000);
+				return;
+			}
+			if (!isCurrentEditorSaveContext(queuedContext)) {
+				cacheSavedNote(queuedChange);
+				return;
+			}
+			if (queuedCapture && window.LeanoteEditorSession && !isCurrentEditorSaveCapture(queuedCapture)) return;
+			if (queuedCapture && window.LeanoteEditorSession && !window.LeanoteEditorSession.confirmSave(queuedCapture, currentEditorSerialization())) {
+				showMsg(getMsg("Error"), 3000);
+				return;
+			}
+			cacheSavedNote(queuedChange);
+		}, function() {
+			me.saveInProcess[queuedNoteId] = false;
+			window.LeanoteEditorSession && window.LeanoteEditorSession.failSave(queuedCapture);
+			showMsg(getMsg("Error"), 3000);
 		});
+		})(noteId, hasChanged, saveCapture, saveContext);
 	}
 };
 // 启动保存, 暂不处理
@@ -741,9 +853,17 @@ Note.renderChangedNote = function(changedNote) {
 // 此时需要清空只读的, 且切换到note edit模式下
 Note.clearNoteInfo = function() {
 	Note.clearCurNoteId();
+	var session = window.LeanoteEditorSession;
+	var loadEpoch = session && typeof session.beginLoad === "function"
+		? session.beginLoad({noteId: null, persistedContent: ''}) : undefined;
 	Tag.clearTags();
 	$("#noteTitle").val("");
-	setEditorContent("");
+	setEditorContent("", false, false, function() {
+		if (session && typeof session.completeLoad === "function") {
+			var serialized = tinymce.activeEditor ? tinymce.activeEditor.getContent() : "";
+			session.completeLoad(loadEpoch, serialized);
+		}
+	}, loadEpoch);
 	
 	// markdown editor
 	/*
@@ -784,11 +904,20 @@ Note.renderNote = function(note) {
 
 // render content
 Note.renderNoteContent = function(content) {
-
+	var session = window.LeanoteEditorSession;
+	var loadEpoch = session && typeof session.beginLoad === "function"
+		? session.beginLoad({noteId: content.NoteId, persistedContent: content.Content || ''}) : undefined;
 	setEditorContent(content.Content, content.IsMarkdown, content.Preview, function() {
+		if (session && typeof session.completeLoad === "function") {
+			var serialized = content.IsMarkdown ? content.Content : (tinymce.activeEditor ? tinymce.activeEditor.getContent() : content.Content);
+			if (!session.completeLoad(loadEpoch, serialized || '')) return;
+		} else if (session) {
+			var fallbackSerialized = content.IsMarkdown ? content.Content : (tinymce.activeEditor ? tinymce.activeEditor.getContent() : content.Content);
+			session.load({noteId: content.NoteId, persistedContent: content.Content || '', editorContent: fallbackSerialized || ''});
+		}
 		Note.setCurNoteId(content.NoteId);
 		Note.toggleReadOnly();
-	});
+	}, loadEpoch);
 
 	// 只有在renderNoteContent时才设置curNoteId
 	// Note.curNoteId = content.NoteId;
@@ -1760,6 +1889,7 @@ Note.toggleReadOnly = function(needSave) {
 	
 	Note.readOnly = true;
 	LEA.readOnly = true;
+	if (window.LeanoteEditorSession) window.LeanoteEditorSession.setReadOnly(true);
 
 	if(!note.IsMarkdown) {
 		// 里面的pre也设为不可写
@@ -1787,6 +1917,7 @@ LEA.toggleWriteable = Note.toggleWriteable = function(isFromNewNote) {
 
 	Note.readOnly = false;
 	LEA.readOnly = false;
+	if (window.LeanoteEditorSession) window.LeanoteEditorSession.setReadOnly(false);
 
 	if(!note.IsMarkdown) {
 		// 里面的pre也设为不可写

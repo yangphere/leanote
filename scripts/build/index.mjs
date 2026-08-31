@@ -95,7 +95,7 @@ export async function runBuild(root = process.cwd(), options = {}) {
   assertSupportedNode(process.versions.node);
   await ensureEsbuild();
   const { MANIFEST, BUILD_OUTPUTS, assertInputsExist, assertOutputsSafe, resolveRepoPath, validateManifest } = await import('./manifest.mjs');
-  const { buildJavaScriptEntries } = await import('./js.mjs');
+  const { buildJavaScriptEntries, buildStaticEntries } = await import('./js.mjs');
   const { buildCssEntries } = await import('./css.mjs');
   const { buildI18n } = await import('./i18n.mjs');
   const { renderNoteHtml } = await import('./note-html.mjs');
@@ -115,6 +115,7 @@ export async function runBuild(root = process.cwd(), options = {}) {
     staging = await createControlledDirectory(root, 'staging', options.stagingRoot);
     await assertControlledDirectory(root, staging, 'staging');
     await buildJavaScriptEntries(MANIFEST.js, root, staging);
+    await buildStaticEntries(MANIFEST.assets, root, staging);
     await assertControlledDirectory(root, staging, 'staging');
     await buildCssEntries(MANIFEST.css, root, staging);
     await assertControlledDirectory(root, staging, 'staging');

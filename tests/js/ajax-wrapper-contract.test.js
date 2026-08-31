@@ -43,6 +43,21 @@ test('ajaxGet success routes response objects to successFunc', () => {
   assert.equal(failures.length, 0);
 });
 
+test('reIsOk requires the structured boolean success flag', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'public/js/common.js'), 'utf8');
+  const start = source.indexOf('// 返回是否是re.Ok == true');
+  const end = source.indexOf('// marker', start);
+  assert.notEqual(start, -1);
+  assert.notEqual(end, -1);
+  const sandbox = {};
+  vm.createContext(sandbox);
+  vm.runInContext(source.slice(start, end), sandbox);
+  assert.equal(sandbox.reIsOk({ Ok: true }), true);
+  assert.equal(sandbox.reIsOk({ Ok: false }), false);
+  assert.equal(sandbox.reIsOk({ Ok: 'true' }), false);
+  assert.equal(sandbox.reIsOk({ Ok: 1 }), false);
+});
+
 test('HTTP error handlers invoke failureFunc and never successFunc', () => {
   const ctx = loadWrapper();
   const successes = [];

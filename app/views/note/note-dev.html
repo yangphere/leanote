@@ -12,7 +12,7 @@
 
 <link href="/css/bootstrap-min.css" rel="stylesheet" />
 <!-- 先加载, 没有样式, 宽度不定 -->
-<link rel="stylesheet" href="/css/tinymce/skin.min.css" rel="stylesheet"/>
+<link rel="stylesheet" href="/tinymce/skins/ui/oxide/skin.css" rel="stylesheet"/>
 <!-- leanote css -->
 <link href="/css/font-awesome-4.2.0/css/font-awesome-min.css" rel="stylesheet" />
 <link href="/css/zTreeStyle/zTreeStyle-min.css" rel="stylesheet" />
@@ -723,7 +723,7 @@ data-bs-toggle="dropdown">
 			        <div class="modal-content">
 			            <div class="modal-header">
 			                <button type="button" class="btn-close" data-bs-dismiss="modal"
-			                    aria-label="{{leaMsg . \"close\"}}"></button>
+				                    aria-label="{{leaMsg . "close"}}"></button>
 			                <h4 class="modal-title">{{leaMsg . "Image"}}</h4>
 			            </div>
 			            <div class="modal-body" style="padding-top: 0; padding-bottom: 0">
@@ -896,6 +896,8 @@ var GlobalConfigs = {{.globalConfigs|jsonJs}};
 <script src="/js/object_id.js"></script>
 <!-- /dev -->
 
+<script src="/js/tinymce-config.js"></script>
+<script src="/js/editor-state.js"></script>
 <script src="/tinymce/tinymce.js"></script>
 
 <script src="/public/libs/ace/ace.js"></script>
@@ -918,7 +920,7 @@ var GlobalConfigs = {{.globalConfigs|jsonJs}};
 <!-- pro_app_js -->
 <script>
 initPage();
-// 当tinymce.dev.js时, 请注释require
+// TinyMCE 8 使用自托管资源闭包
 window.require = {
     baseUrl: '/public',
 };

@@ -47,7 +47,18 @@ Questions to answer:
 
 <!-- Standard error response format -->
 
-(To be filled by the team)
+### Note Save Envelope
+
+`POST /note/updateNoteOrContent` always returns the existing `info.Re` JSON
+shape. Success is `{ "Ok": true }`; a successful new-note request also puts
+the created note in `Item`. Failure is `{ "Ok": false, "Msg": "..." }` with a
+non-empty, user-visible message. HTTP 200 does not imply business success.
+
+The controller must inspect every `UpdateNote` and `UpdateNoteContent` result
+before setting `Ok`. A missing note/content record, permission failure,
+database insert/update failure, conflict, or a metadata-success/content-failure
+partial write must return `Ok:false`; the frontend may confirm its save
+revision and show success only after `Ok:true`.
 
 ---
 
@@ -55,4 +66,7 @@ Questions to answer:
 
 <!-- Error handling mistakes your team has made -->
 
-(To be filled by the team)
+- Returning a zero-value note or a bare boolean as a successful save response.
+- Ignoring one service result when the request updates both metadata and
+  content, which masks a partial write.
+- Treating transport status 200 as the business success signal.

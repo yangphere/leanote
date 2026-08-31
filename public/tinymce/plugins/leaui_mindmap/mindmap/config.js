@@ -10,7 +10,7 @@
         maxUndoCount: 20,
 
         lang: 'en-us',
-        
+
         // image size limit
         maxImageWidth: 200,
         maxImageHeight: 200,

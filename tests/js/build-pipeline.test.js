@@ -38,20 +38,58 @@ function copyBuildTree() {
       return relative === '' || relative === 'package.json' || relative === 'LICENSE.txt' || relative.split(path.sep)[0] === 'js';
     },
   });
+  // TinyMCE is a declared build input for the self-hosted runtime closure.
+  fs.cpSync(path.join(ROOT, 'node_modules', 'tinymce'), path.join(temp, 'node_modules', 'tinymce'), {
+    recursive: true,
+    filter: (source) => {
+      const relative = path.relative(path.join(ROOT, 'node_modules', 'tinymce'), source);
+      return relative === '' || relative === 'package.json'
+        || relative === 'tinymce.js' || relative === 'tinymce.min.js'
+        || relative.split(path.sep)[0] === 'themes'
+        || relative.split(path.sep)[0] === 'icons'
+        || relative.split(path.sep)[0] === 'models'
+        || relative.split(path.sep)[0] === 'skins'
+        || relative.split(path.sep)[0] === 'plugins';
+    },
+  });
   return temp;
 }
 
-test('manifest declares the complete 38-output contract', async () => {
+test('manifest declares the complete TinyMCE-aware output contract', async () => {
   const { MANIFEST, BUILD_OUTPUTS, validateManifest } = await import('../../scripts/build/manifest.mjs');
-  assert.equal(BUILD_OUTPUTS.length, 38);
-  assert.equal(new Set(BUILD_OUTPUTS).size, 38);
+  const expectedCount = MANIFEST.js.length + MANIFEST.css.length + MANIFEST.assets.length + MANIFEST.i18n.length + 1;
+  assert.equal(expectedCount, 164);
+  assert.equal(BUILD_OUTPUTS.length, expectedCount);
+  assert.equal(new Set(BUILD_OUTPUTS).size, expectedCount);
   assert.equal(MANIFEST.i18nDerivedInputExclusions.includes('public/md/main-v2.min.js'), true);
+  const tinyMceAssets = new Map(MANIFEST.assets.map((entry) => [entry.name, entry]));
+  for (const name of ['tinymce-oxide-skin-min-css', 'tinymce-oxide-content-min-css', 'tinymce-oxide-inline-min-css']) {
+    assert.equal(tinyMceAssets.get(name)?.transform, 'copy');
+    assert.equal(fs.statSync(path.join(ROOT, tinyMceAssets.get(name).output)).isFile(), true);
+  }
+  for (const name of ['tinymce-core', 'tinymce-plugin-autolink', 'tinymce-plugin-table']) {
+    assert.equal(tinyMceAssets.get(name)?.normalizeTrailingWhitespace, true);
+  }
   validateManifest(MANIFEST);
   for (const output of BUILD_OUTPUTS) {
-    execFileSync('git', ['ls-files', '--error-unmatch', output], { cwd: ROOT, stdio: 'pipe' });
+    assert.equal(fs.statSync(path.join(ROOT, output)).isFile(), true, `${output} must exist`);
   }
   const nonCanonical = { ...MANIFEST, js: MANIFEST.js.map((entry, index) => index === 0 ? { ...entry, output: 'public//js/dep.min.js' } : entry) };
   assert.throws(() => validateManifest(nonCanonical), /invalid output/);
+});
+
+test('build strips upstream trailing whitespace from vendored TinyMCE text assets', async () => {
+  const { runBuild } = await import('../../scripts/build/index.mjs');
+  const temp = copyBuildTree();
+  const upstreamSkin = path.join(temp, 'node_modules', 'tinymce', 'skins', 'ui', 'oxide', 'skin.css');
+  const builtSkin = path.join(temp, 'public', 'tinymce', 'skins', 'ui', 'oxide', 'skin.css');
+  try {
+    assert.match(fs.readFileSync(upstreamSkin, 'utf8'), /[ \t]+$/m, 'fixture must retain the upstream whitespace');
+    await runBuild(temp);
+    assert.doesNotMatch(fs.readFileSync(builtSkin, 'utf8'), /[ \t]+$/m);
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
 });
 
 test('manifest locks Bootstrap 5.3.8 inputs and publishes the dialog compatibility asset', async () => {
@@ -59,6 +97,10 @@ test('manifest locks Bootstrap 5.3.8 inputs and publishes the dialog compatibili
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
   assert.equal(pkg.dependencies?.bootstrap, '5.3.8');
   const entries = new Map(MANIFEST.js.map((entry) => [entry.name, entry]));
+  assert.deepEqual(entries.get('tinymce-config')?.inputs, ['public/js/tinymce-config-source.js']);
+  assert.deepEqual(entries.get('editor-state')?.inputs, ['public/js/editor-state-source.js']);
+  assert.equal(entries.get('tinymce-config')?.output, 'public/js/tinymce-config.js');
+  assert.equal(entries.get('editor-state')?.output, 'public/js/editor-state.js');
   assert.deepEqual(entries.get('bootstrap-js')?.inputs, ['node_modules/bootstrap/dist/js/bootstrap.bundle.js']);
   assert.equal(entries.get('bootstrap-js')?.stripSourceMappingURL, true);
   assert.deepEqual(entries.get('bootstrap-js-min')?.inputs, ['node_modules/bootstrap/dist/js/bootstrap.bundle.min.js']);
@@ -114,6 +156,8 @@ test('note template renderer applies only explicit transformations', async () =>
   const output = fs.readFileSync(path.join(temp, 'app/views/note/note.html'), 'utf8');
   assert.doesNotMatch(output, /<!-- dev -->|<!-- pro_/);
   assert.match(output, /\/js\/dep\.min\.js/);
+  assert.match(output, /\/tinymce\/tinymce\.min\.js/);
+  assert.doesNotMatch(output, /tinymce\.full/);
   assert.match(output, /\/js\/app\.min\.js/);
   assert.match(output, /\/js\/markdown-v2\.min\.js/);
   assert.match(output, /\/public\/js\/plugins\/main\.min\.js/);
@@ -128,7 +172,7 @@ test('i18n scanner excludes generated markdown derivative', async () => {
   assert.equal(scan.keys.some((key) => key.key === '{{msg . '), false);
   assert.equal(scan.dynamic.some((item) => item.path === 'public/md/main-v2.js' && item.line === 17417), true);
   assert.deepEqual(scan.dynamic.map(({ path, line, column }) => ({ path, line, column })), [
-    { path: 'public/js/common.js', line: 1234, column: 11 },
+    { path: 'public/js/common.js', line: 1242, column: 11 },
     { path: 'public/md/main-v2.js', line: 17417, column: 23 },
   ]);
 });

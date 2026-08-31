@@ -44,8 +44,8 @@ test('manifest publishes jquery-runtime from the npm input to the legacy public 
   assert.equal(runtime.output, RUNTIME_OUTPUT);
   assert.equal(runtime.url, '/js/jquery-1.9.0.min.js');
   validateManifest(MANIFEST);
-  assert.equal(BUILD_OUTPUTS.length, 38);
-  assert.equal(new Set(BUILD_OUTPUTS).size, 38);
+  assert.equal(BUILD_OUTPUTS.length, MANIFEST.js.length + MANIFEST.css.length + MANIFEST.assets.length + MANIFEST.i18n.length + 1);
+  assert.equal(new Set(BUILD_OUTPUTS).size, BUILD_OUTPUTS.length);
   assert.equal(BUILD_OUTPUTS.includes(RUNTIME_OUTPUT), true);
   assert.equal(MANIFEST.i18nDerivedInputExclusions.includes(RUNTIME_OUTPUT), true);
 });
@@ -165,10 +165,10 @@ test('Bootstrap 5 dialog and image-tab contracts avoid removed jQuery APIs', () 
   assert.match(dialog, /backdrop: this\.options\.closable/);
   assert.match(dialog, /keyboard: this\.options\.closable/);
 
-  const imageDialog = fs.readFileSync(path.join(ROOT, 'public/tinymce/plugins/image/js/dialog.js'), 'utf8');
+  const imageDialog = fs.readFileSync(path.join(ROOT, 'public/tinymce/plugins/leaui_image/index.html'), 'utf8');
   assert.match(imageDialog, /bootstrap\.Tab\.getOrCreateInstance/);
   assert.doesNotMatch(imageDialog, /\.tab\(\s*['"]show['"]\s*\)/);
-  assert.match(imageDialog, /#myTab a:last.*hasClass\(["']active["']\)/s);
+  assert.match(imageDialog, /data-bs-toggle=["']tab["']/);
 });
 
 test('Bootstrap 5 navigation templates expose desktop expansion and a visible toggler icon', () => {
@@ -198,7 +198,6 @@ test('album and image iframe forms use explicit Bootstrap 5 layout classes', () 
   const files = [
     'app/views/album/index.html',
     'public/tinymce/plugins/leaui_image/index.html',
-    'public/tinymce/plugins/image/dialog.htm',
   ];
   for (const file of files) {
     const html = fs.readFileSync(path.join(ROOT, file), 'utf8');

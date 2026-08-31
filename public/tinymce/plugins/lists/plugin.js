@@ -1,813 +1,602 @@
 /**
- * plugin.js
- *
- * Copyright, Moxiecode Systems AB
- * Released under LGPL License.
- *
- * License: http://www.tinymce.com/license
- * Contributing: http://www.tinymce.com/contributing
+ * TinyMCE version 8.8.2 (2026-07-27)
  */
 
-/*global tinymce:true */
-/*eslint consistent-this:0 */
-
-tinymce.PluginManager.add('lists', function(editor) {
-	var self = this;
-
-	function isListNode(node) {
-		return node && (/^(OL|UL|DL)$/).test(node.nodeName);
-	}
-
-	function isFirstChild(node) {
-		return node.parentNode.firstChild == node;
-	}
-
-	function isLastChild(node) {
-		return node.parentNode.lastChild == node;
-	}
-
-	function isTextBlock(node) {
-		return node && !!editor.schema.getTextBlockElements()[node.nodeName];
-	}
-
-	editor.on('init', function() {
-		var dom = editor.dom, selection = editor.selection;
-
-		/**
-		 * Returns a range bookmark. This will convert indexed bookmarks into temporary span elements with
-		 * index 0 so that they can be restored properly after the DOM has been modified. Text bookmarks will not have spans
-		 * added to them since they can be restored after a dom operation.
-		 *
-		 * So this: <p><b>|</b><b>|</b></p>
-		 * becomes: <p><b><span data-mce-type="bookmark">|</span></b><b data-mce-type="bookmark">|</span></b></p>
-		 *
-		 * @param  {DOMRange} rng DOM Range to get bookmark on.
-		 * @return {Object} Bookmark object.
-		 */
-		function createBookmark(rng) {
-			var bookmark = {};
-
-			function setupEndPoint(start) {
-				var offsetNode, container, offset;
-
-				container = rng[start ? 'startContainer' : 'endContainer'];
-				offset = rng[start ? 'startOffset' : 'endOffset'];
-
-				if (container.nodeType == 1) {
-					offsetNode = dom.create('span', {'data-mce-type': 'bookmark'});
-
-					if (container.hasChildNodes()) {
-						offset = Math.min(offset, container.childNodes.length - 1);
-
-						if (start) {
-							container.insertBefore(offsetNode, container.childNodes[offset]);
-						} else {
-							dom.insertAfter(offsetNode, container.childNodes[offset]);
-						}
-					} else {
-						container.appendChild(offsetNode);
-					}
-
-					container = offsetNode;
-					offset = 0;
-				}
-
-				bookmark[start ? 'startContainer' : 'endContainer'] = container;
-				bookmark[start ? 'startOffset' : 'endOffset'] = offset;
-			}
-
-			setupEndPoint(true);
-
-			if (!rng.collapsed) {
-				setupEndPoint();
-			}
-
-			return bookmark;
-		}
-
-		/**
-		 * Moves the selection to the current bookmark and removes any selection container wrappers.
-		 *
-		 * @param {Object} bookmark Bookmark object to move selection to.
-		 */
-		function moveToBookmark(bookmark) {
-			function restoreEndPoint(start) {
-				var container, offset, node;
-
-				function nodeIndex(container) {
-					var node = container.parentNode.firstChild, idx = 0;
-
-					while (node) {
-						if (node == container) {
-							return idx;
-						}
-
-						// Skip data-mce-type=bookmark nodes
-						if (node.nodeType != 1 || node.getAttribute('data-mce-type') != 'bookmark') {
-							idx++;
-						}
-
-						node = node.nextSibling;
-					}
-
-					return -1;
-				}
-
-				container = node = bookmark[start ? 'startContainer' : 'endContainer'];
-				offset = bookmark[start ? 'startOffset' : 'endOffset'];
-
-				if (!container) {
-					return;
-				}
-
-				if (container.nodeType == 1) {
-					offset = nodeIndex(container);
-					container = container.parentNode;
-					dom.remove(node);
-				}
-
-				bookmark[start ? 'startContainer' : 'endContainer'] = container;
-				bookmark[start ? 'startOffset' : 'endOffset'] = offset;
-			}
-
-			restoreEndPoint(true);
-			restoreEndPoint();
-
-			var rng = dom.createRng();
-
-			rng.setStart(bookmark.startContainer, bookmark.startOffset);
-
-			if (bookmark.endContainer) {
-				rng.setEnd(bookmark.endContainer, bookmark.endOffset);
-			}
-
-			selection.setRng(rng);
-		}
-
-		function createNewTextBlock(contentNode, blockName) {
-			var node, textBlock, fragment = dom.createFragment(), hasContentNode;
-			var blockElements = editor.schema.getBlockElements();
-
-			if (editor.settings.forced_root_block) {
-				blockName = blockName || editor.settings.forced_root_block;
-			}
-
-			if (blockName) {
-				textBlock = dom.create(blockName);
-
-				if (textBlock.tagName === editor.settings.forced_root_block) {
-					dom.setAttribs(textBlock, editor.settings.forced_root_block_attrs);
-				}
-
-				fragment.appendChild(textBlock);
-			}
-
-			if (contentNode) {
-				while ((node = contentNode.firstChild)) {
-					var nodeName = node.nodeName;
-
-					if (!hasContentNode && (nodeName != 'SPAN' || node.getAttribute('data-mce-type') != 'bookmark')) {
-						hasContentNode = true;
-					}
-
-					if (blockElements[nodeName]) {
-						fragment.appendChild(node);
-						textBlock = null;
-					} else {
-						if (blockName) {
-							if (!textBlock) {
-								textBlock = dom.create(blockName);
-								fragment.appendChild(textBlock);
-							}
-
-							textBlock.appendChild(node);
-						} else {
-							fragment.appendChild(node);
-						}
-					}
-				}
-			}
-
-			if (!editor.settings.forced_root_block) {
-				fragment.appendChild(dom.create('br'));
-			} else {
-				// BR is needed in empty blocks on non IE browsers
-				if (!hasContentNode && (!tinymce.Env.ie || tinymce.Env.ie > 10)) {
-					textBlock.appendChild(dom.create('br', {'data-mce-bogus': '1'}));
-				}
-			}
-
-			return fragment;
-		}
-
-		function getSelectedListItems() {
-			return tinymce.grep(selection.getSelectedBlocks(), function(block) {
-				return /^(LI|DT|DD)$/.test(block.nodeName);
-			});
-		}
-
-		function splitList(ul, li, newBlock) {
-			var tmpRng, fragment, bookmarks, node;
-
-			function removeAndKeepBookmarks(targetNode) {
-				tinymce.each(bookmarks, function(node) {
-					targetNode.parentNode.insertBefore(node, li.parentNode);
-				});
-
-				dom.remove(targetNode);
-			}
-
-			bookmarks = dom.select('span[data-mce-type="bookmark"]', ul);
-			newBlock = newBlock || createNewTextBlock(li);
-			tmpRng = dom.createRng();
-			tmpRng.setStartAfter(li);
-			tmpRng.setEndAfter(ul);
-			fragment = tmpRng.extractContents();
-
-			for (node = fragment.firstChild; node; node = node.firstChild) {
-				if (node.nodeName == 'LI' && dom.isEmpty(node)) {
-					dom.remove(node);
-					break;
-				}
-			}
-
-			if (!dom.isEmpty(fragment)) {
-				dom.insertAfter(fragment, ul);
-			}
-
-			dom.insertAfter(newBlock, ul);
-
-			if (dom.isEmpty(li.parentNode)) {
-				removeAndKeepBookmarks(li.parentNode);
-			}
-
-			dom.remove(li);
-
-			if (dom.isEmpty(ul)) {
-				dom.remove(ul);
-			}
-		}
-
-		function mergeWithAdjacentLists(listBlock) {
-			var sibling, node;
-
-			sibling = listBlock.nextSibling;
-			if (sibling && isListNode(sibling) && sibling.nodeName == listBlock.nodeName) {
-				while ((node = sibling.firstChild)) {
-					listBlock.appendChild(node);
-				}
-
-				dom.remove(sibling);
-			}
-
-			sibling = listBlock.previousSibling;
-			if (sibling && isListNode(sibling) && sibling.nodeName == listBlock.nodeName) {
-				while ((node = sibling.firstChild)) {
-					listBlock.insertBefore(node, listBlock.firstChild);
-				}
-
-				dom.remove(sibling);
-			}
-		}
-
-		/**
-		 * Normalizes the all lists in the specified element.
-		 */
-		function normalizeList(element) {
-			tinymce.each(tinymce.grep(dom.select('ol,ul', element)), function(ul) {
-				var sibling, parentNode = ul.parentNode;
-
-				// Move UL/OL to previous LI if it's the only child of a LI
-				if (parentNode.nodeName == 'LI' && parentNode.firstChild == ul) {
-					sibling = parentNode.previousSibling;
-					if (sibling && sibling.nodeName == 'LI') {
-						sibling.appendChild(ul);
-
-						if (dom.isEmpty(parentNode)) {
-							dom.remove(parentNode);
-						}
-					}
-				}
-
-				// Append OL/UL to previous LI if it's in a parent OL/UL i.e. old HTML4
-				if (isListNode(parentNode)) {
-					sibling = parentNode.previousSibling;
-					if (sibling && sibling.nodeName == 'LI') {
-						sibling.appendChild(ul);
-					}
-				}
-			});
-		}
-
-		function outdent(li) {
-			var ul = li.parentNode, ulParent = ul.parentNode, newBlock;
-
-			function removeEmptyLi(li) {
-				if (dom.isEmpty(li)) {
-					dom.remove(li);
-				}
-			}
-
-			if (li.nodeName == 'DD') {
-				dom.rename(li, 'DT');
-				return true;
-			}
-
-			if (isFirstChild(li) && isLastChild(li)) {
-				if (ulParent.nodeName == "LI") {
-					dom.insertAfter(li, ulParent);
-					removeEmptyLi(ulParent);
-					dom.remove(ul);
-				} else if (isListNode(ulParent)) {
-					dom.remove(ul, true);
-				} else {
-					ulParent.insertBefore(createNewTextBlock(li), ul);
-					dom.remove(ul);
-				}
-
-				return true;
-			} else if (isFirstChild(li)) {
-				if (ulParent.nodeName == "LI") {
-					dom.insertAfter(li, ulParent);
-					li.appendChild(ul);
-					removeEmptyLi(ulParent);
-				} else if (isListNode(ulParent)) {
-					ulParent.insertBefore(li, ul);
-				} else {
-					ulParent.insertBefore(createNewTextBlock(li), ul);
-					dom.remove(li);
-				}
-
-				return true;
-			} else if (isLastChild(li)) {
-				if (ulParent.nodeName == "LI") {
-					dom.insertAfter(li, ulParent);
-				} else if (isListNode(ulParent)) {
-					dom.insertAfter(li, ul);
-				} else {
-					dom.insertAfter(createNewTextBlock(li), ul);
-					dom.remove(li);
-				}
-
-				return true;
-			} else {
-				if (ulParent.nodeName == 'LI') {
-					ul = ulParent;
-					newBlock = createNewTextBlock(li, 'LI');
-				} else if (isListNode(ulParent)) {
-					newBlock = createNewTextBlock(li, 'LI');
-				} else {
-					newBlock = createNewTextBlock(li);
-				}
-
-				splitList(ul, li, newBlock);
-				normalizeList(ul.parentNode);
-
-				return true;
-			}
-
-			return false;
-		}
-
-		function indent(li) {
-			var sibling, newList;
-
-			function mergeLists(from, to) {
-				var node;
-
-				if (isListNode(from)) {
-					while ((node = li.lastChild.firstChild)) {
-						to.appendChild(node);
-					}
-
-					dom.remove(from);
-				}
-			}
-
-			if (li.nodeName == 'DT') {
-				dom.rename(li, 'DD');
-				return true;
-			}
-
-			sibling = li.previousSibling;
-
-			if (sibling && isListNode(sibling)) {
-				sibling.appendChild(li);
-				return true;
-			}
-
-			if (sibling && sibling.nodeName == 'LI' && isListNode(sibling.lastChild)) {
-				sibling.lastChild.appendChild(li);
-				mergeLists(li.lastChild, sibling.lastChild);
-				return true;
-			}
-
-			sibling = li.nextSibling;
-
-			if (sibling && isListNode(sibling)) {
-				sibling.insertBefore(li, sibling.firstChild);
-				return true;
-			}
-
-			if (sibling && sibling.nodeName == 'LI' && isListNode(li.lastChild)) {
-				return false;
-			}
-
-			sibling = li.previousSibling;
-			if (sibling && sibling.nodeName == 'LI') {
-				newList = dom.create(li.parentNode.nodeName);
-				sibling.appendChild(newList);
-				newList.appendChild(li);
-				mergeLists(li.lastChild, newList);
-				return true;
-			}
-
-			return false;
-		}
-
-		function indentSelection() {
-			var listElements = getSelectedListItems();
-
-			if (listElements.length) {
-				var bookmark = createBookmark(selection.getRng(true));
-
-				for (var i = 0; i < listElements.length; i++) {
-					if (!indent(listElements[i]) && i === 0) {
-						break;
-					}
-				}
-
-				moveToBookmark(bookmark);
-				editor.nodeChanged();
-
-				return true;
-			}
-		}
-
-		function outdentSelection() {
-			var listElements = getSelectedListItems();
-
-			if (listElements.length) {
-				var bookmark = createBookmark(selection.getRng(true));
-				var i, y, root = editor.getBody();
-
-				i = listElements.length;
-				while (i--) {
-					var node = listElements[i].parentNode;
-
-					while (node && node != root) {
-						y = listElements.length;
-						while (y--) {
-							if (listElements[y] === node) {
-								listElements.splice(i, 1);
-								break;
-							}
-						}
-
-						node = node.parentNode;
-					}
-				}
-
-				for (i = 0; i < listElements.length; i++) {
-					if (!outdent(listElements[i]) && i === 0) {
-						break;
-					}
-				}
-
-				moveToBookmark(bookmark);
-				editor.nodeChanged();
-
-				return true;
-			}
-		}
-
-		function applyList(listName) {
-			var rng = selection.getRng(true), bookmark = createBookmark(rng), listItemName = 'LI';
-
-			listName = listName.toUpperCase();
-
-			if (listName == 'DL') {
-				listItemName = 'DT';
-			}
-
-			function getSelectedTextBlocks() {
-				var textBlocks = [], root = editor.getBody();
-
-				function getEndPointNode(start) {
-					var container, offset;
-
-					container = rng[start ? 'startContainer' : 'endContainer'];
-					offset = rng[start ? 'startOffset' : 'endOffset'];
-
-					// Resolve node index
-					if (container.nodeType == 1) {
-						container = container.childNodes[Math.min(offset, container.childNodes.length - 1)] || container;
-					}
-
-					while (container.parentNode != root) {
-						if (isTextBlock(container)) {
-							return container;
-						}
-
-						if (/^(TD|TH)$/.test(container.parentNode.nodeName)) {
-							return container;
-						}
-
-						container = container.parentNode;
-					}
-
-					return container;
-				}
-
-				var startNode = getEndPointNode(true);
-				var endNode = getEndPointNode();
-				var block, siblings = [];
-
-				for (var node = startNode; node; node = node.nextSibling) {
-					siblings.push(node);
-
-					if (node == endNode) {
-						break;
-					}
-				}
-
-				tinymce.each(siblings, function(node) {
-					if (isTextBlock(node)) {
-						textBlocks.push(node);
-						block = null;
-						return;
-					}
-
-					if (dom.isBlock(node) || node.nodeName == 'BR') {
-						if (node.nodeName == 'BR') {
-							dom.remove(node);
-						}
-
-						block = null;
-						return;
-					}
-
-					var nextSibling = node.nextSibling;
-					if (tinymce.dom.BookmarkManager.isBookmarkNode(node)) {
-						if (isTextBlock(nextSibling) || (!nextSibling && node.parentNode == root)) {
-							block = null;
-							return;
-						}
-					}
-
-					if (!block) {
-						block = dom.create('p');
-						node.parentNode.insertBefore(block, node);
-						textBlocks.push(block);
-					}
-
-					block.appendChild(node);
-				});
-
-				return textBlocks;
-			}
-
-			tinymce.each(getSelectedTextBlocks(), function(block) {
-				var listBlock, sibling;
-
-				sibling = block.previousSibling;
-				if (sibling && isListNode(sibling) && sibling.nodeName == listName) {
-					listBlock = sibling;
-					block = dom.rename(block, listItemName);
-					sibling.appendChild(block);
-				} else {
-					listBlock = dom.create(listName);
-					block.parentNode.insertBefore(listBlock, block);
-					listBlock.appendChild(block);
-					block = dom.rename(block, listItemName);
-				}
-
-				mergeWithAdjacentLists(listBlock);
-			});
-
-			moveToBookmark(bookmark);
-		}
-
-		function removeList() {
-			var bookmark = createBookmark(selection.getRng(true)), root = editor.getBody();
-
-			tinymce.each(getSelectedListItems(), function(li) {
-				var node, rootList;
-
-				if (dom.isEmpty(li)) {
-					outdent(li);
-					return;
-				}
-
-				for (node = li; node && node != root; node = node.parentNode) {
-					if (isListNode(node)) {
-						rootList = node;
-					}
-				}
-
-				splitList(rootList, li);
-			});
-
-			moveToBookmark(bookmark);
-		}
-
-		function toggleList(listName) {
-			var parentList = dom.getParent(selection.getStart(), 'OL,UL,DL');
-
-			if (parentList) {
-				if (parentList.nodeName == listName) {
-					removeList(listName);
-				} else {
-					var bookmark = createBookmark(selection.getRng(true));
-					mergeWithAdjacentLists(dom.rename(parentList, listName));
-					moveToBookmark(bookmark);
-				}
-			} else {
-				applyList(listName);
-			}
-		}
-
-		function queryListCommandState(listName) {
-			return function() {
-				var parentList = dom.getParent(editor.selection.getStart(), 'UL,OL,DL');
-
-				return parentList && parentList.nodeName == listName;
-			};
-		}
-
-		self.backspaceDelete = function(isForward) {
-			function findNextCaretContainer(rng, isForward) {
-				var node = rng.startContainer, offset = rng.startOffset;
-				var nonEmptyBlocks, walker;
-
-				if (node.nodeType == 3 && (isForward ? offset < node.data.length : offset > 0)) {
-					return node;
-				}
-
-				nonEmptyBlocks = editor.schema.getNonEmptyElements();
-				walker = new tinymce.dom.TreeWalker(rng.startContainer);
-
-				while ((node = walker[isForward ? 'next' : 'prev']())) {
-					if (node.nodeName == 'LI' && !node.hasChildNodes()) {
-						return node;
-					}
-
-					if (nonEmptyBlocks[node.nodeName]) {
-						return node;
-					}
-
-					if (node.nodeType == 3 && node.data.length > 0) {
-						return node;
-					}
-				}
-			}
-
-			function mergeLiElements(fromElm, toElm) {
-				var node, listNode, ul = fromElm.parentNode;
-
-				if (isListNode(toElm.lastChild)) {
-					listNode = toElm.lastChild;
-				}
-
-				node = toElm.lastChild;
-				if (node && node.nodeName == 'BR' && fromElm.hasChildNodes()) {
-					dom.remove(node);
-				}
-
-				if (dom.isEmpty(toElm)) {
-					dom.$(toElm).empty();
-				}
-
-				if (!dom.isEmpty(fromElm)) {
-					while ((node = fromElm.firstChild)) {
-						toElm.appendChild(node);
-					}
-				}
-
-				if (listNode) {
-					toElm.appendChild(listNode);
-				}
-
-				dom.remove(fromElm);
-
-				if (dom.isEmpty(ul)) {
-					dom.remove(ul);
-				}
-			}
-
-			if (selection.isCollapsed()) {
-				var li = dom.getParent(selection.getStart(), 'LI');
-
-				if (li) {
-					var rng = selection.getRng(true);
-					var otherLi = dom.getParent(findNextCaretContainer(rng, isForward), 'LI');
-
-					if (otherLi && otherLi != li) {
-						var bookmark = createBookmark(rng);
-
-						if (isForward) {
-							mergeLiElements(otherLi, li);
-						} else {
-							mergeLiElements(li, otherLi);
-						}
-
-						moveToBookmark(bookmark);
-
-						return true;
-					} else if (!otherLi) {
-						if (!isForward && removeList(li.parentNode.nodeName)) {
-							return true;
-						}
-					}
-				}
-			}
-		};
-
-		editor.on('BeforeExecCommand', function(e) {
-			var cmd = e.command.toLowerCase(), isHandled;
-
-			if (cmd == "indent") {
-				if (indentSelection()) {
-					isHandled = true;
-				}
-			} else if (cmd == "outdent") {
-				if (outdentSelection()) {
-					isHandled = true;
-				}
-			}
-
-			if (isHandled) {
-				editor.fire('ExecCommand', {command: e.command});
-				e.preventDefault();
-				return true;
-			}
-		});
-
-		editor.addCommand('InsertUnorderedList', function() {
-			toggleList('UL');
-		});
-
-		editor.addCommand('InsertOrderedList', function() {
-			toggleList('OL');
-		});
-
-		editor.addCommand('InsertDefinitionList', function() {
-			toggleList('DL');
-		});
-
-		editor.addQueryStateHandler('InsertUnorderedList', queryListCommandState('UL'));
-		editor.addQueryStateHandler('InsertOrderedList', queryListCommandState('OL'));
-		editor.addQueryStateHandler('InsertDefinitionList', queryListCommandState('DL'));
-
-		editor.on('keydown', function(e) {
-			// Check for tab but not ctrl/cmd+tab since it switches browser tabs
-			if (e.keyCode != 9 || tinymce.util.VK.metaKeyPressed(e)) {
-				return;
-			}
-
-			if (editor.dom.getParent(editor.selection.getStart(), 'LI,DT,DD')) {
-				e.preventDefault();
-
-				if (e.shiftKey) {
-					outdentSelection();
-				} else {
-					indentSelection();
-				}
-			}
-		});
-	});
-
-	editor.addButton('indent', {
-		icon: 'indent',
-		title: 'Increase indent',
-		cmd: 'Indent',
-		onPostRender: function() {
-			var ctrl = this;
-
-			editor.on('nodechange', function() {
-				var blocks = editor.selection.getSelectedBlocks();
-				var disable = false;
-
-				for (var i = 0, l = blocks.length; !disable && i < l; i++) {
-					var tag = blocks[i].nodeName;
-
-					disable = (tag == 'LI' && isFirstChild(blocks[i]) || tag == 'UL' || tag == 'OL' || tag == 'DD');
-				}
-
-				ctrl.disabled(disable);
-			});
-		}
-	});
-
-	editor.on('keydown', function(e) {
-		if (e.keyCode == tinymce.util.VK.BACKSPACE) {
-			if (self.backspaceDelete()) {
-				e.preventDefault();
-			}
-		} else if (e.keyCode == tinymce.util.VK.DELETE) {
-			if (self.backspaceDelete(true)) {
-				e.preventDefault();
-			}
-		}
-	});
-});
+(function () {
+    'use strict';
+
+    var global = tinymce.util.Tools.resolve('tinymce.PluginManager');
+
+    const get = (editor) => ({
+        backspaceDelete: (isForward) => {
+            editor.execCommand('mceListBackspaceDelete', false, isForward);
+        }
+    });
+
+    /* eslint-disable @typescript-eslint/no-wrapper-object-types */
+    const isSimpleType = (type) => (value) => typeof value === type;
+    const isNullable = (a) => a === null || a === undefined;
+    const isNonNullable = (a) => !isNullable(a);
+    const isFunction = isSimpleType('function');
+
+    const constant = (value) => {
+        return () => {
+            return value;
+        };
+    };
+    const tripleEquals = (a, b) => {
+        return a === b;
+    };
+    const never = constant(false);
+
+    /**
+     * The `Optional` type represents a value (of any type) that potentially does
+     * not exist. Any `Optional<T>` can either be a `Some<T>` (in which case the
+     * value does exist) or a `None` (in which case the value does not exist). This
+     * module defines a whole lot of FP-inspired utility functions for dealing with
+     * `Optional` objects.
+     *
+     * Comparison with null or undefined:
+     * - We don't get fancy null coalescing operators with `Optional`
+     * - We do get fancy helper functions with `Optional`
+     * - `Optional` support nesting, and allow for the type to still be nullable (or
+     * another `Optional`)
+     * - There is no option to turn off strict-optional-checks like there is for
+     * strict-null-checks
+     */
+    class Optional {
+        tag;
+        value;
+        // Sneaky optimisation: every instance of Optional.none is identical, so just
+        // reuse the same object
+        static singletonNone = new Optional(false);
+        // The internal representation has a `tag` and a `value`, but both are
+        // private: able to be console.logged, but not able to be accessed by code
+        constructor(tag, value) {
+            this.tag = tag;
+            this.value = value;
+        }
+        // --- Identities ---
+        /**
+         * Creates a new `Optional<T>` that **does** contain a value.
+         */
+        static some(value) {
+            return new Optional(true, value);
+        }
+        /**
+         * Create a new `Optional<T>` that **does not** contain a value. `T` can be
+         * any type because we don't actually have a `T`.
+         */
+        static none() {
+            return Optional.singletonNone;
+        }
+        /**
+         * Perform a transform on an `Optional` type. Regardless of whether this
+         * `Optional` contains a value or not, `fold` will return a value of type `U`.
+         * If this `Optional` does not contain a value, the `U` will be created by
+         * calling `onNone`. If this `Optional` does contain a value, the `U` will be
+         * created by calling `onSome`.
+         *
+         * For the FP enthusiasts in the room, this function:
+         * 1. Could be used to implement all of the functions below
+         * 2. Forms a catamorphism
+         */
+        fold(onNone, onSome) {
+            if (this.tag) {
+                return onSome(this.value);
+            }
+            else {
+                return onNone();
+            }
+        }
+        /**
+         * Determine if this `Optional` object contains a value.
+         */
+        isSome() {
+            return this.tag;
+        }
+        /**
+         * Determine if this `Optional` object **does not** contain a value.
+         */
+        isNone() {
+            return !this.tag;
+        }
+        // --- Functor (name stolen from Haskell / maths) ---
+        /**
+         * Perform a transform on an `Optional` object, **if** there is a value. If
+         * you provide a function to turn a T into a U, this is the function you use
+         * to turn an `Optional<T>` into an `Optional<U>`. If this **does** contain
+         * a value then the output will also contain a value (that value being the
+         * output of `mapper(this.value)`), and if this **does not** contain a value
+         * then neither will the output.
+         */
+        map(mapper) {
+            if (this.tag) {
+                return Optional.some(mapper(this.value));
+            }
+            else {
+                return Optional.none();
+            }
+        }
+        // --- Monad (name stolen from Haskell / maths) ---
+        /**
+         * Perform a transform on an `Optional` object, **if** there is a value.
+         * Unlike `map`, here the transform itself also returns an `Optional`.
+         */
+        bind(binder) {
+            if (this.tag) {
+                return binder(this.value);
+            }
+            else {
+                return Optional.none();
+            }
+        }
+        // --- Traversable (name stolen from Haskell / maths) ---
+        /**
+         * For a given predicate, this function finds out if there **exists** a value
+         * inside this `Optional` object that meets the predicate. In practice, this
+         * means that for `Optional`s that do not contain a value it returns false (as
+         * no predicate-meeting value exists).
+         */
+        exists(predicate) {
+            return this.tag && predicate(this.value);
+        }
+        /**
+         * For a given predicate, this function finds out if **all** the values inside
+         * this `Optional` object meet the predicate. In practice, this means that
+         * for `Optional`s that do not contain a value it returns true (as all 0
+         * objects do meet the predicate).
+         */
+        forall(predicate) {
+            return !this.tag || predicate(this.value);
+        }
+        filter(predicate) {
+            if (!this.tag || predicate(this.value)) {
+                return this;
+            }
+            else {
+                return Optional.none();
+            }
+        }
+        // --- Getters ---
+        /**
+         * Get the value out of the inside of the `Optional` object, using a default
+         * `replacement` value if the provided `Optional` object does not contain a
+         * value.
+         */
+        getOr(replacement) {
+            return this.tag ? this.value : replacement;
+        }
+        /**
+         * Get the value out of the inside of the `Optional` object, using a default
+         * `replacement` value if the provided `Optional` object does not contain a
+         * value.  Unlike `getOr`, in this method the `replacement` object is also
+         * `Optional` - meaning that this method will always return an `Optional`.
+         */
+        or(replacement) {
+            return this.tag ? this : replacement;
+        }
+        /**
+         * Get the value out of the inside of the `Optional` object, using a default
+         * `replacement` value if the provided `Optional` object does not contain a
+         * value. Unlike `getOr`, in this method the `replacement` value is
+         * "thunked" - that is to say that you don't pass a value to `getOrThunk`, you
+         * pass a function which (if called) will **return** the `value` you want to
+         * use.
+         */
+        getOrThunk(thunk) {
+            return this.tag ? this.value : thunk();
+        }
+        /**
+         * Get the value out of the inside of the `Optional` object, using a default
+         * `replacement` value if the provided Optional object does not contain a
+         * value.
+         *
+         * Unlike `or`, in this method the `replacement` value is "thunked" - that is
+         * to say that you don't pass a value to `orThunk`, you pass a function which
+         * (if called) will **return** the `value` you want to use.
+         *
+         * Unlike `getOrThunk`, in this method the `replacement` value is also
+         * `Optional`, meaning that this method will always return an `Optional`.
+         */
+        orThunk(thunk) {
+            return this.tag ? this : thunk();
+        }
+        /**
+         * Get the value out of the inside of the `Optional` object, throwing an
+         * exception if the provided `Optional` object does not contain a value.
+         *
+         * WARNING:
+         * You should only be using this function if you know that the `Optional`
+         * object **is not** empty (otherwise you're throwing exceptions in production
+         * code, which is bad).
+         *
+         * In tests this is more acceptable.
+         *
+         * Prefer other methods to this, such as `.each`.
+         */
+        getOrDie(message) {
+            if (!this.tag) {
+                throw new Error(message ?? 'Called getOrDie on None');
+            }
+            else {
+                return this.value;
+            }
+        }
+        // --- Interop with null and undefined ---
+        /**
+         * Creates an `Optional` value from a nullable (or undefined-able) input.
+         * Null, or undefined, is converted to `None`, and anything else is converted
+         * to `Some`.
+         */
+        static from(value) {
+            return isNonNullable(value) ? Optional.some(value) : Optional.none();
+        }
+        /**
+         * Converts an `Optional` to a nullable type, by getting the value if it
+         * exists, or returning `null` if it does not.
+         */
+        getOrNull() {
+            return this.tag ? this.value : null;
+        }
+        /**
+         * Converts an `Optional` to an undefined-able type, by getting the value if
+         * it exists, or returning `undefined` if it does not.
+         */
+        getOrUndefined() {
+            return this.value;
+        }
+        // --- Utilities ---
+        /**
+         * If the `Optional` contains a value, perform an action on that value.
+         * Unlike the rest of the methods on this type, `.each` has side-effects. If
+         * you want to transform an `Optional<T>` **into** something, then this is not
+         * the method for you. If you want to use an `Optional<T>` to **do**
+         * something, then this is the method for you - provided you're okay with not
+         * doing anything in the case where the `Optional` doesn't have a value inside
+         * it. If you're not sure whether your use-case fits into transforming
+         * **into** something or **doing** something, check whether it has a return
+         * value. If it does, you should be performing a transform.
+         */
+        each(worker) {
+            if (this.tag) {
+                worker(this.value);
+            }
+        }
+        /**
+         * Turn the `Optional` object into an array that contains all of the values
+         * stored inside the `Optional`. In practice, this means the output will have
+         * either 0 or 1 elements.
+         */
+        toArray() {
+            return this.tag ? [this.value] : [];
+        }
+        /**
+         * Turn the `Optional` object into a string for debugging or printing. Not
+         * recommended for production code, but good for debugging. Also note that
+         * these days an `Optional` object can be logged to the console directly, and
+         * its inner value (if it exists) will be visible.
+         */
+        toString() {
+            return this.tag ? `some(${this.value})` : 'none()';
+        }
+    }
+
+    const nativeSlice = Array.prototype.slice;
+    const exists = (xs, pred) => {
+        for (let i = 0, len = xs.length; i < len; i++) {
+            const x = xs[i];
+            if (pred(x, i)) {
+                return true;
+            }
+        }
+        return false;
+    };
+    const map = (xs, f) => {
+        // pre-allocating array size when it's guaranteed to be known
+        // http://jsperf.com/push-allocated-vs-dynamic/22
+        const len = xs.length;
+        const r = new Array(len);
+        for (let i = 0; i < len; i++) {
+            const x = xs[i];
+            r[i] = f(x, i);
+        }
+        return r;
+    };
+    // Unwound implementing other functions in terms of each.
+    // The code size is roughly the same, and it should allow for better optimisation.
+    // const each = function<T, U>(xs: T[], f: (x: T, i?: number, xs?: T[]) => void): void {
+    const each = (xs, f) => {
+        for (let i = 0, len = xs.length; i < len; i++) {
+            const x = xs[i];
+            f(x, i);
+        }
+    };
+    const foldl = (xs, f, acc) => {
+        each(xs, (x, i) => {
+            acc = f(acc, x, i);
+        });
+        return acc;
+    };
+    const findUntil = (xs, pred, until) => {
+        for (let i = 0, len = xs.length; i < len; i++) {
+            const x = xs[i];
+            if (pred(x, i)) {
+                return Optional.some(x);
+            }
+            else if (until(x, i)) {
+                break;
+            }
+        }
+        return Optional.none();
+    };
+    const find = (xs, pred) => {
+        return findUntil(xs, pred, never);
+    };
+    const reverse = (xs) => {
+        const r = nativeSlice.call(xs, 0);
+        r.reverse();
+        return r;
+    };
+    isFunction(Array.from) ? Array.from : (x) => nativeSlice.call(x);
+
+    /**
+     * **Is** the value stored inside this Optional object equal to `rhs`?
+     */
+    const is = (lhs, rhs, comparator = tripleEquals) => lhs.exists((left) => comparator(left, rhs));
+
+    const blank = (r) => (s) => s.replace(r, '');
+    /** removes all leading and trailing spaces */
+    const trim = blank(/^\s+|\s+$/g);
+    const isNotEmpty = (s) => s.length > 0;
+    const isEmpty = (s) => !isNotEmpty(s);
+
+    // Example: 'AB' -> 28
+    const parseAlphabeticBase26 = (str) => {
+        const chars = reverse(trim(str).split(''));
+        const values = map(chars, (char, i) => {
+            const charValue = char.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0) + 1;
+            return Math.pow(26, i) * charValue;
+        });
+        return foldl(values, (sum, v) => sum + v, 0);
+    };
+    // Example: 28 -> 'AB'
+    const composeAlphabeticBase26 = (value) => {
+        value--;
+        if (value < 0) {
+            return '';
+        }
+        else {
+            const remainder = value % 26;
+            const quotient = Math.floor(value / 26);
+            const rest = composeAlphabeticBase26(quotient);
+            const char = String.fromCharCode('A'.charCodeAt(0) + remainder);
+            return rest + char;
+        }
+    };
+    const isUppercase = (str) => /^[A-Z]+$/.test(str);
+    const isLowercase = (str) => /^[a-z]+$/.test(str);
+    const isNumeric = (str) => /^[0-9]+$/.test(str);
+    const deduceListType = (start) => {
+        if (isNumeric(start)) {
+            return 2 /* ListType.Numeric */;
+        }
+        else if (isUppercase(start)) {
+            return 0 /* ListType.UpperAlpha */;
+        }
+        else if (isLowercase(start)) {
+            return 1 /* ListType.LowerAlpha */;
+        }
+        else if (isEmpty(start)) {
+            return 3 /* ListType.None */;
+        }
+        else {
+            return 4 /* ListType.Unknown */;
+        }
+    };
+    const parseStartValue = (start) => {
+        switch (deduceListType(start)) {
+            case 2 /* ListType.Numeric */:
+                return Optional.some({
+                    listStyleType: Optional.none(),
+                    start
+                });
+            case 0 /* ListType.UpperAlpha */:
+                return Optional.some({
+                    listStyleType: Optional.some('upper-alpha'),
+                    start: parseAlphabeticBase26(start).toString()
+                });
+            case 1 /* ListType.LowerAlpha */:
+                return Optional.some({
+                    listStyleType: Optional.some('lower-alpha'),
+                    start: parseAlphabeticBase26(start).toString()
+                });
+            case 3 /* ListType.None */:
+                return Optional.some({
+                    listStyleType: Optional.none(),
+                    start: ''
+                });
+            case 4 /* ListType.Unknown */:
+                return Optional.none();
+        }
+    };
+    const parseDetail = (detail) => {
+        const start = parseInt(detail.start, 10);
+        if (is(detail.listStyleType, 'upper-alpha')) {
+            return composeAlphabeticBase26(start);
+        }
+        else if (is(detail.listStyleType, 'lower-alpha')) {
+            return composeAlphabeticBase26(start).toLowerCase();
+        }
+        else {
+            return detail.start;
+        }
+    };
+
+    const option = (name) => (editor) => editor.options.get(name);
+    const getForcedRootBlock = option('forced_root_block');
+
+    const isCustomList = (list) => /\btox\-/.test(list.className);
+    const matchNodeNames = (regex) => (node) => isNonNullable(node) && regex.test(node.nodeName);
+    const matchNodeName = (name) => (node) => isNonNullable(node) && node.nodeName.toLowerCase() === name;
+    const isListNode = matchNodeNames(/^(OL|UL|DL)$/);
+    const isTableCellNode = matchNodeNames(/^(TH|TD)$/);
+    const isListItemNode = matchNodeNames(/^(LI|DT|DD)$/);
+    const inList = (parents, listName) => findUntil(parents, isListNode, isTableCellNode)
+        .exists((list) => list.nodeName === listName && !isCustomList(list));
+    const setNodeChangeHandler = (editor, nodeChangeHandler) => {
+        const initialNode = editor.selection.getNode();
+        // Set the initial state
+        nodeChangeHandler({
+            parents: editor.dom.getParents(initialNode),
+            element: initialNode
+        });
+        editor.on('NodeChange', nodeChangeHandler);
+        return () => editor.off('NodeChange', nodeChangeHandler);
+    };
+    const isWithinNonEditable = (editor, element) => element !== null && !editor.dom.isEditable(element);
+    const isWithinNonEditableList = (editor, element) => {
+        const parentList = editor.dom.getParent(element, 'ol,ul,dl');
+        return isWithinNonEditable(editor, parentList) || !editor.selection.isEditable();
+    };
+    const isOlNode = matchNodeName('ol');
+    const listNames = ['OL', 'UL', 'DL'];
+    const listSelector = listNames.join(',');
+    const getParentList = (editor, node) => {
+        const selectionStart = node || editor.selection.getStart(true);
+        return editor.dom.getParent(selectionStart, listSelector, getClosestListHost(editor, selectionStart, editor.selection.isCollapsed()));
+    };
+    const getClosestListHost = (editor, elm, isCollapsed) => {
+        const parentBlocks = editor.dom.getParents(elm, editor.dom.isBlock);
+        const isNotForcedRootBlock = (elm) => elm.nodeName.toLowerCase() !== getForcedRootBlock(editor);
+        const parentBlock = find(parentBlocks, (elm) => (!isCollapsed || isNotForcedRootBlock(elm)) && isListHost(editor.schema, elm));
+        return parentBlock.getOr(editor.getBody());
+    };
+    const isListHost = (schema, node) => !isListNode(node) && !isListItemNode(node) && exists(listNames, (listName) => schema.isValidChild(node.nodeName, listName));
+
+    const open = (editor) => {
+        // Find the current list and skip opening if the selection isn't in an ordered list
+        const currentList = getParentList(editor);
+        if (!isOlNode(currentList) || isWithinNonEditableList(editor, currentList)) {
+            return;
+        }
+        editor.windowManager.open({
+            title: 'List Properties',
+            body: {
+                type: 'panel',
+                items: [
+                    {
+                        type: 'input',
+                        name: 'start',
+                        label: 'Start list at number',
+                        inputMode: 'numeric'
+                    }
+                ]
+            },
+            initialData: {
+                start: parseDetail({
+                    start: editor.dom.getAttrib(currentList, 'start', '1'),
+                    listStyleType: Optional.from(editor.dom.getStyle(currentList, 'list-style-type'))
+                })
+            },
+            buttons: [
+                {
+                    type: 'cancel',
+                    name: 'cancel',
+                    text: 'Cancel'
+                },
+                {
+                    type: 'submit',
+                    name: 'save',
+                    text: 'Save',
+                    primary: true
+                }
+            ],
+            onSubmit: (api) => {
+                const data = api.getData();
+                parseStartValue(data.start).each((detail) => {
+                    editor.execCommand('mceListUpdate', false, {
+                        attrs: {
+                            start: detail.start === '1' ? '' : detail.start
+                        },
+                        styles: {
+                            'list-style-type': detail.listStyleType.getOr('')
+                        }
+                    });
+                });
+                api.close();
+            }
+        });
+    };
+
+    const register$2 = (editor) => {
+        editor.addCommand('mceListProps', () => {
+            open(editor);
+        });
+    };
+
+    const setupToggleButtonHandler = (editor, listName) => (api) => {
+        const toggleButtonHandler = (e) => {
+            api.setActive(inList(e.parents, listName));
+            api.setEnabled(!isWithinNonEditableList(editor, e.element) && editor.selection.isEditable());
+        };
+        api.setEnabled(editor.selection.isEditable());
+        return setNodeChangeHandler(editor, toggleButtonHandler);
+    };
+    const register$1 = (editor) => {
+        const exec = (command) => () => editor.execCommand(command);
+        if (!editor.hasPlugin('advlist')) {
+            editor.ui.registry.addToggleButton('numlist', {
+                icon: 'ordered-list',
+                active: false,
+                tooltip: 'Numbered list',
+                onAction: exec('InsertOrderedList'),
+                onSetup: setupToggleButtonHandler(editor, 'OL')
+            });
+            editor.ui.registry.addToggleButton('bullist', {
+                icon: 'unordered-list',
+                active: false,
+                tooltip: 'Bullet list',
+                onAction: exec('InsertUnorderedList'),
+                onSetup: setupToggleButtonHandler(editor, 'UL')
+            });
+        }
+    };
+
+    const setupMenuButtonHandler = (editor, listName) => (api) => {
+        const menuButtonHandler = (e) => api.setEnabled(inList(e.parents, listName) && !isWithinNonEditableList(editor, e.element));
+        return setNodeChangeHandler(editor, menuButtonHandler);
+    };
+    const register = (editor) => {
+        const listProperties = {
+            text: 'List properties...',
+            icon: 'ordered-list',
+            onAction: () => editor.execCommand('mceListProps'),
+            onSetup: setupMenuButtonHandler(editor, 'OL')
+        };
+        editor.ui.registry.addMenuItem('listprops', listProperties);
+        editor.ui.registry.addContextMenu('lists', {
+            update: (node) => {
+                const parentList = getParentList(editor, node);
+                return isOlNode(parentList) ? ['listprops'] : [];
+            }
+        });
+    };
+
+    var Plugin = () => {
+        global.add('lists', (editor) => {
+            register$2(editor);
+            register$1(editor);
+            register(editor);
+            return get(editor);
+        });
+    };
+
+    Plugin();
+    /** *****
+     * DO NOT EXPORT ANYTHING
+     *
+     * IF YOU DO ROLLUP WILL LEAVE A GLOBAL ON THE PAGE
+     *******/
+
+})();

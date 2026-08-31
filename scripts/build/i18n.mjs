@@ -516,7 +516,8 @@ export async function buildI18n(root, stagingRoot, manifest = MANIFEST, fixture 
     const tinyEntry = manifest.i18n.find((item) => item.locale === locale && item.namespace === 'tinymce');
     const tinyPath = resolveRepoPath(stagingRoot, tinyEntry.output);
     await fs.mkdir(path.dirname(tinyPath), { recursive: true });
-    await fs.writeFile(tinyPath, `tinymce.addI18n(${JSON.stringify(locale)},${JSON.stringify(maps.tinymce, Object.keys(maps.tinymce).sort())});\n`, 'utf8');
+    const tinyMceLanguage = Intl.getCanonicalLocales(locale)[0];
+    await fs.writeFile(tinyPath, `tinymce.addI18n(${JSON.stringify(tinyMceLanguage)},${JSON.stringify(maps.tinymce, Object.keys(maps.tinymce).sort())});\n`, 'utf8');
   }
   return scan;
 }

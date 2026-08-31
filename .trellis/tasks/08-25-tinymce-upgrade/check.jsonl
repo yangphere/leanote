@@ -1,4 +1,9 @@
-{"file": ".trellis/tasks/08-25-tinymce-upgrade/prd.md", "reason": "检查 TinyMCE 8.8.2、四个插件、leaui_mind 删除证据和内容不变量。"}
-{"file": ".trellis/tasks/08-25-tinymce-upgrade/design.md", "reason": "检查没有 TinyMCE 4、双 runtime、CDN、宽泛 HTML 清洗或静默失败。"}
-{"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "核对 TinyMCE 是前端库串行链的最后叶子。"}
-{"file": "docs/modernization-backlog.md", "reason": "确认未编辑不保存与内容语义约束没有被延期项稀释。"}
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/prd.md", "reason": "逐项检查目标、范围、三入口、官方/第一方插件、保存响应、内容、安全、locale 与 AC 映射。"}
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/design.md", "reason": "检查单一资源/配置事实源、revision/baseline 状态机、结构化保存响应、失败语义和原子回滚。"}
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/implement.md", "reason": "检查测试优先顺序、前后端影响文件、真实服务验证、删除证据和发布缺口。"}
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/research/tinymce4-runtime-inventory.md", "reason": "用现有代码锚点复核 4.1.9 baseline、三入口、保存控制器和漏扫面。"}
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/research/tinymce8-migration-contract.md", "reason": "复核 TinyMCE 8 上游约束与项目内最小保存响应前置边界没有混淆。"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "检查前端状态与生成资源实现遵循当前层规范。"}
+{"file": ".trellis/spec/backend/index.md", "reason": "检查 controller 响应与服务返回值处理遵循当前后端规范。"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "检查前端 revision 与后端响应之间只有一个业务成功边界。"}
+{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "检查 npm 自托管、未编辑字节不变、受支持 DOM 语义和浏览器矩阵。"}

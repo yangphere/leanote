@@ -19,7 +19,7 @@ export default defineConfig({
     {
       name: 'browser-smoke',
       testDir: 'tests/e2e/business',
-      testMatch: '**/business-flows.spec.mjs',
+      testMatch: ['**/business-flows.spec.mjs', '**/editor-flows.spec.mjs'],
       outputDir: 'test-results/browser-smoke',
       use: smokeBrowser === 'firefox'
         ? { browserName: 'firefox' }

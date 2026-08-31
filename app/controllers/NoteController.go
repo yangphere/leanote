@@ -176,6 +176,8 @@ func (c Note) GetNoteContent(noteId string) revel.Result {
 
 // 这里不能用json, 要用post
 func (c Note) UpdateNoteOrContent(noteOrContent info.NoteOrContent) revel.Result {
+	re := info.NewRe()
+
 	// 新添加note
 	if noteOrContent.IsNew {
 		userId := c.GetObjectUserId()
@@ -202,8 +204,14 @@ func (c Note) UpdateNoteOrContent(noteOrContent info.NoteOrContent) revel.Result
 			Content:  noteOrContent.Content,
 			Abstract: noteOrContent.Abstract}
 
-		note = noteService.AddNoteAndContentForController(note, noteContent, c.GetUserId())
-		return c.RenderJSON(note)
+		createdNote, ok, msg := noteService.AddNoteAndContentForControllerResult(note, noteContent, c.GetUserId())
+		re.Ok = ok
+		if !ok {
+			re.Msg = nonEmptySaveMessage(msg)
+			return c.RenderJSON(re)
+		}
+		re.Item = createdNote
+		return c.RenderJSON(re)
 	}
 
 	noteUpdate := bson.M{}
@@ -230,8 +238,12 @@ func (c Note) UpdateNoteOrContent(noteOrContent info.NoteOrContent) revel.Result
 
 	// web端不控制
 	if needUpdateNote {
-		noteService.UpdateNote(c.GetUserId(),
+		ok, msg, _ := noteService.UpdateNote(c.GetUserId(),
 			noteOrContent.NoteId, noteUpdate, -1)
+		if !ok {
+			re.Msg = nonEmptySaveMessage(msg)
+			return c.RenderJSON(re)
+		}
 	}
 
 	//-------------
@@ -242,16 +254,28 @@ func (c Note) UpdateNoteOrContent(noteOrContent info.NoteOrContent) revel.Result
 		//		noteService.UpdateNoteContent(noteOrContent.UserId, c.GetUserId(),
 		//			noteOrContent.NoteId, noteOrContent.Content, noteOrContent.Abstract)
 		// contentOk, contentMsg, afterContentUsn =
-		noteService.UpdateNoteContent(c.GetUserId(),
+		ok, msg, _ := noteService.UpdateNoteContent(c.GetUserId(),
 			noteOrContent.NoteId, noteOrContent.Content, noteOrContent.Abstract,
 			needUpdateNote, -1, time.Now())
+		if !ok {
+			re.Msg = nonEmptySaveMessage(msg)
+			return c.RenderJSON(re)
+		}
 	}
 
 	// Log("usn", "afterContentUsn", afterContentUsn + "")
 	// Log(contentOk)
 	// Log(contentMsg)
 
-	return c.RenderJSON(true)
+	re.Ok = true
+	return c.RenderJSON(re)
+}
+
+func nonEmptySaveMessage(msg string) string {
+	if strings.TrimSpace(msg) == "" {
+		return "saveFailed"
+	}
+	return msg
 }
 
 // 删除note/ 删除别人共享给我的笔记

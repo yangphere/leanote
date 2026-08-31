@@ -7,7 +7,7 @@
 {{end}}
 </h3></div>
 
-<link rel="stylesheet" href="/css/tinymce/skin.min.css" type="text/css">
+<link rel="stylesheet" href="/tinymce/skins/ui/oxide/skin.css" type="text/css">
 
 <div class="row">
 <div class="col-sm-10">
@@ -44,33 +44,13 @@
 
 </div>
 {{template "member/footer.html" .}}
+<script type="text/javascript" src="/js/tinymce-config.js"></script>
 <script type="text/javascript" src="/tinymce/tinymce.js"></script>
 <script>
 var urlPrefix = "{{.siteUrl}}";
 var LeaAce = null;
 $(function() {
-	tinymce.init({
-		inline: true,
-		selector : "#content1",
-		theme: 'leanote',
-		language : "{{.locale}}",
-		plugins : [
-				"advlist autolink link lists charmap hr ",
-				"searchreplace visualblocks visualchars tabfocus",
-				"table contextmenu directionality textcolor fullpage textcolor"],
-		toolbar1 : "formatselect |fontselect fontsizeselect| forecolor backcolor | bold italic underline strikethrough | bullist numlist |",
-		menubar : false,
-		statusbar : false,
-		font_formats : "Arial=arial,helvetica,sans-serif;"
-				+ "Arial Black=arial black,avant garde;"
-				+ "Times New Roman=times new roman,times;"
-				+ "Courier New=courier new,courier;"
-				+ "Tahoma=tahoma,arial,helvetica,sans-serif;"
-				+ "Verdana=verdana,geneva;" + "宋体=SimSun;"
-				+ "新宋体=NSimSun;" + "黑体=SimHei;"
-				+ "微软雅黑=Microsoft YaHei",
-		block_formats : "Header 1=h1;Header 2=h2;Header 3=h3; Header 4=h4;Pre=pre;Paragraph=p"
-	});
+	tinymce.init(LeanoteTinyMCE.createMemberConfig({selector: '#content1', locale: '{{.locale}}'}));
 	
 	// 基本设置
 	var vdPage = new vd.init("#formData");

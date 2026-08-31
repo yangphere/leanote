@@ -12,7 +12,7 @@
 | `public/tinymce/plugins/leaui_image/public/js/jquery.js` | 92,633 B，jQuery v1.9.1 | 仅 `leaui_image/index.html:167` 引用 | 第一方 | 删除；iframe 改用根路径公开 URL（R-jQ1） |
 | `dep` bundle 输入 | manifest 第 8 行直接输入 1.9.0 文件 | note.html 生产加载 | 第一方 | 改为同一 npm 输入（R-jQ1） |
 | `album` bundle 输入 | manifest 第 29 行同上 | album/index 与编辑器内嵌 album iframe 加载 | 第一方 | 同上 |
-| `public/tinymce/tinymce.jquery*.js`、`jquery.tinymce*.js` | TinyMCE 4 内核/适配器 | 不被 note 页直接执行（pro 用 tinymce.full.min.js） | E-TM 所有 | 仅登记；本任务不修改、不计入"生产无 1.9 核心"结论 |
+| `public/tinymce/tinymce.jquery*.js`、`jquery.tinymce*.js` | TinyMCE 4 内核/适配器 | 已从自托管闭包移除 | E-TM 所有 | 删除并由 TinyMCE 8 `tinymce.js`/`tinymce.min.js` 替代 |
 | `leaui_mindmap/mindmap/main.js` | 脑图子应用 | 独立文档内运行 | E-TM 所有 | 同上 |
 
 ## 2. 引用 `/js/jquery-1.9.0.min.js` 的模板（URL 保持不变，仅内容升级）
@@ -87,7 +87,7 @@
 | `dep.min.js`/`main.all.js` 内 verbatim 上传栈输入（`node_modules/blueimp-file-upload/...` 的 `$.isArray/$.isFunction`） | R-jQ5 逐字节同步的 npm dist | 上游字节不可补丁；first-party 扫描断言第一方源无同签名 |
 | `public/md/main-v2.js` 内嵌 `waitForImages` 1.4.2 的 `$.isFunction`（约 13758 行；由 `public/md/main-v2.min.js` 派生加载） | 第三方 waitForImages 1.4.2，Markdown 资产维护边界 | 上游源码逐字节保留；静态契约仅允许该精确归属，诊断 warning 必须命中登记来源，未登记来源 fail-closed |
 | `/public/admin/js/artDialog/jquery.artDialog.js` | vendored artDialog | 诊断范围外（admin 区验收处理） |
-| `tinymce.full.min.js` | E-TM 所有 | 清单 §6 |
+| `tinymce.min.js` | E-TM 所有 | TinyMCE 8 唯一生产 core |
 | `bootstrap.js`（login）、leaui `bootstrap3/js/bootstrap.min.js` | E-BS 所有 | 同上 |
 
 必达类别：`dep-lib`、`verbatim-input`、`verbatim-url`、`lib-url`、`upstream-signature`、`markdown-waitforimages`（每次诊断运行必须全部命中，缺失即失败）；未登记来源一律 fail-closed。
@@ -100,7 +100,7 @@
 
 ## 6. 排除项（E-TM 所有）
 
-`tinymce.jquery*.js`、`jquery.tinymce*.js`、`leaui_mindmap/**`：TinyMCE 8 升级任务（08-25-tinymce-upgrade）所有。本任务不修改、不将其计入兼容结论；诊断 E2E 遇其警告记为 E-TM 排除而非本任务失败。
+`leaui_mindmap/**`：TinyMCE 8 升级任务（08-25-tinymce-upgrade）所有。本任务不修改、不将其计入兼容结论。
 
 ## 7. 回归测试映射
 

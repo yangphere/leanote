@@ -9,7 +9,7 @@ const baseUrl = process.env.LEANOTE_BASE_URL;
 const email = process.env.LEANOTE_E2E_EMAIL;
 const password = process.env.LEANOTE_E2E_PASSWORD;
 const pages = ['/note', '/album/index', '/blog', '/admin/index', '/member/index'];
-const ownedResourcePaths = new Set([...MANIFEST.js, ...MANIFEST.css, ...MANIFEST.i18n].map((entry) => entry.url));
+const ownedResourcePaths = new Set([...MANIFEST.js, ...MANIFEST.css, ...MANIFEST.assets, ...MANIFEST.i18n].map((entry) => entry.url));
 function sanitizeBaseUrl(value) {
   try { const url = new URL(value); url.username = ''; url.password = ''; url.search = ''; url.hash = ''; return url.href.replace(/\/$/, ''); } catch { return '<invalid>'; }
 }
@@ -102,7 +102,7 @@ test('generated resources and read-only pages are healthy', async ({ page, reque
     expect(authenticatedPage, `${route} authentication`).toBe(true);
     if (route === '/note') {
       const scriptSources = await page.locator('script[src]').evaluateAll((elements) => elements.map((element) => element.getAttribute('src')));
-      const requiredOrder = ['/js/dep.min.js', '/tinymce/tinymce.full.min.js', '/js/app.min.js', '/js/markdown-v2.min.js', '/public/js/plugins/main.min.js'];
+      const requiredOrder = ['/js/dep.min.js', '/tinymce/tinymce.min.js', '/js/app.min.js', '/js/markdown-v2.min.js', '/public/js/plugins/main.min.js'];
       let previous = -1;
       for (const expected of requiredOrder) {
         const current = scriptSources.indexOf(expected);
@@ -114,7 +114,7 @@ test('generated resources and read-only pages are healthy', async ({ page, reque
     if (await page.evaluate(() => Boolean(window.__leanoteUnhandledRejection))) errors.push('unhandledrejection');
   }
   summary.stage = 'resource-checks';
-  const outputs = [...MANIFEST.js, ...MANIFEST.css, ...MANIFEST.i18n];
+  const outputs = [...MANIFEST.js, ...MANIFEST.css, ...MANIFEST.assets, ...MANIFEST.i18n];
   for (const entry of outputs) {
     const response = await request.get(new URL(entry.url, baseUrl).href, { maxRedirects: 0 });
     const status = response.status();

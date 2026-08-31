@@ -66,3 +66,20 @@ export async function buildJavaScript(entry, root, stagingRoot) {
 export async function buildJavaScriptEntries(entries, root, stagingRoot) {
   for (const entry of entries) await buildJavaScript(entry, root, stagingRoot);
 }
+
+export async function buildStaticEntries(entries, root, stagingRoot) {
+  for (const entry of entries) {
+    if (!entry || entry.transform !== 'copy' || !Array.isArray(entry.inputs) || entry.inputs.length !== 1) {
+      throw new Error(`invalid static asset ${entry?.name || 'unknown'}`);
+    }
+    const sourcePath = resolveRepoPath(root, entry.inputs[0]);
+    const outputPath = resolveRepoPath(stagingRoot, entry.output);
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    if (entry.normalizeTrailingWhitespace) {
+      const source = (await fs.readFile(sourcePath, 'utf8')).replace(/\r\n?/g, '\n');
+      await fs.writeFile(outputPath, source.replace(/[ \t]+$/gm, ''), 'utf8');
+    } else {
+      await fs.copyFile(sourcePath, outputPath);
+    }
+  }
+}

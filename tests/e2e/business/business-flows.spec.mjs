@@ -122,14 +122,9 @@ test('leaui_image preserves the real parent iframe boundary and TinyMCE insertio
     window.__inserted = [];
     window.__closed = false;
     const editor = {
-      selection: { getContent: () => `<img src="${src}" width="120" height="60" title="seeded image" />` },
+      selection: { getNode: () => null },
+      getContent: () => window.__inserted.join(''),
       dom: {
-        getAttrib: (element, name) => element.getAttribute(name) || '',
-        createHTML: (tag, attrs) => {
-          const element = document.createElement(tag);
-          Object.entries(attrs).forEach(([name, value]) => element.setAttribute(name, value));
-          return element.outerHTML;
-        },
         get: (id) => document.getElementById(id),
         setAttrib: (element, name, value) => {
           if (!element) return;
@@ -137,31 +132,30 @@ test('leaui_image preserves the real parent iframe boundary and TinyMCE insertio
         },
       },
       insertContent: (html) => window.__inserted.push(html),
-      addButton: (_name, config) => { window.__button = config; },
-      addMenuItem: () => {},
+      ui: { registry: {
+        addButton: (_name, config) => { window.__button = config; },
+        addMenuItem: () => {},
+      } },
       windowManager: {
-        open: (config) => {
+        openUrl: (config) => {
           window.__dialogConfig = config;
-          const holder = document.createElement('div');
-          holder.innerHTML = config.html;
-          document.body.append(...holder.childNodes);
           return {};
         },
       },
     };
     window.__pluginFactory(editor);
-    window.__button.onclick();
+    window.__button.onAction();
   }, seededImageSrc);
-  await expect(page.locator('#leauiIfr')).toHaveCount(1, { timeout: 30_000 });
-  await expect(page.frameLocator('#leauiIfr').locator('#preview img')).toHaveAttribute('src', seededImageSrc, { timeout: 30_000 });
   await page.evaluate(() => {
-    const context = { parent: () => ({ parent: () => ({ close: () => { window.__closed = true; } }) }) };
-    window.__dialogConfig.buttons[1].onclick.call(context, {});
+    window.__dialogConfig.onMessage({ close: () => { window.__closed = true; } }, {
+      mceAction: 'insertImage',
+      images: [{ src: window.LEAUI_DATAS[0].src, width: '120', height: '60', title: 'seeded image' }],
+    });
   });
   await expect.poll(() => page.evaluate(() => window.__inserted.length)).toBeGreaterThan(0);
   expect(await page.evaluate(() => ({ closed: window.__closed, inserted: window.__inserted[0] }))).toEqual({
     closed: true,
-    inserted: expect.stringContaining('__mcenew0'),
+    inserted: expect.stringContaining(seededImageSrc),
   });
 });
 
@@ -282,9 +276,10 @@ test('business flows: login, permission gates, note list/search, note+tag write,
     });
     expect(addNote.ok(), 'addNote status').toBe(true);
     const noteBody = await addNote.json();
-    expect(noteBody?.NoteId, 'addNote returned the requested note').toBe(noteId);
-    expect(noteBody?.Title, 'addNote kept the title').toBe(noteTitle);
-    expect(JSON.stringify(noteBody?.Tags ?? []), 'addNote stored the tag').toContain(tagName);
+    expect(noteBody?.Ok, 'addNote business result').toBe(true);
+    expect(noteBody?.Item?.NoteId, 'addNote returned the requested note').toBe(noteId);
+    expect(noteBody?.Item?.Title, 'addNote kept the title').toBe(noteTitle);
+    expect(JSON.stringify(noteBody?.Item?.Tags ?? []), 'addNote stored the tag').toContain(tagName);
     // Register the destructive cleanup right away so a later assertion
     // failure can never leave the note behind.
     cleanups.push(sequentialSteps(

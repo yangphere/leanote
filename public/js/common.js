@@ -379,9 +379,14 @@ function switchEditor(isMarkdown) {
 // 可能是tinymce还没有渲染成功
 var previewToken = "<div style='display: none'>FORTOKEN</div>"
 var clearIntervalForSetContent;
-function setEditorContent(content, isMarkdown, preview, callback) {
+function setEditorContent(content, isMarkdown, preview, callback, loadEpoch) {
 	if(!content) {
 		content = "";
+	}
+	if(loadEpoch !== undefined && window.LeanoteEditorSession &&
+		typeof window.LeanoteEditorSession.isCurrentLoad === "function" &&
+		!window.LeanoteEditorSession.isCurrentLoad(loadEpoch)) {
+		return;
 	}
 	if(clearIntervalForSetContent) {
 		clearInterval(clearIntervalForSetContent);
@@ -402,12 +407,15 @@ function setEditorContent(content, isMarkdown, preview, callback) {
 		if(typeof tinymce != "undefined" && tinymce.activeEditor) {
 			var editor = tinymce.activeEditor;
 			editor.setContent(content);
+			if (loadEpoch !== undefined && window.LeanoteEditorSession) {
+				window.LeanoteEditorSession.setContentProgrammatically(editor.getContent(), loadEpoch);
+			}
 			callback && callback();
 			editor.undoManager.clear(); // 4-7修复BUG
 		} else {
 			// 等下再设置
 			clearIntervalForSetContent = setTimeout(function() {
-				setEditorContent(content, false, false, callback);
+				setEditorContent(content, false, false, callback, loadEpoch);
 			}, 100);
 		}
 	} else {
@@ -438,7 +446,7 @@ function setEditorContent(content, isMarkdown, preview, callback) {
 			callback && callback();
 		} else {
 			clearIntervalForSetContent = setTimeout(function() {
-				setEditorContent(content, true, false, callback);
+				setEditorContent(content, true, false, callback, loadEpoch);
 			}, 100);
 		}
 	}
@@ -1015,7 +1023,7 @@ function getEmailLoginAddress(email) {
 
 // 返回是否是re.Ok == true
 function reIsOk(re) {
-	return re && typeof re == "object" && re.Ok;
+	return re && typeof re == "object" && re.Ok === true;
 }
 
 // marker

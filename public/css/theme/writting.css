@@ -1,14 +1,14 @@
 ::selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 ::-moz-selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 ::-webkit-selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 /*scroll*/
 /*
@@ -395,8 +395,8 @@ background-position:-1px -670px
 .show > .dropdown-menu,
 .dropdown-submenu:hover > .dropdown-menu {
   visibility: visible;
-  -webkit-animation: pulldown .2s;
-  animation: pulldown .2s;
+  -webkit-animation: pulldown 0.2s;
+  animation: pulldown 0.2s;
   /*
   transform: scale(1, 1); 
   -webkit-transform: scale(1, 1);
@@ -483,7 +483,7 @@ background-position:-1px -670px
   line-height: 30px;
 }
 .dropdown-menu li > a {
-  color: #000000;
+  color: #000;
   display: block;
   padding-right: 20px;
 }
@@ -551,8 +551,6 @@ a.raw:hover {
   font-style: normal;
 }
 #logo,
-.mce-i-mind,
-.mce-i-ace-pre,
 .lea-icon {
   font-family: 'leanote' !important;
   speak: none;
@@ -565,12 +563,6 @@ a.raw:hover {
 }
 .icon-markdown:before {
   content: "\e604";
-}
-.mce-i-mind:before {
-  content: "\e602";
-}
-.mce-i-ace-pre:before {
-  content: "\e603";
 }
 #logo:before {
   content: "\e901";
@@ -622,17 +614,17 @@ a.raw:hover {
   margin-top: 10px;
 }
 .new-note {
-  background-color: #000000;
+  background-color: #000;
   border-radius: 3px;
   padding: 3px 5px;
   border: 1px solid #080303;
 }
 .new-note,
 .new-note a {
-  color: #ffffff;
+  color: #fff;
 }
 .new-note:hover {
-  background: #3d3b3b;
+  background: #3D3B3B;
   border-color: transparent;
 }
 .new-note:hover,
@@ -684,18 +676,18 @@ a.raw:hover {
   left: 30px !important;
 }
 a {
-  color: #000000;
+  color: #000;
   cursor: pointer;
 }
 a:hover {
   text-decoration: none !important;
-  color: #000000;
+  color: #000;
 }
 #header {
   height: 60px;
   background-color: #fbfcf7;
   border-bottom: 1px solid #fbfcf7;
-  color: #ffffff;
+  color: #fff;
   /* for app */
   webkit-user-select: none;
   /* 还不知 */
@@ -703,11 +695,11 @@ a:hover {
   /* -webkit-app-region: no-drag; */
 }
 #header a {
-  color: #cccccc;
+  color: #ccc;
 }
 #header li,
 #header li a {
-  color: #000000;
+  color: #000;
 }
 #logo {
   line-height: 50px;
@@ -754,10 +746,10 @@ a:hover {
 }
 #searchNote input {
   background-size: 18px 13px;
-  border-color: #ebeff2;
+  border-color: #EBEFF2;
   border: none;
-  color: #cccccc;
-  background-color: #000000;
+  color: #ccc;
+  background-color: #000;
   padding-left: 14px;
   border-radius: 5px;
   height: 30px;
@@ -790,15 +782,15 @@ a:hover {
   color: #999999;
 }
 .dropdown-menu li > a {
-  color: #000000;
+  color: #000;
 }
 .dropdown-menu li:hover,
 .dropdown-menu li:focus {
-  background-color: #ebeff2;
+  background-color: #EBEFF2;
 }
 .dropdown-menu li > a:hover,
 .dropdown-menu li > a:focus {
-  background-color: #ebeff2;
+  background-color: #EBEFF2;
 }
 #loading {
   display: inline-block;
@@ -893,9 +885,6 @@ a:hover {
 .mce-match-marker.mce-match-marker-selected {
   background: yellow;
 }
-#mce-modal-block {
-  display: none;
-}
 #editor,
 #mdEditor {
   position: absolute;
@@ -940,7 +929,7 @@ a:hover {
   opacity: 0.8;
 }
 .leanoteNav.unfolder h1 {
-  border-bottom: 1px dashed #ebeff2;
+  border-bottom: 1px dashed #EBEFF2;
 }
 .leanoteNav.unfolder span {
   display: inline;
@@ -1002,51 +991,56 @@ a:hover {
 /**
  * tinymce editor
  */
-/* 包裹iframe */
-#editor .mce-ifr {
+/* 包裹编辑区 iframe */
+#editor .tox-edit-area__iframe {
   border: none;
   overflow: hidden !important;
   /*不知道哪里设置了auto*/
 }
 /* 最顶层 */
-#editor .mce-tinymce {
+#editor .tox-tinymce {
   border: none;
 }
 /* 编辑器工具 需要important, 因为mce还要有js加载css, 肯定在此之后 */
 /*加高, 之前显得拥挤*/
-.mce-btn-small button {
+.tox .tox-tbtn {
   padding: 5px 5px !important;
   line-height: 20px !important;
 }
-.mce-foot .mce-btn {
+.tox .tox-dialog__footer .tox-button {
   border-radius: 3px;
 }
-.mce-menubtn.mce-btn-small span {
+.tox .tox-mbtn__select-label,
+.tox .tox-tbtn__select-label {
   line-height: 20px !important;
 }
-.mce-btn span {
+.tox .tox-tbtn,
+.tox .tox-mbtn,
+.tox .tox-collection__item-label {
   font-family: 'Open Sans', 'Helvetica Neue', Arial, 'Hiragino Sans GB', 'Microsoft YaHei', 'WenQuanYi Micro Hei', sans-serif !important;
 }
-.mce-primary button,
-.mce-primary button i {
+.tox .tox-button {
   text-shadow: none;
 }
-.mce-primary {
+.tox .tox-button:not(.tox-button--secondary) {
   background-color: #47a447 !important;
   border: none !important;
 }
-.mce-menu-item:hover,
-.mce-menu-item.mce-selected,
-.mce-menu-item:focus {
-  background-color: #ebeff2;
+.tox .tox-collection__item:hover,
+.tox .tox-collection__item:focus,
+.tox .tox-collection__item--active {
+  background-color: #EBEFF2;
 }
-.mce-menu-item:hover span,
-.mce-menu-item.mce-selected span,
-.mce-menu-item:focus span {
+.tox .tox-collection__item:hover .tox-collection__item-label,
+.tox .tox-collection__item:focus .tox-collection__item-label,
+.tox .tox-collection__item--active .tox-collection__item-label,
+.tox .tox-collection__item:hover .tox-collection__item-accessory,
+.tox .tox-collection__item:focus .tox-collection__item-accessory,
+.tox .tox-collection__item--active .tox-collection__item-accessory {
   color: #000 !important;
 }
-.mce-menu-item-normal.mce-active {
-  background-color: #ebeff2;
+.tox .tox-collection__item--enabled {
+  background-color: #EBEFF2;
 }
 .tool-split {
   display: inline-block;
@@ -1063,21 +1057,9 @@ a:hover {
 #moreBtn span {
   display: none;
 }
-.mce-colorbtn-trans div {
-  line-height: 11px;
-  text-align: center;
-}
-.mce-btn-small .mce-caret {
-  margin-top: 8px;
-}
-.mce-listbox.mce-btn-small .mce-caret {
-  margin-top: -2px;
-}
-.mce-btn i {
+.tox .tox-icon,
+.tox .tox-tbtn svg {
   text-shadow: none;
-}
-.mce-colorbutton.mce-btn-small .mce-preview {
-  width: 15px;
 }
 #editorContent {
   border: 1px solid #ccc;
@@ -1104,7 +1086,7 @@ a:hover {
 #editorContent * {
   font-family: inherit;
 }
-.mce-tinymce-inline {
+.tox.tox-tinymce-inline {
   border-width: 0 !important;
 }
 #editorContent a {
@@ -1144,7 +1126,8 @@ a:hover {
   margin: 0;
   width: 80px;
 }
-.mce-text {
+.tox .tox-tbtn__select-label,
+.tox .tox-mbtn__select-label {
   vertical-align: middle;
 }
 /**
@@ -1453,7 +1436,7 @@ textarea#wmd-input {
   padding-top: 5px;
 }
 #wmd-input.ace_editor {
-  color: #000000;
+  color: #000;
 }
 #wmd-input.ace-tm {
   background-color: #ffffff;
@@ -1471,7 +1454,7 @@ textarea#wmd-input {
   background: none;
 }
 #wmd-input.ace-tm .ace_markup.ace_heading {
-  color: #000000;
+  color: #000;
   font-weight: bold;
 }
 #wmd-input.ace-tm .ace_markup.ace_heading.ace_1,
@@ -1482,7 +1465,7 @@ textarea#wmd-input {
   color: #1d3e81;
 }
 #wmd-input.ace-tm .ace_markup.ace_list {
-  color: #000000;
+  color: #000;
 }
 #wmd-input.ace-tm .ace_constant.ace_language {
   color: #1d3e81;
@@ -1515,15 +1498,15 @@ textarea#wmd-input {
   background: inherit;
 }
 #wmd-input.ace-tm .ace_strong {
-  color: #000000;
+  color: #000;
   font-weight: bold;
 }
 #wmd-input.ace-tm .ace_emphasis {
-  color: #000000;
+  color: #000;
   font-style: italic;
 }
 #wmd-input.ace-tm .ace_blockquote {
-  color: #000000;
+  color: #000;
 }
 #wmd-input.ace-tm .ace_code {
   color: #1a2026;
@@ -1532,7 +1515,7 @@ textarea#wmd-input {
   color: #1a2026;
 }
 #wmd-input.ace-tm .ace_link {
-  color: #000000;
+  color: #000;
   background-color: transparent;
   text-decoration: underline;
 }
@@ -1581,7 +1564,7 @@ textarea#wmd-input {
 }
 #addNotebookPlus {
   padding-right: 10px;
-  color: #adbece;
+  color: #ADBECE;
 }
 #addNotebookPlus .fa {
   font-size: 16px;
@@ -1593,7 +1576,7 @@ textarea#wmd-input {
   padding-left: 3px;
   box-shadow: none;
   background: none;
-  color: #ffffff;
+  color: #fff;
 }
 #notebookList input:focus,
 #notebookListForSearch input:focus {
@@ -1613,7 +1596,7 @@ textarea#wmd-input {
 }
 #notebookMin div.minContainer i {
   font-size: 20px;
-  color: #ffffff;
+  color: #fff;
 }
 #notebookMin div.minContainer:hover i {
   color: #0fb264;
@@ -1669,7 +1652,7 @@ textarea#wmd-input {
 .folderHeader span {
   display: inline-block;
   line-height: 35px;
-  color: #ffffff;
+  color: #fff;
   font-size: 16px;
 }
 .folderHeader .fa-left,
@@ -1680,7 +1663,7 @@ textarea#wmd-input {
   width: 35px;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   text-align: center;
-  color: #ffffff;
+  color: #fff;
 }
 .friend-header {
   position: relative;
@@ -1710,7 +1693,7 @@ textarea#wmd-input {
 }
 .each-user div span {
   line-height: 35px;
-  color: #ffffff;
+  color: #fff;
   padding-left: 3px;
   font-size: 14px;
   display: block;
@@ -1816,8 +1799,8 @@ textarea#wmd-input {
   top: 7px;
   font-weight: normal;
   background-color: #fbfcf7;
-  color: #000000;
-  border: 1px solid #ebeff2;
+  color: #000;
+  border: 1px solid #EBEFF2;
 }
 /**
  * 笔记列表
@@ -1850,8 +1833,8 @@ textarea#wmd-input {
   background-color: #fbfcf7;
 }
 #notesAndSort {
-  background-color: #eeeeee;
-  border-bottom: 1px solid #ebeff2;
+  background-color: #eee;
+  border-bottom: 1px solid #EBEFF2;
   height: 36px;
 }
 #sortType {
@@ -1873,7 +1856,7 @@ textarea#wmd-input {
   background: #fff;
   text-align: center;
   padding-top: 60px;
-  opacity: .3;
+  opacity: 0.3;
   z-index: 500;
   display: none;
 }
@@ -1893,7 +1876,7 @@ textarea#wmd-input {
   height: 110px;
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid #ebeff2;
+  border: 1px solid #EBEFF2;
   border-radius: 3px;
   margin-top: 5px;
   background-color: #fff;
@@ -1969,8 +1952,8 @@ textarea#wmd-input {
   line-height: 20px;
   overflow: hidden;
   margin-bottom: 0px;
-  color: #000000;
-  border-bottom: dashed 1px #ebeff2;
+  color: #000;
+  border-bottom: dashed 1px #EBEFF2;
 }
 #noteItemList .item-desc {
   position: absolute;
@@ -2369,7 +2352,7 @@ textarea#wmd-input {
 #notebookNavForNewNote li,
 #notebookNavForNewSharedNote > li {
   padding-left: 0;
-  border-bottom: 1px solid #ebeff2;
+  border-bottom: 1px solid #EBEFF2;
 }
 #notebookNavForNewNote > li:hover,
 #notebookNavForNewNote > li:focus,
@@ -2382,13 +2365,13 @@ textarea#wmd-input {
   width: 95px;
   overflow: hidden;
   white-space: nowrap;
-  border-right: 1px dashed #ebeff2;
+  border-right: 1px dashed #EBEFF2;
 }
 .new-note-left:hover {
-  background-color: #ebeff2;
+  background-color: #EBEFF2;
 }
 .new-note-right:hover {
-  background-color: #ebeff2;
+  background-color: #EBEFF2;
 }
 #historyList table {
   width: 100%;
@@ -2419,7 +2402,7 @@ textarea#wmd-input {
 #editorMask a {
   display: inline-block;
   border-radius: 3px;
-  border: 1px solid #ebeff2;
+  border: 1px solid #EBEFF2;
   padding: 10px;
 }
 #editorMask a:hover {
@@ -2438,7 +2421,7 @@ textarea#wmd-input {
   padding-top: 60px;
   background: #fff;
   text-align: center;
-  opacity: .3;
+  opacity: 0.3;
 }
 .info-toolbar {
   position: absolute;
@@ -2705,10 +2688,9 @@ h3 {
 .slimScrollDiv,
 #editorContent,
 #editorContent_ifr,
-.mce-edit-area,
-.mce-container-body,
-.mce-tinymce,
-#editor .mce-ifr,
+.tox-edit-area,
+.tox-tinymce,
+#editor .tox-edit-area__iframe,
 .wmd-input,
 #noteReadContent,
 #attachList,
@@ -2743,16 +2725,16 @@ h3 {
 }
 /*"HelveticaNeue-Light","Helvetica Neue Light","Helvetica Neue", Helvetica, "Microsoft Yahei", Verdana, Simsun, "Segoe UI", "Segoe UI Web Regular", "Segoe UI Symbol",  "BBAlpha Sans", "S60 Sans", Arial, sans-serif;*/
 ::selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 ::-moz-selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 ::-webkit-selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 html,
 body {
@@ -2771,12 +2753,12 @@ h3 {
   font-weight: 300 !important;
 }
 a {
-  color: #000000;
+  color: #000;
   cursor: pointer;
 }
 a:hover {
   text-decoration: none !important;
-  color: #000000;
+  color: #000;
 }
 a.raw {
   color: #428bca;
@@ -2788,8 +2770,8 @@ a.raw:hover {
 #header {
   height: 60px;
   background-color: #fbfcf7;
-  color: #ffffff;
-  border-bottom: 1px solid #ebeff2;
+  color: #fff;
+  border-bottom: 1px solid #EBEFF2;
   /* for app */
   webkit-user-select: none;
   /* 还不知 */
@@ -2800,10 +2782,10 @@ a.raw:hover {
   color: #ccc;
 }
 #header li {
-  color: #000000;
+  color: #000;
 }
 #header li a {
-  color: #000000;
+  color: #000;
 }
 #searchWrap,
 #logo,
@@ -2847,17 +2829,17 @@ a.raw:hover {
   line-height: 30px;
 }
 .dropdown-menu > li > a {
-  color: #000000;
+  color: #000;
   display: inline-block;
   padding: 3px 3px;
 }
 .dropdown-menu > li:hover,
 .dropdown-menu > li:focus {
-  background-color: #ebeff2;
+  background-color: #EBEFF2;
 }
 .dropdown-menu > li > a:hover,
 .dropdown-menu > li > a:focus {
-  background-color: #ebeff2;
+  background-color: #EBEFF2;
 }
 .ios7-a {
   display: inline-block;
@@ -2933,7 +2915,7 @@ a.raw:hover {
 }
 #notesAndSort {
   background-color: #eee;
-  border-bottom: 1px solid #ebeff2;
+  border-bottom: 1px solid #EBEFF2;
 }
 /* item list */
 #noteItemList {
@@ -2953,7 +2935,7 @@ a.raw:hover {
   overflow: hidden;
   cursor: pointer;
   padding: 5px;
-  border: 1px solid #ebeff2;
+  border: 1px solid #EBEFF2;
   border-radius: 3px;
   margin-top: 5px;
   background-color: #fff;
@@ -2961,7 +2943,7 @@ a.raw:hover {
 #noteItemList .item:hover,
 #noteItemList .contextmenu-hover {
   background-color: #ddd !important;
-  color: #000000;
+  color: #000;
 }
 #noteItemList .item-thumb {
   padding-left: 10px;
@@ -3011,8 +2993,8 @@ a.raw:hover {
   line-height: 20px;
   overflow: hidden;
   margin-bottom: 0px;
-  color: #000000;
-  border-bottom: dashed 1px #ebeff2;
+  color: #000;
+  border-bottom: dashed 1px #EBEFF2;
 }
 /* note */
 /* editor */
@@ -3055,15 +3037,15 @@ a.raw:hover {
   left: 0;
   overflow: auto;
 }
-/* 包裹iframe */
-#editor .mce-ifr {
+/* 包裹编辑区 iframe */
+#editor .tox-edit-area__iframe {
   border: none;
   overflow: hidden !important;
   /*不知道哪里设置了auto*/
   /*border-radius: 5px;*/
 }
 /* 最顶层 */
-#editor .mce-tinymce {
+#editor .tox-tinymce {
   border: none;
 }
 /*编辑器按钮*/
@@ -3076,39 +3058,44 @@ a.raw:hover {
 }
 /* 编辑器工具 需要important, 因为mce还要有js加载css, 肯定在此之后 */
 /*加高, 之前显得拥挤*/
-.mce-btn-small button {
+.tox .tox-tbtn {
   padding: 5px 5px !important;
   line-height: 20px !important;
 }
-.mce-btn {
+.tox .tox-tbtn,
+.tox .tox-mbtn {
   background-color: #fbfcf7 !important;
 }
-.mce-menubtn.mce-btn-small span {
+.tox .tox-mbtn__select-label,
+.tox .tox-tbtn__select-label {
   line-height: 20px !important;
 }
-.mce-btn span {
+.tox .tox-tbtn,
+.tox .tox-mbtn {
   font-family: 'Open Sans', 'Helvetica Neue', Arial, 'Hiragino Sans GB', 'Microsoft YaHei', 'WenQuanYi Micro Hei', sans-serif !important;
 }
-.mce-primary button,
-.mce-primary button i {
+.tox .tox-button {
   text-shadow: none;
 }
-.mce-primary {
+.tox .tox-button:not(.tox-button--secondary) {
   background-color: #47a447 !important;
   border-color: #398439 !important;
 }
-.mce-menu-item:hover,
-.mce-menu-item.mce-selected,
-.mce-menu-item:focus {
-  background-color: #ebeff2;
+.tox .tox-collection__item:hover,
+.tox .tox-collection__item:focus,
+.tox .tox-collection__item--active {
+  background-color: #EBEFF2;
 }
-.mce-menu-item:hover span,
-.mce-menu-item.mce-selected span,
-.mce-menu-item:focus span {
+.tox .tox-collection__item:hover .tox-collection__item-label,
+.tox .tox-collection__item:focus .tox-collection__item-label,
+.tox .tox-collection__item--active .tox-collection__item-label,
+.tox .tox-collection__item:hover .tox-collection__item-accessory,
+.tox .tox-collection__item:focus .tox-collection__item-accessory,
+.tox .tox-collection__item--active .tox-collection__item-accessory {
   color: #000 !important;
 }
-.mce-menu-item-normal.mce-active {
-  background-color: #ebeff2;
+.tox .tox-collection__item--enabled {
+  background-color: #EBEFF2;
 }
 .tool-split {
   display: inline-block;
@@ -3202,7 +3189,7 @@ a.raw:hover {
   opacity: 0.8;
 }
 #leanoteNav.unfolder h1 {
-  border-bottom: 1px dashed #ebeff2;
+  border-bottom: 1px dashed #EBEFF2;
 }
 #leanoteNav.unfolder span {
   display: inline;
@@ -3257,7 +3244,7 @@ a.raw:hover {
   height: 60px;
   left: 0;
   right: 0;
-  border-bottom: 1px solid #ebeff2;
+  border-bottom: 1px solid #EBEFF2;
 }
 #noteReadTitle {
   margin: 3px 0;
@@ -3394,7 +3381,7 @@ background-position:-1px -670px
 #notebookNavForNewNote li,
 #notebookNavForNewSharedNote > li {
   padding-left: 0;
-  border-bottom: 1px solid #ebeff2;
+  border-bottom: 1px solid #EBEFF2;
 }
 #notebookNavForNewNote > li:hover,
 #notebookNavForNewNote > li:focus,
@@ -3407,16 +3394,16 @@ background-position:-1px -670px
   width: 95px;
   overflow: hidden;
   white-space: nowrap;
-  border-right: 1px dashed #ebeff2;
+  border-right: 1px dashed #EBEFF2;
 }
 .new-note-left:hover {
-  background-color: #ebeff2;
+  background-color: #EBEFF2;
 }
 .new-note-right {
   padding: 0 5px;
 }
 .new-note-right:hover {
-  background-color: #ebeff2;
+  background-color: #EBEFF2;
 }
 #historyList table {
   width: 100%;
@@ -3446,7 +3433,7 @@ background-position:-1px -670px
 #editorMask a {
   display: inline-block;
   border-radius: 3px;
-  border: 1px solid #ebeff2;
+  border: 1px solid #EBEFF2;
   padding: 10px;
 }
 #editorMask a:hover {

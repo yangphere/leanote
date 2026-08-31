@@ -1,4 +1,8 @@
-{"file": ".trellis/tasks/08-25-tinymce-upgrade/prd.md", "reason": "TinyMCE 8.8.2、自托管、四个第一方插件和存量 HTML 语义契约。"}
-{"file": ".trellis/tasks/08-25-tinymce-upgrade/design.md", "reason": "初始化 API、粘贴、插件边界、未编辑不保存和浏览器验证设计。"}
-{"file": ".trellis/tasks/08-25-bootstrap-upgrade/prd.md", "reason": "前序 leaui_image iframe Bootstrap 适配完成后才进入 TinyMCE。"}
-{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "TinyMCE 自托管资源和生成物契约决策。"}
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/prd.md", "reason": "R-TM1 至 R-TM8 的 TinyMCE 8.8.2 范围、保存响应、状态、内容、安全、locale 与验收契约。"}
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/design.md", "reason": "manifest 资源闭包、shared profiles、per-note revision/baseline、结构化响应、插件与回滚设计。"}
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/implement.md", "reason": "失败优先基线、保存 controller、资产、状态、插件、locale、清理和全量验证顺序。"}
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/research/tinymce4-runtime-inventory.md", "reason": "4.1.9 三入口、插件、保存 controller、样式、locale 和测试运行面清单。"}
+{"file": ".trellis/tasks/08-25-tinymce-upgrade/research/tinymce8-migration-contract.md", "reason": "TinyMCE 8 官方约束与项目内最小保存响应前置边界。"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "约束每 note revision/baseline 与异步保存确认的单一状态所有权。"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "约束 controller 传播业务失败，不无条件报告成功或吞掉服务结果。"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "约束前端确认与后端 Ok 响应的跨层不变量。"}

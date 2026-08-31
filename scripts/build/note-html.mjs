@@ -23,7 +23,7 @@ export async function renderNoteHtml(root, stagingRoot, manifest) {
     ['<!-- pro_dep_js -->', `<script src="${dep.url}"></script>`],
     ['<!-- pro_app_js -->', `<script src="${app.url}"></script>`],
     ['<!-- pro_markdown_js -->', `<script src="${markdown.url}"></script>`],
-    ['<!-- pro_tinymce_init_js -->', "var tinyMCEPreInit = {base: '/public/tinymce', suffix: '.min'};"],
+    ['<!-- pro_tinymce_init_js -->', "var tinyMCEPreInit = {base: '/tinymce', suffix: '.min'};"],
   ];
   for (const [marker, replacement] of replacements) {
     const count = source.split(marker).length - 1;
@@ -32,7 +32,7 @@ export async function renderNoteHtml(root, stagingRoot, manifest) {
   }
   const tinyMatches = source.match(/(<script\s+src=")\/tinymce\/tinymce\.js("[^>]*>)/g) ?? [];
   if (tinyMatches.length !== 1) throw new Error(`expected one TinyMCE development script, got ${tinyMatches.length}`);
-  source = source.replace(/(<script\s+src=")\/tinymce\/tinymce\.js("[^>]*>)/, '$1/tinymce/tinymce.full.min.js$2');
+  source = source.replace(/(<script\s+src=")\/tinymce\/tinymce\.js("[^>]*>)/, '$1/tinymce/tinymce.min.js$2');
   const pluginMatches = source.match(/(<script\s+src=")\/public\/js\/plugins\/main\.js("[^>]*>)/g) ?? [];
   if (pluginMatches.length !== 1) throw new Error(`expected one plugin script, got ${pluginMatches.length}`);
   source = source.replace(/(<script\s+src=")\/public\/js\/plugins\/main\.js("[^>]*>)/, `$1${plugins.url}$2`);
@@ -43,7 +43,7 @@ export async function renderNoteHtml(root, stagingRoot, manifest) {
   const scriptSources = [...source.matchAll(/<script\s+src="([^"]+)"[^>]*>/g)].map((match) => match[1]);
   const requiredOrder = [
     dep.url,
-    '/tinymce/tinymce.full.min.js',
+    '/tinymce/tinymce.min.js',
     app.url,
     markdown.url,
     plugins.url,

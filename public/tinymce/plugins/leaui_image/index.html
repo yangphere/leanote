@@ -4,7 +4,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <title>
-    TinyMCE 4 Leaui Image Manager
+    Leanote Image Manager
 </title>
 
 <link href="/css/bootstrap.css" rel="stylesheet" media="screen">
@@ -136,6 +136,10 @@
     <ul id="preview" class="clearfix">
     </ul>
 
+    <div class="d-flex justify-content-end mt-2">
+        <button type="button" class="btn btn-primary" id="insertImageBtn">Insert Image</button>
+    </div>
+
     <div id="previewAttrs" style="margin-left: 10px">
 		<form class="album-form d-flex flex-wrap align-items-center gap-2" role="form">
 		  <div class="mb-3">
@@ -178,6 +182,24 @@ window.showBootstrapTab = window.showBootstrapTab || function(element) {
     if (!window.bootstrap || !window.bootstrap.Tab) throw new Error('Bootstrap 5 is not loaded');
     window.bootstrap.Tab.getOrCreateInstance(element).show();
 };
+window.addEventListener('DOMContentLoaded', function() {
+    var button = document.getElementById('insertImageBtn');
+    if (!button) return;
+    button.addEventListener('click', function() {
+        var images = Array.prototype.map.call(document.querySelectorAll('#preview li img'), function(img) {
+            return {
+                src: img.getAttribute('src') || '',
+                alt: img.getAttribute('data-alt') || img.getAttribute('alt') || '',
+                title: img.getAttribute('data-title') || img.getAttribute('title') || '',
+                width: img.getAttribute('data-width') || img.getAttribute('width') || '',
+                height: img.getAttribute('data-height') || img.getAttribute('height') || ''
+            };
+        }).filter(function(image) { return image.src; });
+        if (images.length && window.parent && window.parent !== window) {
+            window.parent.postMessage({ mceAction: 'insertImage', images: images }, window.location.origin);
+        }
+    });
+});
 </script>
 <!--
 <script src="public/js/jquery.lazyload.min.js"></script>

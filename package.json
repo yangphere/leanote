@@ -25,6 +25,7 @@
     "url": "https://github.com/yangphere/leanote/issues"
   },
   "dependencies": {
-    "bootstrap": "5.3.8"
+    "bootstrap": "5.3.8",
+    "tinymce": "8.8.2"
   }
 }

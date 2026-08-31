@@ -40,7 +40,28 @@ Questions to answer:
 
 <!-- How server data is cached and synchronized -->
 
-(To be filled by the team)
+### Editor Session Contract
+
+The note editor owns one `window.LeanoteEditorSession` state adapter per active
+note. It tracks `noteId`, `loadEpoch`, `persistedContent`, `editorBaseline`,
+`currentContent`, `contentRevision`, `confirmedRevision`, and `loading`.
+
+- `beginLoad({ noteId, persistedContent })` increments `loadEpoch` and enters
+  `loading`; `completeLoad(epoch, editorContent)` accepts only the current
+  epoch and establishes the editor baseline without incrementing the revision.
+- User content actions call `markMutation(serializedContent[, epoch])`. Stale
+  epochs, read-only mode, loading, and unchanged serialization are rejected.
+  Programmatic `setContent`, Ace hydration/cleanup, and external navigation
+  DOM updates must not call this mutation boundary.
+- `beginSave()` captures note id, epoch, revision, and submitted content.
+  `confirmSave(capture, currentSerialization)` advances both persisted and
+  editor baselines only for the current epoch and a non-older revision, then
+  recomputes dirty state from the current serialization. A later edit remains
+  dirty until separately confirmed.
+
+The adapter is the single owner of editor dirty state; callers must not infer
+dirty state from TinyMCE's internal `isDirty()` flag or from DOM-equivalent
+content when deciding whether to send stored HTML.
 
 ---
 
@@ -48,4 +69,7 @@ Questions to answer:
 
 <!-- State management mistakes your team has made -->
 
-(To be filled by the team)
+- Treating a programmatic note load or delayed callback as a user mutation.
+- Confirming a save before the backend returns `info.Re.Ok === true`.
+- Replacing the baseline with the current serialization when a save response
+  is stale or when serialization failed.

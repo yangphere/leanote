@@ -395,8 +395,8 @@ a.raw:hover {
 	// padding-top: 10px;
 }
 
-/* 包裹iframe */
-#editor .mce-ifr {
+/* 包裹编辑区 iframe */
+#editor .tox-edit-area__iframe {
   border: none;
   // padding: 10px;
   overflow: hidden !important; /*不知道哪里设置了auto*/
@@ -407,7 +407,7 @@ a.raw:hover {
 }
 
 /* 最顶层 */
-#editor .mce-tinymce {
+#editor .tox-tinymce {
   border: none;
 }
 #editor iframe {
@@ -422,35 +422,41 @@ a.raw:hover {
 /* 编辑器工具 需要important, 因为mce还要有js加载css, 肯定在此之后 */
 
 /*加高, 之前显得拥挤*/
-.mce-btn-small button {
+.tox .tox-tbtn {
   padding: 5px 5px !important;
   line-height: 20px !important;
 }
-.mce-btn {
+.tox .tox-tbtn,
+.tox .tox-mbtn {
   background-color: @bgColor !important;
 }
-.mce-menubtn.mce-btn-small span {
+.tox .tox-mbtn__select-label,
+.tox .tox-tbtn__select-label {
   line-height: 20px !important;
 }
-.mce-btn span {
+.tox .tox-tbtn,
+.tox .tox-mbtn {
   font-family: @fontFamily !important;
 }
-.mce-primary button, .mce-primary button i {
+.tox .tox-button {
 	text-shadow: none;
 }
-.mce-primary {
+.tox .tox-button:not(.tox-button--secondary) {
 	background-color: #47a447 !important;
 	border-color: #398439 !important;
 }
 // 下拉
-.mce-menu-item:hover, .mce-menu-item.mce-selected, .mce-menu-item:focus {
+.tox .tox-collection__item:hover,
+.tox .tox-collection__item:focus,
+.tox .tox-collection__item--active {
 	background-color: @borderColor;
-	span {
+	.tox-collection__item-label,
+	.tox-collection__item-accessory {
 		color: #000 !important;
 	}
 }
 // 下拉选中
-.mce-menu-item-normal.mce-active {
+.tox .tox-collection__item--enabled {
 	background-color: @borderColor;
 }
 // tool的分隔
@@ -766,10 +772,6 @@ background-position:-1px -670px
 	border-radius: 0 !important;
 }
 
-.mce-container-body iframe {
-  //overflow-x: hidden; // firefox 不能要
-  //overflow-y: hidden;
-}
 // 新建笔记item
 #notebookNavForNewNote li, #notebookNavForNewSharedNote > li {
 	padding-left: 0;

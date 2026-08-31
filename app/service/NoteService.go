@@ -13,6 +13,13 @@ import (
 type NoteService struct {
 }
 
+const (
+	noteInsertFailed        = "noteInsertFailed"
+	noteContentInsertFailed = "noteContentInsertFailed"
+	noteSaveFailed          = "saveFailed"
+	noteContentSaveFailed   = "contentSaveFailed"
+)
+
 // 通过id, userId得到note
 func (this *NoteService) GetNote(noteId, userId string) (note info.Note) {
 	note = info.Note{}
@@ -272,6 +279,11 @@ func (this *NoteService) ListNoteContentByNoteIds(noteIds []ObjectID) (notes []i
 // [ok]
 
 func (this *NoteService) AddNote(note info.Note, fromApi bool) info.Note {
+	note, _, _ = this.addNoteResult(note, fromApi, false)
+	return note
+}
+
+func (this *NoteService) addNoteResult(note info.Note, fromApi bool, strict bool) (info.Note, bool, string) {
 	if note.NoteId.Hex() == "" {
 		noteId := db.NewObjectID()
 		note.NoteId = noteId
@@ -297,7 +309,10 @@ func (this *NoteService) AddNote(note info.Note, fromApi bool) info.Note {
 	note.PublicTime = note.UpdatedTime
 	//	}
 
-	db.Insert(db.Notes, note)
+	ok := db.Insert(db.Notes, note)
+	if strict && !ok {
+		return note, false, noteInsertFailed
+	}
 
 	// tag1
 	tagService.AddTags(note.UserId.Hex(), note.Tags)
@@ -305,7 +320,10 @@ func (this *NoteService) AddNote(note info.Note, fromApi bool) info.Note {
 	// recount notebooks' notes number
 	notebookService.ReCountNotebookNumberNotes(notebookId)
 
-	return note
+	if !ok {
+		return note, false, noteInsertFailed
+	}
+	return note, true, ""
 }
 
 // 添加共享d笔记
@@ -321,17 +339,28 @@ func (this *NoteService) AddSharedNote(note info.Note, myUserId ObjectID) info.N
 // 添加笔记本内容
 // [ok]
 func (this *NoteService) AddNoteContent(noteContent info.NoteContent) info.NoteContent {
+	noteContent, _, _ = this.addNoteContentResult(noteContent, false)
+	return noteContent
+}
+
+func (this *NoteService) addNoteContentResult(noteContent info.NoteContent, strict bool) (info.NoteContent, bool, string) {
 
 	noteContent.CreatedTime = FixUrlTime(noteContent.CreatedTime)
 	noteContent.UpdatedTime = FixUrlTime(noteContent.UpdatedTime)
 
 	noteContent.UpdatedUserId = noteContent.UserId
-	db.Insert(db.NoteContents, noteContent)
+	ok := db.Insert(db.NoteContents, noteContent)
+	if strict && !ok {
+		return noteContent, false, noteContentInsertFailed
+	}
 
 	// 更新笔记图片
 	noteImageService.UpdateNoteImages(noteContent.UserId.Hex(), noteContent.NoteId.Hex(), "", noteContent.Content)
 
-	return noteContent
+	if !ok {
+		return noteContent, false, noteContentInsertFailed
+	}
+	return noteContent, true, ""
 }
 
 // API, abstract, desc需要这里获取
@@ -380,47 +409,52 @@ func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.N
 // 添加笔记和内容
 // 这里使用 info.NoteAndContent 接收?
 func (this *NoteService) AddNoteAndContentForController(note info.Note, noteContent info.NoteContent, updatedUserId string) info.Note {
-	if note.UserId.Hex() != updatedUserId {
-		if !shareService.HasUpdateNotebookPerm(note.UserId.Hex(), updatedUserId, note.NotebookId.Hex()) {
-			Log("NO AUTH11")
-			return info.Note{}
-		} else {
-			Log("HAS AUTH -----------")
-		}
-	}
-	return this.AddNoteAndContent(note, noteContent, db.MustObjectIDFromHex(updatedUserId))
-}
-func (this *NoteService) AddNoteAndContent(note info.Note, noteContent info.NoteContent, myUserId ObjectID) info.Note {
-	if note.NoteId.Hex() == "" {
-		noteId := db.NewObjectID()
-		note.NoteId = noteId
-	}
-	noteContent.NoteId = note.NoteId
-	if note.UserId != myUserId {
-		note = this.AddSharedNote(note, myUserId)
-	} else {
-		note = this.AddNote(note, false)
-	}
-	if !note.NoteId.IsZero() {
-		this.AddNoteContent(noteContent)
-	}
+	note, _, _ = this.AddNoteAndContentForControllerResult(note, noteContent, updatedUserId)
 	return note
 }
 
-func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.NoteContent, myUserId ObjectID) info.Note {
+// AddNoteAndContentForControllerResult is the controller-specific creation
+// boundary. It preserves service failure reasons so the HTTP endpoint cannot
+// mistake a zero-value note or partial write for success.
+func (this *NoteService) AddNoteAndContentForControllerResult(note info.Note, noteContent info.NoteContent, updatedUserId string) (info.Note, bool, string) {
+	return this.addNoteAndContentResult(note, noteContent, db.MustObjectIDFromHex(updatedUserId), false, true)
+}
+func (this *NoteService) AddNoteAndContent(note info.Note, noteContent info.NoteContent, myUserId ObjectID) info.Note {
+	note, _, _ = this.addNoteAndContentResult(note, noteContent, myUserId, false, false)
+	return note
+}
+
+func (this *NoteService) addNoteAndContentResult(note info.Note, noteContent info.NoteContent, myUserId ObjectID, fromApi, strict bool) (info.Note, bool, string) {
 	if note.NoteId.Hex() == "" {
 		noteId := db.NewObjectID()
 		note.NoteId = noteId
 	}
 	noteContent.NoteId = note.NoteId
 	if note.UserId != myUserId {
-		note = this.AddSharedNote(note, myUserId)
+		if !shareService.HasUpdateNotebookPerm(note.UserId.Hex(), myUserId.Hex(), note.NotebookId.Hex()) {
+			return info.Note{}, false, "noAuth"
+		}
+		note.CreatedUserId = myUserId
+		var ok bool
+		note, ok, _ = this.addNoteResult(note, false, strict)
+		if strict && !ok {
+			return note, false, noteInsertFailed
+		}
 	} else {
-		note = this.AddNote(note, true)
+		var ok bool
+		note, ok, _ = this.addNoteResult(note, fromApi, strict)
+		if strict && !ok {
+			return note, false, noteInsertFailed
+		}
 	}
-	if !note.NoteId.IsZero() {
-		this.AddNoteContent(noteContent)
+	if _, ok, msg := this.addNoteContentResult(noteContent, strict); strict && !ok {
+		return note, false, msg
 	}
+	return note, true, ""
+}
+
+func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.NoteContent, myUserId ObjectID) info.Note {
+	note, _, _ = this.addNoteAndContentResult(note, noteContent, myUserId, true, false)
 	return note
 }
 
@@ -504,7 +538,7 @@ func (this *NoteService) UpdateNote(updatedUserId, noteId string, needUpdate bso
 
 	ok = db.UpdateByIdAndUserIdMap(db.Notes, noteId, userId, needUpdate)
 	if !ok {
-		return ok, "", 0
+		return false, noteSaveFailed, 0
 	}
 
 	if needRecountTags {
@@ -594,6 +628,9 @@ func (this *NoteService) UpdateNoteContent(updatedUserId, noteId, content, abstr
 			return false, "noAuth", 0
 		}
 	}
+	if noteContent := this.GetNoteContent(noteId, userId); noteContent.NoteId.IsZero() {
+		return false, "notExists", 0
+	}
 
 	updatedTime = FixUrlTime(updatedTime)
 
@@ -616,7 +653,9 @@ func (this *NoteService) UpdateNoteContent(updatedUserId, noteId, content, abstr
 			return false, "conflict", 0
 		}
 		afterUsn = userService.IncrUsn(userId)
-		db.UpdateByIdAndUserIdField(db.Notes, noteId, userId, "Usn", afterUsn)
+		if !db.UpdateByIdAndUserIdField(db.Notes, noteId, userId, "Usn", afterUsn) {
+			return false, noteSaveFailed, 0
+		}
 	}
 
 	if db.UpdateByIdAndUserIdMap(db.NoteContents, noteId, userId, data) {
@@ -631,7 +670,7 @@ func (this *NoteService) UpdateNoteContent(updatedUserId, noteId, content, abstr
 
 		return true, "", afterUsn
 	}
-	return false, "", 0
+	return false, noteContentSaveFailed, 0
 }
 
 // ?????

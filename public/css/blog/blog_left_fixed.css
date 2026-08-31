@@ -148,8 +148,8 @@ ul.dropdown-menu {
   opacity: 0;
 }
 ul.dropdown-menu.show {
-  -webkit-animation: pulldown .2s;
-  animation: pulldown .2s;
+  -webkit-animation: pulldown 0.2s;
+  animation: pulldown 0.2s;
   visibility: visible;
   opacity: 1;
 }
@@ -245,16 +245,16 @@ ul.dropdown-menu.show {
 }
 /*"HelveticaNeue-Light","Helvetica Neue Light","Helvetica Neue", Helvetica, "Microsoft Yahei", Verdana, Simsun, "Segoe UI", "Segoe UI Web Regular", "Segoe UI Symbol",  "BBAlpha Sans", "S60 Sans", Arial, sans-serif;*/
 ::selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 ::-moz-selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 ::-webkit-selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 *,
 body {
@@ -280,7 +280,7 @@ a:hover {
   top: 0;
   bottom: 0;
   width: 200px;
-  border-right: 1px solid #ebeff2;
+  border-right: 1px solid #EBEFF2;
   text-align: right;
 }
 #headerContainer {
@@ -313,7 +313,7 @@ a:hover {
   font-size: 32px;
 }
 #header h1 a {
-  color: #000000;
+  color: #000;
   font-size: 32px;
 }
 #header h1 a img {
@@ -322,7 +322,7 @@ a:hover {
 #header #blogDesc {
   margin-top: 10px;
   padding-bottom: 10px;
-  border-bottom: 1px dashed #ebeff2;
+  border-bottom: 1px dashed #EBEFF2;
   font-size: 16px;
 }
 #logo {
@@ -370,7 +370,7 @@ a:hover {
   width: 800px;
 }
 #posts .each-post {
-  border-bottom: 1px solid #ebeff2;
+  border-bottom: 1px solid #EBEFF2;
   margin-bottom: 10px;
   padding: 30px;
   padding-top: 10px;
@@ -411,11 +411,11 @@ a:hover {
   padding-right: 15px;
 }
 #footerContainer {
-  background-color: #ffffff;
-  color: #666666;
+  background-color: #fff;
+  color: #666;
 }
 #footerContainer #footer a {
-  color: #666666;
+  color: #666;
 }
 #footerContainer #footer ul {
   list-style: none;
@@ -424,28 +424,29 @@ a:hover {
 }
 .tab-content {
   padding-bottom: 10px;
-  border-bottom: 1px solid #ebeff2;
+  border-bottom: 1px solid #EBEFF2;
 }
-.mce-btn {
+.tox .tox-tbtn,
+.tox .tox-mbtn {
   background: none !important;
 }
 @media screen and (max-width: 600px) {
   html,
   body {
     overflow-x: hidden;
-    background-color: #fbfcf7;
+    background-color: #FBFCF7;
   }
   * {
     font-size: 16px;
   }
   #headerContainer,
   #footerContainer {
-    background-color: #fbfcf7;
+    background-color: #FBFCF7;
     margin: 10px 0;
   }
   #posts .each-post,
   #postsContainer {
-    background-color: #fbfcf7 !important;
+    background-color: #FBFCF7 !important;
   }
   img {
     max-width: 100%;
@@ -552,7 +553,7 @@ a:hover {
     top: 0;
     right: 0;
     left: 0;
-    background: #fbfcf7;
+    background: #FBFCF7;
     z-index: 1000;
     border-bottom: 1px solid #DEDDDF;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), inset 0 1px 0 #ffffff;

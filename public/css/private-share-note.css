@@ -147,17 +147,17 @@
   }
 }
 code {
-  padding: 0 .25em;
-  margin: 0 .25em;
+  padding: 0 0.25em;
+  margin: 0 0.25em;
   background: rgba(232, 232, 232, 0.3);
   font-family: consolas,monaco,monospace,serif;
   font-size: 16px;
   color: #2f2f2f;
-  -webkit-border-radius: .25em;
-  -moz-border-radius: .25em;
-  -ms-border-radius: .25em;
-  -o-border-radius: .25em;
-  border-radius: .25em;
+  -webkit-border-radius: 0.25em;
+  -moz-border-radius: 0.25em;
+  -ms-border-radius: 0.25em;
+  -o-border-radius: 0.25em;
+  border-radius: 0.25em;
 }
 a,
 .btn {
@@ -187,8 +187,8 @@ ul.dropdown-menu {
   opacity: 0;
 }
 ul.dropdown-menu.show {
-  -webkit-animation: pulldown .2s;
-  animation: pulldown .2s;
+  -webkit-animation: pulldown 0.2s;
+  animation: pulldown 0.2s;
   visibility: visible;
   opacity: 1;
 }
@@ -435,7 +435,8 @@ a:hover {
   padding-bottom: 10px;
   border-bottom: 1px solid #ebeff2;
 }
-.mce-btn {
+.tox .tox-tbtn,
+.tox .tox-mbtn {
   background: none !important;
 }
 @media screen and (max-width: 600px) {
@@ -727,7 +728,7 @@ table tr:nth-child(2n) {
 }
 #presentation.writting pre.prettyprint .pln,
 #presentation.black pre.prettyprint .pln {
-  color: #000000;
+  color: #000;
 }
 @media screen {
   #presentation.writting pre.prettyprint,
@@ -746,23 +747,23 @@ table tr:nth-child(2n) {
   }
   #presentation.writting pre.prettyprint .str,
   #presentation.black pre.prettyprint .str {
-    color: #008800;
+    color: #080;
   }
   #presentation.writting pre.prettyprint .kwd,
   #presentation.black pre.prettyprint .kwd {
-    color: #000088;
+    color: #008;
   }
   #presentation.writting pre.prettyprint .com,
   #presentation.black pre.prettyprint .com {
-    color: #880000;
+    color: #800;
   }
   #presentation.writting pre.prettyprint .typ,
   #presentation.black pre.prettyprint .typ {
-    color: #660066;
+    color: #606;
   }
   #presentation.writting pre.prettyprint .lit,
   #presentation.black pre.prettyprint .lit {
-    color: #006666;
+    color: #066;
   }
   #presentation.writting pre.prettyprint .pun,
   #presentation.black pre.prettyprint .pun,
@@ -770,29 +771,29 @@ table tr:nth-child(2n) {
   #presentation.black pre.prettyprint .opn,
   #presentation.writting pre.prettyprint .clo,
   #presentation.black pre.prettyprint .clo {
-    color: #666600;
+    color: #660;
   }
   #presentation.writting pre.prettyprint .tag,
   #presentation.black pre.prettyprint .tag {
-    color: #000088;
+    color: #008;
   }
   #presentation.writting pre.prettyprint .atn,
   #presentation.black pre.prettyprint .atn {
-    color: #660066;
+    color: #606;
   }
   #presentation.writting pre.prettyprint .atv,
   #presentation.black pre.prettyprint .atv {
-    color: #008800;
+    color: #080;
   }
   #presentation.writting pre.prettyprint .dec,
   #presentation.black pre.prettyprint .dec,
   #presentation.writting pre.prettyprint .var,
   #presentation.black pre.prettyprint .var {
-    color: #660066;
+    color: #606;
   }
   #presentation.writting pre.prettyprint .fun,
   #presentation.black pre.prettyprint .fun {
-    color: #ff0000;
+    color: red;
   }
 }
 #presentation.writting pre.prettyprint ol.linenums,

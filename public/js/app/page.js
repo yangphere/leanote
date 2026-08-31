@@ -487,20 +487,8 @@ function initEditor() {
 	});
 
 	// 初始化编辑器
-	tinymce.init({
-		inline: true,
-		theme: 'leanote',
-		valid_children: "+pre[div|#text|p|span|textarea|i|b|strong]", // ace
-		/*
-		protect: [
-	        /\<\/?(if|endif)\>/g, // Protect <if> & </endif>
-	        /\<xsl\:[^>]+\>/g, // Protect <xsl:...>
-	        // /<pre.*?>.*?<\/pre>/g, // Protect <pre ></pre>
-	        // /<p.*?>.*?<\/p>/g, // Protect <pre ></pre>
-	        // /<\?php.*?\?>/g // Protect php code
-	    ],
-	    */
-		setup: function(ed) {
+	var editorConfig = LeanoteTinyMCE.createNoteConfig({selector: '#editorContent', locale: LEA.locale});
+	editorConfig.setup = function(ed) {
 			ed.on('keydown', function(e) {
 				// 如果是readony, 则不能做任何操作
 				var num = e.which ? e.which : e.keyCode;
@@ -529,63 +517,17 @@ function initEditor() {
 					return;
 				}
 			});
-		},
-		
-		// fix TinyMCE Removes site base url
-		// http://stackoverflow.com/questions/3360084/tinymce-removes-site-base-urls
-		convert_urls: false, // true会将url变成../api/
-		relative_urls: true,
-		remove_script_host:false,
-		
-		selector : "#editorContent",
-		
-		// content_css 不再需要
-		// content_css : [LEA.sPath + "/css/editor/editor.css"], // .concat(em.getWritingCss()),
-		skin : "custom",
-		language: LEA.locale, // 语言
-		plugins : [
-				"autolink link leaui_image leaui_mindmap lists hr", "paste",
-				"searchreplace leanote_nav leanote_code tabfocus",
-				"table textcolor" ], // nonbreaking directionality charmap
-		toolbar1 : "formatselect | forecolor backcolor | bold italic underline strikethrough | leaui_image leaui_mindmap | leanote_code leanote_inline_code | bullist numlist | alignleft aligncenter alignright alignjustify",
-		toolbar2 : "outdent indent blockquote | link unlink | table | hr removeformat | subscript superscript | searchreplace | pastetext | leanote_ace_pre | fontselect fontsizeselect",
 
-		// 使用tab键: http://www.tinymce.com/wiki.php/Plugin3x:nonbreaking
-		// http://stackoverflow.com/questions/13543220/tiny-mce-how-to-allow-people-to-indent
-		// nonbreaking_force_tab : true,
-		
-		menubar : false,
-		toolbar_items_size : 'small',
-		statusbar : false,
-		url_converter: false,
-		font_formats : "Arial=arial,helvetica,sans-serif;"
-				+ "Arial Black=arial black,avant garde;"
-				+ "Times New Roman=times new roman,times;"
-				+ "Courier New=courier new,courier;"
-				+ "Tahoma=tahoma,arial,helvetica,sans-serif;"
-				+ "Verdana=verdana,geneva;" + "宋体=SimSun;"
-				+ "新宋体=NSimSun;" + "黑体=SimHei;"
-				+ "微软雅黑=Microsoft YaHei",
-		block_formats : "Header 1=h1;Header 2=h2;Header 3=h3;Header 4=h4;Paragraph=p",
-		/*
-		codemirror: {
-		    indentOnInit: true, // Whether or not to indent code on init. 
-		    path: 'CodeMirror', // Path to CodeMirror distribution
-		    config: {           // CodeMirror config object
-		       //mode: 'application/x-httpd-php',
-		       lineNumbers: true
-		    },
-		    jsFiles: [          // Additional JS files to load
-		       // 'mode/clike/clike.js',
-		       //'mode/php/php.js'
-		    ]
-		  },
-		  */
-		  // This option specifies whether data:url images (inline images) should be removed or not from the pasted contents. 
-		  // Setting this to "true" will allow the pasted images, and setting this to "false" will disallow pasted images.  
-		  // For example, Firefox enables you to paste images directly into any contentEditable field. This is normally not something people want, so this option is "false" by default.
-		  paste_data_images: true
-	});
+		ed.on('paste drop undo redo change input', function() {
+			if (window.LeanoteEditorSession) window.LeanoteEditorSession.markMutation(ed.getContent());
+		});
+		ed.on('init SetContent', function() {
+			if (window.LeaAce && typeof window.LeaAce.initAceFromContent === 'function') {
+				window.LeaAce.initAceFromContent(ed);
+			}
+		});
+	};
+	tinymce.init(editorConfig);
 	
 	// 刷新时保存 参考autosave插件
 	window.onbeforeunload = function(e) {
@@ -1087,19 +1029,35 @@ LeaAce = {
 			    }
 			});
 			this._aceEditors[id] = aceEditor;
-			if(val) {
-				aceEditor.setValue(val);
-				// 不要选择代码
-				// TODO
-			} else {
+				if(val) {
+					aceEditor.setValue(val);
+					// 不要选择代码
+					// TODO
+				} else {
 				// 防止 <pre><div>xx</div></pre> 这里的<div>消失
 				// preHtml = preHtml.replace('/&nbsp;/g', ' '); // 以前是把' ' 全换成了&nbsp;
 				// aceEditor.setValue(preHtml);
 				// 全不选
-				// aceEditor.selection.clearSelection();
-			}
+					// aceEditor.selection.clearSelection();
+				}
 
-			// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+				// Ace edits happen outside TinyMCE's contenteditable surface.  Feed
+				// the normalized editor serialization into the shared state adapter
+				// so code-only edits participate in the normal save contract.
+				var aceLoadEpoch;
+				if (window.LeanoteEditorSession && typeof window.LeanoteEditorSession.snapshot === "function") {
+					aceLoadEpoch = window.LeanoteEditorSession.snapshot().loadEpoch;
+				}
+				if (aceEditor.session && typeof aceEditor.session.on === "function") {
+					aceEditor.session.on("change", function () {
+						if (Note.readOnly || !window.LeanoteEditorSession ||
+							typeof window.LeanoteEditorSession.markMutation !== "function" ||
+							typeof getEditorContent !== "function") return;
+						window.LeanoteEditorSession.markMutation(getEditorContent(false), aceLoadEpoch);
+					});
+				}
+
+				// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 			// "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 			me.resetAddHistory();
 			return aceEditor;

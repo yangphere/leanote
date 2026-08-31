@@ -91,7 +91,7 @@
       "key": "Error",
       "namespace": "blog",
       "path": "app/views/member/blog/add_single.html",
-      "line": 95
+      "line": 75
     },
     {
       "key": "Error",
@@ -229,7 +229,7 @@
       "key": "Success",
       "namespace": "blog",
       "path": "app/views/member/blog/add_single.html",
-      "line": 90
+      "line": 70
     },
     {
       "key": "Success",
@@ -265,7 +265,7 @@
       "key": "Success",
       "namespace": "blog",
       "path": "app/views/member/blog/update_abstract.html",
-      "line": 114
+      "line": 94
     },
     {
       "key": "Success",
@@ -343,7 +343,7 @@
       "key": "Are you sure to delete it ?",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 1983
+      "line": 2114
     },
     {
       "key": "Are you sure to delete this image ?",
@@ -457,7 +457,7 @@
       "key": "cancelPublic",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 1874
+      "line": 2005
     },
     {
       "key": "cancelPublic",
@@ -601,7 +601,7 @@
       "key": "copy",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 1885
+      "line": 2016
     },
     {
       "key": "copyToMyNotebook",
@@ -643,7 +643,7 @@
       "key": "datetime",
       "namespace": "msg",
       "path": "public/js/plugins/history.js",
-      "line": 130
+      "line": 134
     },
     {
       "key": "defaultShare",
@@ -655,7 +655,7 @@
       "key": "delete",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 1879
+      "line": 2010
     },
     {
       "key": "delete",
@@ -697,7 +697,7 @@
       "key": "Delete",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2085
+      "line": 2216
     },
     {
       "key": "Delete Success!",
@@ -721,7 +721,7 @@
       "key": "Download",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2086
+      "line": 2217
     },
     {
       "key": "Edit mode",
@@ -954,14 +954,80 @@
     {
       "key": "Error",
       "namespace": "msg",
-      "path": "public/js/plugins/editor_drop_paste.js",
-      "line": 186
+      "path": "public/js/app/note.js",
+      "line": 490
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 513
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 514
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 520
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 521
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 531
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 532
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 543
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 577
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 586
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 593
     },
     {
       "key": "Error",
       "namespace": "msg",
       "path": "public/js/plugins/editor_drop_paste.js",
-      "line": 199
+      "line": 240
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/plugins/editor_drop_paste.js",
+      "line": 253
     },
     {
       "key": "error!",
@@ -1009,7 +1075,7 @@
       "key": "errorEmail",
       "namespace": "msg",
       "path": "public/js/common.js",
-      "line": 905
+      "line": 913
     },
     {
       "key": "errorPassword",
@@ -1039,13 +1105,13 @@
       "key": "exportPdf",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 1877
+      "line": 2008
     },
     {
       "key": "fold",
       "namespace": "msg",
       "path": "public/js/plugins/history.js",
-      "line": 140
+      "line": 144
     },
     {
       "key": "friendEmail",
@@ -1117,7 +1183,7 @@
       "key": "historiesNum",
       "namespace": "msg",
       "path": "public/js/plugins/history.js",
-      "line": 120
+      "line": 124
     },
     {
       "key": "history",
@@ -1261,7 +1327,7 @@
       "key": "inputEmail",
       "namespace": "msg",
       "path": "public/js/common.js",
-      "line": 903
+      "line": 911
     },
     {
       "key": "inputFriendEmail",
@@ -1345,7 +1411,7 @@
       "key": "Insert link into content",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2087
+      "line": 2218
     },
     {
       "key": "inviteEmailBody",
@@ -1411,7 +1477,7 @@
       "key": "move",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 1880
+      "line": 2011
     },
     {
       "key": "Next",
@@ -1423,7 +1489,7 @@
       "key": "noHistories",
       "namespace": "msg",
       "path": "public/js/plugins/history.js",
-      "line": 111
+      "line": 115
     },
     {
       "key": "Normal mode",
@@ -1579,7 +1645,7 @@
       "key": "publicAsBlog",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 1873
+      "line": 2004
     },
     {
       "key": "publicAsBlog",
@@ -1681,19 +1747,19 @@
       "key": "restoreFromThisVersion",
       "namespace": "msg",
       "path": "public/js/plugins/history.js",
-      "line": 130
+      "line": 134
     },
     {
       "key": "saveSuccess",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 449
+      "line": 538
     },
     {
       "key": "saving",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 434
+      "line": 481
     },
     {
       "key": "send",
@@ -1753,13 +1819,13 @@
       "key": "shareToFriends",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 1342
+      "line": 1471
     },
     {
       "key": "shareToFriends",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 1871
+      "line": 2002
     },
     {
       "key": "shareToFriends",
@@ -1903,25 +1969,25 @@
       "key": "unfold",
       "namespace": "msg",
       "path": "public/js/plugins/history.js",
-      "line": 130
+      "line": 134
     },
     {
       "key": "unfold",
       "namespace": "msg",
       "path": "public/js/plugins/history.js",
-      "line": 144
+      "line": 148
     },
     {
       "key": "unTitled",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 1384
+      "line": 1513
     },
     {
       "key": "unTitled",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2561
+      "line": 2692
     },
     {
       "key": "update",
@@ -2017,7 +2083,7 @@
   "dynamic": [
     {
       "path": "public/js/common.js",
-      "line": 1234,
+      "line": 1242,
       "column": 11
     },
     {

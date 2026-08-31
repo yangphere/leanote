@@ -94,6 +94,10 @@ define('history', [], function() {
                     // 设置之
                     note = Note.cache[Note.curNoteId];
                     setEditorContent(me.list[me.curIndex].Content, note.IsMarkdown);
+					if (window.LeanoteEditorSession && typeof window.LeanoteEditorSession.markMutation === 'function') {
+						var restoredContent = getEditorContent(note.IsMarkdown);
+						window.LeanoteEditorSession.markMutation(isArray(restoredContent) ? restoredContent[0] : restoredContent);
+					}
 
                     hideBootstrapModal($tpl[0]);
                     // 保存

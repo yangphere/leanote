@@ -1,172 +1,116 @@
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const test = require("node:test");
-const vm = require("node:vm");
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const test = require('node:test');
+const vm = require('node:vm');
 
-const ROOT = path.resolve(__dirname, "../..");
-const PRODUCTION_ASSETS = [
-  "public/tinymce/plugins/paste/classes/Clipboard.js",
-  "public/tinymce/plugins/paste/plugin.js",
-  "public/tinymce/plugins/paste/plugin.min.js",
-  "public/tinymce/tinymce.full.js",
-  "public/tinymce/tinymce.full.min.js",
-];
+const ROOT = path.resolve(__dirname, '../..');
+const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 
-function extractPastePlugin(source) {
-  const moduleMarker = '"tinymce/pasteplugin/Utils"';
-  const moduleIndex = source.indexOf(moduleMarker);
-  assert.notEqual(moduleIndex, -1, "paste plugin module is present");
+test('TinyMCE 8 owns ordinary paste and no legacy Clipboard fork remains', () => {
+  const core = read('public/tinymce/tinymce.js');
+  const minCore = read('public/tinymce/tinymce.min.js');
+  assert.match(core, /majorVersion\s*[:=]\s*["']8["']/);
+  assert.match(minCore, /majorVersion.{0,30}8/);
+  assert.doesNotMatch(core, /tinymce\/pasteplugin\/Clipboard|paste\/classes\/Clipboard/);
+  const legacyPasteRoot = path.join(ROOT, 'public/tinymce/plugins/paste');
+  const legacyFiles = fs.existsSync(legacyPasteRoot)
+    ? fs.readdirSync(legacyPasteRoot, { recursive: true }).filter((entry) => /\.[^./\\]+$/.test(entry))
+    : [];
+  assert.deepEqual(legacyFiles, []);
+});
 
-  const minifiedStart = source.lastIndexOf("!function(", moduleIndex);
-  const start = minifiedStart !== -1
-    ? minifiedStart
-    : source.lastIndexOf("(function(", moduleIndex);
-  const endMarker = minifiedStart !== -1 ? "}(this);" : "})(this);";
-  const end = source.indexOf(endMarker, moduleIndex);
-  assert.notEqual(start, -1, "paste plugin bundle start is present");
-  assert.notEqual(end, -1, "paste plugin bundle end is present");
+test('Leanote paste boundary has one upload owner and observable failure handling', () => {
+  const source = read('public/js/plugins/editor_drop_paste.js');
+  const editorRegistrations = source.match(/#editorContent[^\n]*\.fileupload\(/g) ?? [];
+  assert.equal(editorRegistrations.length, 1);
+  assert.match(source, /url:\s*["']\/file\/pasteImage["']/);
+  assert.match(source, /data\.result\.Ok\s*==\s*true/);
+  assert.match(source, /data\.process\.remove\(\)/);
+  assert.doesNotMatch(source, /tinymce\.pasteplugin|Clipboard\.js/);
+});
 
-  return source.slice(start, end + endMarker.length);
-}
+test('paste/drop upload boundary does not enable a read-only editor', () => {
+  const source = read('public/js/plugins/editor_drop_paste.js');
+  assert.match(source, /function isEditorReadOnly\(\)/);
+  assert.match(source, /if \(isEditorReadOnly\(\)\) \{[\s\S]{0,180}?return;/);
+  assert.doesNotMatch(source, /if \(LEA\.readOnly\) \{\s*LEA\.toggleWriteable\(\);/);
+  assert.match(source, /data\.leanoteLoadEpoch/);
+  assert.match(source, /isCurrentEditorEpoch\(data\.leanoteLoadEpoch\)/);
+  assert.match(source, /data\.process && data\.process\.remove\(\)/);
+});
 
-function exposeClipboardModule(source) {
-  const exposePattern = /(\w+)\(\["tinymce\/pasteplugin\/Utils","tinymce\/pasteplugin\/WordFilter"\]\)/;
-  const match = source.match(exposePattern);
-  assert.ok(match, "paste plugin exposure call is present");
-
-  return source.replace(
-    exposePattern,
-    `${match[1]}(["tinymce/pasteplugin/Utils","tinymce/pasteplugin/WordFilter","tinymce/pasteplugin/Clipboard"])`,
-  );
-}
-
-function loadClipboard(assetPath) {
-  const source = fs.readFileSync(path.join(ROOT, assetPath), "utf8");
-  const context = {
-    LeaAce: { nowIsInAce: () => null },
-    setTimeout: () => 0,
-    tinymce: {
-      Env: { gecko: false, ie: false, mac: false, webkit: false },
-      PluginManager: { add: () => {} },
-      dom: { DOMUtils: {} },
-      html: {
-        DomParser: function DomParser() {},
-        Node: function Node() {},
-        Schema: function Schema() {},
-        Serializer: function Serializer() {},
+test('an upload completed after switching notes cannot insert into the new editor session', () => {
+  let uploadOptions;
+  let insertions = 0;
+  const jquery = (selector) => {
+    const node = {
+      0: {},
+      addClass() { return node; },
+      append() { return node; },
+      appendTo() { return node; },
+      css(name) { return name === 'height' ? '0px' : node; },
+      empty() { return node; },
+      fileupload(options) {
+        if (selector === '#upload') uploadOptions = options;
+        return node;
       },
-      util: {
-        Delay: {},
-        LocalStorage: {},
-        Tools: {},
-        VK: {
-          metaKeyPressed: (event) => event.ctrlKey || event.metaKey,
-        },
-      },
-    },
-  };
-
-  if (assetPath.endsWith("classes/Clipboard.js")) {
-    context.define = (_id, _dependencies, definition) => {
-      context.tinymce.pasteplugin = {
-        Clipboard: definition(
-          context.tinymce.Env,
-          context.tinymce.util.VK,
-          { innerText: () => "" },
-        ),
-      };
+      find() { return node; },
+      hide() { return node; },
+      on() { return node; },
+      parent() { return node; },
+      remove() { return node; },
+      removeClass() { return node; },
+      scrollTop() { return node; },
+      show() { return node; },
+      trigger() { return node; },
     };
-    vm.runInNewContext(source, context, { filename: assetPath });
-    return context.tinymce.pasteplugin.Clipboard;
+    return node;
+  };
+  function FakeImage() {
+    this.style = {};
   }
-
-  const pluginSource = exposeClipboardModule(extractPastePlugin(source));
-  vm.runInNewContext(pluginSource, context, { filename: assetPath });
-  return context.tinymce.pasteplugin.Clipboard;
-}
-
-function createEditor() {
-  const handlers = {};
-  const pasteBin = {
-    firstChild: null,
-    focus: () => {},
-    innerHTML: "%MCEPASTEBIN%",
+  const session = {
+    epoch: 1,
+    isCurrentLoad(epoch) { return epoch === this.epoch; },
+    snapshot() { return { loadEpoch: this.epoch }; },
   };
-  const range = {};
-
-  return {
-    editor: {
-      dom: {
-        add: () => pasteBin,
-        bind: () => {},
-        getStyle: () => "ltr",
-        getViewPort: () => ({ h: 100, y: 0 }),
-        remove: () => {},
-        setStyle: () => {},
-        unbind: () => {},
-      },
-      getBody: () => ({ clientHeight: 100, scrollTop: 0 }),
-      getDoc: () => ({}),
-      getWin: () => ({}),
-      on: (events, handler) => {
-        for (const event of events.split(" ")) {
-          handlers[event] = handler;
-        }
-      },
-      selection: {
-        getRng: () => range,
-        select: () => {},
-        setRng: () => {},
-      },
-      settings: { paste_data_images: true },
+  const note = { NoteId: 'note-a', UserId: 'user-a', IsMarkdown: false };
+  const sandbox = {
+    $: jquery,
+    Image: FakeImage,
+    LEA: { readOnly: false },
+    Note: {
+      curNoteId: note.NoteId,
+      readOnly: false,
+      isReadOnly: false,
+      getCurNote() { return note; },
     },
-    handlers,
+    UserInfo: { UserId: note.UserId },
+    document: { body: { appendChild() {} }, createElement() { return new FakeImage(); } },
+    setTimeout() { return 1; },
+    tinymce: {
+      activeEditor: {
+        dom: { createHTML() { return '<img>'; }, get() { return {}; } },
+        insertContent() { insertions += 1; },
+      },
+    },
   };
-}
+  sandbox.window = sandbox;
+  sandbox.window.LeanoteEditorSession = session;
+  sandbox.define = (_name, _dependencies, factory) => factory();
+  vm.runInNewContext(read('public/js/plugins/editor_drop_paste.js'), sandbox);
 
-function pasteImage(Clipboard, clipboardEvent) {
-  const { editor, handlers } = createEditor();
-  new Clipboard(editor);
+  const data = {
+    context: jquery('<li>'),
+    files: [{ name: 'upload.png', size: 128 }],
+    result: { Ok: true, Id: 'uploaded-image' },
+    submit() {},
+  };
+  uploadOptions.add(null, data);
+  sandbox.Note.curNoteId = 'note-b';
+  session.epoch = 2;
+  uploadOptions.done(null, data);
 
-  handlers.keydown({
-    ctrlKey: true,
-    isDefaultPrevented: () => false,
-    keyCode: 86,
-    metaKey: false,
-    shiftKey: false,
-    stopImmediatePropagation: () => {},
-  });
-
-  let preventDefaultCalls = 0;
-  handlers.paste({
-    ...clipboardEvent,
-    preventDefault: () => {
-      preventDefaultCalls += 1;
-    },
-  });
-
-  return preventDefaultCalls;
-}
-
-for (const assetPath of PRODUCTION_ASSETS) {
-  test(`${assetPath} prevents TinyMCE from inserting a directly pasted image`, () => {
-    const Clipboard = loadClipboard(assetPath);
-    const calls = pasteImage(Clipboard, {
-      clipboardData: { items: [{ type: "image/png" }] },
-    });
-
-    assert.equal(calls, 1);
-  });
-
-  test(`${assetPath} detects image items on a jQuery-wrapped paste event`, () => {
-    const Clipboard = loadClipboard(assetPath);
-    const calls = pasteImage(Clipboard, {
-      originalEvent: {
-        clipboardData: { items: [{ type: "image/png" }] },
-      },
-    });
-
-    assert.equal(calls, 1);
-  });
-}
+  assert.equal(insertions, 0);
+});
