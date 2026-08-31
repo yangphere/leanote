@@ -27,9 +27,15 @@
     ".dockerignore",
     "sh/package.sh",
     "docs/modernization/browser-smoke",
+    "app/tests/harness",
+    "cmd/leanote",
+    "go.mod",
+    "package.json",
+    "conf/app.conf-default",
+    "conf/app.conf",
     "docs/modernization-backlog.md"
   ],
-  "notes": "首发只支持 Linux/amd64 且必须保留完整 PDF；arm64 后续工作为 MOD-002。",
+  "notes": "首发只支持 Linux/amd64 且必须保留完整 PDF；arm64 后续工作为 MOD-002。Q-F1 已确认采用 package.json 顶层 version（当前 1.0.0），Go release 构建 linker 注入同一值。Q-F2 已确认由 C-b 提供无认证 GET /healthz：HTTP+Mongo ready 返回 200，否则 503，响应不泄露配置；C-b 实现证据仍需依赖核验。Q-F3 已确认 release 按 tag/ref 隔离 concurrency 且 cancel-in-progress=false，已有 Release、资产或镜像 tag 拒绝且不覆盖，触发 tag/ref 必须指向当前 commit 且不可 force-update，workflow 不自动重试/删除，人工恢复须有明确边界。Q-F4 需求接口已闭合并固定为 research/cb-production-config-contract.md：显式 -conf /etc/leanote/app.conf -runMode prod、只读 0440、MONGODB_URL/db.urlEnv、LEANOTE_APP_SECRET/app.secret、db.dbname 与 URI 一致且非 leanote_test；运行时注入先解析但冲突不覆盖，配置错误在 bind/dial/healthz 前以稳定错误码退出 78，Mongo 未就绪由 /healthz 返回 503，禁止默认/localhost/host-port/未声明别名回退，日志/artifact 脱敏。research/cb-production-config-evidence.md 固定 C-b E1-E8 正向证据矩阵、当前负面结果和 artifact provenance 收口规则；当前矩阵仍 BLOCKED，不得把局部测试通过视为正向证据。Q-F5 已确认采用独立不可变 browser-release-matrix-v1 artifact（release-matrix.json + provenance.json），由 release workflow 在 tag commit 上生成并校验当前 run/attempt、tag ref、commit 和 SHA-256，不进入源码、不自引用、不覆盖或删除。F 当前保持 planning：两个依赖的真实完成证据和 Q-F4 C-b E1-E8 正向实现证据仍是启动前阻断。",
   "meta": {
     "depends_on": [
       "08-25-revel-migration",

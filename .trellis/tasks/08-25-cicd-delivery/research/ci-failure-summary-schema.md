@@ -77,8 +77,10 @@ Go 矩阵的每个 leg 必须分别映射到对应版本 ID，汇总 job 必须�
       "required": ["health_path", "readiness", "http_status", "exit_code"],
       "properties": {
         "health_path": {
-          "type": ["string", "null"],
-          "pattern": "^(/[A-Za-z0-9._~/?=&%-]{0,240})?$"
+          "anyOf": [
+            { "type": "null" },
+            { "const": "/healthz" }
+          ]
         },
         "readiness": { "enum": ["passed", "failed", "not_run", "unknown"] },
         "http_status": { "type": ["integer", "null"], "minimum": 100, "maximum": 599 },
@@ -106,7 +108,7 @@ Go 矩阵的每个 leg 必须分别映射到对应版本 ID，汇总 job 必须�
       "type": "array", "maxItems": 20,
       "items": { "type": "integer", "minimum": 100, "maximum": 599 }
     },
-    "generated_at": { "type": "string", "format": "date-time" }
+    "generated_at": { "type": "string", "format": "date-time", "pattern": "Z$" }
   }
 }
 ```
@@ -115,10 +117,17 @@ Go 矩阵的每个 leg 必须分别映射到对应版本 ID，汇总 job 必须�
 
 - 每个 job 的最后一步使用 `if: always()` 写摘要；摘要步骤本身不能读取或复制原始日志、页面正文、
   Cookie、认证头、storage state、截图、视频或 trace。`failure.message` 只允许脱敏类别和短原因，
-  不得包含 token、邮箱、用户数据、绝对本地路径或请求正文。
+  不得包含 token、邮箱、用户数据、配置值、凭据、完整 Mongo URI、绝对本地路径或请求正文。
 - checkout、tool setup、依赖安装或服务启动失败时，仍须写最小记录：`status=failed`、
   `failure.category=job_not_started`（若能识别则使用更具体类别）、`service.readiness=not_run`，
   未运行计数为 `null`，并保留实际退出码（未知时为 `null`）。
+- C-b 生产配置校验失败时必须在 HTTP readiness 前退出，摘要使用 `status=failed`、
+  `failure.category=setup`、非零 `failure.exit_code`，且 `service.readiness=not_run`；摘要只能保留脱敏的
+  缺失/空值/冲突/公开默认值类别，不得包含配置键值、secret 或 Mongo URI。
+- 执行应用 HTTP readiness 的 job 必须将 `service.health_path` 写为 `/healthz`，并按 Q-F2 探测：HTTP
+  服务已监听且 MongoDB ping 成功时状态码必须为 `200`，任一条件未满足时必须为 `503`；响应内容不得
+  写入摘要，且 `/login` 页面 `200` 不得被记录为健康证明。未执行服务 readiness 的 job 将
+  `service.health_path` 和 `service.http_status` 记为 `null`，`service.readiness` 记为 `not_run`。
 - 独立 `summary` job 必须以 `needs: [所有质量门 job]` 和 `if: always()` 运行，收集并校验全部 8 个
   固定 job ID 的摘要。缺文件、重复 job id、commit/ref 不一致、schema 失败、预期测试层
   `discovery != passed` 或 `discovered_count == 0`、服务 readiness 未通过、cleanup 失败时，汇总
@@ -127,6 +136,10 @@ Go 矩阵的每个 leg 必须分别映射到对应版本 ID，汇总 job 必须�
   `exit_code`，不得上传第二个健康文件。
 - `status=passed` 只能与 `failure.category=none` 和成功的服务/测试门禁组合；`status=failed`、
   `cancelled` 或 `not_run` 必须保留非成功类别或明确未运行状态，不能用 `category=none` 伪造成功。
+- 对需要测试或服务的 job，`status=passed` 还必须满足 `tests.discovery=passed`、
+  `tests.discovered_count > 0`、`tests.executed_count > 0`，以及适用时
+  `service.readiness=passed`；`generated_at` 必须是 UTC RFC3339（以 `Z` 结尾），不能使用本地时区
+  或当前时间以外的伪造值。
 - 只允许上传 `ci-summaries/*.json`；服务健康信息必须来自每条摘要的 `service` 字段，不得上传独立
   健康文件。artifact 保留期最长 7 天。成功运行不上传大型中间物。手工 `record-export-pdf` 是唯一
   例外，只能上传单一不含敏感字段的 Golden JSON，同样最长保留 7 天。
