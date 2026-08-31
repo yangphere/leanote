@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 12
-- **Last Active**: 2026-08-30
+- **Total Sessions**: 13
+- **Last Active**: 2026-08-31
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~301 | Active |
+| `journal-1.md` | ~323 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 13 | 2026-08-31 | 完成 TinyMCE 8 升级 | `05f2b400de28b7847fa26ee2e2815eea1a38e227` | `dev` |
 | 12 | 2026-08-30 | Bootstrap 5.3 升级收口 | `619b569` | `codex/bootstrap-5-3-upgrade` |
 | 11 | 2026-08-30 | jQuery 3.7 升级提交与归档 | `69eefae` | `dev` |
 | 10 | 2026-08-30 | Revel 迁移规划复核、提交与归档 | `4ae8578` | `dev` |

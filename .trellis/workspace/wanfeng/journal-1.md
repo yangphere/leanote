@@ -299,3 +299,25 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 13: 完成 TinyMCE 8 升级
+<!-- trellis-session: v=2 fp=3892c7d22b6c0dba -->
+
+**Date**: 2026-08-31
+**Task**: 完成 TinyMCE 8 升级
+**Branch**: `dev`
+
+### Summary
+
+将自托管 TinyMCE 升级到 8.8.2，迁移共享配置与第一方插件，收敛保存 revision、失败响应和跨笔记异步上传边界；Node 101/101、Go 保存契约与确定性构建验证通过，真实浏览器 E2E 环境缺失已记录。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `05f2b400de28b7847fa26ee2e2815eea1a38e227` | fix: 完成 TinyMCE 8 升级与编辑器状态修复 |
+
+### Status
+
+[OK] **Completed**
