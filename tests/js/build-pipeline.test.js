@@ -568,3 +568,28 @@ test('sanitized reporter drops unknown sensitive fields', async () => {
   assert.equal(Object.hasOwn(output, 'body'), false);
   assert.deepEqual(output.pages, [{ url: '/note', status: 200 }]);
 });
+
+// Windows cannot represent the POSIX exec bit, so the mode contract is only
+// observable on POSIX filesystems; there is nothing to assert on win32.
+const testPosix = process.platform === 'win32' ? test.skip : test;
+
+testPosix('build publishes every output at mode 0644 regardless of umask and source mode', async () => {
+  const { runBuild } = await import('../../scripts/build/index.mjs');
+  const { BUILD_OUTPUTS } = await import('../../scripts/build/manifest.mjs');
+  const temp = copyBuildTree();
+  // First-party identity copies go through fs.copyFile and would otherwise
+  // inherit the checked-out mode; make that leak visible if the fix regresses.
+  const identityCopy = 'public/tinymce/plugins/leaui_image/plugin.min.js';
+  fs.chmodSync(path.join(temp, identityCopy), 0o755);
+  const previousUmask = process.umask(0o077);
+  try {
+    await runBuild(temp);
+    for (const relative of BUILD_OUTPUTS) {
+      const mode = fs.statSync(path.join(temp, relative)).mode & 0o7777;
+      assert.equal(mode, 0o644, `output mode for ${relative}`);
+    }
+  } finally {
+    process.umask(previousUmask);
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});

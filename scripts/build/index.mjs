@@ -147,6 +147,11 @@ export async function runBuild(root = process.cwd(), options = {}) {
       if (failAfter !== null && published.length >= failAfter) throw new Error(`injected publish failure after ${failAfter} outputs`);
       await rename(staged, destination);
       published.push(destination);
+      // Published assets are HTTP-served text tracked at 100644; the mode is
+      // fixed here so umask, tarball, and checkout permissions cannot leak
+      // into the generated tree (fs.writeFile's mode argument would be
+      // masked by umask, so a chmod after publish is required).
+      await fs.chmod(destination, 0o644);
     }
   } catch (error) {
     failure = error;
