@@ -321,3 +321,25 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 14: CI/CD 交付与发布收口
+<!-- trellis-session: v=2 fp=5a4159967e20751b -->
+
+**Date**: 2026-09-01
+**Task**: CI/CD 交付与发布收口
+**Branch**: `dev`
+
+### Summary
+
+完成 CI/CD 质量门、严格版本发布、Linux/amd64 tarball 与 GHCR 镜像契约，补齐生产配置、healthz、真实 PDF smoke、隔离 E2E、失败摘要与发布制品校验；本地 Go/Node/build/契约检查通过，GitHub/GHCR、Linux 容器、受保护浏览器及依赖任务证据仍按材料保留为外部门禁。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2dd4d18` | ci: 建立可复现 CI/CD 交付与发布流程 |
+
+### Status
+
+[OK] **Completed**
