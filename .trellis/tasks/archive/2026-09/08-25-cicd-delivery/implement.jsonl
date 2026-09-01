@@ -6,5 +6,5 @@
 {"file": ".trellis/tasks/08-25-cicd-delivery/research/cb-production-config-contract.md", "reason": "C-b v1 生产配置唯一接口：/etc/leanote/app.conf、0440、MONGODB_URL/LEANOTE_APP_SECRET 占位键、来源优先级、稳定错误码/退出 78、URI/secret 约束和脱敏实现证据。"}
 {"file": ".trellis/tasks/08-25-cicd-delivery/research/cb-production-config-evidence.md", "reason": "C-b Q-F4 正向证据矩阵：E1-E8 的正向证据、复核入口、当前 checkout 的失败/部分结果、artifact provenance 和 F 激活收口规则。"}
 {"file": ".trellis/tasks/08-25-cicd-delivery/research/ci-failure-summary-schema.md", "reason": "统一固定 job ID 的质量门失败摘要 schema、always 收尾、早期失败 fallback、service 健康字段、脱敏边界和 artifact allowlist。"}
-{"file": ".trellis/tasks/08-25-cicd-delivery/research/release-matrix-contract.md", "reason": "browser-release-matrix-v1 独立不可变 artifact 的 provenance 绑定、四浏览器当前/前一主版本八行 JSON Schema、主版本判定、唯一键和真实环境门禁。"}
+{"file": ".trellis/tasks/08-25-cicd-delivery/research/release-matrix-contract.md", "reason": "browser-release-matrix-v1 独立不可变 artifact 的 provenance/coverage_summaries/digest 绑定、四浏览器当前/前一主版本八行 JSON Schema、主版本判定、唯一键和真实环境门禁。"}
 {"file": ".trellis/tasks/08-25-cicd-delivery/research/release-artifact-contract.md", "reason": "quality-gate 到 release 的唯一输入 artifact 名称、五文件 allowlist、manifest 与两份 JSON 元数据 schema、tag commit 时间/本地重建 digest/registry digest/attestation 绑定、固定校验和格式及 run/ref/commit 交接顺序。"}

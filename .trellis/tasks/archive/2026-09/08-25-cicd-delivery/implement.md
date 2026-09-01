@@ -13,8 +13,9 @@
 - 版本与发布接口契约已确认：Go linker 注入 `github.com/yangphere/leanote/app/service.BuildVersion`，未注入值为
   `dev` 且 release/package/container smoke 拒绝；`GET /healthz` 返回固定 JSON 状态且不含版本字段；tarball
   二进制为 `bin/leanote`、权限 `0755`；GHCR 唯一 tag 为 `ghcr.io/yangphere/leanote:vX.Y.Z`，不生成别名。
-- F 只能在 `08-25-revel-migration` 的真实验收闭合、`08-25-frontend-libs` 组合门禁完成并归档后
-  激活；父任务子项 `[n/n done]` 不足以解除依赖。规格审核阶段不得运行 `task.py start`。
+- F 的正式发布只能在 `08-25-revel-migration` 的真实验收闭合、`08-25-frontend-libs` 组合门禁完成并归档后
+  激活；Q-E1 等待模式的 tag 预检 producer 可在此之前运行但不得创建 Release/GHCR 或改变 F 状态。父任务子项
+  `[n/n done]` 不足以解除正式发布依赖。规格审核阶段不得运行 `task.py start`。
 - 本任务 PRD、设计和研究材料中的精确 tag 规则优先于父任务/ADR 的历史 `v*` 描述；失败摘要和
   浏览器矩阵必须分别遵守 `research/ci-failure-summary-schema.md` 与
   `research/release-matrix-contract.md`，不得创建占位证据。
@@ -30,8 +31,9 @@
 
 - [ ] 重新读取两个依赖的归档 `task.json`、PRD、design、implement、check 和真实 workflow 证据；
       C-b 必须不再命中 `app/cmd`、`github.com/revel/*` 或 `revel.` 交付路径，frontend-libs 必须
-      提供真实 Chrome/Edge/Firefox/Safari 当前及前一主版本的 smoke 定义、执行能力和
-      `browser-release-matrix-v1` 证据 workflow 契约。
+      在正式发布前提供真实 Chrome/Edge/Firefox/Safari 当前及前一主版本的 smoke 定义、执行能力和
+      `browser-release-matrix-v1` 证据 workflow 契约。Q-E1 等待模式的预检 producer 可在 E 归档前生成仅供 E 验收的 artifact，
+      但不得创建 Release/GHCR 或标记 F 完成。
 - [x] Q-F1 已确认并记录：版本只读 `package.json` 顶层 `version`，Go release 构建通过 linker 注入同一值。
 - [x] Q-F2 已确认并记录：C-b 提供无认证 `GET /healthz`，HTTP+Mongo ready 返回 `200`，否则 `503`，响应不泄露配置；C-b 实现证据仍需在 Task 0 复核。
 - [x] Q-F3 已确认并记录：release 按 tag/ref 隔离 concurrency 且 `cancel-in-progress: false`；已有 Release、资产或镜像 tag 拒绝且不覆盖，触发 tag/ref 必须指向当前 commit 且不可 force-update，workflow 不自动重试/删除，人工恢复须有明确边界。
@@ -52,8 +54,9 @@
 
 - [x] 为 Go 单元/静态检查、Mongo 集成、Node build/test、Chromium E2E、生成物漂移、package smoke 和 PDF smoke 提供非交互命令，并定义真实 Chrome、Edge、Firefox、Safari 当前及前一主版本 release smoke 的记录命令或人工环境入口（命令见 `quality-gate.yml`，真实受保护 runner 仍待执行）。
 - [x] 为受保护真实浏览器证据 workflow 定义固定入口：仅消费 release tag 的 checkout SHA，生成一次
-      `browser-release-matrix-v1` artifact（`release-matrix.json` + `provenance.json`），不得接受可改变
-      ref、MongoDB 版本或门禁的输入；release validator 只消费当前 run/attempt 的 artifact。
+      `browser-release-matrix-v1` artifact（`release-matrix.json` + `provenance.json`），其中每行保存
+      `coverage_summary_sha256`、provenance 内嵌八槽位 `coverage_summaries`；不得接受可改变 ref、MongoDB
+      版本或门禁的输入；release validator 只消费当前 run/attempt 的 artifact。
 - [x] 从 `package.json` 顶层 `version` 读取唯一版本，先校验 `package-lock.json` 根 package
       的 `version` 完全一致，再增加精确 `vX.Y.Z` tag、Go linker 注入、应用显示/固定 JSON `GET /healthz`、tarball
       和 OCI label 一致性检查；重复资产或未注入版本必须失败而不覆盖。
@@ -157,7 +160,7 @@
       校验 gate 产物，任何失败都不创建 Release。
 - [x] 在同一 release run、同一 tag checkout SHA 上调用受保护的真实浏览器证据 workflow；只接受一次
       `browser-release-matrix-v1` artifact，按 `research/release-matrix-contract.md` 校验两文件 allowlist、
-      provenance、run/attempt、tag ref、commit、矩阵 SHA-256、八行唯一键和真实 Safari 门禁；不从源码
+      provenance、coverage summary digest、run/attempt、tag ref、commit、矩阵 SHA-256、八行唯一键和真实 Safari 门禁；不从源码
       tracked 文件、旧 run/attempt 或占位记录补回矩阵；重试 attempt 的旧 artifact 视为重复并阻断，
       不由 workflow 自动删除。
 - [x] release 只下载当前 tag quality-gate run 的机器可读 artifact 清单及其 allowlisted 文件，
@@ -187,9 +190,11 @@
 - [ ] 检查工作流唯一触发、权限、固定 action/image 引用、缓存、timeout、artifact schema/留存和日志脱敏。
 - [ ] 从当前 release run 的 `browser-release-matrix-v1` artifact 按
       `research/release-matrix-contract.md` 校验每个发布候选的真实四浏览器当前/前一版本八行唯一键
-      记录，确认同一 commit、产品/完整版本、OS、覆盖范围、认证/错误/资源门禁、执行时间和结果齐全；
+      记录，确认同一 commit、产品/完整版本、OS、四个稳定 coverage ID、每槽位 summary 的正整数发现/执行数、
+      digest、认证/错误/资源门禁、执行时间和结果齐全；
       真实 Safari 必须存在，Chromium/WebKit 不得替代，禁止占位记录；同时校验 `provenance.json` 的
-      artifact 名称、唯一性、run/attempt、tag ref 和矩阵 SHA-256，不能从 tracked 文件或其他 run 补回。
+      artifact 名称、唯一性、run/attempt、tag ref、矩阵 SHA-256、八槽位 coverage_summaries 及每行
+      `coverage_summary_sha256` 的 JCS 重算结果，不能从 tracked 文件或其他 run 补回。
 - [x] 更新 README/部署说明，逐字引用 C-b v1 的 `/etc/leanote/app.conf`、`0440`、`MONGODB_URL`/`db.urlEnv`、
       `LEANOTE_APP_SECRET`/`app.secret`、`db.dbname` 匹配、优先级、稳定错误码/退出 `78` 与 fail-closed 规则，以及支持矩阵、卷、
       架构限制及“无自动生产部署”边界。
@@ -209,7 +214,12 @@
       smoke 的 run/ref/commit/SHA-256 provenance；缺一仍不得激活。
 - [x] Q-F5 浏览器矩阵采用已确认的独立不可变证明：release workflow 在 tag commit 上调用受保护真实
       浏览器证据 workflow，生成一次 `browser-release-matrix-v1` artifact（矩阵 + provenance），由
-      validator 绑定当前 run/attempt、tag ref、commit 和 SHA-256；不进入源码提交、不自引用、不覆盖或删除。
+      validator 绑定当前 run/attempt、tag ref、commit、矩阵 SHA-256、四个稳定 coverage ID 及每槽位
+      coverage summary 的 JCS digest；不进入源码提交、不自引用、不覆盖或删除。
+- [ ] **Coverage contract addendum (2026-09-01)**：上述历史入口勾选只证明原始两文件 artifact 的
+      入口约定，不证明当前 producer/validator 已实现本契约新增的四项 coverage、`coverage_summaries`、
+      `coverage_summary_sha256` 和 JCS 重算。现有 producer 若仍输出通用 scope，必须保持 F/AC-E6 阻断，
+      直至实现与 `research/release-matrix-contract.md` 完全一致并取得新的 run/attempt 证据。
 - [ ] 两个依赖的真实完成证据已重新核验；否则保持 planning。
 - [x] PRD Technical Contracts 已闭合并同步：linker 符号/未注入行为、`/healthz` 固定 JSON schema、
       tarball `bin/leanote`/`0755` 布局和 `ghcr.io/yangphere/leanote:vX.Y.Z` 映射均有唯一契约；实现不得

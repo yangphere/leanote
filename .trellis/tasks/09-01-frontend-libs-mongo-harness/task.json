@@ -1,0 +1,39 @@
+{
+  "id": "frontend-libs-mongo-harness",
+  "name": "frontend-libs-mongo-harness",
+  "title": "B-E2 统一 Mongo service 与 E2E harness 生命周期",
+  "description": "消除 CI Mongo service 与 Chromium 自建 harness 同时抢占 27017 的冲突，明确唯一测试模式、数据库约束、启动前 fail-closed 和清理证据。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P0",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-09-01",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "master",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-25-frontend-libs",
+  "relatedFiles": [
+    "app/tests",
+    "app/tests/harness",
+    "app/tests/harness/cmd/e2e",
+    ".github/workflows/quality-gate.yml",
+    ".trellis/tasks/08-25-frontend-libs/implement.md"
+  ],
+  "notes": "",
+  "meta": {
+    "blocker": "B-E2",
+    "sequence": "2",
+    "owner": "go-harness",
+    "depends_on": [
+      "09-01-frontend-libs-build-mode"
+    ]
+  }
+}

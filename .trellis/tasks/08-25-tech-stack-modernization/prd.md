@@ -39,14 +39,14 @@
 │           └─ C-b 08-25-revel-migration     ← B
 ├─ Frontend track
 │  └─ D 08-25-frontend-build-chain           ← G
-│     └─ E 08-25-frontend-libs                ← D（协调父任务）
-│        └─ E-jQ 08-25-jquery-upgrade         ← D
-│           └─ E-BS 08-25-bootstrap-upgrade  ← E-jQ
-│              └─ E-TM 08-25-tinymce-upgrade ← E-BS
+│     └─ E 08-25-frontend-libs                ← D（协调收口，planning）
+│        ├─ E-jQ 08-25-jquery-upgrade         [archive/completed]
+│        ├─ E-BS 08-25-bootstrap-upgrade      [archive/completed]
+│        └─ E-TM 08-25-tinymce-upgrade        [archive/completed]
 └─ F 08-25-cicd-delivery                      ← C-b + E
 ```
 
-G 必须先完成；随后后端与前端轨道可并行。F 只在两个轨道全部完成后启动。
+上图保留历史 children 与原计划依赖，不能单独证明当前生命周期顺序。2026-09-01 的现场状态是：D 及三个 E child 已归档，E 仍为 `planning`；F 也已归档，但 F 的 notes 仍声称上游真实证据阻断。G 必须先完成；随后后端与前端轨道可并行。F “只在两个轨道全部完成后启动”是原计划约束，而不是对当前 F 归档时序的事实背书。Q-E1 等待模式允许受保护 workflow 在 E 归档前生成仅供 E 验收的 tag 预检 artifact，但该运行不得发布或改变 F 状态；F 正式发布仍位于 E 归档之后，不在任务图中增加反向边。父任务收口前必须登记该时序冲突，并分别核验 E 候选提交门禁与 F tag-bound 发布 artifact。
 
 ## Requirements
 
@@ -94,7 +94,7 @@ G 必须先完成；随后后端与前端轨道可并行。F 只在两个轨道�
 
 ### R-E：前端库协调
 
-- `08-25-frontend-libs` 只协调三个顺序子任务，不直接混合生产改动。
+- `08-25-frontend-libs` 只对已归档的三个子任务做同一候选提交组合验收，不直接混合生产改动；children 关系用于历史追踪，不表示本轮仍需按顺序启动。
 - jQuery 固定 3.7.1；`jquery-migrate` 仅开发诊断，生产无 migrate 且 warning 为零。
 - Bootstrap 固定 5.3.8；迁移模板、插件和 `leaui_image` iframe，不做视觉重设计。
 - TinyMCE 固定 8.8.2、自托管、显式 GPL；迁移四个实际插件和粘贴行为，核验后删除失效 `leaui_mind` 副本。
@@ -118,6 +118,12 @@ G 必须先完成；随后后端与前端轨道可并行。F 只在两个轨道�
 - [ ] jQuery 3.7.1、Bootstrap 5.3.8、TinyMCE 8.8.2 各自独立验收，无 migrate、旧 runtime、双版本或编辑器内容损坏。
 - [ ] Chromium E2E 阻塞通过，浏览器支持矩阵的发布前 smoke 有可审计记录。
 - [ ] PR/push 质量门通过；测试 `v*` tag 产出可复验 tarball 和 GHCR Linux/amd64 镜像，且没有生产部署动作。
+- [ ] E 的组合验收与 F 的发布验收分别满足各自 allowlist/provenance；E 不等待 tag 时使用受保护的
+  `candidate-browser-matrix-v1`，F 发布使用两文件 `browser-release-matrix-v1`，两者均须校验按固定顺序的四个
+  稳定 coverage ID、槽位摘要 digest（RFC 8785 JCS）和 run/attempt；不得把 F 在 E planning 时的归档状态改写为按
+  DAG 顺序完成，也不得以 E 候选 SHA 冒充 F 的 tag commit/artifact。
+- [ ] Q-E1 等待模式下，E 只消费严格 tag 指向候选 SHA 的受保护预检 artifact；该预检不创建 Release/GHCR，E 归档后 F
+  必须在最终 release run 中重新生成并校验正式 `browser-release-matrix-v1`，保持 F 发布位于 E 之后且不形成任务依赖环。
 - [ ] Docker 非 root、外置 MongoDB、上传持久化及真实 PDF smoke 通过。
 - [ ] 所有延期结构性工作只记录在 `docs/modernization-backlog.md`，并从相关任务与 ADR 链接。
 

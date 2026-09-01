@@ -1,4 +1,7 @@
-{"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "三个前端库子任务、浏览器矩阵、零 diff 和编辑器内容共享契约。"}
-{"file": ".trellis/tasks/08-25-frontend-libs/design.md", "reason": "jQuery → Bootstrap → TinyMCE 顺序与独立回滚边界。"}
-{"file": ".trellis/tasks/08-25-tech-stack-modernization/prd.md", "reason": "父级不变量、前端轨道和 F 的依赖关系。"}
-{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "前端生成物、浏览器门禁与单一事实来源决策。"}
+{"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "协调收口的目标、输入输出、兼容不变量、候选/发布浏览器矩阵与 provenance Schema、JCS 摘要绑定、失败语义、验收标准与 Q-E1。"}
+{"file": ".trellis/tasks/08-25-frontend-libs/design.md", "reason": "证据优先级、候选与 tag artifact 的槽位/摘要 JCS digest 契约、三层验收流、四项语义 coverage、真实浏览器覆盖与 owner 回退边界。"}
+{"file": ".trellis/tasks/08-25-frontend-libs/research/spec-audit-2026-09-01.md", "reason": "ready 选择、当前实现/CI 现场证据、规格冲突和已知阻断。"}
+{"file": ".trellis/tasks/08-25-frontend-libs/acceptance/evidence-matrix.md", "reason": "逐门禁状态、证据入口、owner 与复验条件。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/prd.md", "reason": "父级不变量、前后端轨道、E/F 依赖与整体完成标准。"}
+{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "生成资源唯一事实来源、三库顺序与浏览器支持决策。"}
+{"file": ".trellis/tasks/archive/2026-09/08-25-cicd-delivery/research/release-matrix-contract.md", "reason": "tag 后八行真实浏览器 artifact、provenance、版本与安全约束。"}

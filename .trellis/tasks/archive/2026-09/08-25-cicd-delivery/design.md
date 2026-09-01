@@ -173,24 +173,29 @@ tag/ref 必须指向当前 checkout commit，且任何移动或 force-update 都
 
 ### 5.4 浏览器矩阵证明交接（Q-F5 已确认）
 
-浏览器矩阵不再是源码中的 tracked 文件。`release.yml` 在严格 tag 指向的 checkout SHA 上调用
-受保护的真实浏览器证据 workflow；该 workflow 使用 frontend-libs 约定的 smoke 定义，在真实
-Chrome、Edge、Firefox、Safari 当前及前一主版本环境中执行后，只上传一次不可覆盖的
-`browser-release-matrix-v1` artifact。artifact 的 allowlist 恰好为：
+浏览器矩阵不再是源码中的 tracked 文件。Q-E1 等待模式分两个阶段：E 归档前可由受保护 workflow
+在严格 tag 指向的 checkout SHA 上运行一次预检，只上传供 E 验收的 `browser-release-matrix-v1`
+artifact，不创建 Release/GHCR 或改变 F 状态；E 归档后，`release.yml` 在最终 release run 中
+重新调用受保护的真实浏览器证据 workflow，重新生成正式 artifact。两阶段都使用 frontend-libs
+约定的 smoke 定义，在真实 Chrome、Edge、Firefox、Safari 当前及前一主版本环境中执行，artifact
+allowlist 恰好为：
 
 - `release-matrix.json`：通过 `research/release-matrix-contract.md` schema 的八行矩阵，顶层和每条
   记录的 `commit` 均为 tag commit；
 - `provenance.json`：`schema_version`、矩阵 `matrix_sha256`、同一 `commit`、精确 `ref`、producer
-  workflow 标识和当前 release `run.id`/`run.attempt`。
+  workflow 标识、当前 release `run.id`/`run.attempt` 以及与八个槽位一一对应的脱敏
+  `coverage_summaries`；每条 `release-matrix.json` 记录同时带 `coverage_summary_sha256`。
 
-矩阵 producer 不接受可改变 checkout ref、MongoDB 版本或门禁的用户输入；它从调用 release 的
-tag/ref 和 checkout SHA 取得绑定值。release validator 必须重新计算 `release-matrix.json` 的
-SHA-256，并逐项校验 artifact 名称/唯一性、provenance schema、run/attempt、tag ref、commit、
-八行唯一键、真实 Safari 和全部门禁。任何缺失、重复、跨 run/ref、哈希不一致或非真实浏览器
-记录都在创建 Release/GHCR 前失败。每个 release `run.id`/`run.attempt` 只允许一个该名称 artifact；
-重试产生的新 attempt 不得复用旧 attempt 的矩阵，旧 artifact 会被视为重复/跨 attempt 并失败。
-该 artifact 的保留期不超过 7 天；workflow 不覆盖或删除，人工删除、重试和恢复只能按 Q-F3 的
-维护者边界执行。
+矩阵 producer 不接受可改变 checkout ref、MongoDB 版本或门禁的用户输入；它从调用 workflow 的
+tag/ref 和 checkout SHA 取得绑定值。E 预检 validator 必须重新计算 `release-matrix.json` 的
+SHA-256，并逐项校验 artifact 名称/唯一性、provenance schema、coverage summary digest、
+producer run/attempt、tag ref、commit、八行唯一键、真实 Safari 和全部门禁；预检 tag commit
+必须等于 E 的候选 SHA，且预检不得创建 Release/GHCR。最终 release validator 除上述校验外，
+还必须确认 artifact 属于当前最终 release run/attempt；任何缺失、重复、跨 run/ref、摘要哈希不一致
+或非真实浏览器记录都在创建 Release/GHCR 前失败。每个 producer `run.id`/`run.attempt` 只允许
+一个该名称 artifact；重试产生的新 attempt 不得复用旧 attempt 的矩阵，旧 artifact 会被视为
+重复/跨 attempt 并失败。两阶段 artifact 的保留期均不超过 7 天；workflow 不覆盖或删除，人工删除、
+重试和恢复只能按 Q-F3 的维护者边界执行。
 
 ## 6. 安全与回滚
 
@@ -211,12 +216,15 @@ SHA-256，并逐项校验 artifact 名称/唯一性、provenance schema、run/at
   Revel CLI；F 的 quality-gate 只调用该唯一 harness。
 - frontend-libs 的浏览器 smoke 定义和真实环境证据由受保护的真实浏览器证据 workflow 生成；其
   既有逐子任务 tracked 脱敏记录可以作为协调证据，但不是 F 的发布输入。F 不复制第二套浏览器配置，
-  只验证 `browser-release-matrix-v1` artifact 的 commit、版本、真实 Safari 和错误门禁。
-- release matrix 的唯一载荷文件、八行唯一键和字段校验见 `research/release-matrix-contract.md`；
-  载荷只在精确 tag commit 的 release workflow 运行中生成，不进入源码提交，也不要求文件内容自引用。
+  只验证 `browser-release-matrix-v1` artifact 的 commit、版本、四个稳定 coverage ID、摘要 digest、
+  真实 Safari 和错误门禁。
+- release matrix 的唯一载荷文件、八行唯一键、coverage summary digest 和字段校验见
+  `research/release-matrix-contract.md`；载荷只在精确 tag commit 的 release workflow 运行中生成，
+  不进入源码提交，也不要求文件内容自引用。
 - Q-F5 已确认采用独立不可变证明：artifact 同时包含 `release-matrix.json` 和 provenance 清单，
-  release validator 必须校验当前 release run/attempt、tag ref、commit 和载荷 SHA-256；workflow
-  不覆盖或删除 artifact，人工恢复遵守已记录的维护者边界。
+  provenance 内嵌脱敏 `coverage_summaries`；release validator 必须校验当前 release run/attempt、
+  tag ref、commit、载荷 SHA-256 和每个槽位的摘要 digest；workflow 不覆盖或删除 artifact，人工恢复
+  遵守已记录的维护者边界。
 - 已确认并同步的技术契约：linker 使用 `github.com/yangphere/leanote/app/service.BuildVersion`，未注入
   值为 `dev` 且 release smoke 拒绝；`GET /healthz` 使用固定 JSON 状态响应且不含版本字段；tarball
   二进制为 `bin/leanote`、权限 `0755`；GHCR 唯一 tag 为 `ghcr.io/yangphere/leanote:vX.Y.Z`，不生成别名。

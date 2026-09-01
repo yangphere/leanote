@@ -1,0 +1,42 @@
+{
+  "id": "frontend-libs-browser-coverage",
+  "name": "frontend-libs-browser-coverage",
+  "title": "B-E4 建立四项浏览器 coverage 与 release artifact 契约",
+  "description": "补齐 browser-smoke Bootstrap suite，并让受保护 producer/validator 生成并校验四项 coverage、JCS 摘要、候选/预检及正式 artifact 的严格 provenance。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-09-01",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "master",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-25-frontend-libs",
+  "relatedFiles": [
+    "tests/e2e",
+    "playwright.config.mjs",
+    "scripts/browser-release-evidence.mjs",
+    "scripts/validate-browser-artifact.mjs",
+    ".github/workflows/browser-release-evidence.yml",
+    ".github/workflows/release.yml"
+  ],
+  "notes": "",
+  "meta": {
+    "blocker": "B-E4",
+    "sequence": "4",
+    "owner": "bootstrap/e2e/release",
+    "depends_on": [
+      "09-01-frontend-libs-build-mode",
+      "09-01-frontend-libs-mongo-harness",
+      "09-01-frontend-libs-chromium-editor"
+    ]
+  }
+}

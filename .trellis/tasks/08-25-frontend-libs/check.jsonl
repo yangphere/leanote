@@ -1,3 +1,10 @@
-{"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "检查协调父任务没有直接承载生产代码，且三个子任务严格串行。"}
-{"file": ".trellis/tasks/08-25-frontend-libs/design.md", "reason": "检查每个库的回滚边界、浏览器证据和后端契约回放。"}
-{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "核对版本唯一性、源码到生成物契约和 migrate 移除要求。"}
+{"file": ".trellis/tasks/08-25-frontend-libs/prd.md", "reason": "检查协调任务不承载实现、候选/发布矩阵与 provenance Schema 可实施、JCS 摘要绑定、AC 可观察且 Q-E1 未被擅自决定。"}
+{"file": ".trellis/tasks/08-25-frontend-libs/design.md", "reason": "检查 evidence precedence、候选与 tag 槽位摘要的 JCS digest 绑定、四项语义 coverage、浏览器覆盖与失败回退无第二事实来源。"}
+{"file": ".trellis/tasks/08-25-frontend-libs/research/spec-audit-2026-09-01.md", "reason": "复核现场路径、命令、CI run/job 根因与未闭合项。"}
+{"file": ".trellis/tasks/08-25-frontend-libs/acceptance/evidence-matrix.md", "reason": "检查每个门禁绑定同一 commit 且 missing/failed 不被记为通过。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/prd.md", "reason": "检查父任务历史 DAG、当前 E/F 生命周期状态与整体质量门边界同步。"}
+{"file": ".trellis/tasks/archive/2026-08/08-25-jquery-upgrade/prd.md", "reason": "复核 jQuery 唯一运行时、Migrate 诊断、test-mode 身份与真实浏览器契约。"}
+{"file": ".trellis/tasks/archive/2026-08/08-25-bootstrap-upgrade/prd.md", "reason": "复核 Bootstrap 页面/组件/iframe 覆盖和无双框架要求。"}
+{"file": ".trellis/tasks/archive/2026-08/08-25-tinymce-upgrade/prd.md", "reason": "复核三个编辑器入口、未编辑零写入、HTML 与错误语义。"}
+{"file": ".trellis/tasks/archive/2026-09/08-25-cicd-delivery/research/release-matrix-contract.md", "reason": "复核八行 artifact 与 commit/ref/run/attempt/checksum provenance。"}
+{"file": ".trellis/tasks/archive/2026-09/08-25-cicd-delivery/task.json", "reason": "复核 F 的 Q-F5 notes 与当前 coverage_summaries/JCS 发布契约及归档状态是否一致。"}

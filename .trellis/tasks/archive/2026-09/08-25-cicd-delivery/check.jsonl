@@ -6,5 +6,5 @@
 {"file": ".trellis/tasks/08-25-cicd-delivery/research/cb-production-config-contract.md", "reason": "验收 C-b v1 的唯一生产配置路径/键名/来源优先级、错误码和退出 78、fail-closed 时序、fallback 禁止、日志/artifact 脱敏及必需实现证据。"}
 {"file": ".trellis/tasks/08-25-cicd-delivery/research/cb-production-config-evidence.md", "reason": "逐项验收 C-b E1-E8 正向证据是否来自当前实现/测试/workflow，检查退出 78、端口/Mongo 顺序、/healthz、脱敏和 run/ref/commit provenance。"}
 {"file": ".trellis/tasks/08-25-cicd-delivery/research/ci-failure-summary-schema.md", "reason": "校验固定 job ID、摘要 schema、service 健康字段、早期失败 fallback、always 收尾、零测试/清理失败阻断和脱敏 artifact。"}
-{"file": ".trellis/tasks/08-25-cicd-delivery/research/release-matrix-contract.md", "reason": "校验 browser-release-matrix-v1 artifact/provenance、release run/attempt 与 tag commit 绑定、JSON Schema、八行唯一键、真实 Safari、门禁字段和禁止占位证据。"}
+{"file": ".trellis/tasks/08-25-cicd-delivery/research/release-matrix-contract.md", "reason": "校验 browser-release-matrix-v1 artifact/provenance、八槽位 coverage_summaries 与 digest、release run/attempt 与 tag commit 绑定、JSON Schema、八行唯一键、真实 Safari、门禁字段和禁止占位证据。"}
 {"file": ".trellis/tasks/08-25-cicd-delivery/research/release-artifact-contract.md", "reason": "校验 release 输入 artifact 的固定名称、allowlist、manifest 及两份 JSON 元数据 schema、tag commit 时间/本地重建 digest/registry digest/attestation 绑定和跨 run/ref/额外文件拒绝规则。"}

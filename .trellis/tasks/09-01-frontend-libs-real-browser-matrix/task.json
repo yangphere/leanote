@@ -1,0 +1,39 @@
+{
+  "id": "frontend-libs-real-browser-matrix",
+  "name": "frontend-libs-real-browser-matrix",
+  "title": "B-E5 执行真实四浏览器 current/previous 矩阵",
+  "description": "在真实 Chrome、Edge、Firefox、Safari 的当前与前一主版本执行四项 coverage，生成不可变、脱敏、八槽位唯一矩阵并完成摘要交叉校验。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-09-01",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "master",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-25-frontend-libs",
+  "relatedFiles": [
+    "docs/modernization/browser-smoke",
+    "tests/e2e",
+    ".github/workflows/browser-release-evidence.yml",
+    ".github/workflows/release.yml",
+    "scripts/validate-browser-artifact.mjs"
+  ],
+  "notes": "",
+  "meta": {
+    "blocker": "B-E5",
+    "sequence": "5",
+    "owner": "browser-evidence",
+    "depends_on": [
+      "09-01-frontend-libs-browser-coverage"
+    ]
+  }
+}

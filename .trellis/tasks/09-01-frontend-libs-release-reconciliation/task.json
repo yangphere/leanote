@@ -1,0 +1,44 @@
+{
+  "id": "frontend-libs-release-reconciliation",
+  "name": "frontend-libs-release-reconciliation",
+  "title": "B-E6 收口 package/container 门禁与 F 状态冲突",
+  "description": "修复或重新运行 package/container 交付门禁，校正 F 归档状态与阻断 notes 的事实冲突，并完成 E/F/父任务的最终发布阻断收口。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-09-01",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "master",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-25-frontend-libs",
+  "relatedFiles": [
+    ".github/workflows/quality-gate.yml",
+    ".github/workflows/release.yml",
+    ".github/workflows/browser-release-evidence.yml",
+    "sh/package.sh",
+    "scripts/validate-browser-artifact.mjs",
+    ".trellis/tasks/archive/2026-09/08-25-cicd-delivery"
+  ],
+  "notes": "",
+  "meta": {
+    "blocker": "B-E6",
+    "sequence": "6",
+    "owner": "cicd-delivery/parent",
+    "depends_on": [
+      "09-01-frontend-libs-build-mode",
+      "09-01-frontend-libs-mongo-harness",
+      "09-01-frontend-libs-chromium-editor",
+      "09-01-frontend-libs-browser-coverage",
+      "09-01-frontend-libs-real-browser-matrix"
+    ]
+  }
+}

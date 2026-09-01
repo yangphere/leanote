@@ -1,0 +1,40 @@
+{
+  "id": "frontend-libs-chromium-editor",
+  "name": "frontend-libs-chromium-editor",
+  "title": "B-E3 修复 Chromium 编辑器 iframe 失败与清理超时",
+  "description": "修复 leaui_image iframe 中 editor.on 兼容错误及其导致的业务流程超时、清理失败，恢复 build/business E2E 的可审计全绿结果。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P0",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-09-01",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "master",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-25-frontend-libs",
+  "relatedFiles": [
+    "tests/e2e",
+    "playwright.config.mjs",
+    "public/tinymce",
+    "app/views",
+    ".github/workflows/quality-gate.yml"
+  ],
+  "notes": "",
+  "meta": {
+    "blocker": "B-E3",
+    "sequence": "3",
+    "owner": "tinymce/e2e",
+    "depends_on": [
+      "09-01-frontend-libs-build-mode",
+      "09-01-frontend-libs-mongo-harness"
+    ]
+  }
+}

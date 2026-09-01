@@ -298,3 +298,7 @@ Contracts 均未闭合。后续只有在这些材料有唯一、可复核的正�
 - 运行 `python ./.trellis/scripts/task.py validate .trellis/tasks/08-25-cicd-delivery`，确认两份上下文清单有效。
 - 解析 `task.json`、`implement.jsonl`、`check.jsonl` 及发布契约中的嵌入 JSON schema。
 - 运行 `git diff HEAD --check` 并确认所有工作区改动仍位于 `.trellis/tasks/08-25-cicd-delivery/`。
+
+### 第十二轮发布矩阵契约补充（2026-09-01）
+
+前述第四轮记录的是当时已确认的两文件 artifact 身份约定；本补充将其扩展为当前有效契约，不能用旧记录替代：矩阵每行必须按固定顺序恰好包含四个稳定 coverage ID，并以 `coverage_summary_sha256` 绑定 provenance 内八槽位的 `coverage_summaries`。摘要输入为去掉 digest 字段的 `{browser_product, release_slot, items}`，按 RFC 8785 JCS（UTF-8、无空白/尾随换行）计算 SHA-256；每项 discovered/executed 为正整数且 `executed_count <= discovered_count`，入口/iframe 仅允许受限稳定标识符。旧的通用 `scope` producer、缺 digest 或缺摘要的 v1 载荷一律无效；F 的 producer/validator 与新的 release run 证据完成前，F 和 E 的相关门禁均保持阻断。候选模式另使用 `candidate-browser-matrix-v1`（`candidate-matrix.json` + `candidate-provenance.json`），只在 Q-E1 选择不等待 tag artifact 时作为 E 完成证据。
