@@ -39,7 +39,7 @@
 
 - [x] 修复提交：`c9030072686335c57dbb2d4a383b240070d10218`（mode 契约：构建侧 chmod + 22 文件索引规范化 + POSIX 回归用例）；测试封闭化修复：`99abfab`（F 契约测试 CI 环境泄漏，见 `09-01-release-contract-hermetic-env`）。
 - [x] CI 链路：[run 33519988846](https://github.com/yangphere/leanote/actions/runs/33519988846) 证明零漂移门禁通过（npm test 被 F 契约缺陷阻断，已由独立任务修复）；[run 33522450969 / job `99904830024`](https://github.com/yangphere/leanote/actions/runs/33522450969/job/99904830024) node-build 全绿（121/121）。
-- [ ] 通知 E：AC-E3 的 retest 输入已就绪（候选基线重置为 `99abfab` 谱系）；B-E2..B-E6 以该提交为新基线，evidence matrix 重置由 E 执行；两任务归档均需用户确认。
+- [x] 通知 E：已在 E task.json notes 登记 B-E1 闭合事实与 `99abfab` 复验基线；evidence matrix 重置仍由 E 的收口阶段执行。用户已确认归档（2026-09-01）。
 
 ## Completion Gate
 

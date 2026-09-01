@@ -46,7 +46,7 @@
     "public/tinymce",
     "app/views"
   ],
-  "notes": "协调收口任务；只汇总同一候选提交的构建、契约、Chromium 与真实浏览器证据，不直接修改生产代码、测试、构建脚本或 workflow。E quality-gate allowlist 为 node-build/chromium-e2e/mongo-8_0；package/container/summary 属 F/父任务。Q-E1 已确认等待 F 的 tag-bound 预检 artifact：受保护 producer 先生成仅供 E 验收的 browser-release-matrix-v1，不创建 Release/GHCR；E 归档后 F 再在最终 release run 中重新生成正式 artifact。B-E1..B-E6 仍未闭合，完成结论保持 blocked。",
+  "notes": "协调收口任务；只汇总同一候选提交的构建、契约、Chromium 与真实浏览器证据，不直接修改生产代码、测试、构建脚本或 workflow。E quality-gate allowlist 为 node-build/chromium-e2e/mongo-8_0；package/container/summary 属 F/父任务。Q-E1 已确认等待 F 的 tag-bound 预检 artifact：受保护 producer 先生成仅供 E 验收的 browser-release-matrix-v1，不创建 Release/GHCR；E 归档后 F 再在最终 release run 中重新生成正式 artifact。B-E1 已闭合（c903007 mode 契约 + 99abfab 测试封闭化，run 33522450969 node-build 全绿；下游复验基线为 99abfab 谱系）；B-E2..B-E6 仍未闭合，完成结论保持 blocked。伴随修复任务 09-01-release-contract-hermetic-env 已闭合。",
   "meta": {
     "depends_on": [
       "08-25-frontend-build-chain"
