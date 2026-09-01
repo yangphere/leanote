@@ -48,8 +48,8 @@ func TestConfigEnvInterpolation(t *testing.T) {
 	}
 
 	// revel/config computeVar errors on an empty/unset ${VAR} resolution,
-	// which collapses to found=false in Context.String — db.Init then falls
-	// back to db.host/db.port instead of dialing an empty URL.
+	// which collapses to found=false in Context.String. Production startup
+	// treats that as a configuration failure instead of using legacy aliases.
 	cfg2, err := ParseConfig([]byte("x=${LEANOTE_TEST_EMPTY}\n"), "")
 	if err != nil {
 		t.Fatalf("ParseConfig: %v", err)
@@ -124,6 +124,17 @@ func TestConfigEnvSetButEmptyIsNotFound(t *testing.T) {
 	}
 	if _, ok := cfg.String("x"); ok {
 		t.Fatalf("set-but-empty ${VAR} must read as not-found")
+	}
+}
+
+func TestConfigEnvExpansionTrimsRuntimeValue(t *testing.T) {
+	t.Setenv("LEANOTE_TEST_TRIMMED", "  mongodb://db.example/leanote  ")
+	cfg, err := ParseConfig([]byte("db.urlEnv=${LEANOTE_TEST_TRIMMED}\n"), "")
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
+	if value, ok := cfg.String("db.urlEnv"); !ok || value != "mongodb://db.example/leanote" {
+		t.Fatalf("db.urlEnv = %q ok=%v, want trimmed environment value", value, ok)
 	}
 }
 

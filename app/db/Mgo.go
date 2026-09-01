@@ -59,50 +59,53 @@ var Sessions *Collection
 
 // 初始化时连接数据库
 func Init(url, dbname string) {
-	ok := true
-	config := revel.Config
-	if url == "" {
-		url, ok = config.String("db.url")
-		if !ok {
-			url, ok = config.String("db.urlEnv")
-			if ok {
-				Log("get db conf from urlEnv: " + url)
-			}
-		} else {
-			Log("get db conf from db.url: " + url)
-		}
-
-		if ok {
-			// get dbname from urlEnv
-			urls := strings.Split(url, "/")
-			dbname = urls[len(urls)-1]
-
-			if strings.Contains(dbname, "?") {
-				urls = strings.Split(dbname, "?")
-				dbname = urls[0]
-			}
-		}
+	if err := InitWithError(url, dbname); err != nil {
+		panic(err)
 	}
-	if dbname == "" {
-		dbname, _ = config.String("db.dbname")
-	}
+}
 
-	// get db config from host, port, username, password
-	if !ok {
+// InitFromRevelConfigForDevelopment keeps the legacy Revel test harness
+// usable without making those aliases part of the production entry point.
+// Production callers must use the explicit db.urlEnv contract instead.
+func InitFromRevelConfigForDevelopment() {
+	if revel.Config == nil {
+		panic("development database configuration is unavailable")
+	}
+	dbURL, _ := revel.Config.String("db.url")
+	if dbURL == "" {
+		dbURL, _ = revel.Config.String("db.urlEnv")
+	}
+	dbName, _ := revel.Config.String("db.dbname")
+	if dbURL == "" {
 		host, _ := revel.Config.String("db.host")
 		port, _ := revel.Config.String("db.port")
-		username, _ := revel.Config.String("db.username")
-		password, _ := revel.Config.String("db.password")
-		usernameAndPassword := username + ":" + password + "@"
-		if username == "" || password == "" {
-			usernameAndPassword = ""
+		user, _ := revel.Config.String("db.username")
+		pass, _ := revel.Config.String("db.password")
+		credentials := ""
+		if user != "" && pass != "" {
+			credentials = user + ":" + pass + "@"
 		}
-		url = "mongodb://" + usernameAndPassword + host + ":" + port + "/" + dbname
+		dbURL = "mongodb://" + credentials + host + ":" + port + "/" + dbName
 	}
-	Log(url)
+	if strings.TrimSpace(dbURL) == "" || strings.TrimSpace(dbName) == "" {
+		panic("development database configuration is incomplete")
+	}
+	Init(strings.TrimSpace(dbURL), strings.TrimSpace(dbName))
+}
 
+// InitWithError initializes MongoDB and collections, returning connection
+// failures to callers that need to expose readiness through /healthz.
+func InitWithError(url, dbname string) error {
+	if url == "" {
+		return errors.New("mongo URL is required")
+	}
+	if dbname == "" {
+		return errors.New("mongo database name is required")
+	}
 	if err := dialMongo(url); err != nil {
-		panic(err)
+		client = nil
+		database = nil
+		return err
 	}
 
 	database = client.Database(dbname)
@@ -166,6 +169,7 @@ func Init(url, dbname string) {
 
 	// session
 	Sessions = wrapCollection(database.Collection("sessions"))
+	return nil
 }
 
 func close() {
@@ -185,12 +189,12 @@ func FindInCollection(database, collection string, filter, result interface{}) e
 	defer cancel()
 	cursor, err := client.Database(database).Collection(collection).Find(ctx, filter)
 	if err != nil {
-		Logf("mongo find failed on %s.%s [%s]: %v", database, collection, classifyError(err), err)
+		Logf("mongo find failed on %s.%s category=%s", database, collection, classifyError(err))
 		return err
 	}
 	defer func() {
 		if cerr := cursor.Close(ctx); cerr != nil {
-			Logf("mongo cursor close failed on %s.%s [%s]: %v", database, collection, classifyError(cerr), cerr)
+			Logf("mongo cursor close failed on %s.%s category=%s", database, collection, classifyError(cerr))
 		}
 	}()
 	return cursor.All(ctx, result)

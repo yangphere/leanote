@@ -1,9 +1,9 @@
-// Command leanote is the plain Go entry point that replaces the Revel CLI
-// run/package flow. It loads conf/app.conf, validates the prod secret and
-// serves until SIGTERM/SIGINT or a shutdown timeout.
+// Command leanote is the plain Go production entry point. It requires the
+// canonical production configuration interface before binding or dialing.
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/controllers"
 	api "github.com/yangphere/leanote/app/controllers/api"
 	"github.com/yangphere/leanote/app/db"
@@ -22,27 +23,21 @@ import (
 	"github.com/yangphere/leanote/app/service"
 )
 
-// defaultPublicSecret mirrors the app.secret shipped in
-// conf/app.conf-default; keep the two in sync. prod must never start with
-// this value or an empty secret.
-const defaultPublicSecret = "V85ZzBeTnzpsHyjQX4zukbQ8qqtju9y2aDM55VWxAH9Qop19poekx3xkcDVvrD0y"
-
 func main() {
-	confPath := flag.String("conf", "conf/app.conf", "path to app.conf")
-	runMode := flag.String("runMode", "dev", "active app.conf section ([dev]/[prod]/[test])")
+	confPath := flag.String("conf", "", "path to the canonical production app.conf")
+	runMode := flag.String("runMode", "", "active app.conf section (must be prod)")
 	port := flag.Int("port", 0, "override http.port from app.conf")
 	flag.Parse()
-
-	cfg, err := httpserver.LoadConfigFile(*confPath, *runMode)
-	if err != nil {
-		log.Fatalf("load config: %v", err)
+	if err := validateCLIOptions(*runMode, hasCLIFlag("runMode"), hasCLIFlag("conf")); err != nil {
+		logConfigError(err)
 	}
 
-	secret, _ := cfg.String("app.secret")
-	if err := validateProdSecret(*runMode, secret); err != nil {
-		log.Fatalf("app.conf: %v", err)
+	cfg, err := httpserver.ValidateProductionConfig(*confPath)
+	if err != nil {
+		logConfigError(err)
 	}
 	appBase := applicationBase(*confPath)
+	revel.BasePath = appBase
 	if err := setupPresentation(
 		cfg,
 		filepath.Join(appBase, "app", "views"),
@@ -56,13 +51,22 @@ func main() {
 		orInt(*port, cfg.IntDefault("http.port", 9000)))
 	shutdownTimeout := httpserver.ShutdownTimeout(cfg)
 
-	initDatabase(cfg)
+	if err := initDatabase(cfg, *runMode); err != nil {
+		var configErr *httpserver.ConfigError
+		if errors.As(err, &configErr) {
+			logConfigError(err)
+		}
+		// A valid configuration with a temporarily unavailable MongoDB keeps
+		// serving /healthz so orchestrators receive the required 503 response.
+		log.Printf("mongo readiness unavailable; healthz will return not_ready")
+	}
 
 	// Wire the first-party stack: conf/routes table + registered actions +
 	// sessions + static file roots (module.static equivalents). db must be
 	// initialised before serving; run-mode is injected into controllers.
-	confDir := filepath.Dir(*confPath)
-	routesData, err := os.ReadFile(filepath.Join(confDir, "routes"))
+	// The production config is mounted outside the application tree. Resolve
+	// routes from the packaged application root, alongside views/messages.
+	routesData, err := os.ReadFile(filepath.Join(appBase, "conf", "routes"))
 	if err != nil {
 		log.Fatalf("load routes: %v", err)
 	}
@@ -74,15 +78,18 @@ func main() {
 	controllers.InitService()
 	api.InitService()
 	registry := httpserver.NewRegistry()
-	controllers.RegisterHTTP(registry, *runMode)
+	controllers.RegisterHTTP(registry, *runMode, cfg)
 	api.RegisterHTTP(registry, *runMode)
 
 	app := &httpserver.App{
-		Routes:        httpserver.CompileRoutes(routes),
-		Registry:      registry,
-		Sessions:      httpserver.NewSessionCodec(cfg),
-		StaticHandler: func(base string) http.Handler { return http.FileServer(http.Dir(base)) },
-		OnRequest:     db.CheckMongoSessionLost,
+		Routes:   httpserver.CompileRoutes(routes),
+		Registry: registry,
+		Sessions: httpserver.NewSessionCodec(cfg),
+		StaticHandler: func(base string) http.Handler {
+			return staticHandler(appBase, base)
+		},
+		OnRequest:   db.CheckMongoSessionLost,
+		HealthCheck: db.Ping,
 	}
 
 	log.Printf("leanote starting: addr=%s runMode=%s shutdownTimeout=%s", addr, *runMode, shutdownTimeout)
@@ -97,11 +104,30 @@ func main() {
 }
 
 func applicationBase(confPath string) string {
+	if filepath.Clean(confPath) == filepath.Clean(httpserver.CanonicalProductionConfigPath()) {
+		if executable, err := os.Executable(); err == nil {
+			return filepath.Dir(filepath.Dir(executable))
+		}
+	}
 	confDir := filepath.Dir(filepath.Clean(confPath))
 	if strings.EqualFold(filepath.Base(confDir), "conf") {
 		return filepath.Dir(confDir)
 	}
 	return confDir
+}
+
+func staticAssetRoot(appBase, base string) string {
+	return filepath.Join(appBase, base)
+}
+
+func staticHandler(appBase, base string) http.Handler {
+	assetPath := staticAssetRoot(appBase, base)
+	if info, err := os.Stat(assetPath); err == nil && !info.IsDir() {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, assetPath)
+		})
+	}
+	return http.FileServer(http.Dir(assetPath))
 }
 
 // setupPresentation installs the first-party template renderer and loads the
@@ -127,41 +153,44 @@ func orInt(override, base int) int {
 	return base
 }
 
-// validateProdSecret rejects an empty or still-public app.secret before a
-// prod server starts, with an actionable message.
-func validateProdSecret(runMode, secret string) error {
-	if runMode != "prod" {
-		return nil
+func hasCLIFlag(name string) bool {
+	prefix := "-" + name
+	for _, arg := range os.Args[1:] {
+		if arg == prefix || strings.HasPrefix(arg, prefix+"=") {
+			return true
+		}
 	}
-	if secret == "" {
-		return fmt.Errorf("app.secret is empty; set a real secret in app.conf before running in prod")
+	return false
+}
+
+func validateCLIOptions(runMode string, hasRunMode, hasConf bool) error {
+	if !hasRunMode || runMode != "prod" {
+		return &httpserver.ConfigError{Code: "CONFIG_RUN_MODE_INVALID"}
 	}
-	if secret == defaultPublicSecret {
-		return fmt.Errorf("app.secret is still the public repository default; set a real secret in app.conf before running in prod")
+	if !hasConf {
+		return &httpserver.ConfigError{Code: "CONFIG_PATH_INVALID", Key: "conf"}
 	}
 	return nil
 }
 
-// initDatabase mirrors db.Init's URL derivation using the first-party
-// config (db.url → db.urlEnv → db.host/port/user/pass), so the plain-Go
-// process never needs revel.Config. db timeouts fall back to their
-// defaults until the db config seam wires the new keys (Task 6).
-func initDatabase(cfg *httpserver.Config) {
-	url := cfg.StringDefault("db.url", "")
-	if url == "" {
-		url = cfg.StringDefault("db.urlEnv", "")
+func logConfigError(err error) {
+	log.Printf("%v", err)
+	os.Exit(78)
+}
+
+// initDatabase consumes the validated production placeholders. No alternate
+// URL, host/port or database-name source is accepted here.
+func initDatabase(cfg *httpserver.Config, runMode string) error {
+	if runMode != "prod" {
+		return &httpserver.ConfigError{Code: "CONFIG_RUN_MODE_INVALID"}
 	}
-	dbname := cfg.StringDefault("db.dbname", "leanote")
-	if url == "" {
-		host := cfg.StringDefault("db.host", "127.0.0.1")
-		port := cfg.StringDefault("db.port", "27017")
-		user := cfg.StringDefault("db.username", "")
-		pass := cfg.StringDefault("db.password", "")
-		userPass := ""
-		if user != "" && pass != "" {
-			userPass = user + ":" + pass + "@"
-		}
-		url = "mongodb://" + userPass + host + ":" + port + "/" + dbname
+	url, ok := cfg.String("db.urlEnv")
+	if !ok || url == "" {
+		return &httpserver.ConfigError{Code: "CONFIG_VALUE_MISSING", Key: "MONGODB_URL"}
 	}
-	db.Init(url, dbname)
+	dbname, ok := cfg.String("db.dbname")
+	if !ok || dbname == "" {
+		return &httpserver.ConfigError{Code: "CONFIG_KEY_INVALID", Key: "db.dbname"}
+	}
+	return db.InitWithError(url, dbname)
 }

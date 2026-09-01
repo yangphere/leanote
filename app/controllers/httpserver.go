@@ -10,12 +10,15 @@ import (
 	"github.com/yangphere/leanote/app/httpserver"
 )
 
-// RegisterHTTP wires every first-party (post-Revel) controller action into
-// the httpserver registry. cmd/leanote calls this at startup; Task 4 adds
-// the remaining controllers here as they migrate.
-func RegisterHTTP(rs *httpserver.Registry, runMode string) {
+// RegisterHTTP wires first-party (post-Revel) controller actions into the
+// httpserver registry. Production callers pass the validated config so
+// sensitive actions can consume the canonical runtime values.
+func RegisterHTTP(rs *httpserver.Registry, runMode string, cfg *httpserver.Config) {
 	e2e := &TestE2eServer{RunMode: runMode}
 	e2e.Register(rs)
+	if cfg != nil {
+		NewNotePDFServer(cfg).Register(rs)
+	}
 }
 
 // TestE2eServer is the first-party host for the test-mode-only E2E identity

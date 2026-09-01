@@ -1,0 +1,22 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { validateBrowserMatrix } from './browser-release-evidence.mjs';
+
+const root = path.resolve(process.argv[2] || 'test-results');
+const commit = process.env.GIT_COMMIT || process.env.GITHUB_SHA;
+const ref = process.env.GITHUB_REF;
+const runId = process.env.GITHUB_RUN_ID;
+const attemptRaw = process.env.GITHUB_RUN_ATTEMPT || '';
+if (!/^[1-9][0-9]*$/.test(attemptRaw)) throw new Error('GITHUB_RUN_ATTEMPT must be a positive integer');
+const attempt = Number(attemptRaw);
+if (!Number.isSafeInteger(attempt) || attempt < 1) throw new Error('GITHUB_RUN_ATTEMPT must be a positive integer');
+const names = (await fs.readdir(root)).sort();
+if (names.length !== 2 || names[0] !== 'provenance.json' || names[1] !== 'release-matrix.json') throw new Error('browser artifact allowlist mismatch');
+const matrixBytes = await fs.readFile(path.join(root, 'release-matrix.json'));
+const matrix = validateBrowserMatrix(JSON.parse(matrixBytes), commit);
+const provenance = JSON.parse(await fs.readFile(path.join(root, 'provenance.json'), 'utf8'));
+const provenanceKeys = Object.keys(provenance).sort();
+if (provenanceKeys.join(',') !== 'commit,matrix_sha256,producer_workflow,ref,release_run,schema_version' || !/^[0-9a-f]{64}$/.test(provenance.matrix_sha256) || !/^[0-9a-f]{40}$/.test(provenance.commit) || /^0{40}$/.test(provenance.commit) || typeof provenance.ref !== 'string' || !/^refs\/tags\/v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/.test(provenance.ref) || provenance.producer_workflow !== 'Protected browser release evidence' || !provenance.release_run || Object.keys(provenance.release_run).sort().join(',') !== 'attempt,id' || !/^[1-9][0-9]*$/.test(provenance.release_run.id || '') || !Number.isSafeInteger(provenance.release_run.attempt) || provenance.release_run.attempt < 1) throw new Error('browser artifact provenance schema mismatch');
+if (provenance.matrix_sha256 !== crypto.createHash('sha256').update(matrixBytes).digest('hex') || provenance.commit !== commit || provenance.ref !== ref || provenance.release_run.id !== runId || provenance.release_run.attempt !== attempt) throw new Error('browser artifact provenance mismatch');
+process.stdout.write(`validated ${matrix.records.length} browser records\n`);

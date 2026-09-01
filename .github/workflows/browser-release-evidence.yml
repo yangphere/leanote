@@ -1,0 +1,36 @@
+name: Protected browser release evidence
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-evidence:
+    # The protected runner owns real Chrome, Edge, Firefox and Safari installs.
+    runs-on: [self-hosted, protected-browser-matrix]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: '${{ github.sha }}', fetch-depth: 0 }
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with: { node-version: '24.20.0' }
+      - run: npm ci
+      - name: Execute protected real-browser matrix
+        # The protected runner provides one command for each product/slot. Each
+        # command must run the real installed browser and emit version plus
+        # LEANOTE_*_GATE=passed markers; the producer rejects missing markers.
+        env:
+          RELEASE_COMMIT: ${{ github.sha }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_REF: ${{ github.ref }}
+        run: node scripts/browser-release-evidence.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: browser-release-matrix-v1
+          path: |
+            test-results/release-matrix.json
+            test-results/provenance.json
+          retention-days: 7
+          if-no-files-found: error

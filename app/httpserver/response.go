@@ -58,6 +58,30 @@ func JSONResult(status int, v interface{}) Result {
 	return jsonResult{status: status, value: v}
 }
 
+// JSONLineResult is the fixed-line JSON response used by readiness probes.
+// It deliberately appends exactly one newline to the compact JSON payload.
+func JSONLineResult(status int, v interface{}) Result {
+	return jsonLineResult{status: status, value: v}
+}
+
+type jsonLineResult struct {
+	status int
+	value  interface{}
+}
+
+func (r jsonLineResult) Apply(w http.ResponseWriter, req *http.Request) {
+	body, err := json.Marshal(r.value)
+	if err != nil {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(r.status)
+	w.Write(append(body, '\n'))
+}
+
 type jsonResult struct {
 	status int
 	value  interface{}

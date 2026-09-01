@@ -1,6 +1,6 @@
 # Leanote
 
-[![Build Status](https://travis-ci.org/leanote/leanote.svg)](https://travis-ci.org/leanote/leanote)
+[![CI](https://github.com/yangphere/leanote/actions/workflows/ci.yml/badge.svg)](https://github.com/yangphere/leanote/actions/workflows/ci.yml)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/leanote/leanote?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 ## 1. Introduction
@@ -56,6 +56,10 @@ More information about how to install Leanote please see:
 ## 4. Documentation
 
 Please see [wiki](https://github.com/yangphere/leanote/wiki) for detailed instruction on how to install Leanote on various platforms, trouble shooting and configuration explanations.
+
+For the reproducible Linux/amd64 release workflow, production configuration and
+container volume requirements, see
+[CI/CD delivery](docs/modernization/cicd-delivery.md).
 
 
 ## 5. How to develop Leanote

@@ -7,24 +7,25 @@
 PRD/design/验收材料中引用本契约，F 不复制键名或增加别名。该契约解决 Q-F4 的需求接口决策，
 但不替代 C-b 的实现、测试和运行证据门禁。
 
-当前仓库的实现证据尚未满足本契约：`cmd/leanote/main.go` 仍默认读取仓库相对的
-`conf/app.conf`，`initDatabase` 仍可回退 `db.host/db.port`，`app/db/Mgo.go` 仍记录完整 URL。
-因此本文件固定的是待 C-b 实现的接口和验收证据，不把现有代码误报为生产合规。
+当前 checkout 已实现生产入口和校验器的 fail-closed 主路径，但 C-b 的完整正向证据矩阵仍未闭合：
+依赖任务尚未全部归档，真实 Mongo/package/container smoke 与进程级错误矩阵尚未在受控 Linux runner
+完成。因此本文件固定接口和证据要求，不把本地单元测试或静态检查误报为完整生产合规。
 
 ## 当前实现证据快照（负面证据）
 
-- `cmd/leanote/main.go:31-43` 将 `-conf` 默认设为 `conf/app.conf`、`-runMode` 默认设为 `dev`，并直接读取
-  `app.secret`；这不满足 prod 必须显式传入 canonical path/mode 的要求。
-- `cmd/leanote/main.go:149-166` 仍按 `db.url` → `db.urlEnv` → `db.host/db.port/db.username/db.password`
-  构造连接串，并为 `db.dbname` 提供 `leanote` 默认值；这不满足唯一 `MONGODB_URL` 和无 host/port fallback。
-- `app/db/Mgo.go:61-102` 仍从 Revel 配置按同一顺序回退，并执行 `Log(url)`；该日志会暴露完整 Mongo URI，违反脱敏规则。
-- `conf/app.conf:23-38` 与 `conf/app.conf-default:23-38` 仍含 localhost/host-port、公开 `app.secret` 和
-  `db.urlEnv` 注释示例；它们只能作为待移除的开发样例，不能成为 prod 来源。
-- `app/tests/harness/configuration_test.go:83-135` 只覆盖测试配置的环境变量/空值边界，不能证明上述 prod
-  路径、键名、错误码、退出状态或日志契约。
+- `cmd/leanote/main.go:24-54` 已要求显式 `-conf`/`-runMode prod` 并在 bind 前校验；`main_test.go` 已覆盖
+  缺省参数返回的稳定错误码和二进制进程退出 `78`，但 canonical 文件的 Linux 权限/进程级矩阵仍待受控
+  runner 证据。
+- `app/httpserver/production_config.go:32-111` 已拒绝默认/host-port 来源、重复敏感来源、非 regular
+  canonical 文件、非法 URI 和 secret；配置解析单元测试已覆盖 URI/secret 核心边界，但尚未覆盖每个错误码
+  的独立进程级“不 bind/不 dial”证据。
+- `app/db/Mgo.go` 与 `app/db/mongo_client.go` 的生产入口不再记录完整 URL，并在 Mongo 不可达时由
+  `/healthz` 返回 `503`；真实 Mongo 8.0、上传持久化和 PDF smoke 仍需 Linux/Docker runner 复核。
+- `conf/app.conf` 与 `conf/app.conf-default` 仍是开发配置参考，包含 localhost/公开示例；打包和镜像
+  allowlist 明确排除 `conf/app.conf`，生产入口不读取这些文件。
 
-这些快照是当前 checkout 的阻断证据，不是通过记录。C-b 后续必须提供本文件“必须提供的实现证据”所列的正向
-材料，并在其 PRD/design/验收材料中引用本契约；F 只在正向证据完整后解除启动门。
+以上是当前 checkout 的剩余阻断证据，不是通过记录。C-b 后续必须提供本文件“必须提供的实现证据”所列的
+正向材料，并在其 PRD/design/验收材料中引用本契约；F 只在正向证据完整后解除启动门。
 
 ## Canonical 运行接口
 
@@ -38,12 +39,23 @@ PRD/design/验收材料中引用本契约，F 不复制键名或增加别名。�
 | 生产配置最小片段 | active `[prod]` section 必须包含且仅能以占位引用提供：`db.urlEnv=${MONGODB_URL}`、`db.dbname=<non-test-name>`、`app.secret=${LEANOTE_APP_SECRET}`。 |
 
 配置文件可以包含其他非敏感运行参数，但 `db.url`、`db.host`、`db.port`、`db.username`、
-`db.password` 不得在 prod 的任何 section 出现；它们是旧的多来源/回退接口。`db.urlEnv` 和
-`app.secret` 的直接字面值也不得出现，避免把 secret 或连接信息写进文件。
+`db.password` 不得出现在 active `[prod]` 的有效配置视图中，包括被全局/root 键继承的值；
+它们是旧的多来源/回退接口。`db.urlEnv` 和 `app.secret` 的直接字面值也不得出现，避免把
+secret 或连接信息写进文件。解析器必须在合并全局/root 与 `[prod]` 时检测重复键和被禁止键，
+不能只检查 section 文本中的直接行。
+
+## 健康端点契约（Q-F2）
+
+C-b 必须提供无需认证的 `GET /healthz`。HTTP 服务已监听且 MongoDB ping 成功时，响应状态为 `200`，
+`Content-Type` 固定为 `application/json; charset=utf-8`，正文严格为 `{"status":"ready"}\n`；
+任一条件未满足时，响应状态为 `503`，正文严格为 `{"status":"not_ready"}\n`。响应 JSON 只能包含
+这个 `status` 字段，不包含版本、配置值、凭据、用户数据或其他动态字段；响应头同样不得泄露敏感信息。
+CI、package smoke 和 container smoke 只能用该端点及其状态码证明 readiness，不得用 `/login` 的 `200` 替代。
 
 ## 来源与优先级
 
-1. C-b 先读取唯一的 `/etc/leanote/app.conf`，确认 active `[prod]` section 和契约键形态。
+1. C-b 先读取唯一的 `/etc/leanote/app.conf`，确认 active `[prod]` section 和契约键形态，
+   同时形成包含全局/root 继承值的有效配置视图。
 2. 再解析 `MONGODB_URL` 与 `LEANOTE_APP_SECRET`；两者必须已设置且 trim 后非空，环境值填充
    配置中的占位引用。
 3. 运行时注入是这两个值的唯一事实来源；挂载文件只提供占位符和非敏感结构。不存在第二个
@@ -51,8 +63,16 @@ PRD/design/验收材料中引用本契约，F 不复制键名或增加别名。�
 4. 若同一语义在文件中出现 literal 值、重复键或另一个环境键，视为来源冲突并失败；“运行时
    注入优先”表示占位引用的解析顺序，不表示静默覆盖冲突值。
 
-`MONGODB_URL` 必须是单行、可解析的 `mongodb://` 或 `mongodb+srv://` URI，含非空数据库路径，
-且不得指向 `localhost`、`127.0.0.1`、`::1` 或 `leanote_test`。URI 中的凭据只存在于进程内存，
+当多个配置错误同时存在时，错误码优先级固定为：CLI run mode → CLI config path → 文件存在性/类型/权限
+→ active `[prod]` section → 必需键/重复键/禁止键 → 环境值缺失或为空 → secret 约束 → Mongo URI/数据库名约束。
+同一类别内也必须按固定键顺序检查：环境值先 `MONGODB_URL`、后 `LEANOTE_APP_SECRET`；配置键按
+section 名和键名的字典序；secret 约束先公开默认/控制字符，再长度；Mongo 约束先 scheme/host/path，
+再数据库名。校验器必须按此顺序报告第一项错误，避免同一输入在不同入口产生不同稳定错误码。
+
+`MONGODB_URL` 必须是单行、可解析的 `mongodb://` 或 `mongodb+srv://` URI，含非空数据库路径；
+数据库路径按 URI 解析后移除一个前导 `/` 并进行 percent-decoding，再与 `db.dbname` 做逐字比较，
+不得通过 query、fragment 或额外 slash 改变比较结果。
+URI 不得指向 `localhost`、`127.0.0.1`、`::1` 或 `leanote_test`。URI 中的凭据只存在于进程内存，
 不得写日志、摘要、artifact 或错误文本。
 
 `LEANOTE_APP_SECRET` trim 后必须非空、至少 32 个可打印 ASCII 字节，且不得等于仓库公开默认 secret。
@@ -64,8 +84,8 @@ PRD/design/验收材料中引用本契约，F 不复制键名或增加别名。�
 
 | 条件 | 稳定错误码 | 进程行为 |
 | --- | --- | --- |
-| `-runMode` 缺失或不是 `prod` | `CONFIG_RUN_MODE_INVALID` | 写一条脱敏错误，退出状态 `78`，不读取生产配置、不监听端口。 |
-| `-conf` 缺失或不是 `/etc/leanote/app.conf` | `CONFIG_PATH_INVALID` | 写一条脱敏错误，退出状态 `78`，不读取其他配置、不监听端口。 |
+| `-runMode` 缺失或不是 `prod` | `CONFIG_RUN_MODE_INVALID` | 按固定优先级写一条脱敏错误，退出状态 `78`，不读取生产配置、不监听端口。 |
+| `-conf` 缺失或不是 `/etc/leanote/app.conf` | `CONFIG_PATH_INVALID` | 按固定优先级写一条脱敏错误，退出状态 `78`，不读取其他配置、不监听端口。 |
 | 文件缺失 | `CONFIG_FILE_MISSING` | 写一条脱敏错误，退出状态 `78`，不监听端口。 |
 | 文件不可读、不是 regular file 或权限不是只读 `0440` | `CONFIG_FILE_UNREADABLE` | 写一条脱敏错误，退出状态 `78`，不监听端口。 |
 | `[prod]` 缺失、必需键缺失或键形态不符 | `CONFIG_SECTION_MISSING` 或 `CONFIG_KEY_INVALID` | 退出状态 `78`，不连接 Mongo。 |

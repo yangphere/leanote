@@ -11,7 +11,7 @@ import (
 
 const (
 	MongoContainerName = "leanote-test-mongo"
-	MongoImage         = "mongo:8.0"
+	MongoImage         = "docker.io/library/mongo:8.0@sha256:376f5173003b5408d7b8e6989667231c0bf0cefdce379d7c814910429d1a7a85"
 	MongoFixtureDB     = "leanote_test"
 )
 

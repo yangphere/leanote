@@ -161,3 +161,140 @@
 
 本轮仅修改 `.trellis/tasks/08-25-cicd-delivery/` 的 PRD、设计、执行计划、研究材料和 `task.json`；未
 修改业务实现、CI workflow、生产配置、测试代码、依赖任务或运行状态，未激活任何任务。
+
+### 第七轮全面规格审核（2026-08-31，本次会话）
+
+#### ready 叶复核
+
+再次按轨道优先级、叶条件和机器状态计算，ready 叶仍为 **0**。唯一的 planning 叶
+`08-25-cicd-delivery`（F/P1，`children=[]`）依赖 `08-25-revel-migration`（虽归档但验收未闭合）
+和 `08-25-frontend-libs`（仍为 planning 且保留三个 child）；`00-bootstrap-guidelines` 虽无 child
+但已是 `in_progress`。本轮未运行 `task.py start`，也未改变任务状态。
+
+#### 现场证据补充
+
+- `package.json` 顶层版本为 `1.0.0`，`package-lock.json` 根 package 版本一致；但
+  `app/service/ConfigService.go:608-610` 的 `GetVersion()` 仍硬编码 `2.6.1`。C-b 尚未定义
+  linker 注入符号、未注入二进制行为或 `/healthz` 的响应体 schema，F 不能自行猜测。
+- `cmd/leanote/main.go` 是源代码入口，不是归档文件名；当前没有 Dockerfile、`.dockerignore`、
+  新 package 脚本或 GHCR tag 约定。若不固定二进制路径/权限和镜像 tag 映射，release、container
+  smoke 和重复预检无法按同一字符串实施。
+- 现有 `.github/workflows/regression-baseline.yml` 仍对所有 push 触发、`cancel-in-progress: true`、
+  提供可改 Mongo 版本的 `workflow_dispatch` 输入、使用 action tag、上传独立健康文件，并构建
+  Revel CLI；`scripts/ci/update-build-summary.mjs` 也仍生成旧字段形态，不能当作 F schema 正向证据。
+
+#### 规格修订
+
+1. 统一 Q-F4 为“先读取唯一文件并验证 active `[prod]` 有效配置视图，再解析两个环境占位值”；
+   明确运行时优先只表示唯一敏感来源，不表示静默覆盖或改变结构校验顺序，并固定多错误的错误码优先级。
+2. 收紧 C-b 配置契约：禁止键检查覆盖全局/root 继承后的 active prod 有效视图；URI 数据库路径
+   先解析、去一个前导 slash、percent-decode 后与 `db.dbname` 逐字比较，避免 query/fragment/额外
+   slash 产生二义性。
+3. 新增 `research/release-artifact-contract.md`，固定唯一 `leanote-release-inputs-v1` artifact、
+   五文件 allowlist、`release-inputs.json` schema、`.sha256` 行格式、校验顺序和跨 run/ref/额外文件拒绝；
+   implement/check manifest 已同步。
+4. 将二进制布局、GHCR tag 映射、linker 符号和 `/healthz` 响应 schema列为 PRD 的 Pending Technical
+   Contracts 与启动前阻断，不以占位值或第二事实来源掩盖未知需求。
+
+#### 本轮结论
+
+规格在目标、范围、触发流程、失败摘要、配置安全、浏览器证据和发布安全边界上已形成可审计骨架，
+但仍不可实施激活：两个依赖的真实完成证据、C-b E1-E8 正向证据，以及上述 Pending Technical
+Contracts 均未闭合。后续只有在这些材料有唯一、可复核的正向证据后，才可重新计算 ready 并运行
+`task.py start`；审核阶段继续禁止业务实现修改。
+
+### 第八轮一致性审核（2026-08-31，本次会话续审）
+
+#### 发现与修订
+
+1. `implement.md` 的 Q-F4 摘要、生产配置测试项和 Review Blockers 仍有“运行时注入先于挂载文件解析”
+   的旧顺序表述；已统一为先验证唯一配置文件及 active `[prod]` 有效配置视图，再解析两个环境占位值，
+   并明确运行时值只是敏感值的唯一来源，不覆盖结构冲突。
+2. `prd.md` 的 R-F12 与 `task.json.notes` 同样残留“运行时注入先解析”；已同步到 C-b v1 的正式顺序和
+   冲突规则。
+3. `prd.md` 的 Activation Evidence Gate 曾将“唯一剩余事项”限定为上游实现证据，但同段另有
+   Pending Technical Contracts 阻断；已改为明确上游实现证据与 Pending Technical Contracts 是两类
+   独立激活阻断，避免误解为可先行启动。
+
+#### 验证
+
+- `python ./.trellis/scripts/task.py validate .trellis/tasks/08-25-cicd-delivery`：通过，
+  `implement.jsonl`/`check.jsonl` 各 10 条真实上下文记录。
+- `git diff --check`：通过；仅报告现有工作副本的 LF/CRLF 转换提示。
+- 旧顺序短语搜索仅命中本研究文件前几轮的历史记录，当前 PRD、design、implement、task.json 和
+  配置契约不再含该冲突表述。
+- 本轮仍未运行 `task.py start`，未修改业务实现、CI workflow、配置、测试实现或依赖任务；任务继续为
+  `planning`，ready 叶数量为 0。
+
+### 第九轮交付制品契约审核（2026-08-31，本次会话续审）
+
+#### 发现与修订
+
+1. `research/release-artifact-contract.md` 原先把 `commit`、`version`、`source_date_epoch` 施加到
+   tarball 与 `.sha256`，但这两者没有结构化字段；已改为 tarball 由文件名/platform 与哈希绑定、
+   `.sha256` 由固定单行绑定，结构化一致性只要求 manifest 与两份 JSON 元数据。
+2. 两份 JSON 元数据原只有交叉校验文字，没有可执行字段边界；已增加 `build-metadata.v1` 与
+   `image-build-inputs.v1` 的最小 schema、`additionalProperties: false`、版本/commit/时间/platform、
+   tarball hash、image digest、base image digest 以及 provenance/SBOM 开关约束。
+3. `design.md` 原使用 `revision` 字段描述元数据，已与契约统一为 `commit`；`implement.md`、
+   `implement.jsonl`、`check.jsonl` 已明确消费三份 JSON schema 和 platform/hash 绑定。
+
+#### 验证
+
+- `python ./.trellis/scripts/task.py validate .trellis/tasks/08-25-cicd-delivery`：通过，两个上下文
+  清单各 10 条真实记录。
+- `python -c "import json, pathlib; root=pathlib.Path('.trellis/tasks/08-25-cicd-delivery'); [json.loads(p.read_text(encoding='utf-8')) for p in [root/'task.json']]; [json.loads(line) for p in [root/'implement.jsonl',root/'check.jsonl'] for line in p.read_text(encoding='utf-8').splitlines() if line.strip()]; print('task/context JSON valid')"`：输出 `task/context JSON valid`。
+- `git diff --check`：通过，仅有现有 LF/CRLF 转换提示。
+- `task.py list` 仍显示 `08-25-cicd-delivery` 为 `planning`、`08-25-frontend-libs` 为 `planning`，
+  `00-bootstrap-guidelines` 为 `in_progress`；因此没有 ready 叶，也没有激活任何任务。
+
+### 第十轮审查反馈修订（2026-08-31，本次会话）
+
+#### 修订内容
+
+1. `release-inputs.json` 现在显式承载 platform、image/base-image digest、provenance、attestation
+   和 SBOM 开关，解决元数据字段无法与 manifest 逐项绑定的问题；两份 JSON schema 与跨字段校验已同步。
+2. `SOURCE_DATE_EPOCH` 固定为 tag checkout SHA 的 Git committer timestamp，并要求 validator 重新计算
+   比较；不再接受仅在文件之间保持一致的任意时间值。
+3. 补充 `attestation` schema 字段，并要求仅使用交接的 `image-build-inputs.json` 重建候选镜像，
+   使本地 digest 与 gate manifest/`build-metadata.json.image_digest` 一致，再要求 GHCR 推送后返回的
+   immutable digest 完全一致；设计和执行计划调整为 digest 验证通过后再创建 GitHub Release。
+4. C-b 配置契约增加同一错误类别内的确定性键/约束顺序；审核记录中的 JSON 校验命令替换为实际可执行命令。
+
+#### 本轮验证
+
+- `python ./.trellis/scripts/task.py validate .trellis/tasks/08-25-cicd-delivery`：通过。
+- `python -c "import json, pathlib; root=pathlib.Path('.trellis/tasks/08-25-cicd-delivery'); [json.loads(p.read_text(encoding='utf-8')) for p in [root/'task.json']]; [json.loads(line) for p in [root/'implement.jsonl',root/'check.jsonl'] for line in p.read_text(encoding='utf-8').splitlines() if line.strip()]; print('task/context JSON valid')"`：输出 `task/context JSON valid`。
+- `git diff HEAD --check`：通过，仅报告现有工作副本的 LF/CRLF 转换提示。
+- 未运行 `task.py start`；未修改业务实现、CI workflow、配置或测试实现。
+
+### 第十一轮技术契约收口（2026-08-31，本次会话）
+
+#### 用户确认与规格修订
+
+用户确认采用审核阶段提出的推荐契约，已将此前的 Pending Technical Contracts 收口为可执行规则：
+
+1. Go release linker 唯一注入符号为 `github.com/yangphere/leanote/app/service.BuildVersion`；未注入值固定为
+   `dev`，仅允许显式开发/测试场景，release、package 和 container smoke 必须拒绝 `dev` 或非严格 `X.Y.Z`。
+   `ConfigService.GetVersion()` 不再保留第二个硬编码版本。
+2. `GET /healthz` 为无需认证的固定 JSON 接口：`application/json; charset=utf-8`，ready 返回
+   `200` 和 `{"status":"ready"}\n`，未 ready 返回 `503` 和 `{"status":"not_ready"}\n`；JSON 只含
+   `status`，不含版本、配置、凭据或用户数据。
+3. tarball 内二进制固定为 `bin/leanote`，文件名为 `leanote`，权限 `0755`；`sh/package.sh` 和 container
+   entrypoint 只调用该路径。
+4. release tag `vX.Y.Z` 唯一映射为 `ghcr.io/yangphere/leanote:vX.Y.Z`，重复预检、manifest、推送和
+   拉取复验均使用该完整字符串，不生成 `latest` 或去掉 `v` 的别名。
+
+上述值已同步到 `prd.md`、`design.md`、`implement.md`、`task.json`、C-b 配置契约和
+`release-artifact-contract.md`；实现不得再引入第二来源、占位值或别名。
+
+#### 当前门禁结论
+
+技术契约阻断已解除，但两个依赖的真实完成证据以及 C-b E1-E8 正向实现证据仍未闭合，任务继续保持
+`planning`，不运行 `task.py start`。本轮仍未修改业务实现、CI workflow、生产配置或测试实现。
+
+#### 验证计划
+
+- 运行 `python ./.trellis/scripts/task.py validate .trellis/tasks/08-25-cicd-delivery`，确认两份上下文清单有效。
+- 解析 `task.json`、`implement.jsonl`、`check.jsonl` 及发布契约中的嵌入 JSON schema。
+- 运行 `git diff HEAD --check` 并确认所有工作区改动仍位于 `.trellis/tasks/08-25-cicd-delivery/`。

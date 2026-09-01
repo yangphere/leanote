@@ -1,0 +1,333 @@
+const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const test = require('node:test');
+
+test('release metadata exposes the five-file handoff builder', async () => {
+  const { buildReleaseInputs } = await import('../../scripts/release-metadata.mjs');
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-release-contract-'));
+  try {
+    await fs.writeFile(path.join(root, 'package.json'), JSON.stringify({ version: '1.2.3' }));
+    await fs.writeFile(path.join(root, 'package-lock.json'), JSON.stringify({ packages: { '': { version: '1.2.3' } } }));
+    const outDir = path.join(root, 'dist');
+    await fs.mkdir(outDir);
+    await fs.writeFile(path.join(outDir, 'leanote-v1.2.3-linux-amd64.tar.gz'), 'tarball');
+    await buildReleaseInputs({ root, outDir, env: {
+      RELEASE_TAG: 'v1.2.3', GIT_COMMIT: 'a'.repeat(40), GITHUB_REF: 'refs/tags/v1.2.3',
+      GITHUB_WORKFLOW: 'Quality gate', GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1', SOURCE_DATE_EPOCH: '100',
+      IMAGE_DIGEST: `sha256:${'b'.repeat(64)}`, BASE_IMAGE_DIGEST: `sha256:${'c'.repeat(64)}`,
+      PROVENANCE: 'disabled', ATTESTATION: 'disabled', SBOM: 'disabled',
+    } });
+    const names = (await fs.readdir(outDir)).sort();
+    assert.deepEqual(names, ['build-metadata.json', 'image-build-inputs.json', 'leanote-v1.2.3-linux-amd64.tar.gz', 'leanote-v1.2.3-linux-amd64.tar.gz.sha256', 'release-inputs.json']);
+    const manifest = JSON.parse(await fs.readFile(path.join(outDir, 'release-inputs.json')));
+    assert.equal(manifest.files.length, 4);
+    assert.equal(manifest.files.find((entry) => entry.kind === 'tarball').sha256, crypto.createHash('sha256').update('tarball').digest('hex'));
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('release artifact validation rejects unknown metadata schema versions', async () => {
+  const { buildReleaseInputs } = await import('../../scripts/release-metadata.mjs');
+  const { execFileSync } = require('node:child_process');
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-release-validator-'));
+  const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const epoch = execFileSync('git', ['show', '-s', '--format=%ct', commit], { encoding: 'utf8' }).trim();
+  try {
+    await fs.writeFile(path.join(root, 'leanote-v1.0.0-linux-amd64.tar.gz'), 'tarball');
+    await buildReleaseInputs({ root: process.cwd(), outDir: root, env: {
+      RELEASE_TAG: 'v1.0.0', GIT_COMMIT: commit, GITHUB_REF: 'refs/tags/v1.0.0',
+      GITHUB_WORKFLOW: 'Quality gate', GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1', SOURCE_DATE_EPOCH: epoch,
+      IMAGE_DIGEST: `sha256:${'b'.repeat(64)}`, BASE_IMAGE_DIGEST: `sha256:${'c'.repeat(64)}`,
+      PROVENANCE: 'disabled', ATTESTATION: 'disabled', SBOM: 'disabled',
+    } });
+    const metadataPath = path.join(root, 'build-metadata.json');
+    const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf8'));
+    metadata.schema_version = 'unknown.schema.v9';
+    await fs.writeFile(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
+    const manifestPath = path.join(root, 'release-inputs.json');
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+    const metadataEntry = manifest.files.find((entry) => entry.kind === 'metadata');
+    metadataEntry.sha256 = crypto.createHash('sha256').update(await fs.readFile(metadataPath)).digest('hex');
+    await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    assert.throws(() => execFileSync(process.execPath, ['scripts/validate-release-artifact.mjs', root], {
+      cwd: process.cwd(), env: { ...process.env, RELEASE_TAG: 'v1.0.0', GIT_COMMIT: commit },
+      stdio: 'pipe',
+    }), /schema version|metadata mismatch/i);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('release metadata rejects a non-numeric source date epoch', async () => {
+  const { buildReleaseInputs } = await import('../../scripts/release-metadata.mjs');
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-release-epoch-'));
+  try {
+    await fs.writeFile(path.join(root, 'package.json'), JSON.stringify({ version: '1.2.3' }));
+    await fs.writeFile(path.join(root, 'package-lock.json'), JSON.stringify({ packages: { '': { version: '1.2.3' } } }));
+    const outDir = path.join(root, 'dist');
+    await fs.mkdir(outDir);
+    await fs.writeFile(path.join(outDir, 'leanote-v1.2.3-linux-amd64.tar.gz'), 'tarball');
+    await assert.rejects(() => buildReleaseInputs({ root, outDir, env: {
+      RELEASE_TAG: 'v1.2.3', GIT_COMMIT: 'a'.repeat(40), GITHUB_REF: 'refs/tags/v1.2.3',
+      GITHUB_WORKFLOW: 'Quality gate', GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1', SOURCE_DATE_EPOCH: '100garbage',
+      IMAGE_DIGEST: `sha256:${'b'.repeat(64)}`, BASE_IMAGE_DIGEST: `sha256:${'c'.repeat(64)}`,
+      PROVENANCE: 'disabled', ATTESTATION: 'disabled', SBOM: 'disabled',
+    } }), /SOURCE_DATE_EPOCH/);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('release artifact validation binds build metadata to the tarball bytes', async () => {
+  const { buildReleaseInputs } = await import('../../scripts/release-metadata.mjs');
+  const { execFileSync } = require('node:child_process');
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-release-metadata-hash-'));
+  const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const epoch = execFileSync('git', ['show', '-s', '--format=%ct', commit], { encoding: 'utf8' }).trim();
+  try {
+    await fs.writeFile(path.join(root, 'leanote-v1.0.0-linux-amd64.tar.gz'), 'tarball');
+    await buildReleaseInputs({ root: process.cwd(), outDir: root, env: {
+      RELEASE_TAG: 'v1.0.0', GIT_COMMIT: commit, GITHUB_REF: 'refs/tags/v1.0.0',
+      GITHUB_WORKFLOW: 'Quality gate', GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1', SOURCE_DATE_EPOCH: epoch,
+      IMAGE_DIGEST: `sha256:${'b'.repeat(64)}`, BASE_IMAGE_DIGEST: `sha256:${'c'.repeat(64)}`,
+      PROVENANCE: 'disabled', ATTESTATION: 'disabled', SBOM: 'disabled',
+    } });
+    const metadataPath = path.join(root, 'build-metadata.json');
+    const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf8'));
+    metadata.tarball_sha256 = '0'.repeat(64);
+    await fs.writeFile(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
+    const manifestPath = path.join(root, 'release-inputs.json');
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+    manifest.files.find((entry) => entry.kind === 'metadata').sha256 = crypto.createHash('sha256').update(await fs.readFile(metadataPath)).digest('hex');
+    await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    assert.throws(() => execFileSync(process.execPath, ['scripts/validate-release-artifact.mjs', root], {
+      cwd: process.cwd(), env: { ...process.env, RELEASE_TAG: 'v1.0.0', GIT_COMMIT: commit }, stdio: 'pipe',
+    }), /build metadata tarball hash mismatch/);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('browser release evidence requires the canonical eight-record matrix', async () => {
+  const { validateBrowserMatrix } = await import('../../scripts/browser-release-evidence.mjs');
+  const commit = 'd'.repeat(40);
+  const records = ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => ({
+    commit, browser_product, release_slot, browser_version: release_slot === 'current_major' ? '123.4.5' : '122.4.5', os: 'linux', environment: 'real-browser',
+    coverage: ['build-smoke'], auth_gate: 'passed', error_gate: 'passed', resource_gate: 'passed',
+    executed_at: '2026-08-31T12:00:00Z', result: 'passed',
+  })));
+  assert.equal(validateBrowserMatrix({ schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records }, commit).records.length, 8);
+  assert.throws(() => validateBrowserMatrix({ schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records: records.slice(1) }, commit), /exactly eight/);
+  const nonAdjacent = records.map((row) => row.browser_product === 'chrome' && row.release_slot === 'previous_major'
+    ? { ...row, browser_version: '121.4.5' }
+    : row);
+  assert.throws(() => validateBrowserMatrix({ schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records: nonAdjacent }, commit), /not adjacent/);
+  const invalidDate = records.map((row, index) => index === 0 ? { ...row, executed_at: '2026-02-30T12:00:00Z' } : row);
+  assert.throws(() => validateBrowserMatrix({ schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records: invalidDate }, commit), /RFC3339|executed_at/);
+});
+
+test('container smoke grants the canonical config group and verifies PDF output', async () => {
+  const script = await fs.readFile(path.join(process.cwd(), 'scripts/container-smoke.sh'), 'utf8');
+  assert.match(script, /chmod 0777 "\$FILES_DIR" "\$UPLOAD_DIR"/);
+  assert.match(script, /--user 10001:10001 --group-add "\$\(id -g\)"/);
+  assert.doesNotMatch(script, /entrypoint \/bin\/chown|MSYS_NO_PATHCONV=1/);
+  assert.match(script, /%PDF-/);
+});
+
+test('package smoke verifies reproducible archive output', async () => {
+  const script = await fs.readFile(path.join(process.cwd(), 'scripts/package-smoke.sh'), 'utf8');
+  assert.match(script, /sha256sum/);
+  assert.match(script, /SOURCE_DATE_EPOCH/);
+  assert.match(script, /PACKAGE_SMOKE_PDF_URL/);
+  assert.match(script, /real \/note\/toPdf route/);
+  assert.match(script, /curl[\s\S]*PDF/);
+  assert.doesNotMatch(script, /wkhtmltopdf --quiet about:blank/);
+});
+
+test('container smoke renders the application PDF route instead of a blank page', async () => {
+  const script = await fs.readFile(path.join(process.cwd(), 'scripts/container-smoke.sh'), 'utf8');
+  assert.match(script, /CONTAINER_SMOKE_PDF_URL/);
+  assert.match(script, /real \/note\/toPdf route/);
+  assert.match(script, /curl[\s\S]*PDF/);
+  assert.doesNotMatch(script, /wkhtmltopdf --quiet about:blank/);
+});
+
+test('quality gate fallback summaries preserve GitHub provenance', async () => {
+  const workflow = await fs.readFile(path.join(process.cwd(), '.github/workflows/quality-gate.yml'), 'utf8');
+  assert.doesNotMatch(workflow, /GITHUB_WORKFLOW:-unknown/);
+  assert.doesNotMatch(workflow, /GITHUB_REF:-unknown/);
+  assert.doesNotMatch(workflow, /GITHUB_SHA:-0{40}/);
+  assert.match(workflow, /CI_FORCE_FALLBACK/);
+});
+
+test('summary writer rejects missing provenance and preserves valid fallback context', async () => {
+  const { execFile } = require('node:child_process');
+  const script = path.join(process.cwd(), 'scripts/ci/write-summary.mjs');
+  const run = (cwd, env) => new Promise((resolve) => {
+    execFile(process.execPath, [script], { cwd, env }, (error, stdout, stderr) => resolve({ error, stdout, stderr }));
+  });
+  const missingEnv = { ...process.env, CI_JOB_ID: 'go-1_26_7', CI_FORCE_FALLBACK: 'true' };
+  delete missingEnv.GITHUB_WORKFLOW;
+  delete missingEnv.GITHUB_RUN_ID;
+  delete missingEnv.GITHUB_RUN_ATTEMPT;
+  delete missingEnv.GITHUB_SHA;
+  delete missingEnv.GITHUB_REF;
+  const missing = await run(process.cwd(), missingEnv);
+  assert.notEqual(missing.error, null);
+  assert.match(missing.stderr, /GITHUB_WORKFLOW|GITHUB_RUN_ID|GITHUB_SHA|GITHUB_REF/);
+
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-summary-provenance-'));
+  try {
+    const validEnv = {
+      ...process.env,
+      CI_JOB_ID: 'go-1_26_7', CI_FORCE_FALLBACK: 'true', CI_JOB_STATUS: 'failure',
+      GITHUB_WORKFLOW: 'Quality gate', GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '2',
+      GITHUB_SHA: 'a'.repeat(40), GITHUB_REF: 'refs/heads/dev',
+    };
+    const valid = await run(root, validEnv);
+    assert.equal(valid.error, null, valid.stderr);
+    const summary = JSON.parse(await fs.readFile(path.join(root, 'ci-summaries/go-1_26_7.json'), 'utf8'));
+    assert.equal(summary.workflow, 'Quality gate');
+    assert.deepEqual(summary.run, { id: '123', attempt: 2 });
+    assert.equal(summary.commit, 'a'.repeat(40));
+    assert.equal(summary.ref, 'refs/heads/dev');
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('quality gate pins Jammy PDF tooling and installs mongorestore explicitly', async () => {
+  const workflow = await fs.readFile(path.join(process.cwd(), '.github/workflows/quality-gate.yml'), 'utf8');
+  assert.match(workflow, /wkhtmltopdf=0\.12\.6-2(?:\s|$)/);
+  assert.doesNotMatch(workflow, /wkhtmltopdf=0\.12\.6-2\+b1/);
+  assert.match(workflow, /mongodb-database-tools-ubuntu2204-x86_64-\$\{version\}/);
+  assert.match(workflow, /\/usr\/local\/bin\/mongorestore/);
+});
+
+test('release validation peels annotated tags and rechecks the remote ref', async () => {
+  const workflow = await fs.readFile(path.join(process.cwd(), '.github/workflows/release.yml'), 'utf8');
+  assert.match(workflow, /refs\/tags\/\$\{GITHUB_REF_NAME\}\^\{\}/);
+  assert.match(workflow, /git fetch --force origin "refs\/tags\/\$\{TAG\}:refs\/remotes\/origin\/tags\/\$\{TAG\}"/);
+  assert.match(workflow, /refs\/remotes\/origin\/tags\/\$\{GITHUB_REF_NAME\}\^\{\}/);
+});
+
+test('protected browser workflow executes commands instead of importing a matrix file', async () => {
+  const workflow = await fs.readFile(path.join(process.cwd(), '.github/workflows/browser-release-evidence.yml'), 'utf8');
+  assert.doesNotMatch(workflow, /BROWSER_MATRIX_SOURCE/);
+  assert.match(workflow, /Execute protected real-browser matrix/);
+  const script = await fs.readFile(path.join(process.cwd(), 'scripts/browser-release-evidence.mjs'), 'utf8');
+  assert.match(script, /BROWSER_SMOKE_COMMAND_/);
+  assert.match(script, /execAsync\(command/);
+});
+
+test('runtime image exposes the PDF binary at the application contract path', async () => {
+  const dockerfile = await fs.readFile(path.join(process.cwd(), 'Dockerfile'), 'utf8');
+  assert.match(dockerfile, /wkhtmltopdf=0\.12\.6-2\+b1/);
+  assert.match(dockerfile, /ln -s \/usr\/bin\/wkhtmltopdf \/usr\/local\/bin\/wkhtmltopdf/);
+  assert.match(dockerfile, /COPY conf\/routes \/app\/conf\/routes/);
+});
+
+test('package layout carries the runtime route table', async () => {
+  const script = await fs.readFile(path.join(process.cwd(), 'sh/package.sh'), 'utf8');
+  assert.match(script, /conf\/routes/);
+});
+
+test('summary validator rejects an unverified service readiness pass', async () => {
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-summary-contract-'));
+  const commit = 'e'.repeat(40);
+  const jobs = ['go-1_26_7', 'go-1_27_0', 'mongo-8_0', 'node-build', 'chromium-e2e', 'package-smoke', 'container-smoke'];
+  const summary = (job, service = { health_path: null, readiness: 'not_run', http_status: null, exit_code: 0 }) => ({
+    schema_version: 'leanote.ci.failure-summary.v1', workflow: 'Quality gate', job,
+    run: { id: '10', attempt: 1 }, commit, ref: 'refs/heads/dev', status: 'passed', stage: 'complete',
+    toolchain: { go: null, node: null, npm: null, mongo: null, playwright: null },
+    failure: { category: 'none', message: '', exit_code: 0 }, service,
+    tests: { discovery: 'passed', discovered_count: 1, executed_count: 1 }, page_paths: [], resource_paths: [],
+    status_codes: service.http_status === null ? [] : [service.http_status], generated_at: '2026-08-31T12:00:00Z',
+  });
+  try {
+    for (const job of jobs) await fs.writeFile(path.join(root, `${job}.json`), JSON.stringify(summary(job)));
+    await fs.writeFile(path.join(root, 'package-smoke.json'), JSON.stringify(summary('package-smoke', {
+      health_path: '/healthz', readiness: 'unknown', http_status: 200, exit_code: 0,
+    })));
+    const result = await import('node:child_process').then(({ execFile }) => new Promise((resolve) => {
+      execFile(process.execPath, ['scripts/ci/validate-summaries.mjs', root], { cwd: process.cwd() }, (error, stdout, stderr) => resolve({ error, stdout, stderr }));
+    }));
+    assert.notEqual(result.error, null);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('summary validator rejects placeholder provenance', async () => {
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-summary-placeholder-'));
+  const jobs = ['go-1_26_7', 'go-1_27_0', 'mongo-8_0', 'node-build', 'chromium-e2e', 'package-smoke', 'container-smoke'];
+  const record = (job, provenance) => ({
+    schema_version: 'leanote.ci.failure-summary.v1', workflow: provenance.workflow,
+    job, run: { id: provenance.runId, attempt: 1 }, commit: provenance.commit, ref: provenance.ref,
+    status: 'failed', stage: 'job_not_started',
+    toolchain: { go: null, node: null, npm: null, mongo: null, playwright: null },
+    failure: { category: 'job_not_started', message: 'job_not_started', exit_code: null },
+    service: { health_path: null, readiness: 'not_run', http_status: null, exit_code: null },
+    tests: { discovery: 'not_run', discovered_count: null, executed_count: null },
+    page_paths: [], resource_paths: [], status_codes: [], generated_at: '2026-08-31T12:00:00Z',
+  });
+  try {
+    for (const [index, job] of jobs.entries()) {
+      await fs.writeFile(path.join(root, `${job}.json`), JSON.stringify(record(job, {
+        workflow: index === 0 ? 'unknown' : 'Quality gate', runId: index === 0 ? '0' : '10',
+        commit: index === 0 ? '0'.repeat(40) : 'a'.repeat(40), ref: index === 0 ? 'unknown' : 'refs/heads/dev',
+      })));
+    }
+    const result = await import('node:child_process').then(({ execFile }) => new Promise((resolve) => {
+      execFile(process.execPath, ['scripts/ci/validate-summaries.mjs', root], { cwd: process.cwd() }, (error, stdout, stderr) => resolve({ error, stdout, stderr }));
+    }));
+    assert.notEqual(result.error, null);
+    assert.match(result.stderr, /workflow invalid|run provenance invalid|commit invalid|ref invalid/);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('browser evidence provenance names the protected producer workflow', async () => {
+  const { buildBrowserEvidence } = await import('../../scripts/browser-release-evidence.mjs');
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-browser-contract-'));
+  const commit = 'f'.repeat(40);
+  const records = ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => ({
+    commit, browser_product, release_slot, browser_version: release_slot === 'current_major' ? '123.4.5' : '122.4.5', os: 'linux', environment: 'real-browser',
+    coverage: ['build-smoke'], auth_gate: 'passed', error_gate: 'passed', resource_gate: 'passed',
+    executed_at: '2026-08-31T12:00:00Z', result: 'passed',
+  })));
+  const source = path.join(root, 'source.json');
+  try {
+    await fs.writeFile(source, JSON.stringify({ schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records }));
+    const { provenance } = await buildBrowserEvidence({ source, output: path.join(root, 'out'), env: {
+      RELEASE_COMMIT: commit, RELEASE_REF: 'refs/tags/v1.2.3', GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1', GITHUB_WORKFLOW: 'Release',
+    } });
+    assert.equal(provenance.producer_workflow, 'Protected browser release evidence');
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('browser evidence rejects a prefixed run attempt', async () => {
+  const { buildBrowserEvidence } = await import('../../scripts/browser-release-evidence.mjs');
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-browser-attempt-'));
+  const commit = '1'.repeat(40);
+  const records = ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => ({
+    commit, browser_product, release_slot, browser_version: release_slot === 'current_major' ? '123.4.5' : '122.4.5', os: 'linux', environment: 'real-browser',
+    coverage: ['build-smoke'], auth_gate: 'passed', error_gate: 'passed', resource_gate: 'passed',
+    executed_at: '2026-08-31T12:00:00Z', result: 'passed',
+  })));
+  const source = path.join(root, 'source.json');
+  try {
+    await fs.writeFile(source, JSON.stringify({ schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records }));
+    await assert.rejects(() => buildBrowserEvidence({ source, output: path.join(root, 'out'), env: {
+      RELEASE_COMMIT: commit, RELEASE_REF: 'refs/tags/v1.2.3', GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1garbage',
+    } }), /attempt/);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});

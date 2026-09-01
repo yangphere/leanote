@@ -1,0 +1,119 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: '${{ github.sha }}', fetch-depth: 0 }
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with: { node-version: '24.20.0' }
+      - run: npm ci
+      - env: { RELEASE_TAG: '${{ github.ref_name }}' }
+        run: node scripts/check-version.mjs
+      - name: Reject forced tag updates
+        env: { TAG_WAS_FORCED: '${{ github.event.forced }}' }
+        run: test "$TAG_WAS_FORCED" != true
+      - name: Verify annotated or lightweight tag points to checkout commit
+        run: test "$(git rev-parse "refs/tags/${GITHUB_REF_NAME}^{}")" = "$GITHUB_SHA"
+
+  quality-gate:
+    needs: [validate]
+    uses: ./.github/workflows/quality-gate.yml
+
+  browser-evidence:
+    needs: [validate, quality-gate]
+    uses: ./.github/workflows/browser-release-evidence.yml
+
+  publish:
+    needs: [validate, quality-gate, browser-evidence]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: '${{ github.sha }}', fetch-depth: 0 }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: { name: leanote-release-inputs-v1, path: dist }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: { name: browser-release-matrix-v1, path: test-results }
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with: { node-version: '24.20.0' }
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e
+      - name: Validate release and browser handoff
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          GIT_COMMIT: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          export SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$GITHUB_SHA")
+          node scripts/validate-release-artifact.mjs dist
+          node scripts/validate-browser-artifact.mjs test-results
+      - name: Recheck remote tag immutability before publish
+        env: { TAG: '${{ github.ref_name }}' }
+        run: |
+          git fetch --force origin "refs/tags/${TAG}:refs/remotes/origin/tags/${TAG}"
+          test "$(git rev-parse "refs/remotes/origin/tags/${TAG}^{}")" = "$GITHUB_SHA"
+      - name: Reject existing release or image tag
+        env: { GH_TOKEN: '${{ github.token }}', TAG: '${{ github.ref_name }}', IMAGE: 'ghcr.io/yangphere/leanote:${{ github.ref_name }}' }
+        run: |
+          set +e
+          release_view=$(gh release view "$TAG" 2>&1)
+          release_status=$?
+          set -e
+          if [ "$release_status" -eq 0 ]; then echo 'release already exists' >&2; exit 1; fi
+          if ! printf '%s' "$release_view" | grep -Eiq 'release not found|not found|no release'; then
+            printf '%s\n' "$release_view" >&2
+            exit "$release_status"
+          fi
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          set +e
+          inspect=$(docker buildx imagetools inspect "$IMAGE" 2>&1)
+          inspect_status=$?
+          set -e
+          if [ "$inspect_status" -eq 0 ]; then echo 'GHCR image tag already exists' >&2; exit 1; fi
+          if ! printf '%s' "$inspect" | grep -Eiq 'manifest unknown|not found|name unknown|no such manifest'; then
+            printf '%s\n' "$inspect" >&2
+            exit "$inspect_status"
+          fi
+      - name: Build candidate and compare immutable digest
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          GIT_COMMIT: ${{ github.sha }}
+        run: |
+          epoch=$(node -e "process.stdout.write(String(JSON.parse(require('fs').readFileSync('dist/release-inputs.json')).source_date_epoch))")
+          created=$(date -u -d "@$epoch" +%Y-%m-%dT%H:%M:%SZ)
+          docker buildx build --platform linux/amd64 --load --metadata-file dist/image-metadata.json --build-arg VERSION="${RELEASE_TAG#v}" --build-arg REVISION="$GITHUB_SHA" --build-arg SOURCE_DATE_EPOCH="$created" --provenance=false --sbom=false -t "ghcr.io/yangphere/leanote:${RELEASE_TAG}" .
+          test "$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('dist/image-metadata.json'))['containerimage.digest'] || '')")" = "$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('dist/build-metadata.json')).image_digest)")"
+      - name: Push immutable image and verify registry digest
+        env: { GH_TOKEN: '${{ github.token }}', IMAGE: 'ghcr.io/yangphere/leanote:${{ github.ref_name }}' }
+        run: |
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/remotes/origin/tags/${GITHUB_REF_NAME}"
+          test "$(git rev-parse "refs/remotes/origin/tags/${GITHUB_REF_NAME}^{}")" = "$GITHUB_SHA"
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          docker push "$IMAGE"
+          pushed=$(docker buildx imagetools inspect "$IMAGE" --format '{{.Manifest.Digest}}')
+          expected=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('dist/build-metadata.json')).image_digest)")
+          test "$pushed" = "$expected"
+      - name: Create GitHub Release
+        env: { GH_TOKEN: '${{ github.token }}', TAG: '${{ github.ref_name }}' }
+        run: |
+          git fetch --force origin "refs/tags/${TAG}:refs/remotes/origin/tags/${TAG}"
+          test "$(git rev-parse "refs/remotes/origin/tags/${TAG}^{}")" = "$GITHUB_SHA"
+          gh release create "$TAG" --verify-tag --title "$TAG" --generate-notes "dist/leanote-$TAG-linux-amd64.tar.gz" "dist/leanote-$TAG-linux-amd64.tar.gz.sha256" dist/build-metadata.json

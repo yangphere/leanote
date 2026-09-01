@@ -5,42 +5,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/yangphere/leanote/app/httpserver"
 	i18n "github.com/yangphere/leanote/app/lea/i18n"
 )
-
-const publicSecret = defaultPublicSecret
-
-func TestValidateProdSecretAcceptsRealSecret(t *testing.T) {
-	if err := validateProdSecret("prod", "a-real-production-secret"); err != nil {
-		t.Fatalf("validateProdSecret(prod, real) = %v, want nil", err)
-	}
-}
-
-func TestValidateProdSecretRejectsEmpty(t *testing.T) {
-	err := validateProdSecret("prod", "")
-	if err == nil || !strings.Contains(err.Error(), "empty") {
-		t.Fatalf("validateProdSecret(prod, empty) = %v, want empty-secret error", err)
-	}
-}
-
-func TestValidateProdSecretRejectsPublicDefault(t *testing.T) {
-	err := validateProdSecret("prod", publicSecret)
-	if err == nil || !strings.Contains(err.Error(), "public repository default") {
-		t.Fatalf("validateProdSecret(prod, default) = %v, want public-default error", err)
-	}
-}
-
-func TestValidateProdSecretSkipsNonProd(t *testing.T) {
-	for _, mode := range []string{"dev", "test"} {
-		if err := validateProdSecret(mode, ""); err != nil {
-			t.Fatalf("validateProdSecret(%s, empty) = %v, want nil (non-prod skips check)", mode, err)
-		}
-	}
-}
 
 func TestSetupPresentationRendersTemplatesWithConfiguredMessages(t *testing.T) {
 	root := t.TempDir()
@@ -105,6 +74,31 @@ func TestApplicationBaseUsesConfigParentUnlessItIsConfDirectory(t *testing.T) {
 	}
 }
 
+func TestStaticAssetRootIsRelativeToApplicationBase(t *testing.T) {
+	root := filepath.Join("workspace", "release")
+	if got, want := staticAssetRoot(root, "public"), filepath.Join(root, "public"); got != want {
+		t.Fatalf("static asset root = %q, want %q", got, want)
+	}
+}
+
+func TestStaticHandlerServesExactFiles(t *testing.T) {
+	root := t.TempDir()
+	file := filepath.Join(root, "public", "images", "favicon.ico")
+	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+		t.Fatalf("create asset directory: %v", err)
+	}
+	if err := os.WriteFile(file, []byte("icon"), 0o644); err != nil {
+		t.Fatalf("write asset: %v", err)
+	}
+	handler := staticHandler(root, "public/images/favicon.ico")
+	req := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK || res.Body.String() != "icon" {
+		t.Fatalf("exact static file: status=%d body=%q", res.Code, res.Body.String())
+	}
+}
+
 func TestSetupPresentationRejectsMissingMessagesDirectory(t *testing.T) {
 	root := t.TempDir()
 	viewsDir := filepath.Join(root, "views")
@@ -139,5 +133,24 @@ func TestSetupPresentationRejectsMalformedMessageFile(t *testing.T) {
 	}
 	if err := setupPresentation(cfg, viewsDir, filepath.Join(root, "messages")); err == nil {
 		t.Fatal("setupPresentation succeeded with a malformed message file")
+	}
+}
+
+func TestValidateCLIOptionsRequiresProductionMode(t *testing.T) {
+	if err := validateCLIOptions("dev", true, true); err == nil {
+		t.Fatal("validateCLIOptions() accepted non-production run mode")
+	}
+}
+
+func TestValidateCLIOptionsRequiresExplicitCanonicalArguments(t *testing.T) {
+	if err := validateCLIOptions("", false, false); err == nil {
+		t.Fatal("validateCLIOptions() accepted missing production arguments")
+	} else if cfgErr, ok := err.(*httpserver.ConfigError); !ok || cfgErr.Code != "CONFIG_RUN_MODE_INVALID" {
+		t.Fatalf("missing run mode error = %v, want CONFIG_RUN_MODE_INVALID", err)
+	}
+	if err := validateCLIOptions("prod", true, false); err == nil {
+		t.Fatal("validateCLIOptions() accepted missing config path")
+	} else if cfgErr, ok := err.(*httpserver.ConfigError); !ok || cfgErr.Code != "CONFIG_PATH_INVALID" {
+		t.Fatalf("missing config path error = %v, want CONFIG_PATH_INVALID", err)
 	}
 }

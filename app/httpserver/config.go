@@ -171,12 +171,12 @@ func (c *Config) expand(value, section string) (string, error) {
 func envExpand(value string) (string, error) {
 	for _, m := range envVarRegExp.FindAllStringSubmatchIndex(value, -1) {
 		name := value[m[2]:m[3]]
-		if os.Getenv(name) == "" {
+		if strings.TrimSpace(os.Getenv(name)) == "" {
 			return "", fmt.Errorf("option not found: %s", name)
 		}
 	}
 	return envVarRegExp.ReplaceAllStringFunc(value, func(match string) string {
-		return os.Getenv(envVarRegExp.FindStringSubmatch(match)[1])
+		return strings.TrimSpace(os.Getenv(envVarRegExp.FindStringSubmatch(match)[1]))
 	}), nil
 }
 

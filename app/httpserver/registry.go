@@ -217,8 +217,12 @@ type App struct {
 	Registry       *Registry
 	Sessions       *SessionCodec // optional; nil = every request anonymous
 	LocaleResolver func(r *http.Request) string
-	OnRequest      func()                         // pre-dispatch hook, e.g. db.CheckMongoSessionLost
-	StaticHandler  func(base string) http.Handler // serves a Static.Serve base dir
+	OnRequest      func() // pre-dispatch hook, e.g. db.CheckMongoSessionLost
+	// HealthCheck is an optional unauthenticated readiness probe. When set,
+	// GET /healthz is handled before route matching and returns the fixed JSON
+	// contract without exposing application state.
+	HealthCheck   func() error
+	StaticHandler func(base string) http.Handler // serves a Static.Serve base dir
 }
 
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -227,6 +231,17 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) dispatch(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet && r.URL.Path == "/healthz" && a.HealthCheck != nil {
+		status := http.StatusOK
+		body := map[string]string{"status": "ready"}
+		if err := a.HealthCheck(); err != nil {
+			status = http.StatusServiceUnavailable
+			body["status"] = "not_ready"
+		}
+		ctx := &Context{Request: r, Writer: newStatusWriter(w)}
+		ApplyResult(ctx, JSONLineResult(status, body))
+		return
+	}
 	if a.OnRequest != nil {
 		a.OnRequest()
 	}
@@ -316,8 +331,12 @@ func (a *App) dispatch(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	ApplyResult(ctx, entry.Handler(ctx))
+	// SessionFilter must emit the refreshed cookie before the action result
+	// writes response headers. Applying it afterward loses Set-Cookie because
+	// net/http has already committed the response.
+	result := entry.Handler(ctx)
 	a.applySessionCookie(ctx)
+	ApplyResult(ctx, result)
 }
 
 // applySessionCookie refreshes the session cookie when the action wrote

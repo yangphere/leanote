@@ -37,7 +37,7 @@ func TestMongoEnvironmentUpRestoresFixtureAndVerifiesUsers(t *testing.T) {
 
 	want := []string{
 		"docker rm -f leanote-test-mongo",
-		"docker run -d --rm --name leanote-test-mongo -p 27017:27017 mongo:8.0",
+		"docker run -d --rm --name leanote-test-mongo -p 27017:27017 docker.io/library/mongo:8.0@sha256:376f5173003b5408d7b8e6989667231c0bf0cefdce379d7c814910429d1a7a85",
 		"docker exec leanote-test-mongo mongosh --quiet --eval db.runCommand({ping:1}).ok",
 		"docker cp " + fixture + " leanote-test-mongo:/",
 		"docker exec leanote-test-mongo mongorestore --db leanote_test --dir /leanote_install_data --drop",

@@ -106,6 +106,18 @@ func CheckMongoSessionLost() {
 	ctx, cancel := operationContext()
 	defer cancel()
 	if err := client.Ping(ctx, nil); err != nil {
-		Log("Lost connection to db! " + err.Error())
+		Log("mongo readiness check failed")
 	}
+}
+
+// Ping reports MongoDB readiness without exposing connection details. A nil
+// client is intentionally treated as not ready so callers can return a stable
+// health response while the process remains available for diagnostics.
+func Ping() error {
+	if client == nil {
+		return fmt.Errorf("mongo client is not initialized")
+	}
+	ctx, cancel := operationContext()
+	defer cancel()
+	return client.Ping(ctx, nil)
 }

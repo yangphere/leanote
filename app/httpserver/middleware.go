@@ -51,7 +51,9 @@ func (g *gzipResponseWriter) Write(b []byte) (int, error) {
 // Requests without the header pass through untouched.
 func Gzip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		// Readiness probes require the exact JSON line on the wire, regardless
+		// of Accept-Encoding negotiation.
+		if r.URL.Path == "/healthz" || !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)
 			return
 		}

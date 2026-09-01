@@ -25,7 +25,7 @@ func wrapCollection(c *mongo.Collection) *Collection {
 }
 
 func (c *Collection) logFailure(op string, err error) {
-	Logf("mongo %s failed on collection %s [%s]: %v", op, c.name, classifyError(err), err)
+	Logf("mongo %s failed on collection %s category=%s", op, c.name, classifyError(err))
 }
 
 // classifyError labels a driver error by category so logs and callers can

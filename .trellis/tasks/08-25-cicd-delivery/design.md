@@ -27,8 +27,10 @@ E2E、package smoke、container smoke，并以显式 job outputs 汇总。releas
 2. `release.yml` 仅接受严格 `vX.Y.Z` tag，先在 tag 指向的 commit 上调用同一
    `quality-gate.yml`，再调用受保护的真实浏览器证据 workflow 生成一次
    `browser-release-matrix-v1` artifact，并校验版本事实源、矩阵 provenance 和本次 gate 的 artifact 清单。
-3. 只有 gate 汇总成功且所有输入均绑定同一 commit/run，release 才能依次创建 Release、上传
-   tarball/校验和/元数据并推送 GHCR；任一步失败都停止后续发布步骤，不执行补偿性覆盖。
+3. 只有 gate 汇总成功且所有输入均绑定同一 commit/run，release 才能仅用交接的
+   `image-build-inputs.json` 重建或载入候选镜像，先校验本地 digest 与 gate 元数据一致，再推送
+   GHCR 并校验 registry digest 完全一致，最后创建 Release、上传 tarball/校验和/元数据；任一步
+   失败都停止后续发布步骤，不执行补偿性覆盖。
    release 按 tag/ref 使用独立 concurrency group，`cancel-in-progress: false`；并发运行等待而不
    取消先行运行，等待本身不授予覆盖权限。
 
@@ -73,8 +75,9 @@ artifact allowlist 以 `research/ci-failure-summary-schema.md` 为唯一契约�
 
 Node job 先运行构建与测试，再执行 `git diff --exit-code`。这使生成资源仍可跟踪，但源码和 manifest 是唯一事实来源。
 
-重写 `sh/package.sh`，只从显式 allowlist 收集迁移后的 `cmd/leanote` 二进制、`conf/app.conf-default`
-配置样例、`app/views`、`messages`、`public` 运行资源和必要运行脚本；明确排除 `conf/app.conf`、
+重写 `sh/package.sh`，从 `cmd/leanote` 源码包构建普通 Go 二进制，固定将二进制写入 tarball 的
+`bin/leanote` 路径并设置 `0755`，再按已确认契约收入显式 allowlist；其余只包含 `conf/app.conf-default`
+配置样例、`app/views`、`messages`、`public` 运行资源和必要运行脚本。明确排除 `conf/app.conf`、
 `mongodb_backup`、`files`、`public/upload` 内容、`node_modules`、测试输出、日志、`.git` 和本地配置。
 构建固定 `SOURCE_DATE_EPOCH`（tag commit 时间），Go 使用 `-trimpath -buildvcs=false`，归档使用
 稳定路径排序、numeric owner/group、固定 mode/mtime，gzip 不写入当前时间。输出命名为
@@ -99,7 +102,7 @@ digest、构建参数和最终镜像 digest 都必须进入可审计元数据。
 `-conf /etc/leanote/app.conf -runMode prod`，配置文件是唯一生产路径、必须为只读 regular file 且部署权限为
 `0440`。Mongo 只允许 `MONGODB_URL` 经 `db.urlEnv=${MONGODB_URL}` 占位引用注入，secret 只允许
 `LEANOTE_APP_SECRET` 经 `app.secret=${LEANOTE_APP_SECRET}` 占位引用注入；`db.dbname` 必须存在、与 URI 数据库路径
-一致且不得为 `leanote_test`。解析顺序是先读该文件和 active `[prod]` section，再解析两个环境键；环境值是唯一
+一致且不得为 `leanote_test`。解析顺序固定为先读该文件并验证 active `[prod]` section 的有效结构，再解析两个环境键；环境值是唯一
 敏感值来源，挂载文件只提供占位符和非敏感结构。literal 值、重复键、未声明别名或其他来源造成冲突时直接失败，
 不静默覆盖。缺失/不可读文件、section/键形态错误、环境值缺失或为空、公开默认/短 secret、非法 URI 或数据库名
 均必须在 HTTP bind/listen、Mongo dial/ping 和 `/healthz` 可达前 fail closed，以研究材料固定的稳定错误码
@@ -108,7 +111,9 @@ digest、构建参数和最终镜像 digest 都必须进入可审计元数据。
 `CONFIG_SOURCE_CONFLICT`、`CONFIG_PUBLIC_DEFAULT`、`CONFIG_SECRET_INVALID`、`CONFIG_MONGO_INVALID`）退出 `78`；合法配置
 但 Mongo ping 失败按 Q-F2 由 `/healthz` 返回 `503`。不得回退 `conf/app.conf`、`conf/app.conf-default`、localhost、
 host/port 组合或公开 secret；日志和 artifact 只保留错误码、非敏感键名、`run_mode=prod`，不得含配置值、凭据、
-完整 Mongo URI 或环境 dump。
+完整 Mongo URI 或环境 dump。`GET /healthz` 固定返回 `application/json; charset=utf-8`：HTTP+Mongo
+ready 时为 `200` 和 `{"status":"ready"}\n`，未 ready 时为 `503` 和 `{"status":"not_ready"}\n`；响应
+不包含版本字段、配置、凭据或用户数据。
 
 Dockerfile、package/container smoke 和部署文档只引用该接口表，不自行复制或发明别名。声明并挂载 `files/` 与
 `public/upload/`，container smoke 启动 MongoDB 8.0 和应用，调用 `GET /healthz` 确认 HTTP 与 Mongo readiness（ready
@@ -123,9 +128,10 @@ Dockerfile、package/container smoke 和部署文档只引用该接口表，不�
 `package.json` 顶层 `version` 是唯一版本输入；`package-lock.json` 根 package 的 `version` 必须
 逐字匹配。所有 Node/release 脚本读取同一字段并用严格 `X.Y.Z` 校验，再将其转换为 `vX.Y.Z`
 标签和 `leanote-vX.Y.Z-linux-amd64.tar.gz` 文件名。Go 发布构建必须通过 linker 将该值注入
-应用版本/健康响应的唯一运行时变量，OCI `version` label、Release metadata 和 tarball metadata
-也必须由该值生成。实现不得保留 `ConfigService.GetVersion()` 的第二个硬编码版本；未注入的二进制
-只能用于显式开发/测试场景，release/package/container smoke 必须拒绝它并保留非零退出码。
+`github.com/yangphere/leanote/app/service.BuildVersion`，`ConfigService.GetVersion()` 只返回该变量；
+变量默认值固定为 `dev`，仅允许显式开发/测试场景，release/package/container smoke 必须拒绝 `dev`
+或非严格 `X.Y.Z` 值。OCI `version` label、Release metadata 和 tarball metadata 也必须由该值生成，
+不得保留第二个硬编码版本。
 
 版本校验必须同时读取两个 package 文件、检查严格 tag 正则和注入值相等性；任何 JSON 缺失、版本
 不一致、前导零、预发布/build metadata 或 linker 注入缺失都在构建/发布前失败。
@@ -137,21 +143,28 @@ release workflow 验证 tag 精确匹配 `^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0
 `contents: write` 与 `packages: write`，使用 GitHub 内建 token，不存长期 PAT；tag commit 必须
 与 quality-gate 的 checkout SHA 相同，已有 Release、同名资产或镜像标签时失败而不覆盖。
 
-镜像推送版本 tag 与 commit digest label，记录最终 image digest；Release 上传 tarball、校验和及
+镜像推送使用唯一完整 tag `ghcr.io/yangphere/leanote:vX.Y.Z`，禁止 `latest` 或去掉 `v` 的别名；同时
+记录 commit digest label 和最终 image digest。Release 上传 tarball、校验和及
 不含敏感信息的构建元数据，下载后再验证 SHA-256。任一验证或推送失败都使 workflow 失败，不发布
 空附件、不继续生产部署；release 重试/错误资产删除遵循 Q-F3 已确认的人工边界。
 
 ### 5.3 发布 artifact 交接
 
-quality-gate 应在汇总成功后发布一个包含固定文件名、SHA-256、checkout SHA、版本和 workflow
-run/attempt 的机器可读清单；tarball、`.sha256`、metadata 和镜像构建输入必须在同一 run 中
-生成。release 通过该清单按精确 artifact 名称下载，并验证：
+quality-gate 应在汇总成功后按 `research/release-artifact-contract.md` 发布唯一的
+`leanote-release-inputs-v1` artifact；其中的 `release-inputs.json`、固定命名 tarball、`.sha256`、
+`build-metadata.json` 和 `image-build-inputs.json` 必须在同一 run 中生成。release 通过该清单按精确
+artifact 名称下载，并验证：
 
 - artifact 所属 workflow、run ID/attempt、tag ref 和 commit SHA 与当前 release 完全一致；
 - 文件路径只落在 allowlist，文件名包含同一 `X.Y.Z` 与 `linux-amd64`；
-- `.sha256` 使用固定格式且重新计算匹配，metadata 中的版本、revision、SOURCE_DATE_EPOCH
-  和镜像 digest 与 gate 输出一致；
+- `.sha256` 使用固定格式且重新计算匹配，`build-metadata.json` 与
+  `image-build-inputs.json` 中的版本、commit、SOURCE_DATE_EPOCH、platform 和镜像构建输入
+  与 gate 输出一致，且 `attestation` 开关也必须被记录；`build-metadata.json.image_digest`
+  使用固定 `sha256:` 格式，并要求重建候选镜像的本地 digest 与其相等，再与 GHCR 推送后返回的 digest 相等；
 - 缺失、重复、跨 ref/run、哈希不匹配或部分上传立即失败，不能从旧 run 或 registry 标签回补。
+
+文件 allowlist、清单 schema、四类文件唯一性和 `.sha256` 行格式以
+`research/release-artifact-contract.md` 为唯一契约；F 不在 workflow 中维护第二套字段表。
 
 release 预检还必须在创建 Release 或推送镜像前检查同名 GitHub Release、Release 资产和 GHCR 镜像
 tag 是否已存在；任一存在即失败，不得覆盖、自动删除或从其他 run/registry tag 补偿。触发的 Git
@@ -204,3 +217,6 @@ SHA-256，并逐项校验 artifact 名称/唯一性、provenance schema、run/at
 - Q-F5 已确认采用独立不可变证明：artifact 同时包含 `release-matrix.json` 和 provenance 清单，
   release validator 必须校验当前 release run/attempt、tag ref、commit 和载荷 SHA-256；workflow
   不覆盖或删除 artifact，人工恢复遵守已记录的维护者边界。
+- 已确认并同步的技术契约：linker 使用 `github.com/yangphere/leanote/app/service.BuildVersion`，未注入
+  值为 `dev` 且 release smoke 拒绝；`GET /healthz` 使用固定 JSON 状态响应且不含版本字段；tarball
+  二进制为 `bin/leanote`、权限 `0755`；GHCR 唯一 tag 为 `ghcr.io/yangphere/leanote:vX.Y.Z`，不生成别名。

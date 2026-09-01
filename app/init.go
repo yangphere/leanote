@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/controllers"
 	"github.com/yangphere/leanote/app/controllers/admin"
 	"github.com/yangphere/leanote/app/controllers/api"
@@ -13,7 +14,6 @@ import (
 	"github.com/yangphere/leanote/app/lea/i18n"
 	"github.com/yangphere/leanote/app/lea/route"
 	"github.com/yangphere/leanote/app/service"
-	"github.com/revel/revel"
 	"html/template"
 	"math"
 	"net/url"
@@ -420,7 +420,16 @@ func init() {
 	// init Email
 	revel.OnAppStart(func() {
 		// 数据库
-		db.Init("", "")
+		if revel.RunMode != "prod" {
+			db.InitFromRevelConfigForDevelopment()
+		} else {
+			dbURL, _ := revel.Config.String("db.urlEnv")
+			dbName, _ := revel.Config.String("db.dbname")
+			if dbURL == "" {
+				panic("db.urlEnv is required in prod")
+			}
+			db.Init(dbURL, dbName)
+		}
 		// email配置
 		InitEmail()
 		InitVd()

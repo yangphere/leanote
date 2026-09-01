@@ -244,6 +244,37 @@ func TestLoginRequiredHook(t *testing.T) {
 	}
 }
 
+func TestAppWritesSessionCookieBeforeActionResponse(t *testing.T) {
+	cfg, err := ParseConfig([]byte("app.secret=session-test-secret\n"), "")
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
+	app := &App{
+		Routes:   CompileRoutes(mustParse(t, "GET /login Auth.Login")),
+		Registry: NewRegistry(),
+		Sessions: NewSessionCodec(cfg),
+	}
+	app.Registry.Register("Auth", "Login", nil, func(c *Context) Result {
+		c.SetSession("UserId", "u1")
+		return c.RenderText("logged in")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/login", nil)
+	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || rec.Body.String() != "logged in" {
+		t.Fatalf("login response = status %d body %q", rec.Code, rec.Body.String())
+	}
+	cookies := rec.Result().Cookies()
+	if len(cookies) != 1 {
+		t.Fatalf("session cookie count = %d, want 1", len(cookies))
+	}
+	decoded, err := app.Sessions.Decode(cookies[0].Value)
+	if err != nil || decoded["UserId"] != "u1" {
+		t.Fatalf("session cookie = %#v, decode error = %v", decoded, err)
+	}
+}
+
 func mustParse(t *testing.T, conf string) []Route {
 	t.Helper()
 	routes, err := ParseRoutes([]byte(conf))
