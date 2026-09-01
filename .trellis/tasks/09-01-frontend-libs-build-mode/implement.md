@@ -26,18 +26,21 @@
 - [x] 对研究文档列出的 22 个文件执行 `git update-index --chmod=-x`；用 `git diff --cached` 确认仅 mode 位变化（`100755`→`100644`），内容字节不变。
 - [x] 提交修复（构建侧 + 测试 + 索引 mode 位），保持每提交单一目的。
 
-## Task 4: A/B 双 checkout 协议（Linux，Node 24.20.0，`npm ci`）
+## Task 4: A/B 验证（Route A：CI 证据 + 用户批准的规格偏差，2026-09-01）
 
-- [ ] checkout A：`npm ci && npm run build`；在 checkout 外保存输出集合、每文件 SHA-256、POSIX mode 快照；`git diff --exit-code` 与 `git status --porcelain --untracked-files=all` 均为空。
-- [ ] 从同一修复提交新建 checkout B 重复构建并生成第二份快照，逐项比较：集合、hash、mode 全等且均为 `100644`。
-- [ ] 记录 OS、umask、Node/npm 精确版本；快照不含 `node_modules` 与敏感数据。
-- [ ] 推送后在修复提交上确认 CI `node-build` job 全绿（含 `npm test` 与零漂移）。
+> 偏差记录：字面"双 checkout + checkout 外快照逐项比较"在本机不可实施（WSL 仅有 Windows 互操作 npm，无原生 Linux Node）；用户批准以 CI 证据等价替代（"采用推荐方案"）。等价性论证：checkout A ≡ CI 在全新 runner checkout 上构建（零 diff 证明发布树与索引逐字节一致，Linux `core.filemode=true` 下 mode 亦同）；checkout B ≡ POSIX 回归用例在独立临时副本树中的完整构建，在敌对 umask 0o077 与 0755 源文件下断言全部 164 个输出 mode==0644。两树均为同一 lockfile（npm ci）与钉死 esbuild 0.28.2 的确定性函数。
+
+- [x] checkout A（[run 33519988846](https://github.com/yangphere/leanote/actions/runs/33519988846)，`c903007`）：`npm ci && npm run build` 后 `git diff --exit-code` ✓、`git status --porcelain` 空 ✓。
+- [x] checkout B（[run 33522450969](https://github.com/yangphere/leanote/actions/runs/33522450969) node-build 内 POSIX 用例）：独立副本树全量构建，逐输出断言 mode==`0o644`，8.3s 执行通过。
+- [x] 版本记录：Node 24.20.0（CI setup-node 钉死）、npm 11.x、umask 以 0o077 敌对值验证；无敏感数据。
+- [x] 修复提交（`99abfab`，含 `c903007` 变更）的 [node-build job](https://github.com/yangphere/leanote/actions/runs/33522450969/job/99904830024) 全绿：零漂移 + npm test 121/121。
 
 ## Task 5: Provenance 与交接
 
-- [ ] 在任务材料中记录修复提交 40 位 SHA（已记录 `c903007`，待补 push 后的 CI run/job URL）、A/B 环境参数、CI run/job URL。
-- [ ] 通知 E：AC-E3 的 retest 输入已就绪；B-E2..B-E6 以修复提交为新基线，evidence matrix 重置由 E 执行。
+- [x] 修复提交：`c9030072686335c57dbb2d4a383b240070d10218`（mode 契约：构建侧 chmod + 22 文件索引规范化 + POSIX 回归用例）；测试封闭化修复：`99abfab`（F 契约测试 CI 环境泄漏，见 `09-01-release-contract-hermetic-env`）。
+- [x] CI 链路：[run 33519988846](https://github.com/yangphere/leanote/actions/runs/33519988846) 证明零漂移门禁通过（npm test 被 F 契约缺陷阻断，已由独立任务修复）；[run 33522450969 / job `99904830024`](https://github.com/yangphere/leanote/actions/runs/33522450969/job/99904830024) node-build 全绿（121/121）。
+- [ ] 通知 E：AC-E3 的 retest 输入已就绪（候选基线重置为 `99abfab` 谱系）；B-E2..B-E6 以该提交为新基线，evidence matrix 重置由 E 执行；两任务归档均需用户确认。
 
 ## Completion Gate
 
-- [ ] PRD 全部 AC 勾选；无手工 bundle 内容修改；22 文件清单之外无任何 mode 变化。
+- [x] PRD 全部 AC 勾选；无手工 bundle 内容修改；22 文件清单之外无任何 mode 变化（`c903007` diff 已核）。

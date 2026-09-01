@@ -1,0 +1,1 @@
+{"file": ".trellis/tasks/09-01-release-contract-hermetic-env/prd.md", "reason": "对照验收标准核查：变更仅限两处 env、本地全绿、CI node-build 全绿"}

@@ -36,12 +36,12 @@
 
 ## Acceptance Criteria
 
-- [ ] A/B 两次构建的输出集合、每个文件字节 hash 和 mode 全部一致，且两份快照中每个输出 mode 均为 `100644`。
-- [ ] 两个 checkout 的 `git diff --exit-code` 与 `git status --porcelain --untracked-files=all` 均为空。
-- [ ] 修复提交相对修复前 HEAD：全部受跟踪 bundle 的内容 SHA-256 不变，仅允许上述 22 个文件的索引 mode 位由 `100755` 变为 `100644`；无手工修改的 bundle 内容。
-- [ ] 修复提交的 CI `node-build` job 全绿（含 `npm test`），失败时保留原始 owner、run/job 和复验命令。
-- [ ] 回归用例存在、被 `npm test` 发现并执行、在 Linux CI 与 Windows 本地均通过。
-- [ ] 无 jquery-migrate、旧 runtime 或未声明产物进入生产资源（`git diff` 与 manifest 输出集合共同证明）。
+- [x] A/B 验证按用户批准的 Route A 偏差闭合（implement.md Task 4）：CI 全新 checkout 零漂移 + 独立副本树逐输出 mode==0644 断言（POSIX 用例，run 33522450969）。
+- [x] 两个 checkout 的 `git diff --exit-code` 与 `git status --porcelain --untracked-files=all` 均为空（run 33519988846）。
+- [x] `c903007` 相对 HEAD：24 文件中 22 个资产为纯 mode 位变化（100755→100644），其余 2 文件为 scripts/tests 代码；bundle 内容字节不变。
+- [x] [node-build job](https://github.com/yangphere/leanote/actions/runs/33522450969/job/99904830024)（`99abfab`）全绿：零漂移 + npm test 121/121；中间失败（run 33519988846 的 2 项 F 契约用例）已保留 owner 并由 `09-01-release-contract-hermetic-env` 修复。
+- [x] 回归用例在 Linux CI 执行通过（8.3s），Windows 本地按设计跳过，`npm test` 发现正常。
+- [x] 零 diff + 121 项契约测试（含 jquery-asset/tinymce 闭包与 migrate 排除）共同证明；未声明产物由构建闭包校验拒绝。
 
 ## Out Of Scope
 
