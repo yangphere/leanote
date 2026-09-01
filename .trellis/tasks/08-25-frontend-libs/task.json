@@ -27,7 +27,8 @@
     "09-01-frontend-libs-chromium-editor",
     "09-01-frontend-libs-browser-coverage",
     "09-01-frontend-libs-real-browser-matrix",
-    "09-01-frontend-libs-release-reconciliation"
+    "09-01-frontend-libs-release-reconciliation",
+    "09-01-release-contract-hermetic-env"
   ],
   "parent": "08-25-tech-stack-modernization",
   "relatedFiles": [
