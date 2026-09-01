@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/09-01-frontend-libs-build-mode/prd.md", "reason": "任务规格：目标、Mode Contract、A/B 协议与验收标准"}
+{"file": ".trellis/tasks/09-01-frontend-libs-build-mode/research/spec-audit-2026-09-01.md", "reason": "代码级根因链（manifest.mjs/js.mjs/index.mjs 的 mode 传播矩阵）、22 文件漂移清单与 CI 门禁命令，实现方案的唯一依据"}
+{"file": ".trellis/tasks/08-25-frontend-libs/implement.md", "reason": "父任务 Task 2 双 checkout A/B 快照协议，B-E1 验收必须对齐"}
+{"file": ".trellis/tasks/08-25-frontend-libs/acceptance/evidence-matrix.md", "reason": "AC-E3 failed 证据与 retest 条件（run 33477561244/job 99759909194）"}
