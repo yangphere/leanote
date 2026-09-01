@@ -53,7 +53,10 @@ test('release artifact validation rejects unknown metadata schema versions', asy
     metadataEntry.sha256 = crypto.createHash('sha256').update(await fs.readFile(metadataPath)).digest('hex');
     await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     assert.throws(() => execFileSync(process.execPath, ['scripts/validate-release-artifact.mjs', root], {
-      cwd: process.cwd(), env: { ...process.env, RELEASE_TAG: 'v1.0.0', GIT_COMMIT: commit },
+      // Pin the run provenance to the fixture values so CI-injected
+      // GITHUB_RUN_ID/GITHUB_RUN_ATTEMPT cannot trip the replay guard
+      // before the schema path under test is reached.
+      cwd: process.cwd(), env: { ...process.env, RELEASE_TAG: 'v1.0.0', GIT_COMMIT: commit, GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1' },
       stdio: 'pipe',
     }), /schema version|metadata mismatch/i);
   } finally {
@@ -104,7 +107,8 @@ test('release artifact validation binds build metadata to the tarball bytes', as
     manifest.files.find((entry) => entry.kind === 'metadata').sha256 = crypto.createHash('sha256').update(await fs.readFile(metadataPath)).digest('hex');
     await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     assert.throws(() => execFileSync(process.execPath, ['scripts/validate-release-artifact.mjs', root], {
-      cwd: process.cwd(), env: { ...process.env, RELEASE_TAG: 'v1.0.0', GIT_COMMIT: commit }, stdio: 'pipe',
+      // Same fixture-pinned provenance as the schema rejection test above.
+      cwd: process.cwd(), env: { ...process.env, RELEASE_TAG: 'v1.0.0', GIT_COMMIT: commit, GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1' }, stdio: 'pipe',
     }), /build metadata tarball hash mismatch/);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
