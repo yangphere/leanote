@@ -33,10 +33,10 @@
 
 ## Acceptance Criteria
 
-- [ ] 本地 business 全量 22/22（含 build-smoke 先行），日志无 `editor.on` 错误、无 `#attrTitle` 可见性超时、无清理失败。
-- [ ] 候选提交的 CI `chromium-e2e` job 通过：build-smoke + business 22/22 全发现全执行，清理结果完整记录。
-- [ ] shell 事件 API 与对话框条件类两处回归断言存在且通过；生产 `plugin.js` 的 API 用法未被"降级迁就"。
-- [ ] 失败 3 按 Req 4 协议处置：CI 全绿即关闭；若仍失败，保留根因、owner 与复验命令，不得静默放宽。
+- [x] 本地 supervisor 串行协议全绿：build-smoke + business 22/22（最终轮 41.1s）；无 `editor.on`、无可见性超时、无清理失败。
+- [x] [run 33589413738 / job `100120419936`](https://github.com/yangphere/leanote/actions/runs/33589413738/job/100120419936)（`7f0a0ba2`）chromium-e2e success：build-smoke 1/1（3.2s）先行 + business 22/22（38.9s），清理摘要完整。E allowlist 三 job（node-build/chromium-e2e/mongo-8_0）首次同轮全绿。
+- [x] shell `on/off` + dragstart 订阅与 onSetup 订阅/退订闭环断言；`#attrTitle` 非 md 可见 + `md=1` 下 body 类与隐藏双向断言；生产 `plugin.js` 零改动（diff 仅 common.js 守卫/index.html 条件类/main.js data: 分支与测试）。
+- [x] 失败 3 经三轮诊断轮（`46caf2aa`/`29bb285d`/`aece2691`）定位真实根因——`common.js:414` undoManager 初始化竞态抛错致加载遮罩永不隐藏（审核的"CI 级联"假设机制有误，已在研究文档修正）；等行数守卫修复，未调任何超时，诊断脚手架已剥离；CI 全绿关闭。
 
 ## Out Of Scope
 
