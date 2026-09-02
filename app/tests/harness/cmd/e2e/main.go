@@ -156,12 +156,12 @@ func installSignalTeardown() {
 // message instead of an opaque docker port-allocation error.
 func assertSupervisorEnvironment() error {
 	if os.Getenv(harness.RequireMongoEnv) == "1" {
-		return fmt.Errorf("%s=1 declares a service MongoDB, but the e2e supervisor always self-provisions; unset it", harness.RequireMongoEnv)
+		return fmt.Errorf("%s declares a service MongoDB, but the e2e supervisor always self-provisions; unset it", harness.RequireMongoEnv)
 	}
 	if os.Getenv(harness.ServiceMongoURLEnv) != "" {
 		return fmt.Errorf("%s declares a service MongoDB, but the e2e supervisor always self-provisions; unset it", harness.ServiceMongoURLEnv)
 	}
-	if err := harness.AssertPortFree("127.0.0.1:27017"); err != nil {
+	if err := harness.AssertPortFree(harness.DefaultMongoAddr); err != nil {
 		return fmt.Errorf("e2e supervisor requires an exclusive MongoDB port: %w", err)
 	}
 	return nil

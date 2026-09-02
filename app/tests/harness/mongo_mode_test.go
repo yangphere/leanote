@@ -24,8 +24,8 @@ func TestResolveMongoTestModeSelfProvisionedUsesContainerAddress(t *testing.T) {
 	if mode != MongoSelfProvisioned {
 		t.Fatalf("mode = %v, want MongoSelfProvisioned", mode)
 	}
-	if uri != defaultServiceMongoURI {
-		t.Fatalf("uri = %q, want %q", uri, defaultServiceMongoURI)
+	if uri != defaultFixtureMongoURI {
+		t.Fatalf("uri = %q, want %q", uri, defaultFixtureMongoURI)
 	}
 }
 
@@ -38,8 +38,8 @@ func TestResolveMongoTestModeServiceBackedUsesDefaultURI(t *testing.T) {
 	if mode != MongoServiceBacked {
 		t.Fatalf("mode = %v, want MongoServiceBacked", mode)
 	}
-	if uri != defaultServiceMongoURI {
-		t.Fatalf("uri = %q, want %q", uri, defaultServiceMongoURI)
+	if uri != defaultFixtureMongoURI {
+		t.Fatalf("uri = %q, want %q", uri, defaultFixtureMongoURI)
 	}
 }
 
@@ -55,6 +55,14 @@ func TestResolveMongoTestModeServiceBackedAcceptsOverrideWithFixtureDatabase(t *
 	}
 	if uri != override {
 		t.Fatalf("uri = %q, want override %q", uri, override)
+	}
+}
+
+func TestResolveMongoTestModeRejectsNonMongoDBScheme(t *testing.T) {
+	setMongoModeEnvironment(t, "1", "mongodb+srv://cluster.example/"+MongoFixtureDB)
+	_, _, err := ResolveMongoTestMode()
+	if err == nil || !strings.Contains(err.Error(), "scheme must be mongodb") {
+		t.Fatalf("ResolveMongoTestMode() error = %v, want scheme rejection", err)
 	}
 }
 
@@ -95,8 +103,9 @@ func TestRestoreServiceFixtureNeverInvokesDocker(t *testing.T) {
 			commands = append(commands, name+" "+strings.Join(args, " "))
 			return "", nil
 		},
-		ping:     func(string) error { return nil },
-		lookPath: func(string) (string, error) { return "/usr/bin/mongorestore", nil },
+		ping:          func(string) error { return nil },
+		lookPath:      func(string) (string, error) { return "/usr/bin/mongorestore", nil },
+		verifyFixture: func(string) error { return nil },
 	}
 
 	if err := env.RestoreServiceFixture("mongodb://127.0.0.1:27017/" + MongoFixtureDB); err != nil {
@@ -127,30 +136,67 @@ func TestRestoreServiceFixtureFailsClosedBeforeAnyRestore(t *testing.T) {
 		commands = append(commands, name)
 		return "", nil
 	}
+	successfulRun := func(name string, args ...string) (string, error) { return "", nil }
 
 	unreachable := MongoEnvironment{RepoRoot: repoRoot, run: noopRun,
 		ping:     func(string) error { return fmt.Errorf("connection refused") },
 		lookPath: func(string) (string, error) { return "/usr/bin/mongorestore", nil }}
-	if err := unreachable.RestoreServiceFixture(defaultServiceMongoURI); err == nil || !strings.Contains(err.Error(), "unreachable") {
+	if err := unreachable.RestoreServiceFixture(defaultFixtureMongoURI); err == nil || !strings.Contains(err.Error(), "unreachable") {
 		t.Fatalf("unreachable error = %v, want explicit failure", err)
 	}
 
 	missingTool := MongoEnvironment{RepoRoot: repoRoot, run: noopRun,
 		ping:     func(string) error { return nil },
 		lookPath: func(string) (string, error) { return "", fmt.Errorf("exec: not found") }}
-	if err := missingTool.RestoreServiceFixture(defaultServiceMongoURI); err == nil || !strings.Contains(err.Error(), "requires mongorestore") {
+	if err := missingTool.RestoreServiceFixture(defaultFixtureMongoURI); err == nil || !strings.Contains(err.Error(), "requires mongorestore") {
 		t.Fatalf("missing tool error = %v, want explicit failure", err)
 	}
 
 	missingFixture := MongoEnvironment{RepoRoot: t.TempDir(), run: noopRun,
 		ping:     func(string) error { return nil },
 		lookPath: func(string) (string, error) { return "/usr/bin/mongorestore", nil }}
-	if err := missingFixture.RestoreServiceFixture(defaultServiceMongoURI); err == nil || !strings.Contains(err.Error(), "fixture is unavailable") {
+	if err := missingFixture.RestoreServiceFixture(defaultFixtureMongoURI); err == nil || !strings.Contains(err.Error(), "fixture is unavailable") {
 		t.Fatalf("missing fixture error = %v, want explicit failure", err)
+	}
+
+	wrongFixture := MongoEnvironment{RepoRoot: repoRoot, run: successfulRun,
+		ping:          func(string) error { return nil },
+		lookPath:      func(string) (string, error) { return "/usr/bin/mongorestore", nil },
+		verifyFixture: func(string) error { return fmt.Errorf("restored service fixture has 0 users, want 2") }}
+	if err := wrongFixture.RestoreServiceFixture(defaultFixtureMongoURI); err == nil || !strings.Contains(err.Error(), "verify service fixture") {
+		t.Fatalf("verification error = %v, want explicit failure", err)
 	}
 
 	if len(commands) != 0 {
 		t.Fatalf("commands = %v, want no restore attempts on failure paths", commands)
+	}
+}
+
+func TestRestoreServiceFixtureScrubsCredentialsFromRestoreFailure(t *testing.T) {
+	repoRoot := t.TempDir()
+	fixture := filepath.Join(repoRoot, "mongodb_backup", "leanote_install_data")
+	if err := os.MkdirAll(fixture, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	uri := "mongodb://user:secret@127.0.0.1:27017/" + MongoFixtureDB
+	env := MongoEnvironment{
+		RepoRoot: repoRoot,
+		run: func(name string, args ...string) (string, error) {
+			return "", fmt.Errorf("%s %s: connection refused: boom", name, strings.Join(args, " "))
+		},
+		ping:     func(string) error { return nil },
+		lookPath: func(string) (string, error) { return "/usr/bin/mongorestore", nil },
+	}
+
+	err := env.RestoreServiceFixture(uri)
+	if err == nil {
+		t.Fatal("RestoreServiceFixture() = nil, want failure")
+	}
+	if strings.Contains(err.Error(), "user:secret@") {
+		t.Fatalf("restore failure leaks credentials: %v", err)
+	}
+	if !strings.Contains(err.Error(), "mongodb://127.0.0.1:27017/"+MongoFixtureDB) {
+		t.Fatalf("restore failure should keep the sanitized URI for diagnosis: %v", err)
 	}
 }
 

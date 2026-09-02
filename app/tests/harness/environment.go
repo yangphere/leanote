@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -19,6 +20,9 @@ const (
 	MongoContainerName = "leanote-test-mongo"
 	MongoImage         = "docker.io/library/mongo:8.0@sha256:376f5173003b5408d7b8e6989667231c0bf0cefdce379d7c814910429d1a7a85"
 	MongoFixtureDB     = "leanote_test"
+	// DefaultMongoAddr is the address both modes converge on: the self-built
+	// container publishes it and the CI service listens there.
+	DefaultMongoAddr = "127.0.0.1:27017"
 	// RequireMongoEnv selects service-backed mode: an external MongoDB must
 	// already be listening; the harness must not start containers.
 	RequireMongoEnv = "LEANOTE_REQUIRE_MONGO"
@@ -27,7 +31,7 @@ const (
 	ServiceMongoURLEnv = "LEANOTE_TEST_MONGO_URL"
 )
 
-const defaultServiceMongoURI = "mongodb://127.0.0.1:27017/" + MongoFixtureDB
+const defaultFixtureMongoURI = "mongodb://" + DefaultMongoAddr + "/" + MongoFixtureDB
 
 type MongoTestMode int
 
@@ -45,7 +49,7 @@ const (
 // t.Setenv inside the same test binary. In self-provisioned mode the returned
 // URI is the container's fixed address.
 func ResolveMongoTestMode() (MongoTestMode, string, error) {
-	uri := defaultServiceMongoURI
+	uri := defaultFixtureMongoURI
 	if os.Getenv(RequireMongoEnv) != "1" {
 		if override := os.Getenv(ServiceMongoURLEnv); override != "" {
 			return MongoSelfProvisioned, uri, fmt.Errorf(
@@ -72,7 +76,7 @@ func mongoDatabaseName(uri string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if parsed.Scheme != "mongodb" && parsed.Scheme != "mongodb+srv" {
+	if parsed.Scheme != "mongodb" {
 		return "", fmt.Errorf("scheme must be mongodb, got %q", parsed.Scheme)
 	}
 	return strings.TrimPrefix(parsed.Path, "/"), nil
@@ -92,12 +96,13 @@ func SanitizeMongoURI(uri string) string {
 type commandRun func(name string, args ...string) (string, error)
 
 type MongoEnvironment struct {
-	RepoRoot string
-	run      commandRun
-	now      func() time.Time
-	sleep    func(time.Duration)
-	lookPath func(string) (string, error)
-	ping     func(uri string) error
+	RepoRoot      string
+	run           commandRun
+	now           func() time.Time
+	sleep         func(time.Duration)
+	lookPath      func(string) (string, error)
+	ping          func(uri string) error
+	verifyFixture func(uri string) error
 }
 
 func NewMongoEnvironment(repoRoot string) MongoEnvironment {
@@ -109,13 +114,21 @@ func NewMongoEnvironment(repoRoot string) MongoEnvironment {
 	}
 }
 
-func (e MongoEnvironment) Up() (err error) {
+func (e MongoEnvironment) fixtureDir() (string, error) {
 	if e.RepoRoot == "" {
-		return fmt.Errorf("repository root is required")
+		return "", fmt.Errorf("repository root is required")
 	}
 	fixture := filepath.Join(e.RepoRoot, "mongodb_backup", "leanote_install_data")
 	if info, err := os.Stat(fixture); err != nil || !info.IsDir() {
-		return fmt.Errorf("Mongo fixture is unavailable at %s", fixture)
+		return "", fmt.Errorf("Mongo fixture is unavailable at %s", fixture)
+	}
+	return fixture, nil
+}
+
+func (e MongoEnvironment) Up() (err error) {
+	fixture, err := e.fixtureDir()
+	if err != nil {
+		return err
 	}
 	if e.run == nil {
 		e.run = runCommand
@@ -162,7 +175,8 @@ func (e MongoEnvironment) Up() (err error) {
 // RestoreServiceFixture resets the external service database to the fixture
 // baseline. It runs on the host (mongorestore on PATH) and must never invoke
 // docker: service-backed mode owns no containers. Called once per test so the
-// suites stay order-independent, mirroring the in-container restore of Up().
+// suites stay order-independent, mirroring the in-container restore of Up(),
+// including the post-restore users verification.
 func (e MongoEnvironment) RestoreServiceFixture(uri string) error {
 	if e.run == nil {
 		e.run = runCommand
@@ -173,21 +187,48 @@ func (e MongoEnvironment) RestoreServiceFixture(uri string) error {
 	if e.lookPath == nil {
 		e.lookPath = exec.LookPath
 	}
+	if e.verifyFixture == nil {
+		e.verifyFixture = verifyServiceFixture
+	}
 	if err := e.ping(uri); err != nil {
 		return fmt.Errorf("service MongoDB at %s is unreachable: %w", SanitizeMongoURI(uri), err)
 	}
 	if _, err := e.lookPath("mongorestore"); err != nil {
 		return fmt.Errorf("service-backed mode requires mongorestore on PATH: %w", err)
 	}
-	if e.RepoRoot == "" {
-		return fmt.Errorf("repository root is required")
-	}
-	fixture := filepath.Join(e.RepoRoot, "mongodb_backup", "leanote_install_data")
-	if info, err := os.Stat(fixture); err != nil || !info.IsDir() {
-		return fmt.Errorf("Mongo fixture is unavailable at %s", fixture)
+	fixture, err := e.fixtureDir()
+	if err != nil {
+		return err
 	}
 	if _, err := e.run("mongorestore", "--uri", uri, "--db", MongoFixtureDB, "--dir", fixture, "--drop", "--quiet"); err != nil {
-		return fmt.Errorf("restore fixture into service MongoDB: %w", err)
+		// runCommand echoes the full command line — including the URI and any
+		// credentials it carries — so scrub the URI before the failure can
+		// reach a test log.
+		return fmt.Errorf("restore fixture into service MongoDB: %s",
+			strings.ReplaceAll(err.Error(), uri, SanitizeMongoURI(uri)))
+	}
+	if err := e.verifyFixture(uri); err != nil {
+		return fmt.Errorf("verify service fixture: %w", err)
+	}
+	return nil
+}
+
+// verifyServiceFixture mirrors Up()'s post-restore users check so a wrong or
+// partial fixture fails identically in both modes.
+func verifyServiceFixture(uri string) error {
+	client, err := mongo.Connect(options.Client().ApplyURI(uri).SetConnectTimeout(10 * time.Second))
+	if err != nil {
+		return err
+	}
+	defer func() { _ = client.Disconnect(context.Background()) }()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	count, err := client.Database(MongoFixtureDB).Collection("users").CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return err
+	}
+	if count != 2 {
+		return fmt.Errorf("restored service fixture has %d users, want 2", count)
 	}
 	return nil
 }
