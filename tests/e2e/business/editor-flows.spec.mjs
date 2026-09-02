@@ -109,11 +109,16 @@ test('note editor keeps load baseline, title-only saves, content revisions, undo
     expect(await page.evaluate(() => ({ dirty: window.LeanoteEditorSession.isDirty(), revision: window.LeanoteEditorSession.snapshot().contentRevision })))
       .toEqual({ dirty: false, revision: 0 });
 
-    await page.locator('#editBtn').click();
-    await page.locator('#noteTitle').fill(`${title} title-only`);
+    mark('pre-editBtn');
+    await page.locator('#editBtn').click({ timeout: 30_000 });
+    mark('post-editBtn');
+    await page.locator('#noteTitle').fill(`${title} title-only`, { timeout: 30_000 });
+    mark('post-title-fill');
     const titleRequestPromise = page.waitForRequest(saveRequest);
     const titleResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/note/updateNoteOrContent' && response.request().method() === 'POST');
-    await page.locator('#saveBtn').click();
+    mark('pre-saveBtn');
+    await page.locator('#saveBtn').click({ timeout: 30_000 });
+    mark('post-saveBtn');
     const [titleRequest, titleResponse] = await Promise.all([titleRequestPromise, titleResponsePromise]);
     expect((await titleResponse.json()).Ok, 'title-only save succeeds').toBe(true);
     expect(new URLSearchParams(titleRequest.postData() || '').has('Content'), 'title-only save omits Content').toBe(false);
