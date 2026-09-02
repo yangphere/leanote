@@ -30,10 +30,10 @@
 
 ## Acceptance Criteria
 
-- [x] 单元级：`mongo_mode_test.go` 的零 docker 断言（恰好一条 mongorestore 命令、无 docker 前缀）通过；CI 级：[mongo-8_0 job `100081573898`](https://github.com/yangphere/leanote/actions/runs/33576516744/job/100081573898)（run 33576516744，`073127f`）success，日志禁行计数 0。
-- [x] 隔离等价：自建模式本地全量通过（harness 103.6s，容器生命周期完整）；service-backed 模式 CI 全量通过（harness 34.9s，宿主每测试 --drop 恢复），三包全部 `ok` 且 0 失败。
+- [x] 单元级：`mongo_mode_test.go` 的零 docker 断言（恰好一条 mongorestore 命令、无 docker 前缀）+ 凭据擦除断言（restore 失败不含 user:secret@、保留脱敏 URI）通过；CI 级：[mongo-8_0 job `100081573898`](https://github.com/yangphere/leanote/actions/runs/33576516744/job/100081573898)（run 33576516744，`073127f`）success，日志禁行计数 0；评审加固后复验 [job `100090082722`](https://github.com/yangphere/leanote/actions/runs/33579336426/job/100090082722)（run 33579336426，`d37e3b8`）再次 success、禁行 0、三包 ok（harness 37.6s）。
+- [x] 隔离等价：自建模式本地全量通过（harness 103.6s，容器生命周期完整）；service-backed 模式 CI 全量通过（harness 34.9s，评审加固后 37.6s；宿主每测试 --drop 恢复 + users==2 等价校验），三包全部 `ok` 且 0 失败。
 - [x] 自建独占与清理：本地全量 11 处调用点 Up/Down 成对通过；supervisor 预检：`AssertPortFree` 单元测试（占用→明确报错，空闲→nil）+ 守卫拒绝 service 声明两分支测试通过。
-- [x] fail-closed 单元级全覆盖：URI 库名≠leanote_test、ping 不通（unreachable）、缺宿主 mongorestore、REQUIRE 未设但 URL 已设（两种来源混合）、supervisor 检测到 REQUIRE/URL 声明——各分支断言错误语义，且失败路径零恢复命令执行。
+- [x] fail-closed 单元级全覆盖：URI 库名≠leanote_test、非 mongodb scheme、ping 不通（unreachable）、缺宿主 mongorestore、恢复后 users 校验失败、REQUIRE 未设但 URL 已设（两种来源混合）、supervisor 检测到 REQUIRE/URL 声明——各分支断言错误语义，且失败路径零恢复命令执行。
 - [x] [run 33576516744 / job `100081573898`](https://github.com/yangphere/leanote/actions/runs/33576516744/job/100081573898) success；复验命令即该 job 的 `LEANOTE_GOLDEN=replay LEANOTE_REQUIRE_MONGO=1 go test -p 1 ./app/tests/... -count=1 -timeout 30m`。
 
 ## Out Of Scope
