@@ -49,10 +49,11 @@ while :; do
   code=$(curl -sS -D "$TMP_HEALTH.headers" -o "$TMP_HEALTH" -w '%{http_code}' http://127.0.0.1:9000/healthz || true)
   if [ "$code" = 200 ] && grep -Fx '{"status":"ready"}' "$TMP_HEALTH" >/dev/null; then break; fi
   if [ "$code" = 503 ] && grep -Fx '{"status":"not_ready"}' "$TMP_HEALTH" >/dev/null; then
-    echo 'container did not become ready' >&2
+    echo 'container did not become ready; app logs:' >&2
+    docker logs --tail 40 "$APP" >&2 || true
     exit 1
   fi
-  [ "$(date +%s)" -lt "$deadline" ] || { echo 'healthz readiness timeout' >&2; exit 1; }
+  [ "$(date +%s)" -lt "$deadline" ] || { echo 'healthz readiness timeout; app logs:' >&2; docker logs --tail 40 "$APP" >&2 || true; exit 1; }
   sleep 1
 done
 grep -Fi 'Content-Type: application/json; charset=utf-8' "$TMP_HEALTH.headers" >/dev/null

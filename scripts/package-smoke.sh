@@ -14,6 +14,10 @@ CONFIG_DIR_CREATED=false
 cleanup() {
   status=$?
   set +e
+  if [ "$status" -ne 0 ] && [ -s "$TMP/app.log" ]; then
+    echo '--- packaged app log (failure diagnostics) ---' >&2
+    sed -n '1,40p' "$TMP/app.log" >&2
+  fi
   if [ -n "$PID" ]; then kill "$PID" >/dev/null 2>&1; wait "$PID" >/dev/null 2>&1; fi
   if [ "$CONFIG_CREATED" = true ]; then sudo rm -f "$CONFIG_FILE"; fi
   if [ "$CONFIG_DIR_CREATED" = true ]; then sudo rmdir "$CONFIG_DIR" >/dev/null 2>&1 || status=1; fi
@@ -63,7 +67,7 @@ printf '%s\n' '[prod]' 'db.urlEnv=${MONGODB_URL}' 'db.dbname=leanote' 'app.secre
 sudo install -o "$(id -u)" -g "$(id -g)" -m 0440 "$TMP/app.conf" "$CONFIG_FILE"
 CONFIG_CREATED=true
 MONGODB_URL="$PACKAGE_SMOKE_MONGODB_URL" LEANOTE_APP_SECRET="$PACKAGE_SMOKE_APP_SECRET" \
-  "$TMP/bin/leanote" -runMode prod -conf "$CONFIG_FILE" >/dev/null 2>&1 &
+  "$TMP/bin/leanote" -runMode prod -conf "$CONFIG_FILE" >"$TMP/app.log" 2>&1 &
 PID=$!
 deadline=$(($(date +%s) + 60))
 while :; do
