@@ -69,6 +69,18 @@ shell 补事件 API vs 换真编辑器（选前者：契约测试本旨是"只�
 - **缺陷 5（生产侧，spec:508）**：`data:` URL 图片经 `addSelectedImage`（main.js:374-380）被当作内部 fileId 拼成 `/file/outputImage?fileId=<data:...>` 垃圾 src。修复：`data:` 前缀与 http(s) 同等作为直接源（main.js 单行分支）；`reRenderSelectedImages` 对 data: src 的渲染已被种子图证实可行。`main.min.js` 无任何消费方（note.html 引用的是 manifest 的 plugins bundle），不需同步。
 - 归类依据：两处均位于 B-E3 "恢复 business 22/22 可审计全绿"的目标闭包内（测试缺陷修测试、生产缺陷修生产），不另立修复任务。
 
+## 失败 3 根因剖析（Req 4 协议，2026-09-02 三轮诊断轮）
+
+审核阶段的"CI 级联/慢机预算"假设**机制上是错的**，如实修正。三轮带诊断标记的 CI 轮次逐步收敛（每轮纯 console 标记，不动断言；`46caf2aa`/`29bb285d`/`aece2691`）：
+
+1. **轮 1（粗粒度标记）**：identity→waitForEditor 全部正常（累计 2.0s），随后 178s 无标记直达 finally——卡点在 title 流程三个动作之一，且本地单测仅 3.8s（47 倍不对称排除硬件）。
+2. **轮 2（三动作独立 30s 超时）**：`#editBtn` 点击 30s 超时，重试日志显示 **`<div class="note-mask" id="noteMaskForLoading"> intercepts pointer events`**——笔记加载遮罩永不隐藏；finally 清理全部完成（服务器无恙）。
+3. **轮 3（页面异常捕获+状态转储）**：`maskZ:"11"`、`contentAjax:false`（ajax 已完成非挂起）、页面 JS 异常 **`Cannot read properties of undefined (reading 'clear')`**。
+
+**根因**：`common.js:414` 的 `editor.undoManager.clear()`（"4-7修复BUG"）在内容 ajax 响应与 TinyMCE 初始化竞态时调用——`tinymce.activeEditor` 已存在但 `undoManager` 尚未创建 → 抛错 → `renderNoteContent` 中断 → `hideContentLoading()`（note.js:788）被跳过 → 遮罩 z=11 拦截全部点击。CI 慢初始化放大竞态窗口；本地恒不触发。E-TM 以来该测试在 CI 从未通过，同根因。
+
+**修复**：`common.js` 等行数单行守卫 `if (editor.undoManager) editor.undoManager.clear()`（初始化竞态期跳过清栈是安全的——新编辑器撤销栈本为空；行数不变以免移位 manifest `dynamicKeyExceptions:1242:11` 的 i18n 契约定位）；`npm run build` 再生 `app.min.js`。诊断脚手架（标记/异常捕获/显式超时）全部剥离，不留在契约测试中。**未调大任何 timeout**。
+
 ## 审核过程 provenance
 
 - `gh run view 33579336426 --job 100090357472 --log`：三失败的测试名、错误行、调用栈、清理产物。

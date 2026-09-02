@@ -35,11 +35,9 @@ async function createNote(request, baseUrl, notebookId, noteId, title, content) 
 
 async function deleteNote(request, baseUrl, noteId) {
   await confirmE2EIdentityFresh();
-  mark('cleanup-identity-fresh');
   const removed = await request.post(new URL('/note/deleteNote', baseUrl).href, {
     form: { 'noteIds[]': noteId, isShared: 'false' },
   });
-  mark('cleanup-delete-post');
   expect(removed.status(), 'delete note transport status').toBeLessThan(400);
   expect(await removed.json(), 'delete note result').toBe(true);
   const purge = await request.get(new URL(`/note/deleteTrash?noteId=${noteId}`, baseUrl).href);
@@ -64,27 +62,14 @@ async function waitForEditor(page, id) {
   }, id);
 }
 
-// Diagnostic budget markers (B-E3 Req 4 协议): visibility only, no assertions.
-function mark(label) {
-  console.log(`[editor-flow-budget] ${label} +${Date.now() - globalThis.__editorFlowStart}ms`);
-}
-function startBudget() {
-  globalThis.__editorFlowStart = Date.now();
-}
-
 function saveRequest(request) {
   return new URL(request.url()).pathname === '/note/updateNoteOrContent' && request.method() === 'POST';
 }
 
 test('note editor keeps load baseline, title-only saves, content revisions, undo and readonly gate', async ({ page }) => {
   test.setTimeout(180_000);
-  startBudget();
-  const pageErrors = [];
-  page.on('pageerror', (error) => pageErrors.push(String(error && error.message || error)));
   const env = await ensureE2EIdentity();
-  mark('identity');
   await login(page, env);
-  mark('login');
   await page.goto(new URL('/note', env.baseUrl).href, { waitUntil: 'domcontentloaded' });
   const notebook = page.locator('#curNotebookForNewNote');
   await expect(notebook).toHaveAttribute('notebookId', /.+/, { timeout: 30_000 });
@@ -95,14 +80,11 @@ test('note editor keeps load baseline, title-only saves, content revisions, undo
   let created = false;
 
   try {
-    mark('notebook-ready');
     await createNote(page.request, env.baseUrl, notebookId, noteId, title, initialContent);
     created = true;
-    mark('createNote');
     await page.goto(new URL(`/note?noteId=${noteId}`, env.baseUrl).href, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#editorContent')).toBeVisible({ timeout: 30_000 });
     const profile = await waitForEditor(page, 'editorContent');
-    mark('waitForEditor');
     expect(profile.inline, 'note editor uses inline mode').toBe(true);
     expect(profile.license, 'note editor uses GPL license').toBe('gpl');
     expect(profile.plugins, 'note editor includes first-party plugins').toEqual(expect.arrayContaining([
@@ -111,28 +93,21 @@ test('note editor keeps load baseline, title-only saves, content revisions, undo
     expect(await page.evaluate(() => ({ dirty: window.LeanoteEditorSession.isDirty(), revision: window.LeanoteEditorSession.snapshot().contentRevision })))
       .toEqual({ dirty: false, revision: 0 });
 
-    mark('pre-editBtn');
-    await page.locator('#editBtn').click({ timeout: 30_000 });
-    mark('post-editBtn');
-    await page.locator('#noteTitle').fill(`${title} title-only`, { timeout: 30_000 });
-    mark('post-title-fill');
+    await page.locator('#editBtn').click();
+    await page.locator('#noteTitle').fill(`${title} title-only`);
     const titleRequestPromise = page.waitForRequest(saveRequest);
     const titleResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/note/updateNoteOrContent' && response.request().method() === 'POST');
-    mark('pre-saveBtn');
-    await page.locator('#saveBtn').click({ timeout: 30_000 });
-    mark('post-saveBtn');
+    await page.locator('#saveBtn').click();
     const [titleRequest, titleResponse] = await Promise.all([titleRequestPromise, titleResponsePromise]);
     expect((await titleResponse.json()).Ok, 'title-only save succeeds').toBe(true);
     expect(new URLSearchParams(titleRequest.postData() || '').has('Content'), 'title-only save omits Content').toBe(false);
     expect(await page.evaluate(() => window.LeanoteEditorSession.isDirty()), 'title-only save keeps content clean').toBe(false);
-    mark('title-save-flow');
 
     const editor = page.locator('#editorContent');
     await editor.click();
     await editor.press('End');
     await editor.pressSequentially(' user-edit');
     await expect.poll(() => page.evaluate(() => window.LeanoteEditorSession.snapshot().contentRevision), { timeout: 15_000 }).toBeGreaterThan(0);
-    mark('type-revision-poll');
     const contentRequestPromise = page.waitForRequest(saveRequest);
     const contentResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/note/updateNoteOrContent' && response.request().method() === 'POST');
     await page.locator('#saveBtn').click();
@@ -142,13 +117,11 @@ test('note editor keeps load baseline, title-only saves, content revisions, undo
     expect((await contentResponse.json()).Ok, 'content save succeeds').toBe(true);
     await expect.poll(() => page.evaluate(() => window.LeanoteEditorSession.isDirty()), { timeout: 15_000 }).toBe(false);
     expect(await page.evaluate(() => window.LeanoteEditorSession.snapshot().persistedContent)).toBe(submittedContent);
-    mark('content-save-flow');
 
     await page.evaluate(() => window.tinymce.get('editorContent').undoManager.undo());
     await expect.poll(() => page.evaluate(() => window.LeanoteEditorSession.isDirty()), { timeout: 15_000 }).toBe(true);
     await page.evaluate(() => window.tinymce.get('editorContent').undoManager.redo());
     await expect.poll(() => page.evaluate(() => window.LeanoteEditorSession.isDirty()), { timeout: 15_000 }).toBe(false);
-    mark('undo-redo');
 
     await page.locator('#editBtn').click();
     const beforeReadonly = await page.evaluate(() => window.LeanoteEditorSession.snapshot());
@@ -157,17 +130,8 @@ test('note editor keeps load baseline, title-only saves, content revisions, undo
     });
     await page.waitForTimeout(200);
     expect(await page.evaluate(() => window.LeanoteEditorSession.snapshot())).toEqual(beforeReadonly);
-    mark('readonly-gate');
   } finally {
-    const maskState = await page.evaluate(() => ({
-      maskZ: document.getElementById('noteMaskForLoading') ? document.getElementById('noteMaskForLoading').style.zIndex : 'missing',
-      contentAjax: Boolean(window.Note && Note.contentAjax),
-      curNoteId: window.Note && Note.curNoteId,
-    })).catch((error) => `unavailable: ${error}`);
-    console.log(`[editor-flow-budget] mask-state ${JSON.stringify(maskState)} page-errors ${JSON.stringify(pageErrors)}`);
-    mark('finally-enter');
     if (created) await deleteNote(page.request, env.baseUrl, noteId);
-    mark('cleanup-done');
   }
 });
 

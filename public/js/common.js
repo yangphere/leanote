@@ -411,7 +411,7 @@ function setEditorContent(content, isMarkdown, preview, callback, loadEpoch) {
 				window.LeanoteEditorSession.setContentProgrammatically(editor.getContent(), loadEpoch);
 			}
 			callback && callback();
-			editor.undoManager.clear(); // 4-7修复BUG
+			if (editor.undoManager) editor.undoManager.clear(); // 4-7修复BUG（初始化竞态期 undoManager 可能未建）
 		} else {
 			// 等下再设置
 			clearIntervalForSetContent = setTimeout(function() {
