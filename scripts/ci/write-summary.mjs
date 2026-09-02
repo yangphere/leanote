@@ -101,7 +101,9 @@ const summary = {
   schema_version: 'leanote.ci.failure-summary.v1', workflow, job,
   run: { id: runId, attempt: runAttempt() },
   commit, ref, status,
-  stage: forcedFallback ? 'job_not_started' : (process.env.CI_STAGE || (status === 'passed' ? 'complete' : 'job_not_started')),
+  // Reaching this writer proves the job started and finished its lifecycle
+  // (pass or fail); only the writer's own fallback path means not started.
+  stage: forcedFallback ? 'job_not_started' : (process.env.CI_STAGE || 'complete'),
   toolchain: {
     go: process.env.GO_VERSION || null, node: process.env.NODE_VERSION || null,
     npm: process.env.NPM_VERSION || null, mongo: process.env.MONGO_VERSION || null,

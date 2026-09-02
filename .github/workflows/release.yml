@@ -99,7 +99,7 @@ jobs:
         run: |
           epoch=$(node -e "process.stdout.write(String(JSON.parse(require('fs').readFileSync('dist/release-inputs.json')).source_date_epoch))")
           created=$(date -u -d "@$epoch" +%Y-%m-%dT%H:%M:%SZ)
-          docker buildx build --platform linux/amd64 --load --metadata-file dist/image-metadata.json --build-arg VERSION="${RELEASE_TAG#v}" --build-arg REVISION="$GITHUB_SHA" --build-arg SOURCE_DATE_EPOCH="$created" --provenance=false --sbom=false -t "ghcr.io/yangphere/leanote:${RELEASE_TAG}" .
+          docker buildx build --platform linux/amd64 --load --metadata-file dist/image-metadata.json --build-arg VERSION="${RELEASE_TAG#v}" --build-arg REVISION="$GITHUB_SHA" --build-arg SOURCE_DATE_EPOCH="$epoch" --build-arg OCI_CREATED="$created" --provenance=false --sbom=false -t "ghcr.io/yangphere/leanote:${RELEASE_TAG}" .
           test "$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('dist/image-metadata.json'))['containerimage.digest'] || '')")" = "$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('dist/build-metadata.json')).image_digest)")"
       - name: Push immutable image and verify registry digest
         env: { GH_TOKEN: '${{ github.token }}', IMAGE: 'ghcr.io/yangphere/leanote:${{ github.ref_name }}' }

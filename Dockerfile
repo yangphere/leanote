@@ -19,9 +19,10 @@ FROM docker.io/library/debian:bookworm-slim@sha256:5ae3c39ebd15e229dcedd5cee596b
 ARG VERSION
 ARG REVISION=unknown
 ARG SOURCE_DATE_EPOCH=0
+ARG OCI_CREATED=unknown
 LABEL org.opencontainers.image.version="$VERSION" \
       org.opencontainers.image.revision="$REVISION" \
-      org.opencontainers.image.created="$SOURCE_DATE_EPOCH" \
+      org.opencontainers.image.created="$OCI_CREATED" \
       org.opencontainers.image.source="https://github.com/yangphere/leanote"
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates fontconfig fonts-dejavu wkhtmltopdf=0.12.6-2+b1 \

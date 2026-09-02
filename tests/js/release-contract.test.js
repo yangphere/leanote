@@ -253,6 +253,66 @@ test('quality gate fallback summaries preserve GitHub provenance', async () => {
   assert.match(workflow, /CI_FORCE_FALLBACK/);
 });
 
+test('package tag assertion only applies to real tag contexts', async () => {
+  const script = await fs.readFile(path.join(process.cwd(), 'sh/package.sh'), 'utf8');
+  // The tag must come from an explicit RELEASE_TAG or a refs/tags/* GITHUB_REF;
+  // branch pushes also set GITHUB_REF_NAME (e.g. "dev") and must never be
+  // treated as release tags.
+  assert.match(script, /case "\$\{GITHUB_REF:-\}" in/);
+  assert.match(script, /refs\/tags\/\*\) TAG=/);
+  assert.doesNotMatch(script, /RELEASE_TAG:-\$\{GITHUB_REF_NAME/);
+});
+
+test('container builds pass an integer epoch and a separate RFC3339 OCI label', async () => {
+  const gate = await fs.readFile(path.join(process.cwd(), '.github/workflows/quality-gate.yml'), 'utf8');
+  const release = await fs.readFile(path.join(process.cwd(), '.github/workflows/release.yml'), 'utf8');
+  const dockerfile = await fs.readFile(path.join(process.cwd(), 'Dockerfile'), 'utf8');
+  for (const [name, workflow] of [['quality-gate', gate], ['release', release]]) {
+    assert.match(workflow, /--build-arg SOURCE_DATE_EPOCH="\$epoch" --build-arg OCI_CREATED="\$created"/, `${name} build args`);
+    assert.doesNotMatch(workflow, /--build-arg SOURCE_DATE_EPOCH="\$created"/, `${name} must not feed RFC3339 into the epoch arg`);
+  }
+  assert.match(dockerfile, /ARG OCI_CREATED=/);
+  assert.match(dockerfile, /org\.opencontainers\.image\.created="\$OCI_CREATED"/);
+  assert.doesNotMatch(dockerfile, /org\.opencontainers\.image\.created="\$SOURCE_DATE_EPOCH"/);
+});
+
+test('summary writer records failed jobs with a complete lifecycle stage', async () => {
+  const { execFile } = require('node:child_process');
+  const script = path.join(process.cwd(), 'scripts/ci/write-summary.mjs');
+  const run = (cwd, env) => new Promise((resolve) => {
+    execFile(process.execPath, [script], { cwd, env }, (error, stdout, stderr) => resolve({ error, stdout, stderr }));
+  });
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-summary-stage-'));
+  const base = {
+    CI_JOB_ID: 'node-build', CI_JOB_STATUS: 'failure',
+    GITHUB_WORKFLOW: 'Quality gate', GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '1',
+    GITHUB_SHA: 'a'.repeat(40), GITHUB_REF: 'refs/heads/dev',
+  };
+  try {
+    // A job that ran and failed reaches this writer: its lifecycle stage is
+    // complete even though the job failed; failure details live in the block.
+    const failed = await run(root, { ...process.env, ...base });
+    assert.equal(failed.error, null, failed.stderr);
+    const failedSummary = JSON.parse(await fs.readFile(path.join(root, 'ci-summaries/node-build.json'), 'utf8'));
+    assert.equal(failedSummary.status, 'failed');
+    assert.equal(failedSummary.stage, 'complete');
+
+    // The writer's own fallback path is the only legitimate job_not_started.
+    const fallback = await run(root, { ...process.env, ...base, CI_FORCE_FALLBACK: 'true' });
+    assert.equal(fallback.error, null, fallback.stderr);
+    const fallbackSummary = JSON.parse(await fs.readFile(path.join(root, 'ci-summaries/node-build.json'), 'utf8'));
+    assert.equal(fallbackSummary.stage, 'job_not_started');
+
+    // An explicit CI_STAGE still wins.
+    const staged = await run(root, { ...process.env, ...base, CI_STAGE: 'package-built' });
+    assert.equal(staged.error, null, staged.stderr);
+    const stagedSummary = JSON.parse(await fs.readFile(path.join(root, 'ci-summaries/node-build.json'), 'utf8'));
+    assert.equal(stagedSummary.stage, 'package-built');
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test('summary writer rejects missing provenance and preserves valid fallback context', async () => {
   const { execFile } = require('node:child_process');
   const script = path.join(process.cwd(), 'scripts/ci/write-summary.mjs');

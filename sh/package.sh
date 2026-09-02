@@ -4,7 +4,13 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 OUT_DIR=${OUTPUT_DIR:-"$ROOT/dist"}
 VERSION=$(node "$ROOT/scripts/version.mjs")
-TAG=${RELEASE_TAG:-${GITHUB_REF_NAME:-}}
+# The tag assertion only applies to real tag contexts: an explicit
+# RELEASE_TAG or a refs/tags/* GITHUB_REF. Branch pushes carry GITHUB_REF_NAME
+# too (e.g. "dev") and must not be treated as release tags.
+TAG=${RELEASE_TAG:-}
+case "${GITHUB_REF:-}" in
+  refs/tags/*) TAG=${TAG:-"${GITHUB_REF:-}"}; TAG=${TAG#refs/tags/} ;;
+esac
 if [ -n "$TAG" ]; then
   node "$ROOT/scripts/version.mjs" "$TAG" >/dev/null
 fi

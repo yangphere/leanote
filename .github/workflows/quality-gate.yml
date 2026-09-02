@@ -322,7 +322,7 @@ jobs:
         run: |
           epoch=$(git show -s --format=%ct "$GITHUB_SHA")
           created=$(date -u -d "@$epoch" +%Y-%m-%dT%H:%M:%SZ)
-          docker build --platform linux/amd64 --build-arg VERSION="$(node scripts/version.mjs)" --build-arg REVISION="$GITHUB_SHA" --build-arg SOURCE_DATE_EPOCH="$created" --provenance=false --sbom=false -t leanote:ci .
+          docker build --platform linux/amd64 --build-arg VERSION="$(node scripts/version.mjs)" --build-arg REVISION="$GITHUB_SHA" --build-arg SOURCE_DATE_EPOCH="$epoch" --build-arg OCI_CREATED="$created" --provenance=false --sbom=false -t leanote:ci .
       - name: Run container smoke
         env:
           CONTAINER_SMOKE_PDF_URL: http://127.0.0.1:9000/note/toPdf?noteId=5483207cf4e87203a4000001&appKey=container-smoke-secret-012345678901234567890
@@ -409,7 +409,7 @@ jobs:
         run: |
           SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$GITHUB_SHA")
           created=$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y-%m-%dT%H:%M:%SZ)
-          docker buildx build --platform linux/amd64 --load --metadata-file dist/image-metadata.json --build-arg VERSION="${RELEASE_TAG#v}" --build-arg REVISION="$GITHUB_SHA" --build-arg SOURCE_DATE_EPOCH="$created" --provenance=false --sbom=false -t "leanote:${RELEASE_TAG}" .
+          docker buildx build --platform linux/amd64 --load --metadata-file dist/image-metadata.json --build-arg VERSION="${RELEASE_TAG#v}" --build-arg REVISION="$GITHUB_SHA" --build-arg SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" --build-arg OCI_CREATED="$created" --provenance=false --sbom=false -t "leanote:${RELEASE_TAG}" .
           IMAGE_DIGEST=$(node -e "const m=require('./dist/image-metadata.json'); process.stdout.write(m['containerimage.digest'] || '')")
           [[ "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
           export SOURCE_DATE_EPOCH IMAGE_DIGEST
