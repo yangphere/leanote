@@ -16,7 +16,7 @@ cleanup() {
   set +e
   if [ "$status" -ne 0 ] && [ -s "$TMP/app.log" ]; then
     echo '--- packaged app log (failure diagnostics) ---' >&2
-    sed -n '1,40p' "$TMP/app.log" >&2
+    tail -n 40 "$TMP/app.log" >&2
   fi
   if [ -n "$PID" ]; then kill "$PID" >/dev/null 2>&1; wait "$PID" >/dev/null 2>&1; fi
   if [ "$CONFIG_CREATED" = true ]; then sudo rm -f "$CONFIG_FILE"; fi
