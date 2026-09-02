@@ -1,6 +1,29 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"github.com/yangphere/leanote/app/tests/harness"
+)
+
+func TestAssertSupervisorEnvironmentRejectsServiceDeclaration(t *testing.T) {
+	t.Setenv(harness.RequireMongoEnv, "1")
+	t.Setenv(harness.ServiceMongoURLEnv, "")
+	err := assertSupervisorEnvironment()
+	if err == nil || !strings.Contains(err.Error(), "always self-provisions") {
+		t.Fatalf("assertSupervisorEnvironment() = %v, want service-declaration rejection", err)
+	}
+}
+
+func TestAssertSupervisorEnvironmentRejectsLeakedServiceURI(t *testing.T) {
+	t.Setenv(harness.RequireMongoEnv, "")
+	t.Setenv(harness.ServiceMongoURLEnv, "mongodb://127.0.0.1:27017/"+harness.MongoFixtureDB)
+	err := assertSupervisorEnvironment()
+	if err == nil || !strings.Contains(err.Error(), "always self-provisions") {
+		t.Fatalf("assertSupervisorEnvironment() = %v, want rejection of a leaked service URI", err)
+	}
+}
 
 func TestMarkerSelectorRequiresAndScopesCurrentRun(t *testing.T) {
 	var state supervisorState

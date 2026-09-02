@@ -149,6 +149,24 @@ func installSignalTeardown() {
 	}()
 }
 
+// assertSupervisorEnvironment enforces the supervisor's exclusive self-built
+// contract before any resource is created: it never consumes an external
+// service (a service declaration plus a self-built attempt is a conflict),
+// and the Mongo port must be free so a stale listener fails with a clear
+// message instead of an opaque docker port-allocation error.
+func assertSupervisorEnvironment() error {
+	if os.Getenv(harness.RequireMongoEnv) == "1" {
+		return fmt.Errorf("%s=1 declares a service MongoDB, but the e2e supervisor always self-provisions; unset it", harness.RequireMongoEnv)
+	}
+	if os.Getenv(harness.ServiceMongoURLEnv) != "" {
+		return fmt.Errorf("%s declares a service MongoDB, but the e2e supervisor always self-provisions; unset it", harness.ServiceMongoURLEnv)
+	}
+	if err := harness.AssertPortFree("127.0.0.1:27017"); err != nil {
+		return fmt.Errorf("e2e supervisor requires an exclusive MongoDB port: %w", err)
+	}
+	return nil
+}
+
 func run(args []string) (childExitError error) {
 	separator := -1
 	for index, arg := range args {
@@ -164,6 +182,10 @@ func run(args []string) (childExitError error) {
 
 	repoRoot, err := harness.RepositoryRoot()
 	if err != nil {
+		return err
+	}
+
+	if err := assertSupervisorEnvironment(); err != nil {
 		return err
 	}
 

@@ -26,7 +26,6 @@ const (
 	fixtureNotebookID   = "548125adf4e872105c000007"
 	fixtureActiveNoteID = "5483207cf4e87203a4000001"
 	fixtureTrashNoteID  = "5481481bf4e87273d2000003"
-	fixtureDatabaseURL  = "mongodb://127.0.0.1:27017/leanote_test"
 	fixtureDatabaseName = "leanote_test"
 	seedImageID         = "650000000000000000000001"
 	seedAttachID        = "650000000000000000000002"
@@ -44,14 +43,26 @@ func startBaselineServer(t testing.TB) (*Server, *Client, string) {
 		t.Fatal(err)
 	}
 	environment := NewMongoEnvironment(repoRoot)
-	if err := environment.Up(); err != nil {
+	mode, serviceURI, err := ResolveMongoTestMode()
+	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if err := environment.Down(); err != nil {
-			t.Error(err)
+	if mode == MongoServiceBacked {
+		// The external service database is reset per test so the suites stay
+		// order-independent; the mode owns no containers, so no teardown.
+		if err := environment.RestoreServiceFixture(serviceURI); err != nil {
+			t.Fatal(err)
 		}
-	})
+	} else {
+		if err := environment.Up(); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if err := environment.Down(); err != nil {
+				t.Error(err)
+			}
+		})
+	}
 
 	server := StartServer(t)
 	client := NewClient(server.BaseURL)
@@ -287,7 +298,11 @@ func captureGolden(t testing.TB, store GoldenStore, client *Client, name string,
 
 func fixtureDatabase(t testing.TB) *mongo.Database {
 	t.Helper()
-	client, err := mongo.Connect(options.Client().ApplyURI(fixtureDatabaseURL).SetConnectTimeout(5 * time.Second).
+	_, fixtureURI, err := ResolveMongoTestMode()
+	if err != nil {
+		t.Fatalf("resolve fixture database URI: %v", err)
+	}
+	client, err := mongo.Connect(options.Client().ApplyURI(fixtureURI).SetConnectTimeout(5 * time.Second).
 		SetRegistry(lea.CodecRegistry).SetBSONOptions(&options.BSONOptions{DefaultDocumentM: true}))
 	if err != nil {
 		t.Fatalf("connect fixture database: %v", err)
