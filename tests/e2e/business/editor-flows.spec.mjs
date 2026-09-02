@@ -79,6 +79,8 @@ function saveRequest(request) {
 test('note editor keeps load baseline, title-only saves, content revisions, undo and readonly gate', async ({ page }) => {
   test.setTimeout(180_000);
   startBudget();
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(String(error && error.message || error)));
   const env = await ensureE2EIdentity();
   mark('identity');
   await login(page, env);
@@ -157,6 +159,12 @@ test('note editor keeps load baseline, title-only saves, content revisions, undo
     expect(await page.evaluate(() => window.LeanoteEditorSession.snapshot())).toEqual(beforeReadonly);
     mark('readonly-gate');
   } finally {
+    const maskState = await page.evaluate(() => ({
+      maskZ: document.getElementById('noteMaskForLoading') ? document.getElementById('noteMaskForLoading').style.zIndex : 'missing',
+      contentAjax: Boolean(window.Note && Note.contentAjax),
+      curNoteId: window.Note && Note.curNoteId,
+    })).catch((error) => `unavailable: ${error}`);
+    console.log(`[editor-flow-budget] mask-state ${JSON.stringify(maskState)} page-errors ${JSON.stringify(pageErrors)}`);
     mark('finally-enter');
     if (created) await deleteNote(page.request, env.baseUrl, noteId);
     mark('cleanup-done');
