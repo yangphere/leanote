@@ -17,10 +17,19 @@ CONFIG_DIR_CREATED=false
 cleanup() {
   status=$?
   set +e
-  if [ "$status" -ne 0 ] && [ -s "$TMP/app.log" ]; then
-    { set +x; } 2>/dev/null
-    echo '--- packaged app log (failure diagnostics) ---' >&2
-    tail -n 40 "$TMP/app.log" >&2
+  { set +x; } 2>/dev/null
+  if [ "$status" -ne 0 ]; then
+    if [ -s "$TMP/app.log" ]; then
+      echo '--- packaged app log (failure diagnostics) ---' >&2
+      tail -n 40 "$TMP/app.log" >&2
+    fi
+    if [ -s "$TMP/pdf.headers" ]; then
+      echo '--- pdf response headers (failure diagnostics) ---' >&2
+      cat "$TMP/pdf.headers" >&2
+      echo '--- pdf body first 200 bytes ---' >&2
+      head -c 200 "$TMP/pdf.html" >&2
+      echo >&2
+    fi
   fi
   if [ -n "$PID" ]; then kill "$PID" >/dev/null 2>&1; wait "$PID" >/dev/null 2>&1; fi
   if [ "$CONFIG_CREATED" = true ]; then sudo rm -f "$CONFIG_FILE"; fi
