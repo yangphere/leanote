@@ -15,32 +15,32 @@
 
 ## Task 1: 模式判定与 service-backed 路径
 
-- [ ] harness 增加三态判定（设计见 design.md §2）：`LEANOTE_REQUIRE_MONGO=1` ⇒ service-backed（零 docker 调用，消费默认 URI 或 `LEANOTE_TEST_MONGO_URL` 覆盖，覆盖 URI 库名必须恰为 `leanote_test`）；未设 ⇒ 自建（现状 `Up()`）。
-- [ ] service-backed 的每测试隔离恢复（机制与取舍见 design.md §3）：与自建模式的容器内恢复语义等价。
-- [ ] `startBaselineServer` 接入判定（11 处调用点行为不变或改善，不逐点复制逻辑）。
+- [x] harness 增加三态判定（设计见 design.md §2）：`LEANOTE_REQUIRE_MONGO=1` ⇒ service-backed（零 docker 调用，消费默认 URI 或 `LEANOTE_TEST_MONGO_URL` 覆盖，覆盖 URI 库名必须恰为 `leanote_test`）；未设 ⇒ 自建（现状 `Up()`）。
+- [x] service-backed 的每测试隔离恢复（机制与取舍见 design.md §3）：与自建模式的容器内恢复语义等价。
+- [x] `startBaselineServer` 接入判定（单点门控，11 处调用点零改动；`fixtureDatabase` 直连改用解析 URI）。
 
 ## Task 2: fail-closed 校验与 supervisor 预检
 
-- [ ] URI 库名 ≠ `leanote_test`、service ping 不通、宿主 mongorestore 缺失——启动前明确非零失败。
-- [ ] e2e supervisor `Up()` 前显式断言 27017 无监听，占用时明确报错（替代 docker 125）。
+- [x] URI 库名 ≠ `leanote_test`、service ping 不通、宿主 mongorestore 缺失——启动前明确非零失败（`RestoreServiceFixture` fail-closed 次序）。
+- [x] e2e supervisor `Up()` 前显式断言 27017 无监听并拒绝 REQUIRE/URL service 声明（`assertSupervisorEnvironment`）。
 
 ## Task 3: 回归用例（fake `commandRun`，environment_test.go 先例）
 
-- [ ] REQUIRE=1 路径零 docker 调用断言。
-- [ ] 各 fail-closed 错误路径（URI 库名、ping、缺工具、端口占用）单元覆盖。
-- [ ] 隔离恢复调用次数/顺序断言（每测试一次 `--drop`）。
+- [x] REQUIRE=1 路径零 docker 调用断言（`TestRestoreServiceFixtureNeverInvokesDocker`）。
+- [x] 各 fail-closed 错误路径（URI 库名、ping、缺工具、端口占用、来源冲突、supervisor 声明）单元覆盖。
+- [x] 隔离恢复断言：恰好一条 mongorestore 命令且参数序确定；失败路径零恢复命令。
 
 ## Task 4: 本地与 CI 验证
 
-- [ ] 本地（Windows/WSL，未设 REQUIRE）自建模式全绿：`go test ./app/tests/... -count=1`。
-- [ ] CI `mongo-8_0` job 全绿，日志无 `leanote-test-mongo` / `port is already allocated`；记录 run/job URL 与发现/执行数。
-- [ ] 若本地具备 service+mongorestore 条件，补一次 REQUIRE=1 本地验证（可选，CI 为最终证据）。
+- [x] 本地自建模式全绿：`go test ./app/tests/... -count=1 -p 1 -timeout 25m`（harness 103.6s / auth ok / cmd-e2e ok，Docker 29.7.2）。
+- [x] CI [mongo-8_0 job `100081573898`](https://github.com/yangphere/leanote/actions/runs/33576516744/job/100081573898) success：日志禁行 0，三包 `ok`（app/tests 0.008s、harness 34.853s、cmd/e2e 0.004s）。
+- [x] 本地无宿主 mongorestore，跳过（按计划标注为可选；CI 为最终证据）。
 
 ## Task 5: Provenance 与交接
 
-- [ ] 记录修复提交 SHA、CI run/job、模式与脱敏参数，填入 PRD AC 勾选。
-- [ ] 通知 E：AC-E5 retest 输入就绪；B-E3 以本任务输出为 harness 前提。
+- [x] 修复提交 `073127f`（材料 `16099ba`）；provenance 已填入 PRD AC；记录仅含脱敏 URI（`SanitizeMongoURI` 剥离凭据）。
+- [x] 待归档确认后由 E 收口阶段重置 AC-E5；B-E3 现在可将 chromium 失败归因于编辑器行为（harness 生命周期已消歧：run 33576516744 的 chromium 失败不再涉及 Mongo 冲突）。
 
 ## Completion Gate
 
-- [ ] PRD 全部 AC 勾选；无业务 API/数据结构改动；两模式隔离等价有测试与 CI 证据。
+- [x] PRD 全部 AC 勾选；无业务 API/数据结构改动（diff 仅 app/tests/harness/**）；两模式隔离等价有测试与 CI 证据。

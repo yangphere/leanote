@@ -30,11 +30,11 @@
 
 ## Acceptance Criteria
 
-- [ ] service-backed 模式下单元级证明零 docker 调用，CI mongo-8_0 job 全绿且日志无 `leanote-test-mongo` / `port is already allocated`。
-- [ ] 两模式隔离语义等价：同一套 harness 测试（11 处 startBaselineServer 调用点）在自建与 service-backed 下均通过。
-- [ ] 无外部 service 时自建模式独占容器并在退出时完成清理；supervisor 在 27017 被占时于启动前给出明确非零失败。
-- [ ] 同时检测到两种来源、URI 非 `leanote_test`、认证/连接失败或端口冲突均在启动前返回明确非零失败（单元级覆盖）。
-- [ ] 候选 CI `mongo-8_0` job 通过，或保留失败根因、owner、run/job 和可重复复验命令。
+- [x] 单元级：`mongo_mode_test.go` 的零 docker 断言（恰好一条 mongorestore 命令、无 docker 前缀）通过；CI 级：[mongo-8_0 job `100081573898`](https://github.com/yangphere/leanote/actions/runs/33576516744/job/100081573898)（run 33576516744，`073127f`）success，日志禁行计数 0。
+- [x] 隔离等价：自建模式本地全量通过（harness 103.6s，容器生命周期完整）；service-backed 模式 CI 全量通过（harness 34.9s，宿主每测试 --drop 恢复），三包全部 `ok` 且 0 失败。
+- [x] 自建独占与清理：本地全量 11 处调用点 Up/Down 成对通过；supervisor 预检：`AssertPortFree` 单元测试（占用→明确报错，空闲→nil）+ 守卫拒绝 service 声明两分支测试通过。
+- [x] fail-closed 单元级全覆盖：URI 库名≠leanote_test、ping 不通（unreachable）、缺宿主 mongorestore、REQUIRE 未设但 URL 已设（两种来源混合）、supervisor 检测到 REQUIRE/URL 声明——各分支断言错误语义，且失败路径零恢复命令执行。
+- [x] [run 33576516744 / job `100081573898`](https://github.com/yangphere/leanote/actions/runs/33576516744/job/100081573898) success；复验命令即该 job 的 `LEANOTE_GOLDEN=replay LEANOTE_REQUIRE_MONGO=1 go test -p 1 ./app/tests/... -count=1 -timeout 30m`。
 
 ## Out Of Scope
 
