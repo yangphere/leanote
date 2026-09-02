@@ -57,6 +57,13 @@ D1-D3 修复落地后，package/container smoke 首次真正运行到应用启�
    - 复验命令：push 后观察 run；或本地复现需 canonical `/etc/leanote/app.conf`（Windows 不可直建，建议 WSL/Linux 环境 + 打包 tarball + `/etc/hosts` 加 `mongo-smoke.internal`）。
    - owner：B-E6（深挖需新会话/诊断轮；候选方向：`db.Ping` 与 `dialMongo` 的 Ping 语义差异、healthz 处理时 client 状态、503 响应来源验证）。
 
+### 真根因定名与全绿（2026-09-02 第六、七轮）
+
+- **第六轮（行级 trace `57abc337` + pdf 头转储 `02914a3a`）**：`set -x` 点名失败行为 `grep -Eiq '^Content-Type: text/html(?:;|$)'`（status=2），转储证明响应头恰为 `text/html; charset=utf-8`——grep 应匹配而不匹配。
+- **真根因**：`(?:…)` 是 PCRE 非捕获组，`grep -E`（ERE）不支持——GNU grep 警告 "`? at start of expression`" 后按 ERE 解析为不同模式，永不匹配（WSL grep 3.11 实测 exit 1；CI grep 3.7 status 2）。所谓 "503 not_ready" 是第一轮诊断的**错误归因**：时间线推断的 503 路径实为该 grep 在 healthz 之后的 PDF 校验静默失败（set -e 无输出）；"1 秒即退" 与 503-立即判负路径的时序巧合误导了四轮。
+- **修复**（`7ccb4d6c`）：两处 `(?:;|$)` → `(;|$)`（捕获组，语义等价、可移植）；WSL 实测匹配；503-继续轮询与 180s deadline 保留为正确防御；移除临时 set -x，保留 app.log/pdf 失败转储。
+- **[run 33637319776](https://github.com/yangphere/leanote/actions/runs/33637319776)**：八 quality-gate job 首次全部 success；ci-summary artifact 实测 `passed/complete/11-11`（D3 语义 CI 级实证）。
+
 ## 审核过程 provenance
 
 - `gh run view 33604371491` 三 job 日志（错误行精确到步）；`ci-summary-container-smoke` artifact 下载实测 job_not_started。

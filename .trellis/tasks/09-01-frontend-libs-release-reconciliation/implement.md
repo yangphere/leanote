@@ -31,8 +31,8 @@
 
 ## Task 5: CI 复验与 D3 实证
 
-- [x→blocked] 四轮 CI：node-build/chromium/mongo 持续绿；package/container 揭露执行位缺失→诊断能力→503 未解之谜（详见研究文档补录）；run 链 33621572778/33622698589/33624592817/33626805206。
-- [ ] （blocked 连锁）三门禁全绿后复核 summary artifact 的 stage 语义。
+- [x] 六轮 CI 收敛至全绿：执行位→诊断能力→503 假象→ERE 真根因（`grep -E` 不支持 `(?:…)`）；run 链 33621572778/33622698589/33624592817/33626805206/33633129835/33634803149/33635990193 → **[33637319776 八 job 全绿](https://github.com/yangphere/leanote/actions/runs/33637319776)**。
+- [x] ci-summary-node-build artifact 实测 passed/complete/11-11，stage 语义 CI 级实证完成。
 
 ## Task 6: D4/D5 登记
 
