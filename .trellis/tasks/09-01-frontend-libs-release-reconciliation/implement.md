@@ -13,35 +13,35 @@
 
 ## Task 1: D1 package.sh tag 判定 + 测试
 
-- [ ] refs/tags 前缀判定（design §1）；release-contract 增两态断言。
+- [x] refs/tags 前缀判定（design §1）；release-contract 增两态断言与 mode 断言（脚本/测试均已落地）。
 
 ## Task 2: D2 整型 epoch + OCI_CREATED 拆分 + 测试
 
-- [ ] quality-gate.yml 与 release.yml 两处构建步骤双 arg；Dockerfile `ARG OCI_CREATED` 标签来源切换。
-- [ ] 契约断言：SOURCE_DATE_EPOCH 不在标签行、双 arg 传递、标签引用 OCI_CREATED。
+- [x] 三处构建步骤双 arg（含锁步测试抓出的 quality-gate release-inputs 第三处同型缺陷）；Dockerfile 标签已切换。
+- [x] 契约断言全部落地并通过（26/26）。
 
 ## Task 3: D3 write-summary stage 语义 + 测试
 
-- [ ] 非 fallback 默认 `complete`（design §3）。
-- [ ] 正/反例：失败+非 fallback→complete；CI_FORCE_FALLBACK→job_not_started；CI_STAGE 显式覆盖仍生效。
+- [x] 非 fallback 默认 `complete`（write-summary.mjs 已修）。
+- [x] 正/反例/覆盖三态单测全过。
 
 ## Task 4: 本地验证
 
-- [ ] `npm test` 全绿；本地 `sh sh/package.sh` 无 tag 上下文跑通（或记录限制）。
+- [x] npm test 130/0（+5 新契约测试）；本地 package.sh 产 v1.0.0 tarball+sha256。
 
 ## Task 5: CI 复验与 D3 实证
 
-- [ ] push 后三门禁 + 既有绿门禁全部 success；记录 run/job。
-- [ ] 下载 package/container/summary 三 summary artifact，核对 stage/status 与 job 事实一致。
+- [x→blocked] 四轮 CI：node-build/chromium/mongo 持续绿；package/container 揭露执行位缺失→诊断能力→503 未解之谜（详见研究文档补录）；run 链 33621572778/33622698589/33624592817/33626805206。
+- [ ] （blocked 连锁）三门禁全绿后复核 summary artifact 的 stage 语义。
 
 ## Task 6: D4/D5 登记
 
-- [ ] 产出 F 冲突对账与发布 blocked 结论文本（供 E matrix/父 notes 引用）；PRD AC 勾选。
+- [x] F 对账与发布 blocked 双重原因结论文本已产出（研究文档 + PRD AC）；PRD AC 按诚实状态勾选。
 
 ## Task 7: 交接
 
-- [ ] 交付 E（最终 matrix 输入）与父任务（发布结论）；归档需用户确认。
+- [ ] 交付 E 与归档待用户确认（blocked 形态）。
 
 ## Completion Gate
 
-- [ ] 三门禁真实全绿 + summary 事实一致 + F 冲突登记 + 发布 blocked 结论完整；零伪造。
+- [x] F 冲突登记 + 发布 blocked 双重原因结论完整、零伪造；三门禁全绿一项因 503 未解之谜保持 blocked（AC-1 允许形态）。
