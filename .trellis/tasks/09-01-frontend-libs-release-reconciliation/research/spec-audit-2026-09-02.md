@@ -46,6 +46,17 @@ B-E5 裁决跳过 Safari → 8 槽 `browser-release-matrix-v1` 不可得 → F �
 - D2 影响面补全：release.yml:102 存在同型 RFC3339→整型缺陷，纳入修复（参数类型缺陷≠发布语义变更）；Dockerfile 标签无空值路径（两 workflow 恒传 `OCI_CREATED`）。
 - 恢复被重写静默丢弃的三项旧需求：package/container 验证范围枚举（tarball/SHA-256/OCI/非 root/外部 Mongo/持久化路径/PDF smoke）、发现/执行数量与失败 owner 记录、两阶段 artifact 分离规则（现 Req 6/7）。
 
+## 实现期调查补录（2026-09-02，四轮 CI 诊断轮）
+
+D1-D3 修复落地后，package/container smoke 首次真正运行到应用启动段，揭开多层潜伏缺陷并逐层修复：
+
+1. **执行位缺失**（`37c2ee01`）：两 smoke 脚本 100644 但被 workflow 直接调用 → exit 126；`git update-index --chmod=+x` + mode 回归断言。
+2. **诊断能力**（`fe734046`/`94525989`）：应用日志此前被完全吞掉，违反"失败保留原始原因"；package-smoke 落盘 app.log 失败时输出尾部 40 行，container-smoke 输出 docker logs 尾部。
+3. **readiness deadline**（`353f28ed`）：60s→180s（冷启动保护；后续轮证明启动仅 ~3s，此项保留为防御性余量）。
+4. **未解之谜（诚实登记为 blocked）**：run `33626805206`（`353f28ed`）诊断轮：应用 3 秒启动并打印 `leanote starting`（initDatabase 表观成功，无 `mongo readiness unavailable` 或任何 ERROR 日志行），server 监听 19090 并响应 healthz，**但返回 503 not_ready**（`db.Ping` 失败）——与启动期 dialMongo 的 Ping 成功矛盾。此前轮次的 60s "慢启动"表象实为该 503 路径立即使 EXPECT_READY=true 断言失败所致。容器 smoke 同症状（curl 56 重置后同路径）。
+   - 复验命令：push 后观察 run；或本地复现需 canonical `/etc/leanote/app.conf`（Windows 不可直建，建议 WSL/Linux 环境 + 打包 tarball + `/etc/hosts` 加 `mongo-smoke.internal`）。
+   - owner：B-E6（深挖需新会话/诊断轮；候选方向：`db.Ping` 与 `dialMongo` 的 Ping 语义差异、healthz 处理时 client 状态、503 响应来源验证）。
+
 ## 审核过程 provenance
 
 - `gh run view 33604371491` 三 job 日志（错误行精确到步）；`ci-summary-container-smoke` artifact 下载实测 job_not_started。

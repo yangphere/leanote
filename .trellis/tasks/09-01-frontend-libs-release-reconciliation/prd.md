@@ -34,11 +34,11 @@
 
 ## Acceptance Criteria
 
-- [ ] 修复提交的 CI：package-smoke、container-smoke、summary 三门禁全绿（连同 node-build/chromium/mongo 保持绿），run/job 记录入材料。
-- [ ] 失败 job 的 summary（若再现）stage 与实际生命周期一致，不再出现"已运行却写 job_not_started"；summary 契约测试覆盖该语义。
-- [ ] tag 上下文断言保留：`version.mjs`/package.sh 对 `refs/tags/*` 与显式 `RELEASE_TAG` 的断言行为有测试锁定；dev 分支 push 不再触发。
-- [ ] 镜像构建可复现且 OCI `created` 为 RFC3339：契约测试断言双 arg 与 Dockerfile 标签来源。
-- [ ] F 状态冲突在 E matrix 与父 notes 完整登记；最终结论为"门禁修复全绿 + 发布保持 blocked（缺 8 槽 artifact，恢复条件见 B-E5）"，无 `eligible_for_completion`/发布获批表述。
+- [ ] **blocked（诚实登记）**：D1/D2/D3 修复后 node-build/chromium/mongo 保持绿；package/container 达到应用启动+healthz 响应层后暴露更深的 503 not_ready 未解之谜（四轮诊断轮证据链见研究文档"实现期调查补录"；run 33626805206）；summary 随上游失败保持 failed。AC 允许的 failed/blocked 形态成立，owner/复验命令已登记。
+- [x] stage 语义修复有正/反例/覆盖单测（失败非 fallback→complete；fallback→job_not_started；CI_STAGE 显式覆盖）；D3 的 CI 级实证待三门禁最终全绿后由 summary artifact 复核（当前 blocked 连锁）。
+- [x] tag 断言两态锁定（`refs/tags/*` case 守卫 + `GITHUB_REF_NAME` 直通移除断言）；dev push 不再触发（本地 package.sh 无 tag 上下文跑通 v1.0.0 tarball 实证）。
+- [x] 双 arg 断言（SOURCE_DATE_EPOCH=$epoch 整型 + OCI_CREATED RFC3339）覆盖三条构建点（quality-gate container-smoke/release-inputs + release.yml——锁步测试并抓出第三处被 skipped 掩盖的同型缺陷）与 Dockerfile 标签。container 构建步已越过 ParseInt（run 33626805206 日志实证）。
+- [x] **最终结论：发布保持 blocked**（双重原因：三门禁 package/container/summary 保持 failed——503 未解之谜；8 槽 artifact 缺失——B-E5 Safari 跳过）。F 冲突登记文本已产出（研究文档 D4 + E notes 同步项）；无任何 `eligible_for_completion`/发布获批表述。
 
 ## Out Of Scope
 
