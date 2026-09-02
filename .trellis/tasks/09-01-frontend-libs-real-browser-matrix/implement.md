@@ -5,7 +5,9 @@
 - [x] 规格审核完成（`research/spec-audit-2026-09-02.md`）；design/implement 就位。
 - [x] **Q-E5-1** 已答复（2026-09-02"跳过macOS验证"）：Safari 两槽跳过；本机真实产品执行工程证据（Chrome/Edge/Firefox current 三槽 16/16 全绿，见 acceptance/engineering-evidence.md）；8 槽预检 artifact 因 producer 硬性要求含 Safari 而挂起，E AC-E6 保持 blocked。
 - [x] **Q-E5-2** 随预检路径挂起（无 8 槽 artifact 则无 tag 需求）；恢复预检时再议版本号。
-- [ ] 任务收口形态（blocked 交付，AC-4）经用户确认后归档；未运行 `task.py start`（无 8 槽执行可激活）。
+- [x] 任务收口形态（blocked 交付，AC-4）经用户确认归档（2026-09-02"归档"）；全程未运行 `task.py start`（无 8 槽执行可激活）。
+
+## Task 1-4: 8 槽执行路径（SUSPENDED——用户裁决跳过 Safari，producer 硬性 8 槽无法满足；恢复条件见缺口台账）
 
 ## Task 1: 环境准备（依 Q-E5-1 答复，仓库外）
 
