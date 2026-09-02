@@ -44,7 +44,7 @@ docker run -d --name "$APP" --user 10001:10001 --group-add "$(id -g)" --network 
   -v "$TMP_CONFIG:/etc/leanote/app.conf:ro" -v "$FILES_DIR:/app/files" -v "$UPLOAD_DIR:/app/public/upload" \
   -e MONGODB_URL="mongodb://$MONGO:27017/leanote" \
   -e LEANOTE_APP_SECRET='container-smoke-secret-012345678901234567890' "$IMAGE" >/dev/null
-deadline=$(($(date +%s) + 60))
+deadline=$(($(date +%s) + 180))
 while :; do
   code=$(curl -sS -D "$TMP_HEALTH.headers" -o "$TMP_HEALTH" -w '%{http_code}' http://127.0.0.1:9000/healthz || true)
   if [ "$code" = 200 ] && grep -Fx '{"status":"ready"}' "$TMP_HEALTH" >/dev/null; then break; fi
@@ -73,7 +73,7 @@ docker restart "$APP" >/dev/null
 test -f "$FILES_DIR/smoke-marker"
 test "$(docker exec "$APP" cat /app/files/smoke-marker)" = persisted
 test "$(docker exec "$APP" cat /app/public/upload/smoke-upload)" = persisted-upload
-deadline=$(($(date +%s) + 60))
+deadline=$(($(date +%s) + 180))
 while :; do
   code=$(curl -sS -D "$TMP_HEALTH.headers" -o "$TMP_HEALTH" -w '%{http_code}' http://127.0.0.1:9000/healthz || true)
   if [ "$code" = 200 ] && grep -Fx '{"status":"ready"}' "$TMP_HEALTH" >/dev/null; then break; fi

@@ -69,7 +69,9 @@ CONFIG_CREATED=true
 MONGODB_URL="$PACKAGE_SMOKE_MONGODB_URL" LEANOTE_APP_SECRET="$PACKAGE_SMOKE_APP_SECRET" \
   "$TMP/bin/leanote" -runMode prod -conf "$CONFIG_FILE" >"$TMP/app.log" 2>&1 &
 PID=$!
-deadline=$(($(date +%s) + 60))
+# Cold CI runners need well over 60s for the packaged binary to load
+# templates and messages before the first listen; poll for real readiness.
+deadline=$(($(date +%s) + 180))
 while :; do
   code=$(curl -sS -D "$TMP/healthz.headers" -o "$TMP/healthz" -w '%{http_code}' http://127.0.0.1:19090/healthz || true)
   if [ "$code" = 200 ] && grep -Fx '{"status":"ready"}' "$TMP/healthz" >/dev/null; then break; fi
