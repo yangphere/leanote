@@ -64,7 +64,7 @@ case "$CONTAINER_SMOKE_PDF_URL" in
   *) echo 'CONTAINER_SMOKE_PDF_URL must target the real /note/toPdf route' >&2; exit 1 ;;
 esac
 curl -fsS -D "$TMP_HEALTH.pdf.headers" -o "$TMP_HEALTH.pdf.html" "$CONTAINER_SMOKE_PDF_URL"
-grep -Eiq '^Content-Type: text/html(?:;|$)' "$TMP_HEALTH.pdf.headers"
+grep -Eiq '^Content-Type: text/html(;|$)' "$TMP_HEALTH.pdf.headers"
 test -s "$TMP_HEALTH.pdf.html"
 docker exec "$APP" env "CONTAINER_SMOKE_PDF_URL=$CONTAINER_SMOKE_PDF_URL" sh -c 'printf persisted > /app/files/smoke-marker && test -x /usr/local/bin/wkhtmltopdf && wkhtmltopdf --quiet "$CONTAINER_SMOKE_PDF_URL" /app/files/smoke.pdf'
 test -s "$FILES_DIR/smoke.pdf"

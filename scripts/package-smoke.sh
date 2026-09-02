@@ -1,8 +1,5 @@
 #!/bin/sh
 set -eu
-# Line trace names the exact failing step; CI job logs are the destination.
-PS4='+smoke:${LINENO}: '
-set -x
 
 ARCHIVE=${1:?usage: package-smoke.sh <tarball>}
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
@@ -17,7 +14,6 @@ CONFIG_DIR_CREATED=false
 cleanup() {
   status=$?
   set +e
-  { set +x; } 2>/dev/null
   if [ "$status" -ne 0 ]; then
     if [ -s "$TMP/app.log" ]; then
       echo '--- packaged app log (failure diagnostics) ---' >&2
@@ -107,7 +103,7 @@ case "$PACKAGE_SMOKE_PDF_URL" in
   *) echo 'PACKAGE_SMOKE_PDF_URL must target the real /note/toPdf route' >&2; exit 1 ;;
 esac
 curl -fsS -D "$TMP/pdf.headers" -o "$TMP/pdf.html" "$PACKAGE_SMOKE_PDF_URL"
-grep -Eiq '^Content-Type: text/html(?:;|$)' "$TMP/pdf.headers"
+grep -Eiq '^Content-Type: text/html(;|$)' "$TMP/pdf.headers"
 test -s "$TMP/pdf.html"
 test -x "$(command -v wkhtmltopdf)"
 wkhtmltopdf --quiet "$PACKAGE_SMOKE_PDF_URL" "$TMP/smoke.pdf"
