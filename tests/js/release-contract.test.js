@@ -253,6 +253,15 @@ test('quality gate fallback summaries preserve GitHub provenance', async () => {
   assert.match(workflow, /CI_FORCE_FALLBACK/);
 });
 
+test('smoke scripts carry the executable bit for direct workflow invocation', async () => {
+  const { execFileSync } = require('node:child_process');
+  const modes = execFileSync('git', ['ls-files', '-s', 'scripts/package-smoke.sh', 'scripts/container-smoke.sh'], { encoding: 'utf8' })
+    .split('
+').filter(Boolean).map((line) => line.split(' ')[0]);
+  assert.equal(modes.length, 2);
+  assert.ok(modes.every((mode) => mode === '100755'), `smoke scripts must be 100755, got ${modes.join(',')}`);
+});
+
 test('package tag assertion only applies to real tag contexts', async () => {
   const script = await fs.readFile(path.join(process.cwd(), 'sh/package.sh'), 'utf8');
   // The tag must come from an explicit RELEASE_TAG or a refs/tags/* GITHUB_REF;
