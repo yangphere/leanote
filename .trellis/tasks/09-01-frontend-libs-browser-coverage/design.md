@@ -53,7 +53,7 @@ on:
       tag: { description: strict vX.Y.Z tag, required: true }
 ```
 
-步骤约束：正则断言 `^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$`；`git fetch --force origin refs/tags/<tag>` + `git rev-parse refs/tags/<tag>^{}` 得 RELEASE_COMMIT（同 release.yml 既有剥壳模式，release-contract:210-214 已锁定该模式）；checkout 该 SHA；producer 运行；上传两文件 artifact（retention 7）。`permissions: contents: read` 保持；runner 标签不变。**不新增任何 publish/Release/GHCR 步骤**——结构断言测试扫描 workflow 文本证明（无 `create-release`/`ghcr`/publish job）。
+步骤约束：`inputs.tag` 经 `env` 传入脚本（不内插进 shell）；正则断言 `^v(0|[1-9][0-9]*)\.[0-9]` 前缀；checkout 该 tag（`fetch-depth: 0`）后 `git rev-parse refs/tags/<tag>^{}` 剥壳得 RELEASE_COMMIT（与 release.yml 剥壳断言同模式）；producer 运行；上传两文件 artifact（retention 7）。`permissions: contents: read` 保持；runner 标签不变。**不新增任何 publish/Release/GHCR 步骤**——结构断言测试扫描 workflow 文本证明（无 `create-release`/`ghcr`/publish job）。
 
 ## 7. 兼容与不变量
 

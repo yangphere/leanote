@@ -157,61 +157,59 @@ function parseCoverageMarkers(marker, browser_product, release_slot) {
       throw new Error(`protected ${browser_product}/${release_slot} smoke emitted invalid counts for ${id}`);
     }
     if (entrypoints === '') throw new Error(`protected ${browser_product}/${release_slot} smoke must emit at least one entrypoint for ${id}`);
-    assertIdentifiers(entrypoints.split(','), `entrypoints for ${id}`, { allowEmpty: false });
-    assertIdentifiers(iframes === '' ? [] : iframes.split(','), `iframes for ${id}`, { allowEmpty: true });
-    return {
-      id, discovered_count, executed_count,
-      entrypoints: entrypoints.split(','),
-      iframes: iframes === '' ? [] : iframes.split(','),
-      result: 'passed',
-    };
+    const entrypointList = entrypoints.split(',');
+    const iframeList = iframes === '' ? [] : iframes.split(',');
+    assertIdentifiers(entrypointList, `entrypoints for ${id}`, { allowEmpty: false });
+    assertIdentifiers(iframeList, `iframes for ${id}`, { allowEmpty: true });
+    return { id, discovered_count, executed_count, entrypoints: entrypointList, iframes: iframeList, result: 'passed' };
   });
   const summaryInput = { browser_product, release_slot, items };
   return { items, coverage_summary_sha256: jcsSha256(summaryInput) };
 }
 
 async function runProtectedBrowserCommands(commit, env) {
-	const records = [];
-	const coverageSummaries = [];
-	for (const browser_product of products) {
-		for (const release_slot of slots) {
-			const suffix = `${browser_product}_${release_slot}`.toUpperCase();
-			const command = env[`BROWSER_SMOKE_COMMAND_${suffix}`];
-			if (!command) throw new Error(`missing protected smoke command: BROWSER_SMOKE_COMMAND_${suffix}`);
-			let stdout;
-			try {
-				({ stdout } = await execAsync(command, { shell: true, maxBuffer: 1024 * 1024 }));
-			} catch (error) {
-				throw new Error(`protected ${browser_product}/${release_slot} smoke failed`);
-			}
-			const marker = (name) => {
-				const match = stdout.match(new RegExp(`^${name}=([^\\r\\n]+)$`, 'm'));
-				return match ? match[1].trim() : '';
-			};
-			const version = marker('LEANOTE_BROWSER_VERSION');
-			if (!version || marker('LEANOTE_AUTH_GATE') !== 'passed' || marker('LEANOTE_ERROR_GATE') !== 'passed' || marker('LEANOTE_RESOURCE_GATE') !== 'passed') {
-				throw new Error(`protected ${browser_product}/${release_slot} smoke did not emit required passed markers`);
-			}
-			const { items, coverage_summary_sha256 } = parseCoverageMarkers(marker, browser_product, release_slot);
-			records.push({
-				commit, browser_product, release_slot, browser_version: version,
-				os: marker('LEANOTE_BROWSER_OS') || `${process.platform}-${os.release()}`,
-				environment: 'real-browser', coverage: [...coverageIds], coverage_summary_sha256,
-				auth_gate: 'passed', error_gate: 'passed', resource_gate: 'passed',
-				executed_at: new Date().toISOString(), result: 'passed',
-			});
-			coverageSummaries.push({ browser_product, release_slot, coverage_summary_sha256, items });
-		}
-	}
-	return {
+  const records = [];
+  const coverageSummaries = [];
+  for (const browser_product of products) {
+    for (const release_slot of slots) {
+      const suffix = `${browser_product}_${release_slot}`.toUpperCase();
+      const command = env[`BROWSER_SMOKE_COMMAND_${suffix}`];
+      if (!command) throw new Error(`missing protected smoke command: BROWSER_SMOKE_COMMAND_${suffix}`);
+      let stdout;
+      try {
+        ({ stdout } = await execAsync(command, { shell: true, maxBuffer: 1024 * 1024 }));
+      } catch (error) {
+        throw new Error(`protected ${browser_product}/${release_slot} smoke failed`);
+      }
+      const marker = (name) => {
+        const match = stdout.match(new RegExp(`^${name}=([^\\r\\n]+)$`, 'm'));
+        return match ? match[1].trim() : '';
+      };
+      const version = marker('LEANOTE_BROWSER_VERSION');
+      if (!version || marker('LEANOTE_AUTH_GATE') !== 'passed' || marker('LEANOTE_ERROR_GATE') !== 'passed' || marker('LEANOTE_RESOURCE_GATE') !== 'passed') {
+        throw new Error(`protected ${browser_product}/${release_slot} smoke did not emit required passed markers`);
+      }
+      const { items, coverage_summary_sha256 } = parseCoverageMarkers(marker, browser_product, release_slot);
+      records.push({
+        commit, browser_product, release_slot, browser_version: version,
+        os: marker('LEANOTE_BROWSER_OS') || `${process.platform}-${os.release()}`,
+        environment: 'real-browser', coverage: [...coverageIds], coverage_summary_sha256,
+        auth_gate: 'passed', error_gate: 'passed', resource_gate: 'passed',
+        executed_at: new Date().toISOString(), result: 'passed',
+      });
+      coverageSummaries.push({ browser_product, release_slot, coverage_summary_sha256, items });
+    }
+  }
+  return {
     matrix: { schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records },
     coverage_summaries: coverageSummaries,
   };
 }
 
 export async function buildBrowserEvidence({ source, summaries, output = path.resolve('test-results'), env = process.env } = {}) {
-	const commit = env.RELEASE_COMMIT;
+  const commit = env.RELEASE_COMMIT;
   if (!/^[0-9a-f]{40}$/.test(commit || '') || /^0{40}$/.test(commit)) throw new Error('RELEASE_COMMIT must be a commit SHA');
+  if (!source && summaries) throw new Error('summaries input requires the matrix source; refusing to run protected commands from a partial rebuild request');
   let matrix;
   let coverageSummaries;
   if (source) {
@@ -225,7 +223,7 @@ export async function buildBrowserEvidence({ source, summaries, output = path.re
     ({ matrix, coverage_summaries: coverageSummaries } = await runProtectedBrowserCommands(commit, env));
     validateBrowserMatrix(matrix, commit);
   }
-  const ref = env.RELEASE_REF || env.GITHUB_REF || `refs/tags/${env.RELEASE_TAG || ''}`;
+  const ref = env.RELEASE_REF || env.GITHUB_REF;
   if (!/^refs\/tags\/v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/.test(ref)) throw new Error('GITHUB_REF must be a strict release tag ref');
   const runId = env.GITHUB_RUN_ID;
   const attempt = parseAttempt(env.GITHUB_RUN_ATTEMPT);
@@ -247,8 +245,8 @@ export async function buildBrowserEvidence({ source, summaries, output = path.re
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
-	buildBrowserEvidence().catch((error) => {
-		console.error(error.message);
-		process.exitCode = 1;
-	});
+  buildBrowserEvidence().catch((error) => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
 }

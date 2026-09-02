@@ -153,22 +153,8 @@ async function buildBrowserArtifactFixture(commit) {
 
 test('browser release evidence requires the canonical eight-record matrix', async () => {
   const { validateBrowserMatrix, crossValidateBrowserEvidence } = await import('../../scripts/browser-release-evidence.mjs');
-  const { jcsSha256 } = await import('../../scripts/jcs.mjs');
   const commit = 'd'.repeat(40);
-  const summaries = ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => {
-    const summary = coverageSummaryFixture(browser_product, release_slot);
-    summary.coverage_summary_sha256 = jcsSha256({ browser_product, release_slot, items: summary.items });
-    return summary;
-  }));
-  const digestFor = (browser_product, release_slot) => summaries
-    .find((summary) => summary.browser_product === browser_product && summary.release_slot === release_slot).coverage_summary_sha256;
-  const records = ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => ({
-    commit, browser_product, release_slot, browser_version: release_slot === 'current_major' ? '123.4.5' : '122.4.5', os: 'linux', environment: 'real-browser',
-    coverage: [...coverageIds], coverage_summary_sha256: digestFor(browser_product, release_slot),
-    auth_gate: 'passed', error_gate: 'passed', resource_gate: 'passed',
-    executed_at: '2026-08-31T12:00:00Z', result: 'passed',
-  })));
-  const matrix = { schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records };
+  const { matrix, coverage_summaries: summaries } = await buildBrowserArtifactFixture(commit);
   const provenance = {
     schema_version: 'leanote.browser-smoke.release-matrix-provenance.v1',
     matrix_sha256: 'a'.repeat(64), commit, ref: 'refs/tags/v1.2.3',
@@ -176,6 +162,7 @@ test('browser release evidence requires the canonical eight-record matrix', asyn
     release_run: { id: '12', attempt: 1 },
     coverage_summaries: summaries,
   };
+  const records = matrix.records;
   assert.equal(validateBrowserMatrix(matrix, commit).records.length, 8);
   assert.doesNotThrow(() => crossValidateBrowserEvidence(matrix, provenance));
   assert.throws(() => validateBrowserMatrix({ ...matrix, records: records.slice(1) }, commit), /exactly eight/);
@@ -194,20 +181,8 @@ test('browser release evidence requires the canonical eight-record matrix', asyn
 
 test('coverage summaries enforce slot uniqueness, item rules and JCS digests', async () => {
   const { crossValidateBrowserEvidence } = await import('../../scripts/browser-release-evidence.mjs');
-  const { jcsSha256 } = await import('../../scripts/jcs.mjs');
   const commit = 'e'.repeat(40);
-  const buildSummaries = () => ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => {
-    const summary = coverageSummaryFixture(browser_product, release_slot);
-    summary.coverage_summary_sha256 = jcsSha256({ browser_product, release_slot, items: summary.items });
-    return summary;
-  }));
-  const records = ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => ({
-    commit, browser_product, release_slot, browser_version: release_slot === 'current_major' ? '123.4.5' : '122.4.5', os: 'linux', environment: 'real-browser',
-    coverage: [...coverageIds], coverage_summary_sha256: '0'.repeat(64),
-    auth_gate: 'passed', error_gate: 'passed', resource_gate: 'passed',
-    executed_at: '2026-08-31T12:00:00Z', result: 'passed',
-  })));
-  const matrix = { schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records };
+  const { matrix, coverage_summaries: bound } = await buildBrowserArtifactFixture(commit);
   const baseProvenance = (summaries) => ({
     schema_version: 'leanote.browser-smoke.release-matrix-provenance.v1',
     matrix_sha256: 'a'.repeat(64), commit, ref: 'refs/tags/v1.2.3',
@@ -216,11 +191,7 @@ test('coverage summaries enforce slot uniqueness, item rules and JCS digests', a
     coverage_summaries: summaries,
   });
 
-  // Row digests are recomputed and must bind to the summaries.
-  const bound = buildSummaries().map((summary, index) => {
-    records[index].coverage_summary_sha256 = summary.coverage_summary_sha256;
-    return summary;
-  });
+  // The fixture's summaries are pre-bound to the matrix rows by digest.
   assert.doesNotThrow(() => crossValidateBrowserEvidence(matrix, baseProvenance(bound)));
 
   const missingSlot = bound.slice(0, 7);
