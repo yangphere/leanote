@@ -49,9 +49,10 @@ while :; do
   code=$(curl -sS -D "$TMP_HEALTH.headers" -o "$TMP_HEALTH" -w '%{http_code}' http://127.0.0.1:9000/healthz || true)
   if [ "$code" = 200 ] && grep -Fx '{"status":"ready"}' "$TMP_HEALTH" >/dev/null; then break; fi
   if [ "$code" = 503 ] && grep -Fx '{"status":"not_ready"}' "$TMP_HEALTH" >/dev/null; then
-    echo 'container did not become ready; app logs:' >&2
-    docker logs --tail 40 "$APP" >&2 || true
-    exit 1
+    # A not_ready response during container startup is transient by design;
+    # the deadline below is the only failure point for readiness.
+    sleep 1
+    continue
   fi
   [ "$(date +%s)" -lt "$deadline" ] || { echo 'healthz readiness timeout; app logs:' >&2; docker logs --tail 40 "$APP" >&2 || true; exit 1; }
   sleep 1

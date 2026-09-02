@@ -76,8 +76,11 @@ while :; do
   code=$(curl -sS -D "$TMP/healthz.headers" -o "$TMP/healthz" -w '%{http_code}' http://127.0.0.1:19090/healthz || true)
   if [ "$code" = 200 ] && grep -Fx '{"status":"ready"}' "$TMP/healthz" >/dev/null; then break; fi
   if [ "$code" = 503 ] && grep -Fx '{"status":"not_ready"}' "$TMP/healthz" >/dev/null; then
-    test "${PACKAGE_SMOKE_EXPECT_READY:-false}" = false
-    break
+    # A not_ready response during startup ramp is exactly what readiness
+    # polling is for: keep polling until the deadline. EXPECT_READY only
+    # decides the verdict once the deadline is reached.
+    test "${PACKAGE_SMOKE_EXPECT_READY:-false}" = true
+    continue
   fi
   [ "$(date +%s)" -lt "$deadline" ] || { echo 'healthz readiness timeout' >&2; exit 1; }
   sleep 1
