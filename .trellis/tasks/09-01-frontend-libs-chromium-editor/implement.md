@@ -13,29 +13,29 @@
 
 ## Task 1: shell 事件 API（失败 1）
 
-- [ ] shell 补 `on/off`（空格分隔事件名、订阅存储、退订语义）。
-- [ ] 断言：工厂执行后 `dragstart` 已订阅；`onSetup` 订阅/退订闭环（design §2）。
-- [ ] 本地单测该 spec 文件相关用例通过。
+- [x] shell 补 `on/off`（空格分隔事件名、订阅存储、退订语义）。
+- [x] 断言：工厂执行后 `dragstart` 已订阅；`onSetup` 订阅/退订闭环（design §2）。
+- [x] 本地与 CI 该 spec 全部通过。
 
 ## Task 2: 对话框条件类（失败 2）
 
-- [ ] `index.html` 恢复 `md=1` 条件类（design §3）；`#previewAttrs` 非 md 可见。
-- [ ] 回归断言（design §3）：非 md `#attrTitle` 可见可填；`index.html?md=1` 下 body 类为 `md` 且 `#previewAttrs` 隐藏。
+- [x] `index.html` 恢复 `md=1` 条件类（design §3）；`#previewAttrs` 非 md 可见。
+- [x] 回归断言（design §3）：非 md `#attrTitle` 可见可填；`index.html?md=1` 下 body 类为 `md` 且 `#previewAttrs` 隐藏。
 
 ## Task 3: 本地全量复验
 
-- [ ] `go run ./app/tests/harness/cmd/e2e -- sh -c 'npm run test:e2e:build && npm run test:e2e'` → build-smoke 1/1 + business 22/22，无 `editor.on`、无可见性超时、无清理失败。
+- [x] 本地三轮全绿（最终 41.1s）；实现期另修复两个暴露的潜伏缺陷（测试读重置变量 / main.js data: URL 分支，见研究文档补录）。
 
 ## Task 4: CI 复验与失败 3 协议
 
-- [ ] 提交推送，CI `chromium-e2e` job 全绿（22/22 + 清理摘要 + run/job 记录）。
-- [ ] 若 editor-flows 仍败：按 PRD Req 4 采集证据、登记独立事实，不放宽超时。
+- [x] [run 33589413738](https://github.com/yangphere/leanote/actions/runs/33589413738/job/100120419936) 全绿（1/1 + 22/22，38.9s）。
+- [x] editor-flows 首轮仍败（21/22）→ 三轮诊断轮定位 undoManager 竞态根因 → 守卫修复后全绿；全程未放宽超时。
 
 ## Task 5: Provenance 与交接
 
-- [ ] PRD AC 勾选并附本地/CI provenance。
+- [x] PRD AC 全勾并附 provenance；修复提交 `42a9025e`（主体）+ `7f0a0ba2`（根因守卫）；诊断轮 `46caf2aa`/`29bb285d`/`aece2691` 的脚手架已剥离、过程留档研究文档。
 - [ ] 通知 E：AC-E4 的 chromium 行 retest 输入就绪；B-E4 以本任务输出为前提；归档需用户确认。
 
 ## Completion Gate
 
-- [ ] PRD 全部 AC 勾选；生产 plugin.js 零改动；22 用例断言原样。
+- [x] PRD 全部 AC 勾选；生产 plugin.js 零改动；22 用例既有断言与超时原样（仅新增断言与两处修复）。
