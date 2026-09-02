@@ -1,5 +1,8 @@
 #!/bin/sh
 set -eu
+# Line trace names the exact failing step; CI job logs are the destination.
+PS4='+smoke:${LINENO}: '
+set -x
 
 ARCHIVE=${1:?usage: package-smoke.sh <tarball>}
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
@@ -15,6 +18,7 @@ cleanup() {
   status=$?
   set +e
   if [ "$status" -ne 0 ] && [ -s "$TMP/app.log" ]; then
+    { set +x; } 2>/dev/null
     echo '--- packaged app log (failure diagnostics) ---' >&2
     tail -n 40 "$TMP/app.log" >&2
   fi
