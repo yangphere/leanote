@@ -1,0 +1,3 @@
+{"file": ".trellis/tasks/09-01-frontend-libs-mongo-harness/prd.md", "reason": "对照验收标准逐项核查（零 docker 断言、隔离等价、fail-closed、CI job）"}
+{"file": ".trellis/tasks/09-01-frontend-libs-mongo-harness/research/spec-audit-2026-09-02.md", "reason": "核查实现是否遵循审核确立的三态判定与每测试隔离恢复"}
+{"file": ".trellis/tasks/08-25-frontend-libs/acceptance/evidence-matrix.md", "reason": "核查 AC-E5 证据更新一致性（E 自行重置基线）"}
