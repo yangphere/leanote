@@ -38,7 +38,7 @@
     ".travis.yml",
     "docs/modernization-backlog.md"
   ],
-  "notes": "架构决策见 docs/adr/0001 至 0004；延期重构只记录在 docs/modernization-backlog.md。",
+  "notes": "终局（2026-09-02）：八个 child 全部闭合——A(regression-baseline)/B(mongo-driver)/C(go-toolchain+revel-1-1+revel-migration)/D(frontend-build-chain)/E(frontend-libs, blocked 形态：八 quality-gate 全绿 run 33637319776，发布因 8 槽浏览器 artifact 缺失保持阻断，恢复路径=macOS/Safari 或契约修订)/F(cicd-delivery, 遗留 notes 冲突已由 B-E6 对账登记)。架构决策见 docs/adr/0001 至 0004；延期重构只记录在 docs/modernization-backlog.md。",
   "meta": {
     "depends_on": []
   }
