@@ -1,0 +1,5 @@
+{"file": ".trellis/tasks/09-01-frontend-libs-chromium-editor/prd.md", "reason": "任务规格：两处普遍失败的确切根因、shell 保真与条件类修复方向、失败 3 复验协议与验收标准"}
+{"file": ".trellis/tasks/09-01-frontend-libs-chromium-editor/research/spec-audit-2026-09-02.md", "reason": "CI+本地双源证据链：三失败定性、根因定位（plugin.js:152 栈帧、.md CSS 规则、md=1 契约溯源）、本地 20/2 复现记录"}
+{"file": ".trellis/tasks/09-01-frontend-libs-chromium-editor/design.md", "reason": "技术设计：shell 事件 API 形态与断言、条件类恢复方案、复验执行序与不变量"}
+{"file": ".trellis/tasks/08-25-frontend-libs/acceptance/evidence-matrix.md", "reason": "AC-E4 chromium 行的 failed 证据与 retest 条件，B-E3 完成后由 E 重置"}
+{"file": ".trellis/tasks/08-25-frontend-libs/implement.md", "reason": "父任务 Task 3 的 Chromium 串行协议（build-smoke 先行）与 harness 期望，B-E3 验收对齐"}
