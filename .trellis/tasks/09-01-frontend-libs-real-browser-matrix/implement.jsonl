@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/09-01-frontend-libs-real-browser-matrix/prd.md", "reason": "任务规格：环境就绪门禁（Q-E5-1/2）、执行需求与 blocked 交付形态"}
+{"file": ".trellis/tasks/09-01-frontend-libs-real-browser-matrix/research/spec-audit-2026-09-02.md", "reason": "环境就绪度硬证据（runner 零注册/workflow 零运行/无候选 tag/Safari 需 macOS）与仓库侧就绪清单、三选项影响面"}
+{"file": ".trellis/tasks/09-01-frontend-libs-real-browser-matrix/design.md", "reason": "执行序列、runner 命令 marker 契约（B-E4 producer fail-closed 对接）、失败语义与部分矩阵处理"}
+{"file": ".trellis/tasks/archive/2026-09/09-01-frontend-libs-browser-coverage/design.md", "reason": "B-E4 交付的 marker 协议与预检入口定义——本任务直接消费，不改"}
