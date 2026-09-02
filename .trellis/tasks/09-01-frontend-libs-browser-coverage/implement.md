@@ -13,41 +13,41 @@
 
 ## Task 1: 套件迁移与发现
 
-- [ ] 新建 `leaui-image-iframe.spec.mjs`，迁移 business-flows:84 的独立 leaui 契约用例（design §2；:187 内嵌段不动）。
-- [ ] browser-smoke testMatch 扩四文件；`--list` 证明四 ID 文件发现、business 6 文件/22 用例。
-- [ ] 本地 supervisor 串行协议复跑 business 全绿（迁移无回归）。
+- [x] 迁移完成；business 22/6、browser-smoke 16/4 实测。
+- [x] testMatch 四文件；--list 计数如上。
+- [x] 本地 supervisor 22/22（39.8s）。
 
 ## Task 2: JCS 规范化器与单测
 
-- [ ] 实现 JCS 最小规范化器（design §4）+ RFC 8785 向量子集与契约载荷正/反例单测。
+- [x] scripts/jcs.mjs + 4 单测（排序/域拒绝/手算摘要/篡改敏感）。
 
 ## Task 3: producer 升级
 
-- [ ] marker 协议扩展解析（design §3，合成 stdout 单测）。
-- [ ] 矩阵四 ID 固定顺序 + 每行 `coverage_summary_sha256`；provenance 八槽位 `coverage_summaries`；原始字节 matrix_sha256 不变语义。
+- [x] parseCoverageMarkers 落地（fail-closed：缺 marker/计数/标识符非法即拒）。
+- [x] producer 全面升级；rebuild 模式（source+summaries）保持 provenance 契约完整。
 
 ## Task 4: validator 双相位升级
 
-- [ ] schema 升级（coverage_summaries 必含、旧六字段拒绝、通用 scope 拒绝）。
-- [ ] JCS 重算与交叉校验；`--phase final|precheck` 与 `--expected-commit`（design §5）。
+- [x] crossValidateBrowserEvidence 导出共享校验。
+- [x] 双相位 CLI 落地并有相位契约测试。
 
 ## Task 5: 预检 workflow 入口
 
-- [ ] `workflow_dispatch` + 严格 tag 断言 + 剥壳解析 + 无发布步骤（design §6）。
+- [x] 预检入口落地；结构断言测试锁定。
 
 ## Task 6: 锁步契约测试
 
-- [ ] 升级 release-contract.test.js 四用例；新增 JCS/结构/相位断言（PRD Req 6）。
+- [x] 26/26（升级三用例 + 新增摘要/相位/预检结构三用例）。
 
 ## Task 7: 本地与 CI 验证
 
-- [ ] `npm test` 全绿；本地 supervisor business 22/22。
-- [ ] 候选 CI `node-build`（承载契约测试）通过；记录 run/job 与 `--list` 计数。
+- [x] npm test 0 失败；本地 22/22。
+- [x] [run 33601564498](https://github.com/yangphere/leanote/actions/runs/33601564498)：node-build + chromium-e2e + mongo-8_0 全部 success（`c8c7518e`）。
 
 ## Task 8: Provenance 与交接
 
-- [ ] PRD AC 勾选并附 provenance；通知 E：AC-E6 producer/validator 行与预检入口 retest 输入就绪，"5 files"措辞待 E 同步；B-E5 以四套件+marker 协议为输入；归档需用户确认。
+- [x] PRD AC 全勾并附 provenance；实现提交 `c8c7518e`、材料 `206cc727`。E 同步项与 B-E5 输入已写入 Handoff；归档待用户确认（待归档时同步 E notes）。
 
 ## Completion Gate
 
-- [ ] PRD 全部 AC 勾选；与 F release-matrix-contract 差异清单为空；无浏览器结果伪造。
+- [x] 差异清单为空；未执行任何真实浏览器矩阵（B-E5 范围）。

@@ -34,11 +34,11 @@
 
 ## Acceptance Criteria
 
-- [ ] browser-smoke `--list` 与执行证据证明四个 coverage ID 文件均被发现执行；business 发现 6 文件/22 用例（数量不缩水、用例不重复）。
-- [ ] producer 产出的矩阵每行含固定顺序四 ID 与 `coverage_summary_sha256`，provenance 含恰好八槽位 `coverage_summaries`；validator（两相位）重算全部摘要并拒绝重复槽位、非相邻版本、错误 commit/ref/run/attempt、非 JCS digest、敏感字段与 tag/候选身份混用。
-- [ ] 预检 workflow_dispatch 入口存在且结构断言证明：两文件 allowlist、retention ≤7 天、无 Release/GHCR/publish 步骤、身份取自剥壳 tag 而非输入。
-- [ ] 锁步契约测试（含 JCS 向量）全部通过；`npm test` 全绿；候选 CI `node-build`（承载契约测试）通过。
-- [ ] schema/producer/validator 与 E design §3.3、F release-matrix-contract 完全一致（差异清单为空），提供可复验命令与 owner/retest 入口。
+- [x] browser-smoke `--list` = 16 用例/4 文件（business-flows/editor-flows/bootstrap-components/leaui-image-iframe）；business = 22 用例/6 文件（迁移非复制，chromium job [run 33601564498](https://github.com/yangphere/leanote/actions/runs/33601564498) chromium-e2e success 全量执行复验；本地 supervisor 39.8s 22/22）。
+- [x] 契约测试锁定（release-contract 26/26 + jcs 4/4）：八槽/四 ID/固定序/entrypoints 非空/计数规则/JCS 重算/行摘要绑定/旧六字段与通用 scope 拒绝/final run 相等/precheck 候选 SHA 绑定与跨 run 容忍/--expected-commit 相位互斥。
+- [x] workflow_dispatch 入口落地；结构断言测试证明严格 tag 正则、剥壳 `^{}` 解析、retention 7、contents: read、无 ghcr/create-release/publish 步骤、两文件路径。
+- [x] 本地 `npm test` 0 失败（151 用例）；CI [run 33601564498](https://github.com/yangphere/leanote/actions/runs/33601564498) node-build success。
+- [x] 差异清单为空：逐条对照 F schema（枚举/数量/模式/additionalProperties/相邻主版本/raw bytes/JCS 摘要输入/保留期）与 E §3.3——实现即契约；复验：`npm test`（jcs-contract + release-contract）与 `node scripts/validate-browser-artifact.mjs <dir> --phase precheck --expected-commit <sha>`。
 
 ## Out Of Scope
 

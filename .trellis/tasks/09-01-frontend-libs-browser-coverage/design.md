@@ -23,7 +23,7 @@
 
 ```text
 LEANOTE_COVERAGE_business_flows=discovered=N;executed=M
-LEANOTE_ENTRYPOINTS_business_flows=/note,/blog
+LEANOTE_ENTRYPOINTS_business_flows=note,blog
 LEANOTE_IFRAMES_business_flows=      (可为空)
 ```
 
