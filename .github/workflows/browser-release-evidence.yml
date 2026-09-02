@@ -2,6 +2,16 @@ name: Protected browser release evidence
 
 on:
   workflow_call:
+  # Tag-precheck entry (Q-E1 waiting mode): produces the two-file artifact for
+  # E's acceptance ONLY. It never creates a release, pushes an image, or
+  # changes the delivery task state; the final release run regenerates the
+  # artifact after E is archived.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Strict vX.Y.Z release tag pointing at the candidate commit'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -12,19 +22,41 @@ jobs:
     runs-on: [self-hosted, protected-browser-matrix]
     timeout-minutes: 45
     steps:
+      - name: Validate tag input
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          tag="${{ inputs.tag }}"
+          printf '%s' "$tag" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' \
+            || { echo "tag must be a strict vX.Y.Z value" >&2; exit 1; }
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with: { ref: '${{ github.sha }}', fetch-depth: 0 }
+        with:
+          # workflow_call checks out the release event SHA; the precheck checks
+          # out the tag itself and peels it below so annotated tags cannot
+          # smuggle a different commit identity.
+          ref: '${{ inputs.tag || github.sha }}'
+          fetch-depth: 0
+      - name: Resolve release identity
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+            peeled="$(git rev-parse "refs/tags/${tag}^{}")"
+            printf '%s' "$peeled" | grep -Eq '^[0-9a-f]{40}$' || { echo "tag peel failed" >&2; exit 1; }
+            echo "RELEASE_COMMIT=${peeled}" >> "$GITHUB_ENV"
+            echo "RELEASE_REF=refs/tags/${tag}" >> "$GITHUB_ENV"
+          else
+            echo "RELEASE_COMMIT=${{ github.sha }}" >> "$GITHUB_ENV"
+            echo "RELEASE_REF=${{ github.ref }}" >> "$GITHUB_ENV"
+          fi
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with: { node-version: '24.20.0' }
       - run: npm ci
       - name: Execute protected real-browser matrix
         # The protected runner provides one command for each product/slot. Each
-        # command must run the real installed browser and emit version plus
-        # LEANOTE_*_GATE=passed markers; the producer rejects missing markers.
+        # command must run the real installed browser and emit version, gate and
+        # per-coverage markers; the producer rejects missing or invalid markers.
         env:
-          RELEASE_COMMIT: ${{ github.sha }}
-          RELEASE_TAG: ${{ github.ref_name }}
-          RELEASE_REF: ${{ github.ref }}
+          RELEASE_COMMIT: ${{ env.RELEASE_COMMIT }}
+          RELEASE_REF: ${{ env.RELEASE_REF }}
         run: node scripts/browser-release-evidence.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

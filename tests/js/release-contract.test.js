@@ -115,22 +115,137 @@ test('release artifact validation binds build metadata to the tarball bytes', as
   }
 });
 
-test('browser release evidence requires the canonical eight-record matrix', async () => {
-  const { validateBrowserMatrix } = await import('../../scripts/browser-release-evidence.mjs');
-  const commit = 'd'.repeat(40);
+const coverageIds = ['business-flows', 'editor-flows', 'bootstrap-components', 'leaui-image-iframe'];
+
+function coverageSummaryFixture(browser_product, release_slot) {
+  const items = coverageIds.map((id, index) => ({
+    id,
+    discovered_count: 3,
+    executed_count: index === 3 ? 1 : 3,
+    entrypoints: ['note'],
+    iframes: id === 'leaui-image-iframe' ? ['tinymce/plugins/leaui_image/index.html'] : [],
+    result: 'passed',
+  }));
+  // Digest is filled by the caller via jcsSha256 once imported.
+  return { browser_product, release_slot, items };
+}
+
+async function buildBrowserArtifactFixture(commit) {
+  const { jcsSha256 } = await import('../../scripts/jcs.mjs');
+  const summaries = ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => {
+    const summary = coverageSummaryFixture(browser_product, release_slot);
+    summary.coverage_summary_sha256 = jcsSha256({ browser_product, release_slot, items: summary.items });
+    return summary;
+  }));
+  const digestFor = (browser_product, release_slot) => summaries
+    .find((summary) => summary.browser_product === browser_product && summary.release_slot === release_slot).coverage_summary_sha256;
   const records = ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => ({
     commit, browser_product, release_slot, browser_version: release_slot === 'current_major' ? '123.4.5' : '122.4.5', os: 'linux', environment: 'real-browser',
-    coverage: ['build-smoke'], auth_gate: 'passed', error_gate: 'passed', resource_gate: 'passed',
+    coverage: [...coverageIds], coverage_summary_sha256: digestFor(browser_product, release_slot),
+    auth_gate: 'passed', error_gate: 'passed', resource_gate: 'passed',
     executed_at: '2026-08-31T12:00:00Z', result: 'passed',
   })));
-  assert.equal(validateBrowserMatrix({ schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records }, commit).records.length, 8);
-  assert.throws(() => validateBrowserMatrix({ schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records: records.slice(1) }, commit), /exactly eight/);
+  return {
+    matrix: { schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records },
+    coverage_summaries: summaries,
+  };
+}
+
+test('browser release evidence requires the canonical eight-record matrix', async () => {
+  const { validateBrowserMatrix, crossValidateBrowserEvidence } = await import('../../scripts/browser-release-evidence.mjs');
+  const { jcsSha256 } = await import('../../scripts/jcs.mjs');
+  const commit = 'd'.repeat(40);
+  const summaries = ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => {
+    const summary = coverageSummaryFixture(browser_product, release_slot);
+    summary.coverage_summary_sha256 = jcsSha256({ browser_product, release_slot, items: summary.items });
+    return summary;
+  }));
+  const digestFor = (browser_product, release_slot) => summaries
+    .find((summary) => summary.browser_product === browser_product && summary.release_slot === release_slot).coverage_summary_sha256;
+  const records = ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => ({
+    commit, browser_product, release_slot, browser_version: release_slot === 'current_major' ? '123.4.5' : '122.4.5', os: 'linux', environment: 'real-browser',
+    coverage: [...coverageIds], coverage_summary_sha256: digestFor(browser_product, release_slot),
+    auth_gate: 'passed', error_gate: 'passed', resource_gate: 'passed',
+    executed_at: '2026-08-31T12:00:00Z', result: 'passed',
+  })));
+  const matrix = { schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records };
+  const provenance = {
+    schema_version: 'leanote.browser-smoke.release-matrix-provenance.v1',
+    matrix_sha256: 'a'.repeat(64), commit, ref: 'refs/tags/v1.2.3',
+    producer_workflow: 'Protected browser release evidence',
+    release_run: { id: '12', attempt: 1 },
+    coverage_summaries: summaries,
+  };
+  assert.equal(validateBrowserMatrix(matrix, commit).records.length, 8);
+  assert.doesNotThrow(() => crossValidateBrowserEvidence(matrix, provenance));
+  assert.throws(() => validateBrowserMatrix({ ...matrix, records: records.slice(1) }, commit), /exactly eight/);
   const nonAdjacent = records.map((row) => row.browser_product === 'chrome' && row.release_slot === 'previous_major'
     ? { ...row, browser_version: '121.4.5' }
     : row);
-  assert.throws(() => validateBrowserMatrix({ schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records: nonAdjacent }, commit), /not adjacent/);
+  assert.throws(() => validateBrowserMatrix({ ...matrix, records: nonAdjacent }, commit), /not adjacent/);
   const invalidDate = records.map((row, index) => index === 0 ? { ...row, executed_at: '2026-02-30T12:00:00Z' } : row);
-  assert.throws(() => validateBrowserMatrix({ schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records: invalidDate }, commit), /RFC3339|executed_at/);
+  assert.throws(() => validateBrowserMatrix({ ...matrix, records: invalidDate }, commit), /RFC3339|executed_at/);
+  // The legacy generic scope and any coverage reordering are rejected.
+  const legacyScope = records.map((row, index) => index === 0 ? { ...row, coverage: ['build-smoke'] } : row);
+  assert.throws(() => validateBrowserMatrix({ ...matrix, records: legacyScope }, commit), /four stable coverage ids/);
+  const reordered = records.map((row, index) => index === 0 ? { ...row, coverage: [...coverageIds].reverse() } : row);
+  assert.throws(() => validateBrowserMatrix({ ...matrix, records: reordered }, commit), /four stable coverage ids/);
+});
+
+test('coverage summaries enforce slot uniqueness, item rules and JCS digests', async () => {
+  const { crossValidateBrowserEvidence } = await import('../../scripts/browser-release-evidence.mjs');
+  const { jcsSha256 } = await import('../../scripts/jcs.mjs');
+  const commit = 'e'.repeat(40);
+  const buildSummaries = () => ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => {
+    const summary = coverageSummaryFixture(browser_product, release_slot);
+    summary.coverage_summary_sha256 = jcsSha256({ browser_product, release_slot, items: summary.items });
+    return summary;
+  }));
+  const records = ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => ({
+    commit, browser_product, release_slot, browser_version: release_slot === 'current_major' ? '123.4.5' : '122.4.5', os: 'linux', environment: 'real-browser',
+    coverage: [...coverageIds], coverage_summary_sha256: '0'.repeat(64),
+    auth_gate: 'passed', error_gate: 'passed', resource_gate: 'passed',
+    executed_at: '2026-08-31T12:00:00Z', result: 'passed',
+  })));
+  const matrix = { schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records };
+  const baseProvenance = (summaries) => ({
+    schema_version: 'leanote.browser-smoke.release-matrix-provenance.v1',
+    matrix_sha256: 'a'.repeat(64), commit, ref: 'refs/tags/v1.2.3',
+    producer_workflow: 'Protected browser release evidence',
+    release_run: { id: '12', attempt: 1 },
+    coverage_summaries: summaries,
+  });
+
+  // Row digests are recomputed and must bind to the summaries.
+  const bound = buildSummaries().map((summary, index) => {
+    records[index].coverage_summary_sha256 = summary.coverage_summary_sha256;
+    return summary;
+  });
+  assert.doesNotThrow(() => crossValidateBrowserEvidence(matrix, baseProvenance(bound)));
+
+  const missingSlot = bound.slice(0, 7);
+  assert.throws(() => crossValidateBrowserEvidence(matrix, baseProvenance(missingSlot)), /eight slots/);
+  const duplicateSlot = [...bound, bound[0]];
+  assert.throws(() => crossValidateBrowserEvidence(matrix, baseProvenance(duplicateSlot)), /eight slots|duplicate/);
+  const reorderedItems = bound.map((summary, index) => index === 0
+    ? { ...summary, items: [...summary.items].reverse() }
+    : summary);
+  assert.throws(() => crossValidateBrowserEvidence(matrix, baseProvenance(reorderedItems)), /fixed order/);
+  const emptyEntrypoints = bound.map((summary, index) => index === 0
+    ? { ...summary, items: summary.items.map((item) => ({ ...item, entrypoints: [] })) }
+    : summary);
+  assert.throws(() => crossValidateBrowserEvidence(matrix, baseProvenance(emptyEntrypoints)), /entrypoints/);
+  const executedBeyondDiscovered = bound.map((summary, index) => index === 0
+    ? { ...summary, items: summary.items.map((item) => ({ ...item, executed_count: item.discovered_count + 1 })) }
+    : summary);
+  assert.throws(() => crossValidateBrowserEvidence(matrix, baseProvenance(executedBeyondDiscovered)), /counts are invalid/);
+  // A tampered digest (not matching the recomputed JCS value) is rejected.
+  const tamperedDigest = bound.map((summary, index) => index === 0 ? { ...summary, coverage_summary_sha256: 'b'.repeat(64) } : summary);
+  assert.throws(() => crossValidateBrowserEvidence(matrix, baseProvenance(tamperedDigest)), /digest mismatch/);
+  // The legacy six-field provenance (no coverage_summaries) is rejected.
+  const { coverage_summaries, ...legacyProvenance } = baseProvenance(bound);
+  assert.ok(legacyProvenance);
+  assert.throws(() => crossValidateBrowserEvidence(matrix, legacyProvenance), /unknown or missing fields/);
 });
 
 test('container smoke grants the canonical config group and verifies PDF output', async () => {
@@ -227,6 +342,24 @@ test('protected browser workflow executes commands instead of importing a matrix
   assert.match(script, /execAsync\(command/);
 });
 
+test('browser precheck entry is isolated from any publishing side effects', async () => {
+  const workflow = await fs.readFile(path.join(process.cwd(), '.github/workflows/browser-release-evidence.yml'), 'utf8');
+  assert.match(workflow, /workflow_dispatch:/);
+  // The dispatch input is a strict version tag and the identity is resolved by
+  // peeling the tag in-repo, never from caller-controlled strings beyond the
+  // validated tag itself.
+  assert.match(workflow, /tag:/);
+  assert.match(workflow, /\^\{\}/);
+  assert.match(workflow, /grep -Eq '\^v\(0\|\[1-9\]\[0-9\]\*\)/);
+  // Two-file artifact with bounded retention; read-only permissions; and no
+  // publish/release/registry steps anywhere in the workflow.
+  assert.match(workflow, /retention-days: 7/);
+  assert.match(workflow, /contents: read/);
+  assert.doesNotMatch(workflow, /ghcr|create-release|release\/action|publish:/i);
+  assert.match(workflow, /test-results\/release-matrix\.json/);
+  assert.match(workflow, /test-results\/provenance\.json/);
+});
+
 test('runtime image exposes the PDF binary at the application contract path', async () => {
   const dockerfile = await fs.readFile(path.join(process.cwd(), 'Dockerfile'), 'utf8');
   assert.match(dockerfile, /wkhtmltopdf=0\.12\.6-2\+b1/);
@@ -295,22 +428,24 @@ test('summary validator rejects placeholder provenance', async () => {
   }
 });
 
-test('browser evidence provenance names the protected producer workflow', async () => {
+test('browser evidence provenance names the protected producer workflow and carries coverage summaries', async () => {
   const { buildBrowserEvidence } = await import('../../scripts/browser-release-evidence.mjs');
   const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-browser-contract-'));
   const commit = 'f'.repeat(40);
-  const records = ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => ({
-    commit, browser_product, release_slot, browser_version: release_slot === 'current_major' ? '123.4.5' : '122.4.5', os: 'linux', environment: 'real-browser',
-    coverage: ['build-smoke'], auth_gate: 'passed', error_gate: 'passed', resource_gate: 'passed',
-    executed_at: '2026-08-31T12:00:00Z', result: 'passed',
-  })));
   const source = path.join(root, 'source.json');
+  const summariesPath = path.join(root, 'summaries.json');
   try {
-    await fs.writeFile(source, JSON.stringify({ schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records }));
-    const { provenance } = await buildBrowserEvidence({ source, output: path.join(root, 'out'), env: {
+    const { matrix, coverage_summaries } = await buildBrowserArtifactFixture(commit);
+    await fs.writeFile(source, JSON.stringify(matrix));
+    await fs.writeFile(summariesPath, JSON.stringify(coverage_summaries));
+    const { provenance } = await buildBrowserEvidence({ source, summaries: summariesPath, output: path.join(root, 'out'), env: {
       RELEASE_COMMIT: commit, RELEASE_REF: 'refs/tags/v1.2.3', GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1', GITHUB_WORKFLOW: 'Release',
     } });
     assert.equal(provenance.producer_workflow, 'Protected browser release evidence');
+    assert.equal(provenance.coverage_summaries.length, 8);
+    for (const summary of provenance.coverage_summaries) {
+      assert.equal(summary.items.length, 4);
+    }
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -320,17 +455,57 @@ test('browser evidence rejects a prefixed run attempt', async () => {
   const { buildBrowserEvidence } = await import('../../scripts/browser-release-evidence.mjs');
   const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-browser-attempt-'));
   const commit = '1'.repeat(40);
-  const records = ['chrome', 'edge', 'firefox', 'safari'].flatMap((browser_product) => ['current_major', 'previous_major'].map((release_slot) => ({
-    commit, browser_product, release_slot, browser_version: release_slot === 'current_major' ? '123.4.5' : '122.4.5', os: 'linux', environment: 'real-browser',
-    coverage: ['build-smoke'], auth_gate: 'passed', error_gate: 'passed', resource_gate: 'passed',
-    executed_at: '2026-08-31T12:00:00Z', result: 'passed',
-  })));
   const source = path.join(root, 'source.json');
+  const summariesPath = path.join(root, 'summaries.json');
   try {
-    await fs.writeFile(source, JSON.stringify({ schema_version: 'leanote.browser-smoke.release-matrix.v1', commit, records }));
-    await assert.rejects(() => buildBrowserEvidence({ source, output: path.join(root, 'out'), env: {
+    const { matrix, coverage_summaries } = await buildBrowserArtifactFixture(commit);
+    await fs.writeFile(source, JSON.stringify(matrix));
+    await fs.writeFile(summariesPath, JSON.stringify(coverage_summaries));
+    await assert.rejects(() => buildBrowserEvidence({ source, summaries: summariesPath, output: path.join(root, 'out'), env: {
       RELEASE_COMMIT: commit, RELEASE_REF: 'refs/tags/v1.2.3', GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1garbage',
     } }), /attempt/);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('browser artifact validator enforces the final and precheck phases', async () => {
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-browser-phase-'));
+  const { buildBrowserEvidence } = await import('../../scripts/browser-release-evidence.mjs');
+  const commit = '2'.repeat(40);
+  const source = path.join(root, 'source.json');
+  const summariesPath = path.join(root, 'summaries.json');
+  const runValidator = (args, env) => import('node:child_process').then(({ execFile }) => new Promise((resolve) => {
+    execFile(process.execPath, ['scripts/validate-browser-artifact.mjs', ...args], { cwd: process.cwd(), env }, (error, stdout, stderr) => resolve({ error, stdout, stderr }));
+  }));
+  try {
+    const { matrix, coverage_summaries } = await buildBrowserArtifactFixture(commit);
+    await fs.writeFile(source, JSON.stringify(matrix));
+    await fs.writeFile(summariesPath, JSON.stringify(coverage_summaries));
+    const output = path.join(root, 'out');
+    await buildBrowserEvidence({ source, summaries: summariesPath, output, env: {
+      RELEASE_COMMIT: commit, RELEASE_REF: 'refs/tags/v1.2.3', GITHUB_RUN_ID: '999', GITHUB_RUN_ATTEMPT: '1',
+    } });
+    const baseEnv = { ...process.env, GITHUB_REF: 'refs/tags/v1.2.3', GITHUB_RUN_ID: '999', GITHUB_RUN_ATTEMPT: '1', GIT_COMMIT: commit };
+
+    // Final phase: producer run must equal the validating run.
+    const finalOk = await runValidator([output], { ...baseEnv });
+    assert.equal(finalOk.error, null, finalOk.stderr);
+    const finalMismatch = await runValidator([output], { ...baseEnv, GITHUB_RUN_ID: '1000' });
+    assert.notEqual(finalMismatch.error, null);
+    assert.match(finalMismatch.stderr, /provenance mismatch/);
+
+    // Precheck phase: identity binds to the candidate commit, not the
+    // validating process's run; a foreign run id is therefore acceptable.
+    const precheckOk = await runValidator([output, '--phase', 'precheck', '--expected-commit', commit], { ...baseEnv, GITHUB_RUN_ID: '555' });
+    assert.equal(precheckOk.error, null, precheckOk.stderr);
+    assert.match(precheckOk.stdout, /precheck phase/);
+    const precheckWrongCommit = await runValidator([output, '--phase', 'precheck', '--expected-commit', '3'.repeat(40)], baseEnv);
+    assert.notEqual(precheckWrongCommit.error, null);
+    // --expected-commit is meaningless in the final phase and must be refused.
+    const finalWithExpected = await runValidator([output, '--expected-commit', commit], baseEnv);
+    assert.notEqual(finalWithExpected.error, null);
+    assert.match(finalWithExpected.stderr, /only valid in precheck/);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
