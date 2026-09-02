@@ -61,6 +61,14 @@ editor-flows 本地全绿（含 180s 预算内的全部 poll 与清理 POST）�
 
 shell 补事件 API vs 换真编辑器（选前者：契约测试本旨是"只实现插件公开用到的 API"的边界验证）；条件类恢复 vs CSS 改动（选前者：忠于原设计、markdown 页面零影响）；失败 3 不预修（本地证据充分）。
 
+## 实现阶段补录（2026-09-02）：修复 1+2 后暴露的两处潜伏缺陷
+
+失败 1/2 的修复使测试首次执行过原阻塞点，暴露两个此前从未运行到的潜伏缺陷（与 CI 失败 3 同属"E-TM 未验收区"）：
+
+- **缺陷 4（测试侧，spec:171）**：`TypeError: Cannot read properties of undefined (reading 'src')`——onMessage 求值时读 `window.LEAUI_DATAS[0]`，但插件 `openAlbum`（plugin.js:114）的语义本就是**重置**该变量为当前编辑器选择（shell 下为空数组）。修复：种子 src 经测试作用域传参，不经 window 变量；插件的播种语义不变。
+- **缺陷 5（生产侧，spec:508）**：`data:` URL 图片经 `addSelectedImage`（main.js:374-380）被当作内部 fileId 拼成 `/file/outputImage?fileId=<data:...>` 垃圾 src。修复：`data:` 前缀与 http(s) 同等作为直接源（main.js 单行分支）；`reRenderSelectedImages` 对 data: src 的渲染已被种子图证实可行。`main.min.js` 无任何消费方（note.html 引用的是 manifest 的 plugins bundle），不需同步。
+- 归类依据：两处均位于 B-E3 "恢复 business 22/22 可审计全绿"的目标闭包内（测试缺陷修测试、生产缺陷修生产），不另立修复任务。
+
 ## 审核过程 provenance
 
 - `gh run view 33579336426 --job 100090357472 --log`：三失败的测试名、错误行、调用栈、清理产物。

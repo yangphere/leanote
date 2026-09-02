@@ -121,6 +121,7 @@ test('leaui_image preserves the real parent iframe boundary and TinyMCE insertio
   await page.evaluate((src) => {
     window.__inserted = [];
     window.__closed = false;
+    window.__editorListeners = {};
     const editor = {
       selection: { getNode: () => null },
       getContent: () => window.__inserted.join(''),
@@ -132,6 +133,19 @@ test('leaui_image preserves the real parent iframe boundary and TinyMCE insertio
         },
       },
       insertContent: (html) => window.__inserted.push(html),
+      // The real TinyMCE 8 Editor exposes the Observable event API; the plugin
+      // legitimately depends on it (factory-time dragstart guard, onSetup
+      // subscriptions), so the shell implements the same boundary.
+      on: (names, handler) => {
+        for (const name of String(names).split(' ')) {
+          (window.__editorListeners[name] = window.__editorListeners[name] || []).push(handler);
+        }
+      },
+      off: (names, handler) => {
+        for (const name of String(names).split(' ')) {
+          window.__editorListeners[name] = (window.__editorListeners[name] || []).filter((registered) => registered !== handler);
+        }
+      },
       ui: { registry: {
         addButton: (_name, config) => { window.__button = config; },
         addMenuItem: () => {},
@@ -146,12 +160,23 @@ test('leaui_image preserves the real parent iframe boundary and TinyMCE insertio
     window.__pluginFactory(editor);
     window.__button.onAction();
   }, seededImageSrc);
-  await page.evaluate(() => {
+  expect(await page.evaluate(() => Object.keys(window.__editorListeners))).toEqual(['dragstart']);
+  expect(await page.evaluate(() => {
+    const teardown = window.__button.onSetup({ setEnabled() {} });
+    const subscribed = ['NodeChange', 'ModeChange'].every((name) => (window.__editorListeners[name] || []).length === 1);
+    teardown();
+    const unsubscribed = ['NodeChange', 'ModeChange'].every((name) => (window.__editorListeners[name] || []).length === 0);
+    return { subscribed, unsubscribed };
+  }), 'onSetup subscribes through the event API and its teardown unsubscribes').toEqual({ subscribed: true, unsubscribed: true });
+  // openAlbum legitimately resets window.LEAUI_DATAS to the editor's current
+  // selection before the dialog posts its message, so the seeded source must
+  // travel through the test scope, not through the window variable.
+  await page.evaluate((src) => {
     window.__dialogConfig.onMessage({ close: () => { window.__closed = true; } }, {
       mceAction: 'insertImage',
-      images: [{ src: window.LEAUI_DATAS[0].src, width: '120', height: '60', title: 'seeded image' }],
+      images: [{ src, width: '120', height: '60', title: 'seeded image' }],
     });
-  });
+  }, seededImageSrc);
   await expect.poll(() => page.evaluate(() => window.__inserted.length)).toBeGreaterThan(0);
   expect(await page.evaluate(() => ({ closed: window.__closed, inserted: window.__inserted[0] }))).toEqual({
     closed: true,
@@ -453,6 +478,8 @@ test('business flows: login, permission gates, note list/search, note+tag write,
       window.getMsg = window.getMsg || ((key) => key);
     }, { src: seededImageSrc });
     await page.goto(new URL('/tinymce/plugins/leaui_image/index.html', baseUrl).href, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).not.toHaveClass('md');
+    await expect(page.locator('#previewAttrs')).toBeVisible();
     const leaui = await page.evaluate(() => ({
       jquery: window.jQuery && window.jQuery.fn && window.jQuery.fn.jquery,
       fileupload: Boolean(window.jQuery && window.jQuery.fn && window.jQuery.fn.fileupload),
@@ -494,6 +521,12 @@ test('business flows: login, permission gates, note list/search, note+tag write,
     // late cannot escape the assertion the way it could with a fixed wait.
     await page.waitForLoadState('networkidle', { timeout: 15_000 });
     expect(leauiFailures, 'leaui_image document must not request missing resources').toEqual([]);
+
+    // The md=1 variant keeps the compact markdown layout: the class comes from
+    // the URL parameter, never a hardcoded attribute on the body tag.
+    await page.goto(new URL('/tinymce/plugins/leaui_image/index.html?md=1', baseUrl).href, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toHaveClass('md');
+    await expect(page.locator('#previewAttrs')).toBeHidden();
 
     // --- write-gate re-check: identity is re-requested and revalidated
     // against the live service before any further writes ---

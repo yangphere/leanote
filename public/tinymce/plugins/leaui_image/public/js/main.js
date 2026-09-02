@@ -375,8 +375,8 @@ alert("error");
 		if(typeof $li == "object") {
 			var src = $li.find("img").attr('src');
 		} else {
-			// 也有可能来自url
-			if($li.indexOf("http://") != -1 || $li.indexOf("https://") != -1) {
+			// 也有可能来自url (http(s) 与 data: 内联图直接作为源)
+			if($li.indexOf("http://") != -1 || $li.indexOf("https://") != -1 || $li.indexOf("data:") === 0) {
 				src = $li;
 			} else {
 				// 来自内部

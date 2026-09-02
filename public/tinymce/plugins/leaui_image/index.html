@@ -18,7 +18,7 @@
 <![endif]-->
 
 </head>
-<body class="md" id="body">
+<body id="body">
 <div style="margin: 3px;">
 	<div class="holder"></div>
 
@@ -161,14 +161,11 @@ G.perPageItems = 12;
 G.maxSelected = 1;
 // 独立打开(非 iframe)时没有父页提供 UrlPrefix, 置空使图片走相对路径
 var UrlPrefix = '';
-/*
-var url = location.href;
-var classes = "";
-if(url.indexOf("md=1") >= 0) {
-	classes = "md";
-	document.getElementById("body").className = classes;
+// markdown 上下文以 md=1 打开本页并期望紧凑布局；其他上下文（独立页与
+// TinyMCE 富文本对话框）必须显示属性面板，因此 md 类只能按 URL 条件应用。
+if (location.href.indexOf('md=1') >= 0) {
+	document.getElementById('body').className = 'md';
 }
-*/
 </script>
 
 <script src="/js/jquery-1.9.0.min.js"></script>
