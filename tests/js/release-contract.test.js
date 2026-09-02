@@ -256,8 +256,7 @@ test('quality gate fallback summaries preserve GitHub provenance', async () => {
 test('smoke scripts carry the executable bit for direct workflow invocation', async () => {
   const { execFileSync } = require('node:child_process');
   const modes = execFileSync('git', ['ls-files', '-s', 'scripts/package-smoke.sh', 'scripts/container-smoke.sh'], { encoding: 'utf8' })
-    .split('
-').filter(Boolean).map((line) => line.split(' ')[0]);
+    .split('\n').filter(Boolean).map((line) => line.split(' ')[0]);
   assert.equal(modes.length, 2);
   assert.ok(modes.every((mode) => mode === '100755'), `smoke scripts must be 100755, got ${modes.join(',')}`);
 });
