@@ -6,41 +6,28 @@
 
 ## Overview
 
-<!--
-Document your project's quality standards here.
-
-Questions to answer:
-- What patterns are forbidden?
-- What linting rules do you enforce?
-- What are your testing requirements?
-- What code review standards apply?
--->
-
-(To be filled by the team)
-
----
+Go 1.26 monolith, standard `testing`, no linter beyond `gofmt`/`go vet` — the gates are the CI quality jobs (node-build/chromium-e2e/mongo-8_0 + go-1_26_7/go-1_27_0) and the contract tests under `tests/js/`. Quality = green CI on the real boundaries plus focused regression cases per fix (AGENTS.md testing rules).
 
 ## Forbidden Patterns
 
-<!-- Patterns that should never be used and why -->
-
-(To be filled by the team)
-
----
+- Revel imports: `rg 'github.com/revel|revel\.' app go.mod sh conf` must stay zero hits (go.sum pongo2 hash is the recorded exception).
+- Probe-based or fallback environment selection (Mongo mode, toolchain) — fail closed instead (see `database-guidelines.md`).
+- Log-and-return at every layer; masking db/service errors as empty success (`error-handling.md`).
+- Hand-editing generated assets: anything produced by `scripts/build/manifest.mjs` (`public/js/app.min.js`, `public/tinymce/**` bundles, `app/views/note/note.html`) — regenerate via `npm run build`.
+- CI shell scripts using PCRE-only regex syntax with `grep -E` (e.g. `(?:...)` — GNU grep ERE never matches it; the B-E6 root cause).
 
 ## Required Patterns
 
-<!-- Patterns that must always be used -->
-
-(To be filled by the team)
-
----
+- `gofmt` before commit; run `go vet ./app/tests/harness/...` for harness changes; `go build ./...` must pass.
+- Fake-injection for environment-dependent tests: function fields (`run`, `now`, `sleep`, `lookPath`, `ping`, `verifyFixture`) on the environment struct with nil-guard defaults — see `app/tests/harness/environment.go` and its tests.
+- Windows-safe shell: `set -eu` scripts guard expansions (`${GITHUB_REF:-}`); MSYS path pitfalls handled with `MSYS_NO_PATHCONV` where needed.
+- Failure diagnostics preserved: smoke scripts dump app log tail / response headers / docker logs on failure (original-cause requirement).
 
 ## Testing Requirements
 
-<!-- What level of testing is expected -->
-
-(To be filled by the team)
+- Every fix ships a focused regression case (AGENTS.md). Real server boundary for HTTP work — never call a controller directly.
+- Mongo-backed tests run under the three-mode harness; `LEANOTE_GOLDEN=replay go test -p 1 ./app/tests/... -count=1 -timeout 30m` stays read-only; only `LEANOTE_GOLDEN=record` writes.
+- Node contract suite `npm test` covers build closure, i18n scanner, release/summary/browser-evidence contracts — extend it when touching `scripts/` tooling.
 
 ---
 

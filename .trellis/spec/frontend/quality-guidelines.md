@@ -6,19 +6,11 @@
 
 ## Overview
 
-<!--
-Document your project's quality standards here.
-
-Questions to answer:
-- What patterns are forbidden?
-- What linting rules do you enforce?
-- What are your testing requirements?
-- What code review standards apply?
--->
-
 Frontend build and regression code must fail closed: source discovery, manifest
 validation, generated output publication, and browser smoke reporting must not
 silently accept malformed or ambiguous input.
+
+No linter is configured — the gates are `npm ci && npm run build && npm test` on Node 24 (CI `node-build` job, zero-drift `git diff --exit-code`) plus the Chromium e2e suite. Legacy page code uses four-space indent; Node tests two-space; do not reformat vendored/minified files (AGENTS.md).
 
 ---
 

@@ -6,70 +6,22 @@
 
 ## Overview
 
-<!--
-Document your project's state management conventions here.
-
-Questions to answer:
-- What state management solution do you use?
-- How is local vs global state decided?
-- How do you handle server state?
-- What are the patterns for derived state?
--->
-
-(To be filled by the team)
-
----
+No state library. This is a legacy jQuery application: state lives in window-level namespace objects plus a first-party editor session facade. Server state is mirrored into those objects by AJAX calls that follow the shared wrapper contract.
 
 ## State Categories
 
-<!-- Local state, global state, server state, URL state -->
+- **Global app state** — window namespaces: `Note` (current note + list cache `Note.cache`), `Notebook`, `Tag`, `LEA` (runtime flags incl. `readOnly`). See `public/js/app/note.js`.
+- **Editor session state** — `window.LeanoteEditorSession` (source `public/js/editor-state-source.js`): dirty flag, content revision counter, persisted content snapshot; the note page and e2e suites poll it (`isDirty()`, `snapshot()`). First-party plugins mark mutations through `LeanoteEditorSession.markMutation` or the plugin's `leanoteMarkMutation` option (see `leaui_image/plugin.js`).
+- **Server state** — fetched via the shared AJAX wrappers (`ajaxPostJson`/`ajaxGetJson` in `public/js/common.js`): failures always surface (alert + failure callback), never silent; NOTLOGIN responses alert and route to login.
+- **Dialog/iframe state** — TinyMCE dialogs exchange data with `window.parent.postMessage({mceAction, images|data})`; the opener reseeds `window.LEAUI_DATAS` on each open (opener reset is part of the contract — tests must pass expected data through their own scope, not reread the window variable).
 
-(To be filled by the team)
+## Patterns
 
----
+- Mutation → `markMutation` → debounced autosave → `/note/updateNoteOrContent` envelope (`Ok:true` confirms the save revision; title-only saves omit `Content` and keep content clean).
+- Read-only gate: `leaui_image` checks `LEA.readOnly`/`Note.readOnly`/`editor.mode.isReadOnly()` and blocks mutations incl. `dragstart`.
+- Undo/redo: TinyMCE `undoManager` transitions must flow through `LeanoteEditorSession` dirtiness — `editor.undoManager` may be absent during init races; guard before use (`public/js/common.js` `setEditorContent`).
 
-## When to Use Global State
+## What NOT to do
 
-<!-- Criteria for promoting state to global -->
-
-(To be filled by the team)
-
----
-
-## Server State
-
-<!-- How server data is cached and synchronized -->
-
-### Editor Session Contract
-
-The note editor owns one `window.LeanoteEditorSession` state adapter per active
-note. It tracks `noteId`, `loadEpoch`, `persistedContent`, `editorBaseline`,
-`currentContent`, `contentRevision`, `confirmedRevision`, and `loading`.
-
-- `beginLoad({ noteId, persistedContent })` increments `loadEpoch` and enters
-  `loading`; `completeLoad(epoch, editorContent)` accepts only the current
-  epoch and establishes the editor baseline without incrementing the revision.
-- User content actions call `markMutation(serializedContent[, epoch])`. Stale
-  epochs, read-only mode, loading, and unchanged serialization are rejected.
-  Programmatic `setContent`, Ace hydration/cleanup, and external navigation
-  DOM updates must not call this mutation boundary.
-- `beginSave()` captures note id, epoch, revision, and submitted content.
-  `confirmSave(capture, currentSerialization)` advances both persisted and
-  editor baselines only for the current epoch and a non-older revision, then
-  recomputes dirty state from the current serialization. A later edit remains
-  dirty until separately confirmed.
-
-The adapter is the single owner of editor dirty state; callers must not infer
-dirty state from TinyMCE's internal `isDirty()` flag or from DOM-equivalent
-content when deciding whether to send stored HTML.
-
----
-
-## Common Mistakes
-
-<!-- State management mistakes your team has made -->
-
-- Treating a programmatic note load or delayed callback as a user mutation.
-- Confirming a save before the backend returns `info.Re.Ok === true`.
-- Replacing the baseline with the current serialization when a save response
-  is stale or when serialization failed.
+- Do not introduce a second state container or a parallel editor runtime — the session facade and namespace objects are the contract the e2e suites assert against.
+- Do not read `window.LEAUI_DATAS` after triggering `openAlbum`-style dialogs expecting the seed to persist (the opener legitimately resets it).
