@@ -3,7 +3,7 @@
   "name": "00-bootstrap-guidelines",
   "title": "Bootstrap Guidelines",
   "description": "Fill in project development guidelines for AI agents",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": "docs",
   "scope": null,
   "package": null,
@@ -11,7 +11,7 @@
   "creator": "wanfeng",
   "assignee": "wanfeng",
   "createdAt": "2026-08-25",
-  "completedAt": null,
+  "completedAt": "2026-09-03",
   "branch": null,
   "base_branch": null,
   "worktree_path": null,
@@ -24,6 +24,6 @@
     ".trellis/spec/backend/",
     ".trellis/spec/frontend/"
   ],
-  "notes": "First-time setup task created by trellis init (fullstack project)",
+  "notes": "规格填实完成：backend 五文件 + frontend 七文件全部以真实路径/不变量/失败教训填实（路径逐一验证，占位清零，索引 Filled）；内容沉淀现代化弧线的关键契约（三态 Mongo 环境、canonical 生产配置、manifest 构建链、window 命名空间状态、契约测试即类型层、B-E6 ERE 教训等）。First-time setup task created by trellis init (fullstack project)",
   "meta": {}
 }
