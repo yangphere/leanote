@@ -1,0 +1,2 @@
+{"file": "docs/adr/0001-stage-modernization-as-contract-first-dag.md", "reason": "核对契约优先 DAG"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "检查跨层契约和数据流"}

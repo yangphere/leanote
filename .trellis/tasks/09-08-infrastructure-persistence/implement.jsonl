@@ -1,0 +1,2 @@
+{"file": "CONTEXT.md", "reason": "读取 Schema/ObjectID/所有权不变量"}
+{"file": "docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md", "reason": "核对 Mongo driver 兼容边界"}

@@ -1,0 +1,2 @@
+{"file": "CONTEXT.md", "reason": "读取跨层敏感数据不变量"}
+{"file": "docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md", "reason": "核对无自动部署边界"}

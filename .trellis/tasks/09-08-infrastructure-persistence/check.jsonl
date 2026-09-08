@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "检查 DB 查询和超时规范"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "检查错误映射"}

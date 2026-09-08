@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "检查 HTTP 边界质量约束"}
+{"file": "docs/modernization-backlog.md", "reason": "登记延期项而不隐藏 fallback"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "维护 production-config 错误码、fail-closed 和 bind/dial/healthz 时序"}
+{"file": "docs/modernization/cicd-delivery.md", "reason": "核对生产配置来源、secret/Mongo 约束和 healthz 契约"}

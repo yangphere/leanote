@@ -1,0 +1,6 @@
+{"file": "docs/modernization/cicd-delivery.md", "reason": "检查 CI/CD 交付契约"}
+{"file": "docs/modernization-backlog.md", "reason": "检查延期项登记和发布边界"}
+{"file": ".trellis/tasks/09-08-delivery-verification/research/browser-release-evidence.md", "reason": "绑定 scripts/browser-release-evidence.mjs、scripts/validate-browser-artifact.mjs、tests/js/release-contract.test.js 和 .github/workflows/browser-release-evidence.yml 的权威执行入口"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "核对浏览器 artifact validator、JCS digest 和 release contract test 的权威入口"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "核对真实浏览器 artifact 的脱敏、失败关闭和质量门要求"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "核对四个稳定 browser-smoke coverage ID"}

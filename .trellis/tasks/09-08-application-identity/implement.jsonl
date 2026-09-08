@@ -1,0 +1,2 @@
+{"file": "CONTEXT.md", "reason": "保持 API token 与身份不变量"}
+{"file": "docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md", "reason": "读取 Session/API 迁移边界"}

@@ -1,0 +1,2 @@
+{"file": "CONTEXT.md", "reason": "读取资源所有权和 HTML 不变量"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "复用持久化边界约束"}

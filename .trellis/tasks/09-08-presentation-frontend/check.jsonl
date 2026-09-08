@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "检查前端构建质量"}
+{"file": "docs/modernization/browser-smoke/jquery-3.7.md", "reason": "核对真实浏览器证据边界"}

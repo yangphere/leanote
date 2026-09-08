@@ -1,0 +1,2 @@
+{"file": "CONTEXT.md", "reason": "读取公开页面和所有权术语"}
+{"file": "docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md", "reason": "核对 HTTP/Session 兼容取舍"}

@@ -1,0 +1,2 @@
+{"file": "CONTEXT.md", "reason": "读取现代化门禁和跨层不变量"}
+{"file": "docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md", "reason": "核对发布和无自动部署边界"}
