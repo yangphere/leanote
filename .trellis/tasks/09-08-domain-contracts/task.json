@@ -3,7 +3,7 @@
   "name": "domain-contracts",
   "title": "领域层：模型与跨层契约",
   "description": "冻结 info 模型、API 信封、USN、用户所有权、Schema 和 HTML 语义不变量，作为所有后续分层迁移的唯一契约。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": "domain layer / cross-layer contracts",
   "package": null,

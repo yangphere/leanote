@@ -1,2 +1,13 @@
 {"file": "CONTEXT.md", "reason": "冻结领域术语和跨层不变量"}
 {"file": "app/info/README.md", "reason": "确认模型事实来源"}
+{"file": ".trellis/tasks/09-08-domain-contracts/research/spec-audit-2026-09-08.md", "reason": "实现前复用已核验模型分类、序列化、已确认决策和依赖边界"}
+{"file": ".trellis/tasks/09-08-domain-contracts/acceptance/evidence-matrix.md", "reason": "按责任层执行领域与下游验收"}
+{"file": ".trellis/tasks/09-08-domain-contracts/research/model-catalog.schema.json", "reason": "按固定 schema 生成并校验模型目录"}
+{"file": ".trellis/tasks/09-08-domain-contracts/research/generate_model_catalog.go", "reason": "从 app/info AST 与集合/路线证据可复现生成模型目录"}
+{"file": ".trellis/tasks/09-08-domain-contracts/research/validate_info_dependencies.ps1", "reason": "断言 app/info 生产与测试依赖图不含 Revel、Mongo driver 或 lea 聚合包"}
+{"file": ".trellis/tasks/09-08-domain-contracts/research/validate_model_catalog.py", "reason": "执行无第三方依赖的模型目录校验"}
+{"file": ".trellis/tasks/09-08-domain-contracts/research/input-contracts.json", "reason": "维护请求绑定结构字段级 schema fixture"}
+{"file": ".trellis/tasks/09-08-domain-contracts/research/input-contracts.schema.json", "reason": "按固定 schema 约束输入契约 fixture"}
+{"file": ".trellis/tasks/09-08-domain-contracts/research/validate_input_contracts.py", "reason": "执行输入契约材料的可复现校验"}
+{"file": ".trellis/tasks/09-08-domain-contracts/research/validation-2026-09-09.md", "reason": "记录本轮领域实现、验证结果和未闭合下游证据边界"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "遵循领域 ObjectID 与数据库 BSON 适配边界"}
