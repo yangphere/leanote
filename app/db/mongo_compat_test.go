@@ -50,7 +50,7 @@ func testCollection(t *testing.T) (*Collection, *mongo.Collection) {
 		}
 		ctx, cancel := contextWithTimeout(5 * time.Second)
 		defer cancel()
-		client, err := mongo.Connect(options.Client().ApplyURI(uri))
+		client, err := mongo.Connect(options.Client().ApplyURI(uri).SetRegistry(CodecRegistry))
 		if err != nil {
 			testSetupErr = err
 			return

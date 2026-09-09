@@ -64,7 +64,8 @@ func dialMongo(url string) error {
 	opts := options.Client().ApplyURI(url)
 	opts.SetConnectTimeout(connectTimeout)
 	opts.SetServerSelectionTimeout(connectTimeout)
-	// lea.CodecRegistry stores lea.ObjectID as a plain BSON ObjectId; the
+	// lea.CodecRegistry stores domain.ObjectID (with lea.ObjectID as a
+	// migration alias) as a plain BSON ObjectId; the
 	// explicit codecs are required because the driver's kind-based array
 	// decoder shadows pointer-receiver ValueUnmarshaler for defined [12]byte
 	// types. DefaultDocumentM restores mgo's bson.M decode of untyped

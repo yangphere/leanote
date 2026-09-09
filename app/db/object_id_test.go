@@ -1,11 +1,85 @@
 package db
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 
 	. "github.com/yangphere/leanote/app/lea"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
+
+func TestSplitUpdateKindUsesDomainObjectIDCodec(t *testing.T) {
+	update := bson.M{"$set": bson.M{"UserId": MustObjectIDFromHex("507f1f77bcf86cd799439011")}}
+	replacement, err := splitUpdateKind(update)
+	if err != nil {
+		t.Fatalf("splitUpdateKind: %v", err)
+	}
+	if replacement {
+		t.Fatal("operator update was classified as replacement")
+	}
+
+	var encoded bytes.Buffer
+	encoder := bson.NewEncoder(bson.NewDocumentWriter(&encoded))
+	encoder.SetRegistry(CodecRegistry)
+	if err := encoder.Encode(update); err != nil {
+		t.Fatalf("encode update: %v", err)
+	}
+	if got := bson.Raw(encoded.Bytes()).Lookup("$set", "UserId").Type; got != bson.TypeObjectID {
+		t.Fatalf("encoded UserId type = %s, want object id", got)
+	}
+}
+
+func TestObjectIDBSONAdapterReadsLegacyStrings(t *testing.T) {
+	type document struct {
+		ID ObjectID `bson:"ID"`
+	}
+
+	tests := []struct {
+		name string
+		raw  bson.M
+		want ObjectID
+	}{
+		{name: "object id", raw: bson.M{"ID": bson.ObjectID{0x50, 0x7f, 0x1f, 0x77, 0xbc, 0xf8, 0x6c, 0xd7, 0x99, 0x43, 0x90, 0x11}}, want: MustObjectIDFromHex("507f1f77bcf86cd799439011")},
+		{name: "empty legacy string", raw: bson.M{"ID": ""}, want: ObjectID{}},
+		{name: "hex legacy string", raw: bson.M{"ID": "507F1F77BCF86CD799439011"}, want: MustObjectIDFromHex("507f1f77bcf86cd799439011")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			raw, err := bson.Marshal(tt.raw)
+			if err != nil {
+				t.Fatalf("marshal raw BSON: %v", err)
+			}
+			var got document
+			decoder := bson.NewDecoder(bson.NewDocumentReader(bytes.NewReader(raw)))
+			decoder.SetRegistry(CodecRegistry)
+			if err := decoder.Decode(&got); err != nil {
+				t.Fatalf("decode: %v", err)
+			}
+			if got.ID != tt.want {
+				t.Fatalf("decoded ID = %q, want %q", got.ID.Hex(), tt.want.Hex())
+			}
+		})
+	}
+}
+
+func TestObjectIDBSONAdapterRejectsUnknownValues(t *testing.T) {
+	type document struct {
+		ID ObjectID `bson:"ID"`
+	}
+	for _, rawValue := range []interface{}{"bad", 1, true, bson.A{}} {
+		raw, err := bson.Marshal(bson.M{"ID": rawValue})
+		if err != nil {
+			t.Fatalf("marshal %T: %v", rawValue, err)
+		}
+		var got document
+		decoder := bson.NewDecoder(bson.NewDocumentReader(bytes.NewReader(raw)))
+		decoder.SetRegistry(CodecRegistry)
+		if err := decoder.Decode(&got); err == nil {
+			t.Errorf("decode %T unexpectedly succeeded", rawValue)
+		}
+	}
+}
 
 func TestMustObjectIDFromHexValid(t *testing.T) {
 	const hex = "507f1f77bcf86cd799439011"

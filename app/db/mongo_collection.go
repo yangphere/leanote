@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"net"
@@ -97,10 +98,16 @@ func (c *Collection) Insert(docs ...interface{}) error {
 // top-level key is a $-operator is an operator update; anything else is a
 // full replacement. Driver v2 splits these across UpdateOne and ReplaceOne.
 func splitUpdateKind(update interface{}) (replacement bool, err error) {
-	raw, err := bson.Marshal(update)
+	// Use the same adapter registry as the live client so domain.ObjectID
+	// values are encoded as BSON ObjectId rather than reflected as byte arrays.
+	var buffer bytes.Buffer
+	encoder := bson.NewEncoder(bson.NewDocumentWriter(&buffer))
+	encoder.SetRegistry(CodecRegistry)
+	err = encoder.Encode(update)
 	if err != nil {
 		return false, err
 	}
+	raw := buffer.Bytes()
 	elements, err := bson.Raw(raw).Elements()
 	if err != nil {
 		return false, err
