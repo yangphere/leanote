@@ -1,6 +1,7 @@
 {"file": "docs/adr/0001-stage-modernization-as-contract-first-dag.md", "reason": "核对契约优先 DAG"}
 {"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "检查跨层契约和数据流"}
 {"file": ".trellis/tasks/09-08-domain-contracts/research/spec-audit-2026-09-08.md", "reason": "读取本任务规格审核、覆盖缺口、已知缺陷和已确认决策"}
+{"file": ".trellis/tasks/09-08-domain-contracts/research/spec-audit-2026-09-09.md", "reason": "复核本轮规格修补、API 观察冲突和未闭合证据边界"}
 {"file": ".trellis/tasks/09-08-domain-contracts/acceptance/evidence-matrix.md", "reason": "核对领域门禁与下游证据责任"}
 {"file": ".trellis/tasks/09-08-domain-contracts/research/model-catalog.schema.json", "reason": "校验模型目录的类型、字段、集合、索引和决策结构"}
 {"file": ".trellis/tasks/09-08-domain-contracts/research/generate_model_catalog.go", "reason": "复核模型目录生成来源和计数边界"}

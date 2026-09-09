@@ -26,8 +26,8 @@ def main(argv: list[str]) -> int:
     if data.get("schema_version") != "leanote.domain-input-contracts.v1":
         fail("unexpected schema_version")
     contracts = data.get("contracts")
-    if not isinstance(contracts, list) or len(contracts) != 4:
-        fail("expected four input contracts")
+    if not isinstance(contracts, list) or len(contracts) != 7:
+        fail("expected seven input contracts")
     names = set()
     for contract in contracts:
         name = contract.get("type")

@@ -4,10 +4,13 @@
     "app/info/Api.go",
     "app/info/NoteInfo.go",
     "app/info/UserInfo.go",
+    "app/info/BlogInfo.go",
     "app/controllers/api/API列表-v0.1.md",
     "app/controllers/api/ApiNoteController.go",
     "app/controllers/api/ApiNotebookController.go",
-    "app/controllers/api/ApiUserController.go"
+    "app/controllers/api/ApiUserController.go",
+    "app/controllers/member/MemberBlogController.go",
+    "app/service/BlogService.go"
   ],
   "contracts": [
     {
@@ -17,11 +20,11 @@
         {"name":"NoteId","go_type":"string","wire_name":"NoteId","required":false,"required_in":["ApiNote.UpdateNote"],"nullable":false,"notes":["Update requires a non-empty value; Add assigns it server-side"]},
         {"name":"NotebookId","go_type":"string","wire_name":"NotebookId","required":false,"required_in":["ApiNote.AddNote"],"nullable":false,"notes":["Add requires a valid 24-hex id; Update treats presence as an optional change"]},
         {"name":"UserId","go_type":"string","wire_name":"UserId","required":false,"nullable":false,"notes":["Server fills the owner on success"]},
-        {"name":"Title","go_type":"string","wire_name":"Title","required":false,"required_in":["ApiNote.AddNote"],"nullable":false,"notes":["Required by the documented AddNote input; Update is presence-sensitive"]},
+        {"name":"Title","go_type":"string","wire_name":"Title","required":false,"required_in":["ApiNote.AddNote"],"nullable":false,"notes":["Required by the documented AddNote input; the current controller does not reject an empty value; Update is presence-sensitive"]},
         {"name":"Desc","go_type":"string","wire_name":"Desc","required":false,"nullable":false,"notes":["Update is presence-sensitive"]},
         {"name":"Tags","go_type":"[]string","wire_name":"Tags","required":false,"nullable":true,"notes":["API array form; legacy form binding and empty-array presence require interface fixture"]},
         {"name":"Abstract","go_type":"string","wire_name":"Abstract","required":false,"nullable":false,"notes":["Required for markdown only when content-derived abstract is not accepted"]},
-        {"name":"Content","go_type":"string","wire_name":"Content","required":false,"required_in":["ApiNote.AddNote"],"nullable":false,"notes":["Required by documented AddNote input; Update is presence-sensitive"]},
+        {"name":"Content","go_type":"string","wire_name":"Content","required":false,"required_in":["ApiNote.AddNote"],"nullable":false,"notes":["Required by documented AddNote input; the current controller does not reject an empty value; Update is presence-sensitive"]},
         {"name":"IsMarkdown","go_type":"bool","wire_name":"IsMarkdown","required":false,"nullable":false,"notes":["Zero value is false"]},
         {"name":"IsBlog","go_type":"bool","wire_name":"IsBlog","required":false,"nullable":false,"notes":["Add may set it; Update presence is controlled by form key"]},
         {"name":"IsTrash","go_type":"bool","wire_name":"IsTrash","required":false,"nullable":false,"notes":["Update presence is controlled by form key"]},
@@ -32,7 +35,7 @@
         {"name":"UpdatedTime","go_type":"time.Time","wire_name":"UpdatedTime","required":false,"nullable":false,"notes":["Update writes the supplied value before response refresh"]},
         {"name":"PublicTime","go_type":"time.Time","wire_name":"PublicTime","required":false,"nullable":false,"notes":["Output field"]}
       ],
-      "runtime_unknowns": ["form duplicate keys", "Tags form comma-separated parsing", "integer overflow and invalid boolean text", "JSON versus multipart binder precedence"]
+      "runtime_unknowns": ["form duplicate keys", "Tags form comma-separated parsing", "integer overflow and invalid boolean text", "JSON versus multipart binder precedence", "whether AddNote must reject empty Title or Content despite the documentation"]
     },
     {
       "type": "NoteFile",
@@ -81,7 +84,36 @@
         {"name":"MaxAttachSize","go_type":"int","wire_name":"MaxAttachSize","required":false,"nullable":false,"notes":["JSON is intentionally hidden"]},
         {"name":"MaxPerAttachSize","go_type":"int","wire_name":"MaxPerAttachSize","required":false,"nullable":false,"notes":["JSON is intentionally hidden"]}
       ],
-      "runtime_unknowns": ["admin binder source and authorization", "integer range and overflow"]
+      "runtime_unknowns": ["current service-only command has no direct controller binder evidence", "admin binder source and authorization", "integer range and overflow"]
+    },
+    {
+      "type": "UserBlogBase",
+      "source": ["app/info/BlogInfo.go:18-23", "app/controllers/member/MemberBlogController.go:518-521", "app/service/BlogService.go:553-556"],
+      "fields": [
+        {"name":"Logo","go_type":"string","wire_name":"Logo","required":false,"nullable":false,"notes":["Partial member-blog update field; empty-value write semantics require runtime fixture"]},
+        {"name":"Title","go_type":"string","wire_name":"Title","required":false,"nullable":false,"notes":["Partial member-blog update field; empty-value write semantics require runtime fixture"]},
+        {"name":"SubTitle","go_type":"string","wire_name":"SubTitle","required":false,"nullable":false,"notes":["Partial member-blog update field; empty-value write semantics require runtime fixture"]}
+      ],
+      "runtime_unknowns": ["duplicate form keys", "binder source and field-presence semantics", "authorization/error mapping"]
+    },
+    {
+      "type": "UserBlogComment",
+      "source": ["app/info/BlogInfo.go:25-29", "app/controllers/member/MemberBlogController.go:523-526", "app/service/BlogService.go:557-560"],
+      "fields": [
+        {"name":"CanComment","go_type":"bool","wire_name":"CanComment","required":false,"nullable":false,"notes":["Partial member-blog update field; false is a meaningful value"]},
+        {"name":"CommentType","go_type":"string","wire_name":"CommentType","required":false,"nullable":false,"notes":["Documented values include default/disqus; validation is not present in the current controller"]},
+        {"name":"DisqusId","go_type":"string","wire_name":"DisqusId","required":false,"nullable":false,"notes":["Optional when CommentType is default; cross-field validation is unknown"]}
+      ],
+      "runtime_unknowns": ["duplicate form keys", "binder source and field-presence semantics", "CommentType/DisqusId cross-field validation", "authorization/error mapping"]
+    },
+    {
+      "type": "UserBlogStyle",
+      "source": ["app/info/BlogInfo.go:31-34", "app/controllers/member/MemberBlogController.go:528-531", "app/service/BlogService.go:558-563"],
+      "fields": [
+        {"name":"Style","go_type":"string","wire_name":"Style","required":false,"nullable":false,"notes":["Partial member-blog update field; accepted style values are not validated by the current controller"]},
+        {"name":"Css","go_type":"string","wire_name":"Css","required":false,"nullable":false,"notes":["Custom CSS payload; size/content safety and empty-value semantics require runtime fixture"]}
+      ],
+      "runtime_unknowns": ["duplicate form keys", "binder source and field-presence semantics", "CSS size/content validation", "authorization/error mapping"]
     }
   ]
 }

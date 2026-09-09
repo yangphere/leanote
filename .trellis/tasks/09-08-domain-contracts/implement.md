@@ -25,7 +25,7 @@
 ## Phase 3：纯领域契约回归（已获实现批准）
 
 1. [ ] 以真实 `app/info` 类型和目录驱动 JSON full/zero golden，锁定字段名、声明顺序、嵌入展开、nil/empty、时间和 ObjectID 形状；当前先补齐 ObjectID、`Re`/`Theme.Info` 动态值回归，完整 golden 缺口由目录和下游继续收敛。
-2. [x] 为 `ApiNote`、`NoteFile`、`NoteOrContent`、`UserAccount` 增加字段级、DB-independent 静态 schema fixture；缺失/重复字段、form/query 解析、非法 ID/整数和 `Tags` 字符串/数组的运行时行为仍由 `interface-http` fixture 验收。动态 `List/Item` 已通过集中 `ValidateJSONValue` 拒绝不可编码值。
+2. [x] 为 `ApiNote`、`NoteFile`、`NoteOrContent`、`UserAccount` 及 member-blog 的 `UserBlogBase`、`UserBlogComment`、`UserBlogStyle` 增加字段级、DB-independent 静态 schema fixture；其中 `UserAccount` 当前无直接 binder 证据，博客设置的字段 presence/跨字段校验仍为 unknown。缺失/重复字段、form/query 解析、非法 ID/整数和 `Tags` 字符串/数组的运行时行为仍由 `interface-http`/对应 application fixture 验收。动态 `List/Item` 已通过集中 `ValidateJSONValue` 拒绝不可编码值。
 3. [ ] 将 BSON key/tag/round-trip 测试的 driver 依赖迁入 `app/db` 合约测试；当前遗留探针仅用 `mongo_contract` 显式编译，领域包只验证不依赖 driver 的字段目录和 JSON 行为。
 4. [x] 将 notebook/tag 旧 USN 差异作为基线记录，同时按 D-01 为下游回归冻结新 USN tombstone/sync 目标；不在本领域任务修改 service/controller。按 D-06 为 USN 并发原子分配、note-save 事务失败与显式 `partial_write` 补偿预留 application/infrastructure 回归入口。
 

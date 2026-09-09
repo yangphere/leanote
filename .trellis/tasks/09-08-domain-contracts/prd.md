@@ -20,7 +20,7 @@
 
 1. **持久化模型**：与 `app/db/Mgo.go` 业务集合对应的 `Notebook`、`Note`、`NoteContent`、`NoteContentHistory`、`ShareNote`、`ShareNotebook`、`HasShareNote`、`User`、`Group`、`GroupUser`、`Tag`、`NoteTag`、`TagCount`、`UserBlog`、`Token`、`Suggestion`、`Album`、`File`、`Attach`、`NoteImage`、`Config`、`EmailLog`、`BlogLike`、`BlogComment`、`Report`、`BlogSingle`、`Theme`、`Session`。DAO 中声明但当前无业务读写证据的 `Blogs` 集合必须单独标注为“待确认”，不得虚构 schema。
 2. **API DTO/envelope**：`ApiNote`、`NoteFile`、`ApiNoteContent`、`ApiUser`、`ApiNotebook`、`ApiRe`、`AuthOk`、`ReUpdate`、`Re`。`ApiNote` 既作为绑定输入又作为输出/同步值时，目录只设一个 primary role，并在 secondary role 中记录用途；线上 JSON 必须字节兼容。
-3. **请求绑定输入**：`NoteOrContent`、`UserAccount`、博客设置输入结构以及 API 的 `ApiNote`/`NoteFile`。领域只冻结字段、required/optional 和 wire shape；绑定字段名、缺失字段零值、重复表单值和 `Tags` 字符串/数组的运行时解析由 `interface-http` 验收。
+3. **请求绑定输入**：`NoteOrContent`、`UserAccount`、博客设置部分更新输入 `UserBlogBase`、`UserBlogComment`、`UserBlogStyle` 以及 API 的 `ApiNote`/`NoteFile`。其中 `UserAccount` 当前是 service-only 的管理命令载荷，暂无直接 controller binder 证据，必须保持该 unknown 状态；领域只冻结字段、required/optional 和 wire shape。绑定字段名、缺失字段零值、重复表单值、字段 presence、`Tags` 字符串/数组及博客设置的跨字段校验由对应 interface/application 验收。
 4. **Web/模板和内部投影**：`Page`、博客/分享组合结构、`NoteAndContent`、`Notebooks`、`ShareNotebooks`、`ShareNoteWithPerm`、`ShareUserInfo` 等。它们可被模板或 JSON 消费，但不能自动视为 Mongo 文档。
 
 ### 2. 序列化契约
@@ -28,11 +28,11 @@
 - **JSON**：保留当前导出字段名、声明顺序、嵌入展开方式、数组顺序和 `time.Time` 的 RFC3339Nano 表示；不得借新增 `json:"...,omitempty"` 删除现有字段。nil slice/map/interface 保持 `null`，非 nil 空 slice 保持 `[]`。动态字段只接受可被 `encoding/json` 表示的值，拒绝不可编码值时必须返回可观察错误。
 - **ObjectID**：领域值类型不得依赖 Mongo/Revel；零值 JSON 为 `""`，非零值为小写 24 位 hex；为保持当前 `lea.ObjectID` 输入兼容，JSON `null` 也映射为 zero，number/object 和非法字符串必须报错。BSON 由 `app/db` 转换为标准 ObjectId。读取旧文档时允许空字符串和 24 位 hex，其他字符串必须报错。现有 mongo-driver/v2 快照中带 `omitempty` 的零 ObjectID 会出现零 ObjectId，这一事实须单独测试，不能套用 mgo 的旧 `MarshalError` 假设。
 - **时间**：JSON 使用标准库 RFC3339Nano；BSON 使用日期类型；比较按瞬时相等，Golden 归一化为 UTC `Z`，不因时区位置改变字段语义。
-- **BSON**：逐字段冻结 key、`omitempty`、空值、嵌入和排序/分页依赖的字段；所有实际持久化字段必须有显式 tag。`app/info` 的 driver-agnostic struct tag 是字段命名的唯一来源，`app/db` 只负责读取该来源并执行 ObjectID/date 转换，不得维护第二套字段表。带有“仅显示/不保存”注释的字段（如 `ToGroup`、`Group.Users`、`ThemePath`）必须在目录中标注 persistence read/write 状态；在真实读写证据闭合前保持 unknown，不得从 struct-level round-trip fixture 推断为已存储。
+- **BSON**：逐字段冻结 key、`omitempty`、空值、嵌入和排序/分页依赖的字段；所有实际持久化字段必须有显式 tag。`app/info` 的 driver-agnostic struct tag 是字段命名的唯一来源，`app/db` 只负责读取该来源并执行 ObjectID/date 转换，不得维护第二套字段表。`ApiNoteContent`/`ApiNotebook` 的历史 tag 只作为 API 字段快照，不构成 DB 读写证据；`UserAccount` 与 `UserBlog*` 这类 partial-update/service command 字段标为 `write_only`，不可冒充完整文档。带有“仅显示/不保存”注释的字段（如 `ToGroup`、`Group.Users`、`ThemePath`）必须在目录中标注 persistence read/write 状态；在真实读写证据闭合前保持 unknown，不得从 struct-level round-trip fixture 推断为已存储。
 
 ### 3. API、输入和错误
 
-- 建立 route/action → 请求 DTO → 成功形状 → 失败形状 → 状态码/Content-Type 的契约索引，索引来源为 `conf/routes`、API controller 和现有 Golden；缺失证据的端点标为 unknown 并补 fixture，不以默认值填空。
+- 建立 route/action → 请求 DTO → 成功形状 → 失败形状 → 状态码/Content-Type 的契约索引，索引来源为 `conf/routes`、API controller 和现有 Golden；缺失证据的端点标为 unknown 并补 fixture，不以默认值填空。文档、controller 与 Golden 的方法/参数/类型冲突必须在目录 `compatibility_notes` 中逐项记录；当前已知冲突包括 `user/info` 的 userId 与 session 输入、`getSyncState` 的 GET/POST 和 Unix 时间整数、部分 action 的 GET/POST 观察差异、file 读取 token 白名单，以及 `getSyncTags` 的实际 `[]NoteTag` 返回形状。
 - 现有变体必须保持：未登录通常是 HTTP 200 的 `Ok=false, Msg=NOTLOGIN`；冲突是 HTTP 200 的 `Ok=false, Msg=conflict, Usn=0`；同步接口返回数组；认证成功返回 `AuthOk`；更新操作按现有端点使用 `ReUpdate` 或 `Re`。不得把直接模型/数组强行包进新 envelope。
 - `Ok`、`Msg`、`Code`、`Id`、`List`、`Item`、`Usn` 及动态 `List/Item` 的 nil/空值行为必须有 fixture；错误不能被吞掉、改写为成功或通过零值模型伪装。
 - invalid ID、not-found、forbidden、duplicate key、USN conflict、部分写入和数据库失败必须逐操作记录当前可观察语义。若当前代码没有稳定映射，先登记决策和回归材料；本任务不跨端点统一错误码。
@@ -63,7 +63,7 @@
 
 - [x] `research/model-catalog.json` 按 `research/model-catalog.schema.json` 完成；每个 active 导出类型有唯一 primary role 和消费者，secondary role 显式登记，28 个有业务读写证据的集合均映射到模型，`Blogs` 等无证据集合列入待确认清单；`HasShareNote`、`NoteImage` 不再被 registry 漏报；D-01～D-04、D-06 以 decided 状态记录并附影响与证据。
 - [ ] 持久化契约测试覆盖清单中的每个实际文档字段：完整 BSON key、显式 tag、`omitempty`/零值矩阵、ObjectID（含零值、`null` JSON 输入和旧字符串读取）、时间、nil/空集合和 round-trip；driver-dependent 测试归 `app/db`/infrastructure，Mongo 7/8 运行证据由 `infrastructure-persistence`/delivery 任务提供。
-- [ ] API DTO/envelope 契约覆盖所有已登记 public API 响应变体；当前模型目录已登记 29 个 active action，并以 `partial` 保留尚未运行的 HTTP 证据。领域材料只提供字段/输入 schema（`input-contracts.json` 覆盖 `ApiNote`、`NoteFile`、`NoteOrContent`、`UserAccount`），真实 binder 的缺失/重复/非法输入、`Tags` 解析、状态码/Content-Type 和错误响应由 `interface-http` fixture 或明确 unknown 记录。现有 42 个 JSON golden 只能作为子集，不能作为完成证明。
+- [ ] API DTO/envelope 契约覆盖所有已登记 public API 响应变体；当前模型目录已登记 29 个 active action，并以 `partial` 保留尚未运行的 HTTP 证据。领域材料只提供字段/输入 schema（`input-contracts.json` 覆盖 `ApiNote`、`NoteFile`、`NoteOrContent`、`UserAccount`、`UserBlogBase`、`UserBlogComment`、`UserBlogStyle`），真实 binder 的缺失/重复/非法输入、`Tags` 解析、博客设置字段 presence/跨字段规则、状态码/Content-Type 和错误响应由 `interface-http`/对应 application fixture 或明确 unknown 记录。现有 42 个 JSON golden 只能作为子集，不能作为完成证明。
 - [x] 中立 ObjectID seam 完成后，`go list -deps ./app/info` 与 `go list -deps -test ./app/info` 均不出现 Revel 或 Mongo driver；BSON adapter 的 driver 依赖仅在 `app/db`，JSON/hex 行为在领域侧有 DB-independent 回归。
 - [ ] USN/所有权/冲突/删除回放材料可由下游任务直接消费，并逐项标注基线通过、目标修复或已知缺陷；D-01 的删除目标必须验证新 USN、tombstone 和 sync 返回，D-06 的并发与事务/补偿语义必须有独立 fixture，不能把旧差异隐式改成“通过”。
 - [ ] HTML 契约引用 ADR-0003 的 fixture/DOM 语义和未编辑零写入门禁；本任务不引入 sanitizer、编辑器状态机或批量 HTML 迁移。

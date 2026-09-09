@@ -54,7 +54,7 @@ HTTP/form/query or template input
 在实现阶段维护固定路径 `.trellis/tasks/09-08-domain-contracts/research/model-catalog.json` 的机器可检查模型目录，并用同目录的 `model-catalog.schema.json` 校验。目录由同目录的 `generate_model_catalog.go` 从 `app/info` AST、`app/db/Mgo.go` 和已登记路线材料生成，避免手工维护第二事实来源；校验命令必须可在无外部服务的环境复现。目录至少包含 `schema_version`、源文件/版本、类型责任、消费者、secondary role、字段 wire/BSON/persistence 状态、fixture 状态、集合映射、索引证据、API variant 和已确认决策记录。目录必须覆盖 `app/info` 的 69 个实际编译导出类型；3 个仍在注释中的类型声明单独列为 `commented_declarations`，不得计入 active 类型。另须至少列出 28 个有业务读写证据的集合模型；`Blogs` 仅记录为无调用证据的待确认项。匿名嵌入字段同时记录 `json_embedded` 与展开后的 JSON 键，避免把 JSON 展平误写成嵌套对象。
 
 - 持久化模型的字段事实来自 `app/info` 中物理存在的显式 `bson` struct tag、集合初始化和读写调用；`app/db` 只能读取这些 tag 并完成驱动转换，不得维护第二套字段表。带“仅显示/不存储”注释的字段即使仍有历史 tag，也必须在目录标成 `projection_only` 或 `unknown`，并由 adapter 明确排除写入；`contractRegistry` 只是测试清单，不是第二事实来源。
-- API DTO/envelope 的字段事实来自 `conf/routes`、API controller 和 Golden；直接数组/模型与 `ApiRe`/`AuthOk`/`ReUpdate`/`Re` envelope 分开记录。
+- API DTO/envelope 的字段事实来自 `conf/routes`、API controller 和 Golden；直接数组/模型与 `ApiRe`/`AuthOk`/`ReUpdate`/`Re` envelope 分开记录。`ApiNoteContent`/`ApiNotebook` 虽保留历史 BSON tag 以维持字段快照，但当前没有 DB 读写调用，目录不得把它们标为 persistence secondary；带 tag 的 `UserAccount` 与 `UserBlog*` 是 partial-update/service command 载荷，字段状态标为 `write_only`，不能当成完整 Mongo 文档。`EachHistory` 是 `NoteContentHistory.Histories` 中实际持久化的嵌套值，保留显式 persistence secondary，但不计为独立集合。
 - 请求输入的事实来自 binder 注册、controller 参数和表单 Golden；缺失字段、重复字段和字符串列表解析必须有独立条目。
 - 模板/内部投影不得因为可 JSON marshal 就自动加入 BSON registry；组合嵌入结构要记录展开键和字段冲突规则。
 
@@ -64,9 +64,11 @@ HTTP/form/query or template input
 
 ### API and input
 
-为每个 API action 记录：请求方法/路径、认证前置、输入来源（query/form/file/json）、绑定目标、成功状态/Content-Type/body 形状、失败状态/body 形状、动态字段和 Golden 文件。模型目录当前登记 29 个 active action；每条记录的 `evidence_status=partial` 表示静态源码/文档已核对但真实 HTTP replay 尚未运行。现有 `NOTLOGIN`、`conflict`、直接同步数组、认证成功和更新 envelope 必须作为独立 variant；不把端点统一到新协议。
+为每个 API action 记录：请求方法/路径、认证前置、输入来源（query/form/file/json）、绑定目标、成功状态/Content-Type/body 形状、失败状态/body 形状、动态字段和 Golden 文件。模型目录当前登记 29 个 active action；每条记录的 `evidence_status=partial` 表示静态源码/文档已核对但真实 HTTP replay 尚未运行。现有 `NOTLOGIN`、`conflict`、直接同步数组、认证成功和更新 envelope 必须作为独立 variant；不把端点统一到新协议。文档与 golden/controller 不一致之处必须写入 `compatibility_notes`，至少包括：`user/info` 的 userId/session 输入、`getSyncState` 的 GET/POST 与 Unix 时间整数、logout/delete action 的 GET/POST 观察差异、file 读取的 token 白名单差异，以及 `getSyncTags` 实际返回 `[]NoteTag`。
 
-请求结构的字段级静态事实单独写入 `research/input-contracts.json`，并由同目录 schema/校验脚本约束。该材料只冻结 Go 字段、wire 名称、required/optional、空值和已知约束；重复字段、form/query 解析、`Tags` 字符串/数组和状态码的运行时差异继续由 `interface-http` 验收。
+请求结构的字段级静态事实单独写入 `research/input-contracts.json`，并由同目录 schema/校验脚本约束。该材料覆盖 API 的 `ApiNote`/`NoteFile`、旧 Web 的 `NoteOrContent`、service-only 的 `UserAccount`，以及 member-blog 的 `UserBlogBase`/`UserBlogComment`/`UserBlogStyle` 部分更新载荷；后者的字段 presence、空值覆盖和跨字段校验不能从 BSON tag 推导。该材料只冻结 Go 字段、wire 名称、required/optional、空值和已知约束；重复字段、form/query 解析、`Tags` 字符串/数组和状态码的运行时差异继续由 `interface-http`/对应 application 验收。
+
+`SetUserBlogPaging` 等不使用结构体的 scalar member action 不伪装成上述输入目录条目；其参数范围、重复值和错误映射由 `application-publishing`/`interface-http` 逐 action 登记，缺少运行证据时保持 unknown。
 
 输入目录还要标明 required/optional ID、整数范围/缺省值、重复字段处理、UTF-8/大小写和 `Tags` 的分隔规则。领域任务只提供字段级静态 schema fixture；缺失/重复字段、form 解析、非法 ID/整数等运行时行为由 `interface-http` fixture 验收。required ID 的非法 hex、整数溢出和未知值必须在 adapter 处显式失败，不能以 zero、默认页码或成功 envelope 继续执行；没有现状证据的范围保持 unknown。
 

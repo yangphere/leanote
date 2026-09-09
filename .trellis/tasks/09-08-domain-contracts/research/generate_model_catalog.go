@@ -29,9 +29,28 @@ var persistenceTypes = set(
 )
 
 var apiTypes = set("ApiNote", "ApiNoteContent", "ApiNotebook", "ApiRe", "ApiUser", "AuthOk", "NoteFile", "Re", "ReUpdate")
-var requestTypes = set("NoteOrContent", "UserAccount")
+var requestTypes = set("NoteOrContent", "UserAccount", "UserBlogBase", "UserBlogComment", "UserBlogStyle")
 var templateTypes = set("Archive", "ArchiveMonth", "BlogCommentPublic", "BlogInfoCustom", "BlogItem", "BlogUrls", "Cate", "Post")
 var valueTypes = set("ShareNotebooksByUser", "SubNotebooks", "SubShareNotebooks")
+var writeOnlyTypes = set("UserAccount", "UserBlogBase", "UserBlogComment", "UserBlogStyle")
+var nestedPersistenceTypes = set("EachHistory")
+
+var consumerOverrides = map[string][]string{
+	"ApiNoteContent":  {"app/controllers/api"},
+	"ApiNotebook":     {"app/controllers/api"},
+	"ApiRe":           {"app/controllers/api"},
+	"ApiUser":         {"app/controllers/api"},
+	"AuthOk":          {"app/controllers/api"},
+	"NoteFile":        {"app/controllers/api", "app/service"},
+	"NoteOrContent":   {"app/controllers", "app/controllers/api"},
+	"Re":              {"app/controllers", "app/controllers/api"},
+	"ReUpdate":        {"app/controllers/api"},
+	"UserAccount":     {"app/service"},
+	"UserBlogBase":    {"app/controllers/member", "app/service"},
+	"UserBlogComment": {"app/controllers/member", "app/service"},
+	"UserBlogStyle":   {"app/controllers/member", "app/service"},
+	"EachHistory":     {"app/db", "app/service"},
+}
 
 var projectionOnly = set("Group.Users", "ShareNote.ToGroup", "ShareNotebook.ToGroup", "UserBlog.ThemePath")
 
@@ -42,7 +61,7 @@ var jsonFixtureTypes = set(
 	"HasShareNote", "NoteImage",
 )
 var bsonFixtureTypes = set(
-	"Album", "ApiNoteContent", "ApiNotebook", "Attach", "BlogComment", "BlogLike", "BlogSingle", "BlogStat", "Config", "EachHistory", "EmailLog", "File", "Group", "GroupUser", "Note", "NoteContent", "NoteContentHistory", "NoteTag", "Notebook", "Report", "Session", "ShareNote", "ShareNotebook", "Suggestion", "Tag", "TagCount", "Theme", "Token", "User", "UserAndBlog", "UserAndBlogUrl", "UserBlog", "UserBlogBase", "UserBlogComment", "UserBlogStyle",
+	"Album", "Attach", "BlogComment", "BlogLike", "BlogSingle", "Config", "EachHistory", "EmailLog", "File", "Group", "GroupUser", "Note", "NoteContent", "NoteContentHistory", "NoteTag", "Notebook", "Report", "Session", "ShareNote", "ShareNotebook", "Suggestion", "Tag", "TagCount", "Theme", "Token", "User", "UserBlog",
 )
 
 type sourceRef struct {
@@ -166,8 +185,8 @@ func readTypes() ([]typeEntry, error) {
 					Status:         "active",
 					PrimaryRole:    role,
 					SecondaryRoles: secondary,
-					ConsumerStatus: consumerStatus(role),
-					Consumers:      consumers(role),
+					ConsumerStatus: consumerStatusFor(typeSpec.Name.Name, role),
+					Consumers:      consumersFor(typeSpec.Name.Name, role),
 					Source:         sourceRef{File: filepath.ToSlash(position.Filename), Line: position.Line},
 					Fields:         fieldsFor(fset, typeSpec.Name.Name, typeSpec.Type, role, secondary, structs),
 					Fixtures: map[string]interface{}{
@@ -191,9 +210,6 @@ func classify(name string) (string, []string) {
 		return "persistence", []string{}
 	case apiTypes[name]:
 		secondary := []string{}
-		if name == "ApiNoteContent" || name == "ApiNotebook" {
-			secondary = append(secondary, "persistence")
-		}
 		if name == "ApiNote" || name == "NoteFile" {
 			secondary = append(secondary, "request_input")
 		}
@@ -204,6 +220,8 @@ func classify(name string) (string, []string) {
 		return "template_projection", []string{}
 	case valueTypes[name]:
 		return "value_type", []string{}
+	case nestedPersistenceTypes[name]:
+		return "internal_projection", []string{"persistence"}
 	default:
 		return "internal_projection", []string{}
 	}
@@ -224,11 +242,25 @@ func consumers(role string) []string {
 	}
 }
 
+func consumersFor(typeName, role string) []string {
+	if override, ok := consumerOverrides[typeName]; ok {
+		return append([]string(nil), override...)
+	}
+	return consumers(role)
+}
+
 func consumerStatus(role string) string {
 	if role == "internal_projection" || role == "value_type" {
 		return "unknown"
 	}
 	return "confirmed"
+}
+
+func consumerStatusFor(typeName, role string) string {
+	if _, ok := consumerOverrides[typeName]; ok {
+		return "confirmed"
+	}
+	return consumerStatus(role)
 }
 
 func fieldsFor(fset *token.FileSet, typeName string, expression ast.Expr, role string, secondary []string, structs map[string]*ast.StructType) []fieldEntry {
@@ -283,6 +315,8 @@ func fieldsFor(fset *token.FileSet, typeName string, expression ast.Expr, role s
 				if projectionOnly[typeName+"."+name.Name] {
 					state = "projection_only"
 				}
+			} else if writeOnlyTypes[typeName] && bsonName != nil && bsonName != "-" {
+				state = "write_only"
 			}
 			result = append(result, fieldEntry{
 				Name:   name.Name,
@@ -372,6 +406,9 @@ func fixtureJSON(typeName string) string {
 }
 
 func fixtureBSON(typeName, role string, secondary []string) string {
+	if writeOnlyTypes[typeName] {
+		return "unknown"
+	}
 	if bsonFixtureTypes[typeName] {
 		return "present"
 	}
@@ -452,7 +489,7 @@ func apiVariants() []map[string]interface{} {
 	// the interface/delivery tasks. Request/success/failure objects deliberately
 	// carry explicit unknown markers where source material does not settle a
 	// detail (notably binary errors and binder behavior).
-	return []map[string]interface{}{
+	variants := []map[string]interface{}{
 		apiVariant("/api/auth/login", "ApiAuth.Login", "GET", "not_required", map[string]interface{}{"source": "form", "fields": []string{"email", "pwd"}, "required": []string{"email", "pwd"}}, "AuthOk", "ApiRe", []string{"app/controllers/api/ApiAuthController.go", "app/controllers/api/API列表-v0.1.md"}),
 		apiVariant("/api/auth/logout", "ApiAuth.Logout", "GET", "required", map[string]interface{}{"source": "query", "fields": []string{"token"}, "required": []string{"token"}}, "ApiRe", "ApiRe", []string{"app/controllers/api/ApiAuthController.go", "app/controllers/api/API列表-v0.1.md"}),
 		apiVariant("/api/auth/register", "ApiAuth.Register", "POST", "not_required", map[string]interface{}{"source": "form", "fields": []string{"email", "pwd"}, "required": []string{"email", "pwd"}}, "ApiRe", "ApiRe", []string{"app/controllers/api/ApiAuthController.go", "app/controllers/api/API列表-v0.1.md"}),
@@ -460,7 +497,7 @@ func apiVariants() []map[string]interface{} {
 		apiVariant("/api/user/info", "ApiUser.Info", "GET", "required", map[string]interface{}{"source": "session", "fields": []string{}}, "ApiUser", "ApiRe", []string{"app/controllers/api/ApiUserController.go", "app/controllers/api/API列表-v0.1.md"}),
 		apiVariant("/api/user/updateUsername", "ApiUser.UpdateUsername", "POST", "required", map[string]interface{}{"source": "form", "fields": []string{"username"}, "required": []string{"username"}}, "ApiRe", "ApiRe", []string{"app/controllers/api/ApiUserController.go", "app/controllers/api/API列表-v0.1.md"}),
 		apiVariant("/api/user/updatePwd", "ApiUser.UpdatePwd", "POST", "required", map[string]interface{}{"source": "form", "fields": []string{"oldPwd", "pwd"}, "required": []string{"oldPwd", "pwd"}}, "ApiRe", "ApiRe", []string{"app/controllers/api/ApiUserController.go", "app/controllers/api/API列表-v0.1.md"}),
-		apiVariant("/api/user/getSyncState", "ApiUser.GetSyncState", "POST", "required", map[string]interface{}{"source": "session", "fields": []string{}}, "object{LastSyncUsn,LastSyncTime}", "ApiRe", []string{"app/controllers/api/ApiUserController.go", "app/controllers/api/API列表-v0.1.md"}),
+		apiVariant("/api/user/getSyncState", "ApiUser.GetSyncState", "POST", "required", map[string]interface{}{"source": "session", "fields": []string{}}, "object{LastSyncTime:int64,LastSyncUsn:int}", "ApiRe", []string{"app/controllers/api/ApiUserController.go", "app/controllers/api/API列表-v0.1.md"}),
 		apiVariant("/api/user/updateLogo", "ApiUser.UpdateLogo", "POST", "required", map[string]interface{}{"source": "multipart", "fields": []string{"file"}, "required": []string{"file"}}, "object{Logo:string}", "ApiRe", []string{"app/controllers/api/ApiUserController.go", "app/controllers/api/API列表-v0.1.md"}),
 
 		apiVariant("/api/notebook/getSyncNotebooks", "ApiNotebook.GetSyncNotebooks", "GET", "required", map[string]interface{}{"source": "query", "fields": []string{"afterUsn", "maxEntry"}, "optional": []string{"afterUsn", "maxEntry"}}, "[]ApiNotebook", "ApiRe", []string{"app/controllers/api/ApiNotebookController.go", "app/controllers/api/API列表-v0.1.md"}),
@@ -475,12 +512,12 @@ func apiVariants() []map[string]interface{} {
 		apiVariant("/api/note/getNote", "ApiNote.GetNote", "GET", "required", map[string]interface{}{"source": "query", "fields": []string{"noteId"}, "required": []string{"noteId"}}, "ApiNote", "ApiRe", []string{"app/controllers/api/ApiNoteController.go", "app/controllers/api/API列表-v0.1.md"}),
 		apiVariant("/api/note/getNoteAndContent", "ApiNote.GetNoteAndContent", "GET", "required", map[string]interface{}{"source": "query", "fields": []string{"noteId"}, "required": []string{"noteId"}}, "ApiNote", "unknown", []string{"app/controllers/api/ApiNoteController.go", "app/controllers/api/API列表-v0.1.md"}),
 		apiVariant("/api/note/getNoteContent", "ApiNote.GetNoteContent", "GET", "required", map[string]interface{}{"source": "query", "fields": []string{"noteId"}, "required": []string{"noteId"}}, "ApiNoteContent", "unknown", []string{"app/controllers/api/ApiNoteController.go", "app/controllers/api/API列表-v0.1.md"}),
-		apiVariant("/api/note/addNote", "ApiNote.AddNote", "POST", "required", map[string]interface{}{"source": "multipart/form", "body": "ApiNote", "required": []string{"NotebookId", "Title", "Content"}, "optional": []string{"Tags", "Abstract", "IsMarkdown", "Files"}, "notes": []string{"Files body parts use FileDatas[<LocalFileId>]"}}, "ApiNote", "Re", []string{"app/controllers/api/ApiNoteController.go", "app/controllers/api/API列表-v0.1.md"}),
+		apiVariant("/api/note/addNote", "ApiNote.AddNote", "POST", "required", map[string]interface{}{"source": "multipart/form", "body": "ApiNote", "required": []string{"NotebookId", "Title", "Content"}, "optional": []string{"Tags", "Abstract", "IsMarkdown", "Files"}, "notes": []string{"Files body parts use FileDatas[<LocalFileId>]", "Documentation marks Title/Content required, but the current controller only rejects an invalid NotebookId; empty-value semantic validation remains unknown"}}, "ApiNote", "Re", []string{"app/controllers/api/ApiNoteController.go", "app/controllers/api/API列表-v0.1.md"}),
 		apiVariant("/api/note/updateNote", "ApiNote.UpdateNote", "POST", "required", map[string]interface{}{"source": "multipart/form", "body": "ApiNote", "required": []string{"NoteId", "Usn"}, "optional": []string{"NotebookId", "Title", "Tags", "Content", "Abstract", "IsMarkdown", "IsTrash", "Files"}, "notes": []string{"Tags and Files presence are determined by form keys; runtime binder fixture is downstream"}}, "ApiNote", "ReUpdate", []string{"app/controllers/api/ApiNoteController.go", "app/controllers/api/API列表-v0.1.md"}),
 		apiVariant("/api/note/deleteTrash", "ApiNote.DeleteTrash", "GET", "required", map[string]interface{}{"source": "query", "fields": []string{"noteId", "usn"}, "required": []string{"noteId", "usn"}}, "ReUpdate", "ReUpdate", []string{"app/controllers/api/ApiNoteController.go", "app/controllers/api/API列表-v0.1.md"}),
 		apiVariant("/api/note/exportPdf", "ApiNote.ExportPdf", "GET", "required", map[string]interface{}{"source": "query", "fields": []string{"noteId"}, "required": []string{"noteId"}}, "binary", "ApiRe-or-text", []string{"app/controllers/api/ApiNoteController.go", "app/controllers/api/API列表-v0.1.md"}),
 
-		apiVariant("/api/tag/getSyncTags", "ApiTag.GetSyncTags", "GET", "required", map[string]interface{}{"source": "query", "fields": []string{"afterUsn", "maxEntry"}, "optional": []string{"afterUsn", "maxEntry"}}, "[]string", "ApiRe", []string{"app/controllers/api/ApiTagController.go", "app/controllers/api/API列表-v0.1.md"}),
+		apiVariant("/api/tag/getSyncTags", "ApiTag.GetSyncTags", "GET", "required", map[string]interface{}{"source": "query", "fields": []string{"afterUsn", "maxEntry"}, "optional": []string{"afterUsn", "maxEntry"}}, "[]NoteTag", "ApiRe", []string{"app/controllers/api/ApiTagController.go", "app/controllers/api/API列表-v0.1.md"}),
 		apiVariant("/api/tag/addTag", "ApiTag.AddTag", "POST", "required", map[string]interface{}{"source": "form", "fields": []string{"tag"}, "required": []string{"tag"}}, "NoteTag", "Re", []string{"app/controllers/api/ApiTagController.go", "app/controllers/api/API列表-v0.1.md"}),
 		apiVariant("/api/tag/deleteTag", "ApiTag.DeleteTag", "POST", "required", map[string]interface{}{"source": "form", "fields": []string{"tag", "usn"}, "required": []string{"tag", "usn"}}, "ReUpdate", "ReUpdate", []string{"app/controllers/api/ApiTagController.go", "app/controllers/api/API列表-v0.1.md"}),
 
@@ -488,6 +525,42 @@ func apiVariants() []map[string]interface{} {
 		apiVariant("/api/file/getAttach", "ApiFile.GetAttach", "GET", "not_required", map[string]interface{}{"source": "query", "fields": []string{"fileId"}, "required": []string{"fileId"}}, "binary", "binary-or-text", []string{"app/controllers/api/ApiFileController.go", "app/controllers/api/API列表-v0.1.md"}),
 		apiVariant("/api/file/getAllAttachs", "ApiFile.GetAllAttachs", "GET", "not_required", map[string]interface{}{"source": "query", "fields": []string{"noteId"}, "required": []string{"noteId"}}, "binary", "text", []string{"app/controllers/api/ApiFileController.go", "app/controllers/api/API列表-v0.1.md"}),
 	}
+
+	compatibilityNotes := map[string][]string{
+		"ApiAuth.Logout": {
+			"API documentation declares GET, while conf/routes accepts wildcard methods and the existing golden replay uses POST; accepted-method compatibility remains unknown until the HTTP fixture exercises both forms",
+		},
+		"ApiUser.Info": {
+			"API documentation lists a userId parameter, while the controller reads the authenticated user from session; preserve the observed session path and resolve the documentation conflict in the HTTP fixture",
+		},
+		"ApiUser.GetSyncState": {
+			"API documentation declares POST and LastSyncTime as a string, while the golden replay uses GET and the controller emits a Unix integer; preserve both observations until the HTTP contract is replayed",
+		},
+		"ApiNotebook.DeleteNotebook": {
+			"API documentation declares GET, while conf/routes accepts wildcard methods and the existing golden replay uses POST; accepted-method compatibility remains unknown until the HTTP fixture exercises both forms",
+		},
+		"ApiNote.DeleteTrash": {
+			"API documentation declares GET, while conf/routes accepts wildcard methods and the existing golden replay uses POST; accepted-method compatibility remains unknown until the HTTP fixture exercises both forms",
+		},
+		"ApiTag.GetSyncTags": {
+			"API documentation describes a [type.Tag] array, while the controller/service and golden replay expose []NoteTag objects; preserve the observed object-array shape pending HTTP fixture confirmation",
+		},
+		"ApiFile.GetImage": {
+			"API documentation says non-auth actions require a token, while the interceptor whitelist permits this read without auth and the no-token golden returns text; preserve the observed whitelist behavior pending HTTP fixture",
+		},
+		"ApiFile.GetAttach": {
+			"API documentation says non-auth actions require a token, while the interceptor whitelist permits this read without auth and the no-token golden returns text; preserve the observed whitelist behavior pending HTTP fixture",
+		},
+		"ApiFile.GetAllAttachs": {
+			"API documentation says non-auth actions require a token, while the interceptor whitelist permits this read without auth and the no-token golden returns text; preserve the observed whitelist behavior pending HTTP fixture",
+		},
+	}
+	for _, variant := range variants {
+		if notes, ok := compatibilityNotes[variant["action"].(string)]; ok {
+			variant["compatibility_notes"] = notes
+		}
+	}
+	return variants
 }
 
 func apiVariant(route, action, method, auth string, request map[string]interface{}, successBody, failureBody string, evidence []string) map[string]interface{} {

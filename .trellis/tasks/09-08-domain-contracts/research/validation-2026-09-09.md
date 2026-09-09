@@ -28,3 +28,16 @@
 - 原子 USN、note-save 事务/补偿和 `partial_write`（D-06）由 `application-notes` 与 `infrastructure-persistence` 实现与回放。
 - 真实 Mongo 7/8、HTTP、浏览器、PDF、容器及发布证据仍未运行；本机缺少相应运行环境时保持 `partial`/`unknown`，不以纯单元测试替代。
 - 完整 69 类型 JSON full golden 及 driver-dependent BSON 探针的基础设施归属仍按验收矩阵交接，不在领域任务中伪造完成。
+
+## 规格复审补充（本轮仅改任务材料）
+
+- `python research/validate_model_catalog.py research/model-catalog.json research/model-catalog.schema.json`：通过；API 目录仍为 29 个 action，`getSyncTags` 修正为 `[]NoteTag`，冲突项写入 `compatibility_notes`，API DTO、`write_only` 更新载荷和 `EachHistory` 嵌套持久化值的责任已分离（更新载荷完整 BSON fixture 仍为 unknown）。
+- `python research/validate_input_contracts.py research/input-contracts.json research/input-contracts.schema.json`：通过；输入结构由 4 个扩展为 7 个，新增 3 个 member-blog 部分更新载荷。
+- `python .trellis/scripts/task.py validate 09-08-domain-contracts`：通过；上下文清单包含本轮复审材料。
+- `git diff --check`：通过；本轮未修改 `app/`、`cmd/`、`conf/`、`sh/` 或生成资源。
+
+## 差异复核修复（本轮仅改任务材料）
+
+- `ApiTag.GetSyncTags` 的旧文档 `[type.Tag]` 与实际 `[]NoteTag` 对象数组差异已写入 `compatibility_notes`；模型目录校验器现对 9 个已知冲突 action 强制要求非空备注。
+- `NoteOrContent` 消费者已移除无证据的 `app/service`；GET/POST 备注改为准确引用 `conf/routes` 的通配方法。
+- `python research/validate_model_catalog.py research/model-catalog.json research/model-catalog.schema.json`：通过；29 个 API action 和兼容备注约束均通过。

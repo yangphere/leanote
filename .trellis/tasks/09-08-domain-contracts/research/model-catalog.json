@@ -38,6 +38,9 @@
     {
       "action": "ApiAuth.Logout",
       "auth": "required",
+      "compatibility_notes": [
+        "API documentation declares GET, while conf/routes accepts wildcard methods and the existing golden replay uses POST; accepted-method compatibility remains unknown until the HTTP fixture exercises both forms"
+      ],
       "evidence": [
         "app/controllers/api/ApiAuthController.go",
         "app/controllers/api/API列表-v0.1.md"
@@ -106,6 +109,9 @@
     {
       "action": "ApiUser.Info",
       "auth": "required",
+      "compatibility_notes": [
+        "API documentation lists a userId parameter, while the controller reads the authenticated user from session; preserve the observed session path and resolve the documentation conflict in the HTTP fixture"
+      ],
       "evidence": [
         "app/controllers/api/ApiUserController.go",
         "app/controllers/api/API列表-v0.1.md"
@@ -202,6 +208,9 @@
     {
       "action": "ApiUser.GetSyncState",
       "auth": "required",
+      "compatibility_notes": [
+        "API documentation declares POST and LastSyncTime as a string, while the golden replay uses GET and the controller emits a Unix integer; preserve both observations until the HTTP contract is replayed"
+      ],
       "evidence": [
         "app/controllers/api/ApiUserController.go",
         "app/controllers/api/API列表-v0.1.md"
@@ -222,7 +231,7 @@
       },
       "route": "/api/user/getSyncState",
       "success": {
-        "body": "object{LastSyncUsn,LastSyncTime}",
+        "body": "object{LastSyncTime:int64,LastSyncUsn:int}",
         "content_type": "application/json",
         "status": 200
       }
@@ -408,6 +417,9 @@
     {
       "action": "ApiNotebook.DeleteNotebook",
       "auth": "required",
+      "compatibility_notes": [
+        "API documentation declares GET, while conf/routes accepts wildcard methods and the existing golden replay uses POST; accepted-method compatibility remains unknown until the HTTP fixture exercises both forms"
+      ],
       "evidence": [
         "app/controllers/api/ApiNotebookController.go",
         "app/controllers/api/API列表-v0.1.md"
@@ -664,7 +676,8 @@
       "request": {
         "body": "ApiNote",
         "notes": [
-          "Files body parts use FileDatas[\u003cLocalFileId\u003e]"
+          "Files body parts use FileDatas[\u003cLocalFileId\u003e]",
+          "Documentation marks Title/Content required, but the current controller only rejects an invalid NotebookId; empty-value semantic validation remains unknown"
         ],
         "optional": [
           "Tags",
@@ -734,6 +747,9 @@
     {
       "action": "ApiNote.DeleteTrash",
       "auth": "required",
+      "compatibility_notes": [
+        "API documentation declares GET, while conf/routes accepts wildcard methods and the existing golden replay uses POST; accepted-method compatibility remains unknown until the HTTP fixture exercises both forms"
+      ],
       "evidence": [
         "app/controllers/api/ApiNoteController.go",
         "app/controllers/api/API列表-v0.1.md"
@@ -802,6 +818,9 @@
     {
       "action": "ApiTag.GetSyncTags",
       "auth": "required",
+      "compatibility_notes": [
+        "API documentation describes a [type.Tag] array, while the controller/service and golden replay expose []NoteTag objects; preserve the observed object-array shape pending HTTP fixture confirmation"
+      ],
       "evidence": [
         "app/controllers/api/ApiTagController.go",
         "app/controllers/api/API列表-v0.1.md"
@@ -829,7 +848,7 @@
       },
       "route": "/api/tag/getSyncTags",
       "success": {
-        "body": "[]string",
+        "body": "[]NoteTag",
         "content_type": "application/json",
         "status": 200
       }
@@ -905,6 +924,9 @@
     {
       "action": "ApiFile.GetImage",
       "auth": "not_required",
+      "compatibility_notes": [
+        "API documentation says non-auth actions require a token, while the interceptor whitelist permits this read without auth and the no-token golden returns text; preserve the observed whitelist behavior pending HTTP fixture"
+      ],
       "evidence": [
         "app/controllers/api/ApiFileController.go",
         "app/controllers/api/API列表-v0.1.md"
@@ -938,6 +960,9 @@
     {
       "action": "ApiFile.GetAttach",
       "auth": "not_required",
+      "compatibility_notes": [
+        "API documentation says non-auth actions require a token, while the interceptor whitelist permits this read without auth and the no-token golden returns text; preserve the observed whitelist behavior pending HTTP fixture"
+      ],
       "evidence": [
         "app/controllers/api/ApiFileController.go",
         "app/controllers/api/API列表-v0.1.md"
@@ -971,6 +996,9 @@
     {
       "action": "ApiFile.GetAllAttachs",
       "auth": "not_required",
+      "compatibility_notes": [
+        "API documentation says non-auth actions require a token, while the interceptor whitelist permits this read without auth and the no-token golden returns text; preserve the observed whitelist behavior pending HTTP fixture"
+      ],
       "evidence": [
         "app/controllers/api/ApiFileController.go",
         "app/controllers/api/API列表-v0.1.md"
@@ -1859,13 +1887,10 @@
       "name": "ApiNoteContent",
       "status": "active",
       "primary_role": "api_dto",
-      "secondary_roles": [
-        "persistence"
-      ],
+      "secondary_roles": [],
       "consumer_status": "confirmed",
       "consumers": [
-        "app/controllers/api",
-        "app/service"
+        "app/controllers/api"
       ],
       "source": {
         "file": "app/info/Api.go",
@@ -1888,7 +1913,7 @@
             "tag": "_id",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         },
         {
           "name": "UserId",
@@ -1906,7 +1931,7 @@
             "tag": "UserId",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         },
         {
           "name": "Content",
@@ -1924,12 +1949,12 @@
             "tag": "Content",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         }
       ],
       "fixtures": {
         "binder": "unknown",
-        "bson": "present",
+        "bson": "not_applicable",
         "json": "present",
         "status": "partial"
       }
@@ -1938,13 +1963,10 @@
       "name": "ApiNotebook",
       "status": "active",
       "primary_role": "api_dto",
-      "secondary_roles": [
-        "persistence"
-      ],
+      "secondary_roles": [],
       "consumer_status": "confirmed",
       "consumers": [
-        "app/controllers/api",
-        "app/service"
+        "app/controllers/api"
       ],
       "source": {
         "file": "app/info/Api.go",
@@ -1967,7 +1989,7 @@
             "tag": "_id",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         },
         {
           "name": "UserId",
@@ -1985,7 +2007,7 @@
             "tag": "UserId",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         },
         {
           "name": "ParentNotebookId",
@@ -2003,7 +2025,7 @@
             "tag": "ParentNotebookId",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         },
         {
           "name": "Seq",
@@ -2021,7 +2043,7 @@
             "tag": "Seq",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         },
         {
           "name": "Title",
@@ -2039,7 +2061,7 @@
             "tag": "Title",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         },
         {
           "name": "UrlTitle",
@@ -2057,7 +2079,7 @@
             "tag": "UrlTitle",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         },
         {
           "name": "IsBlog",
@@ -2075,7 +2097,7 @@
             "tag": "IsBlog",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         },
         {
           "name": "CreatedTime",
@@ -2093,7 +2115,7 @@
             "tag": "CreatedTime",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         },
         {
           "name": "UpdatedTime",
@@ -2111,7 +2133,7 @@
             "tag": "UpdatedTime",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         },
         {
           "name": "Usn",
@@ -2129,7 +2151,7 @@
             "tag": "Usn",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         },
         {
           "name": "IsDeleted",
@@ -2147,12 +2169,12 @@
             "tag": "IsDeleted",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "read_write"
+          "persistence_state": "not_applicable"
         }
       ],
       "fixtures": {
         "binder": "unknown",
-        "bson": "present",
+        "bson": "not_applicable",
         "json": "present",
         "status": "partial"
       }
@@ -2164,8 +2186,7 @@
       "secondary_roles": [],
       "consumer_status": "confirmed",
       "consumers": [
-        "app/controllers/api",
-        "app/service"
+        "app/controllers/api"
       ],
       "source": {
         "file": "app/info/Api.go",
@@ -2223,8 +2244,7 @@
       "secondary_roles": [],
       "consumer_status": "confirmed",
       "consumers": [
-        "app/controllers/api",
-        "app/service"
+        "app/controllers/api"
       ],
       "source": {
         "file": "app/info/Api.go",
@@ -2657,8 +2677,7 @@
       "secondary_roles": [],
       "consumer_status": "confirmed",
       "consumers": [
-        "app/controllers/api",
-        "app/service"
+        "app/controllers/api"
       ],
       "source": {
         "file": "app/info/Api.go",
@@ -3714,7 +3733,7 @@
       ],
       "fixtures": {
         "binder": "not_applicable",
-        "bson": "present",
+        "bson": "not_applicable",
         "json": "present",
         "status": "partial"
       }
@@ -4224,9 +4243,12 @@
       "name": "EachHistory",
       "status": "active",
       "primary_role": "internal_projection",
-      "secondary_roles": [],
-      "consumer_status": "unknown",
+      "secondary_roles": [
+        "persistence"
+      ],
+      "consumer_status": "confirmed",
       "consumers": [
+        "app/db",
         "app/service"
       ],
       "source": {
@@ -4250,7 +4272,7 @@
             "tag": "UpdatedUserId",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "read_write"
         },
         {
           "name": "UpdatedTime",
@@ -4268,7 +4290,7 @@
             "tag": "UpdatedTime",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "read_write"
         },
         {
           "name": "Content",
@@ -4286,7 +4308,7 @@
             "tag": "Content",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "read_write"
         }
       ],
       "fixtures": {
@@ -7445,19 +7467,19 @@
       "secondary_roles": [],
       "consumer_status": "confirmed",
       "consumers": [
-        "app/controllers/api",
-        "app/service"
+        "app/controllers",
+        "app/controllers/api"
       ],
       "source": {
         "file": "app/info/Re.go",
-        "line": 10
+        "line": 11
       },
       "fields": [
         {
           "name": "Ok",
           "source": {
             "file": "app/info/Re.go",
-            "line": 11
+            "line": 12
           },
           "wire": {
             "json_embedded": false,
@@ -7475,7 +7497,7 @@
           "name": "Code",
           "source": {
             "file": "app/info/Re.go",
-            "line": 12
+            "line": 13
           },
           "wire": {
             "json_embedded": false,
@@ -7493,7 +7515,7 @@
           "name": "Msg",
           "source": {
             "file": "app/info/Re.go",
-            "line": 13
+            "line": 14
           },
           "wire": {
             "json_embedded": false,
@@ -7511,7 +7533,7 @@
           "name": "Id",
           "source": {
             "file": "app/info/Re.go",
-            "line": 14
+            "line": 15
           },
           "wire": {
             "json_embedded": false,
@@ -7529,7 +7551,7 @@
           "name": "List",
           "source": {
             "file": "app/info/Re.go",
-            "line": 15
+            "line": 16
           },
           "wire": {
             "json_embedded": false,
@@ -7547,7 +7569,7 @@
           "name": "Item",
           "source": {
             "file": "app/info/Re.go",
-            "line": 16
+            "line": 17
           },
           "wire": {
             "json_embedded": false,
@@ -7576,8 +7598,7 @@
       "secondary_roles": [],
       "consumer_status": "confirmed",
       "consumers": [
-        "app/controllers/api",
-        "app/service"
+        "app/controllers/api"
       ],
       "source": {
         "file": "app/info/Api.go",
@@ -9091,14 +9112,14 @@
       ],
       "source": {
         "file": "app/info/ThemeInfo.go",
-        "line": 12
+        "line": 13
       },
       "fields": [
         {
           "name": "ThemeId",
           "source": {
             "file": "app/info/ThemeInfo.go",
-            "line": 13
+            "line": 14
           },
           "wire": {
             "json_embedded": false,
@@ -9116,7 +9137,7 @@
           "name": "UserId",
           "source": {
             "file": "app/info/ThemeInfo.go",
-            "line": 14
+            "line": 15
           },
           "wire": {
             "json_embedded": false,
@@ -9134,7 +9155,7 @@
           "name": "Name",
           "source": {
             "file": "app/info/ThemeInfo.go",
-            "line": 15
+            "line": 16
           },
           "wire": {
             "json_embedded": false,
@@ -9152,7 +9173,7 @@
           "name": "Version",
           "source": {
             "file": "app/info/ThemeInfo.go",
-            "line": 16
+            "line": 17
           },
           "wire": {
             "json_embedded": false,
@@ -9170,7 +9191,7 @@
           "name": "Author",
           "source": {
             "file": "app/info/ThemeInfo.go",
-            "line": 17
+            "line": 18
           },
           "wire": {
             "json_embedded": false,
@@ -9188,7 +9209,7 @@
           "name": "AuthorUrl",
           "source": {
             "file": "app/info/ThemeInfo.go",
-            "line": 18
+            "line": 19
           },
           "wire": {
             "json_embedded": false,
@@ -9206,7 +9227,7 @@
           "name": "Path",
           "source": {
             "file": "app/info/ThemeInfo.go",
-            "line": 19
+            "line": 20
           },
           "wire": {
             "json_embedded": false,
@@ -9224,7 +9245,7 @@
           "name": "Info",
           "source": {
             "file": "app/info/ThemeInfo.go",
-            "line": 20
+            "line": 21
           },
           "wire": {
             "json_embedded": false,
@@ -9242,7 +9263,7 @@
           "name": "IsActive",
           "source": {
             "file": "app/info/ThemeInfo.go",
-            "line": 21
+            "line": 22
           },
           "wire": {
             "json_embedded": false,
@@ -9260,7 +9281,7 @@
           "name": "IsDefault",
           "source": {
             "file": "app/info/ThemeInfo.go",
-            "line": 23
+            "line": 24
           },
           "wire": {
             "json_embedded": false,
@@ -9278,7 +9299,7 @@
           "name": "Style",
           "source": {
             "file": "app/info/ThemeInfo.go",
-            "line": 24
+            "line": 25
           },
           "wire": {
             "json_embedded": false,
@@ -9296,7 +9317,7 @@
           "name": "CreatedTime",
           "source": {
             "file": "app/info/ThemeInfo.go",
-            "line": 26
+            "line": 27
           },
           "wire": {
             "json_embedded": false,
@@ -9314,7 +9335,7 @@
           "name": "UpdatedTime",
           "source": {
             "file": "app/info/ThemeInfo.go",
-            "line": 27
+            "line": 28
           },
           "wire": {
             "json_embedded": false,
@@ -10037,8 +10058,7 @@
       "secondary_roles": [],
       "consumer_status": "confirmed",
       "consumers": [
-        "app/controllers",
-        "app/controllers/api"
+        "app/service"
       ],
       "source": {
         "file": "app/info/UserInfo.go",
@@ -10061,7 +10081,7 @@
             "tag": "AccountType",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         },
         {
           "name": "AccountStartTime",
@@ -10079,7 +10099,7 @@
             "tag": "AccountStartTime",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         },
         {
           "name": "AccountEndTime",
@@ -10097,7 +10117,7 @@
             "tag": "AccountEndTime",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         },
         {
           "name": "MaxImageNum",
@@ -10115,7 +10135,7 @@
             "tag": "MaxImageNums",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         },
         {
           "name": "MaxImageSize",
@@ -10133,7 +10153,7 @@
             "tag": "MaxImageSize",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         },
         {
           "name": "MaxAttachNum",
@@ -10151,7 +10171,7 @@
             "tag": "MaxAttachNum",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         },
         {
           "name": "MaxAttachSize",
@@ -10169,7 +10189,7 @@
             "tag": "MaxAttachSize",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         },
         {
           "name": "MaxPerAttachSize",
@@ -10187,12 +10207,12 @@
             "tag": "MaxPerAttachSize",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         }
       ],
       "fixtures": {
         "binder": "unknown",
-        "bson": "not_applicable",
+        "bson": "unknown",
         "json": "unknown",
         "status": "partial"
       }
@@ -10368,7 +10388,7 @@
       ],
       "fixtures": {
         "binder": "not_applicable",
-        "bson": "present",
+        "bson": "not_applicable",
         "json": "present",
         "status": "partial"
       }
@@ -10464,7 +10484,7 @@
       ],
       "fixtures": {
         "binder": "not_applicable",
-        "bson": "present",
+        "bson": "not_applicable",
         "json": "present",
         "status": "partial"
       }
@@ -10837,10 +10857,11 @@
     {
       "name": "UserBlogBase",
       "status": "active",
-      "primary_role": "internal_projection",
+      "primary_role": "request_input",
       "secondary_roles": [],
-      "consumer_status": "unknown",
+      "consumer_status": "confirmed",
       "consumers": [
+        "app/controllers/member",
         "app/service"
       ],
       "source": {
@@ -10864,7 +10885,7 @@
             "tag": "Logo",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         },
         {
           "name": "Title",
@@ -10882,7 +10903,7 @@
             "tag": "Title",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         },
         {
           "name": "SubTitle",
@@ -10900,12 +10921,12 @@
             "tag": "SubTitle",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         }
       ],
       "fixtures": {
-        "binder": "not_applicable",
-        "bson": "present",
+        "binder": "unknown",
+        "bson": "unknown",
         "json": "present",
         "status": "partial"
       }
@@ -10913,10 +10934,11 @@
     {
       "name": "UserBlogComment",
       "status": "active",
-      "primary_role": "internal_projection",
+      "primary_role": "request_input",
       "secondary_roles": [],
-      "consumer_status": "unknown",
+      "consumer_status": "confirmed",
       "consumers": [
+        "app/controllers/member",
         "app/service"
       ],
       "source": {
@@ -10940,7 +10962,7 @@
             "tag": "CanComment",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         },
         {
           "name": "CommentType",
@@ -10958,7 +10980,7 @@
             "tag": "CommentType",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         },
         {
           "name": "DisqusId",
@@ -10976,12 +10998,12 @@
             "tag": "DisqusId",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         }
       ],
       "fixtures": {
-        "binder": "not_applicable",
-        "bson": "present",
+        "binder": "unknown",
+        "bson": "unknown",
         "json": "present",
         "status": "partial"
       }
@@ -10989,10 +11011,11 @@
     {
       "name": "UserBlogStyle",
       "status": "active",
-      "primary_role": "internal_projection",
+      "primary_role": "request_input",
       "secondary_roles": [],
-      "consumer_status": "unknown",
+      "consumer_status": "confirmed",
       "consumers": [
+        "app/controllers/member",
         "app/service"
       ],
       "source": {
@@ -11016,7 +11039,7 @@
             "tag": "Style",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         },
         {
           "name": "Css",
@@ -11034,12 +11057,12 @@
             "tag": "Css",
             "tag_source": "app/info struct tag"
           },
-          "persistence_state": "not_applicable"
+          "persistence_state": "write_only"
         }
       ],
       "fixtures": {
-        "binder": "not_applicable",
-        "bson": "present",
+        "binder": "unknown",
+        "bson": "unknown",
         "json": "present",
         "status": "partial"
       }

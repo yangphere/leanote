@@ -15,6 +15,17 @@ from pathlib import Path
 
 EXPECTED_SCHEMA = "leanote.domain-model-catalog.v1"
 DECIDED = {"D-01", "D-02", "D-03", "D-04", "D-06"}
+REQUIRED_COMPATIBILITY_NOTES = {
+    "ApiAuth.Logout",
+    "ApiUser.Info",
+    "ApiUser.GetSyncState",
+    "ApiNotebook.DeleteNotebook",
+    "ApiNote.DeleteTrash",
+    "ApiTag.GetSyncTags",
+    "ApiFile.GetImage",
+    "ApiFile.GetAttach",
+    "ApiFile.GetAllAttachs",
+}
 
 
 def fail(message: str) -> "NoReturn":
@@ -128,6 +139,12 @@ def main(argv: list[str]) -> int:
             fail(f"unsupported evidence status for {variant['action']}")
         if not isinstance(variant["evidence"], list) or not variant["evidence"]:
             fail(f"api variant {variant['action']} evidence must be a non-empty array")
+        if "compatibility_notes" in variant:
+            notes = variant["compatibility_notes"]
+            if not isinstance(notes, list) or not notes or any(not isinstance(note, str) or not note for note in notes):
+                fail(f"api variant {variant['action']} compatibility_notes must be non-empty strings")
+        elif variant["action"] in REQUIRED_COMPATIBILITY_NOTES:
+            fail(f"api variant {variant['action']} must declare compatibility_notes")
 
     decisions = require(catalog, "decisions", "catalog")
     if not isinstance(decisions, list):
