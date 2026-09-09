@@ -1,19 +1,19 @@
 package info
 
 import (
-	"github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/domain"
 	"time"
 )
 
 // 只存笔记基本信息
 // 内容不存放
 type Note struct {
-	NoteId        lea.ObjectID `bson:"_id,omitempty"`           // 必须要设置bson:"_id" 不然mgo不会认为是主键
-	UserId        lea.ObjectID `bson:"UserId"`                  // 谁的
-	CreatedUserId lea.ObjectID `bson:"CreatedUserId,omitempty"` // 谁创建的(UserId != CreatedUserId, 是因为共享). 只是共享才有, 默认为空, 不存 必须要加omitempty
-	NotebookId    lea.ObjectID `bson:"NotebookId"`
-	Title         string       `bson:"Title"` // 标题
-	Desc          string       `bson:"Desc"`  // 描述, 非html
+	NoteId        domain.ObjectID `bson:"_id,omitempty"`           // 必须要设置bson:"_id" 不然mgo不会认为是主键
+	UserId        domain.ObjectID `bson:"UserId"`                  // 谁的
+	CreatedUserId domain.ObjectID `bson:"CreatedUserId,omitempty"` // 谁创建的(UserId != CreatedUserId, 是因为共享). 只是共享才有, 默认为空, 不存 必须要加omitempty
+	NotebookId    domain.ObjectID `bson:"NotebookId"`
+	Title         string          `bson:"Title"` // 标题
+	Desc          string          `bson:"Desc"`  // 描述, 非html
 
 	Src string `bson:"Src,omitempty"` // 来源, 2016/4/22
 
@@ -37,11 +37,11 @@ type Note struct {
 
 	AttachNum int `bson:"AttachNum"` // 2014/9/21, attachments num
 
-	CreatedTime   time.Time    `bson:"CreatedTime"`
-	UpdatedTime   time.Time    `bson:"UpdatedTime"`
-	RecommendTime time.Time    `bson:"RecommendTime,omitempty"` // 推荐时间
-	PublicTime    time.Time    `bson:"PublicTime,omitempty"`    // 发表时间, 公开为博客则设置
-	UpdatedUserId lea.ObjectID `bson:"UpdatedUserId"`           // 如果共享了, 并可写, 那么可能是其它他修改了
+	CreatedTime   time.Time       `bson:"CreatedTime"`
+	UpdatedTime   time.Time       `bson:"UpdatedTime"`
+	RecommendTime time.Time       `bson:"RecommendTime,omitempty"` // 推荐时间
+	PublicTime    time.Time       `bson:"PublicTime,omitempty"`    // 发表时间, 公开为博客则设置
+	UpdatedUserId domain.ObjectID `bson:"UpdatedUserId"`           // 如果共享了, 并可写, 那么可能是其它他修改了
 
 	// 2015/1/15, 更新序号
 	Usn int `bson:"Usn"` // UpdateSequenceNum
@@ -51,17 +51,17 @@ type Note struct {
 
 // 内容
 type NoteContent struct {
-	NoteId lea.ObjectID `bson:"_id,omitempty"`
-	UserId lea.ObjectID `bson:"UserId"`
+	NoteId domain.ObjectID `bson:"_id,omitempty"`
+	UserId domain.ObjectID `bson:"UserId"`
 
 	IsBlog bool `bson:"IsBlog,omitempty"` // 为了搜索博客
 
 	Content  string `bson:"Content"`
 	Abstract string `bson:"Abstract"` // 摘要, 有html标签, 比content短, 在博客展示需要, 不放在notes表中
 
-	CreatedTime   time.Time    `bson:"CreatedTime"`
-	UpdatedTime   time.Time    `bson:"UpdatedTime"`
-	UpdatedUserId lea.ObjectID `bson:"UpdatedUserId"` // 如果共享了, 并可写, 那么可能是其它他修改了
+	CreatedTime   time.Time       `bson:"CreatedTime"`
+	UpdatedTime   time.Time       `bson:"UpdatedTime"`
+	UpdatedUserId domain.ObjectID `bson:"UpdatedUserId"` // 如果共享了, 并可写, 那么可能是其它他修改了
 }
 
 // 基本信息和内容在一起
@@ -73,14 +73,14 @@ type NoteAndContent struct {
 // 历史记录
 // 每一个历史记录对象
 type EachHistory struct {
-	UpdatedUserId lea.ObjectID `bson:"UpdatedUserId"`
-	UpdatedTime   time.Time    `bson:"UpdatedTime"`
-	Content       string       `bson:"Content"`
+	UpdatedUserId domain.ObjectID `bson:"UpdatedUserId"`
+	UpdatedTime   time.Time       `bson:"UpdatedTime"`
+	Content       string          `bson:"Content"`
 }
 type NoteContentHistory struct {
-	NoteId    lea.ObjectID  `bson:"_id,omitempty"`
-	UserId    lea.ObjectID  `bson:"UserId"` // 所属者
-	Histories []EachHistory `bson:"Histories"`
+	NoteId    domain.ObjectID `bson:"_id,omitempty"`
+	UserId    domain.ObjectID `bson:"UserId"` // 所属者
+	Histories []EachHistory   `bson:"Histories"`
 }
 
 // 为了NoteController接收参数

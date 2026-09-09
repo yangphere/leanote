@@ -1,15 +1,18 @@
 package info
 
 import (
-	"github.com/yangphere/leanote/app/lea"
+	"encoding/json"
+	"fmt"
+
+	"github.com/yangphere/leanote/app/domain"
 	"time"
 )
 
 // 主题, 每个用户有多个主题, 这里面有主题的配置信息
 // 模板, css, js, images, 都在路径Path下
 type Theme struct {
-	ThemeId   lea.ObjectID           `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
-	UserId    lea.ObjectID           `bson:"UserId"`
+	ThemeId   domain.ObjectID        `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
+	UserId    domain.ObjectID        `bson:"UserId"`
 	Name      string                 `bson:"Name"`
 	Version   string                 `bson:"Version"`
 	Author    string                 `bson:"Author"`
@@ -23,4 +26,24 @@ type Theme struct {
 
 	CreatedTime time.Time `bson:"CreatedTime"`
 	UpdatedTime time.Time `bson:"UpdatedTime"`
+}
+
+// ValidateInfo verifies dynamic theme metadata before it crosses the JSON
+// boundary. The map remains intentionally JSON-compatible rather than being
+// narrowed to a second local schema.
+func (t Theme) ValidateInfo() error {
+	if err := domain.ValidateJSONValue(t.Info); err != nil {
+		return fmt.Errorf("Theme.Info: %w", err)
+	}
+	return nil
+}
+
+// MarshalJSON validates dynamic theme metadata at the serialization boundary
+// without changing the existing struct JSON shape or field ordering.
+func (t Theme) MarshalJSON() ([]byte, error) {
+	if err := t.ValidateInfo(); err != nil {
+		return nil, err
+	}
+	type themeJSON Theme
+	return json.Marshal(themeJSON(t))
 }

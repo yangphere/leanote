@@ -1,7 +1,7 @@
 package info
 
 import (
-	"github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/domain"
 	"time"
 )
 
@@ -24,9 +24,9 @@ const (
 )
 
 type Token struct {
-	UserId      lea.ObjectID `bson:"_id"`
-	Email       string       `bson:"Email"`
-	Token       string       `bson:"Token"`
-	Type        int          `bson:"Type"`
-	CreatedTime time.Time    `bson:"CreatedTime"`
+	UserId      domain.ObjectID `bson:"_id"`
+	Email       string          `bson:"Email"`
+	Token       string          `bson:"Token"`
+	Type        int             `bson:"Type"`
+	CreatedTime time.Time       `bson:"CreatedTime"`
 }

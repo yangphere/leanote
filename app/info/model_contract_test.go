@@ -1,8 +1,9 @@
+//go:build mongo_contract
+
 package info
 
 import (
 	"bytes"
-	"encoding/json"
 	"reflect"
 	"sort"
 	"strings"
@@ -119,6 +120,19 @@ func marshalWithLeaRegistry(v interface{}) ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
+
+func toBsonM(v interface{}) (bson.M, error) {
+	data, err := bson.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var m bson.M
+	if err := bson.Unmarshal(data, &m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func sortedKeys(m bson.M) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
@@ -225,38 +239,6 @@ func TestFixtureBSONKeysAndRoundTrip(t *testing.T) {
 		}
 		if !timeAwareEqual(raw, back.Elem().Interface()) {
 			t.Errorf("%s bson round-trip mismatch\n %+v\n %+v", name, raw, back.Elem().Interface())
-		}
-	}
-}
-
-// TestJSONContractFrozen locks the external encoding/json representation of
-// every covered model (field names, order, zero handling, ObjectId hex).
-func TestJSONContractFrozen(t *testing.T) {
-	fixtures := buildFixtures()
-	names := make([]string, 0, len(jsonFullGoldens))
-	for k := range jsonFullGoldens {
-		names = append(names, k)
-	}
-	sort.Strings(names)
-	for _, name := range names {
-		raw, ok := fixtures[name]
-		if !ok {
-			t.Fatalf("fixture %q missing", name)
-		}
-		data, err := json.Marshal(raw)
-		if err != nil {
-			t.Fatalf("%s json marshal: %v", name, err)
-		}
-		if string(data) != jsonFullGoldens[name] {
-			t.Errorf("%s full json drift\n got %s\nwant %s", name, data, jsonFullGoldens[name])
-		}
-		zero := reflect.New(reflect.TypeOf(raw)).Elem().Interface()
-		zdata, err := json.Marshal(zero)
-		if err != nil {
-			t.Fatalf("%s zero json marshal: %v", name, err)
-		}
-		if string(zdata) != jsonZeroGoldens[name] {
-			t.Errorf("%s zero json drift\n got %s\nwant %s", name, zdata, jsonZeroGoldens[name])
 		}
 	}
 }

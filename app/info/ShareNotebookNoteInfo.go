@@ -1,7 +1,7 @@
 package info
 
 import (
-	"github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/domain"
 	"time"
 )
 
@@ -38,7 +38,7 @@ type EachSharedNotebookAndNotes struct {
 }
 
 type SharedNotebookAndNotes struct {
-	UserId lea.ObjectID                          `bson:"_id"`
+	UserId domain.ObjectID                       `bson:"_id"`
 	Shared map[string]EachSharedNotebookAndNotes // userId =>
 }
 
@@ -52,7 +52,7 @@ type SharedNotebookAndNotes struct {
 
 // 用户正在共享的notebook, note
 type SharingNotebookAndNotes struct {
-	UserId    lea.ObjectID        `bson:"_id"`
+	UserId    domain.ObjectID     `bson:"_id"`
 	Notes     map[string][]string // noteId => []string{userId1, userId2}
 	Notebooks map[string][]string // notebookId => []string{userId1, userId2}
 }
@@ -74,15 +74,15 @@ type SharingNotebookAndNotes struct {
 */
 
 type ShareNotebook struct {
-	ShareNotebookId lea.ObjectID `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
-	UserId          lea.ObjectID `bson:"UserId"`
-	ToUserId        lea.ObjectID `bson:"ToUserId,omitempty"`
-	ToGroupId       lea.ObjectID `bson:"ToGroupId,omitempty"` // 分享给的用户组
-	ToGroup         Group        `bson:"ToGroup,omitempty"`   // 仅仅为了显示, 不存储, 分组信息
-	NotebookId      lea.ObjectID `bson:"NotebookId"`
-	Seq             int          `bson:"Seq"`  // 排序
-	Perm            int          `bson:"Perm"` // 权限, 其下所有notes 0只读, 1可修改
-	CreatedTime     time.Time    `bson:"CreatedTime,omitempty"`
+	ShareNotebookId domain.ObjectID `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
+	UserId          domain.ObjectID `bson:"UserId"`
+	ToUserId        domain.ObjectID `bson:"ToUserId,omitempty"`
+	ToGroupId       domain.ObjectID `bson:"ToGroupId,omitempty"` // 分享给的用户组
+	ToGroup         Group           `bson:"ToGroup,omitempty"`   // 仅仅为了显示, 不存储, 分组信息
+	NotebookId      domain.ObjectID `bson:"NotebookId"`
+	Seq             int             `bson:"Seq"`  // 排序
+	Perm            int             `bson:"Perm"` // 权限, 其下所有notes 0只读, 1可修改
+	CreatedTime     time.Time       `bson:"CreatedTime,omitempty"`
 	//	IsDefault       bool          `IsDefault` // 是否是默认共享notebook, perm seq=-9999999, NotebookId=null
 }
 
@@ -103,7 +103,7 @@ type ShareNotebooks struct {
 
 	// Notebook与ShareNotebook公用的不能生成json
 	Seq        int
-	NotebookId lea.ObjectID
+	NotebookId domain.ObjectID
 	IsDefault  bool // 是否是默认笔记本
 }
 
@@ -125,7 +125,7 @@ type ShareNotebooksByUser map[string][]ShareNotebooks
 /*
 type ShareNotebooksByUser struct {
 //	User
-	UserId lea.ObjectID
+	UserId domain.ObjectID
 	ShareNotebooks []ShareNotebooks // SubShareNotebooks 一样的, 不过用[]更容易理解
 }
 */
@@ -136,14 +136,14 @@ type ShareNotebooksByUser struct {
 // use leanote
 // db.leanote.share_notes.ensureIndex({"UserId":1,"ToUserId":1, "NoteId": 1},{"unique":true})
 type ShareNote struct {
-	ShareNoteId lea.ObjectID `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
-	UserId      lea.ObjectID `bson:"UserId"`
-	ToUserId    lea.ObjectID `bson:"ToUserId,omitempty"`
-	ToGroupId   lea.ObjectID `bson:"ToGroupId,omitempty"` // 分享给的用户组
-	ToGroup     Group        `bson:"ToGroup,omitempty"`   // 仅仅为了显示, 不存储, 分组信息
-	NoteId      lea.ObjectID `bson:"NoteId"`
-	Perm        int          `bson:"Perm"` // 权限, 0只读, 1可修改
-	CreatedTime time.Time    `bson:"CreatedTime"`
+	ShareNoteId domain.ObjectID `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
+	UserId      domain.ObjectID `bson:"UserId"`
+	ToUserId    domain.ObjectID `bson:"ToUserId,omitempty"`
+	ToGroupId   domain.ObjectID `bson:"ToGroupId,omitempty"` // 分享给的用户组
+	ToGroup     Group           `bson:"ToGroup,omitempty"`   // 仅仅为了显示, 不存储, 分组信息
+	NoteId      domain.ObjectID `bson:"NoteId"`
+	Perm        int             `bson:"Perm"` // 权限, 0只读, 1可修改
+	CreatedTime time.Time       `bson:"CreatedTime"`
 }
 
 // 谁共享给了谁note
@@ -151,10 +151,10 @@ type ShareNote struct {
 // 唯一: UserId-ToUserId
 // db.leanote.has_share_notes.ensureIndex({"UserId":1,"ToUserId":1},{"unique":true})
 type HasShareNote struct {
-	HasShareNotebookId lea.ObjectID `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
-	UserId             lea.ObjectID `bson:"UserId"`
-	ToUserId           lea.ObjectID `bson:"ToUserId"`
-	Seq                int          `bson:"Seq"` // 以后还可以用户排序
+	HasShareNotebookId domain.ObjectID `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
+	UserId             domain.ObjectID `bson:"UserId"`
+	ToUserId           domain.ObjectID `bson:"ToUserId"`
+	Seq                int             `bson:"Seq"` // 以后还可以用户排序
 }
 
 // 将note与权限结合起来
@@ -165,7 +165,7 @@ type ShareNoteWithPerm struct {
 
 // 查看共享状态, 用户的信息
 type ShareUserInfo struct {
-	ToUserId          lea.ObjectID `bson:"UserId"`
+	ToUserId          domain.ObjectID `bson:"UserId"`
 	Email             string
 	Perm              int  // note或其notebook的权限
 	NotebookHasShared bool // 是否其notebook共享了

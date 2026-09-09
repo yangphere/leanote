@@ -1,13 +1,13 @@
 package info
 
 import (
-	"github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/domain"
 	"time"
 )
 
 // 发送邮件
 type EmailLog struct {
-	LogId lea.ObjectID `bson:"_id"`
+	LogId domain.ObjectID `bson:"_id"`
 
 	Email   string `bson:"Email"`   // 发送者
 	Subject string `bson:"Subject"` // 主题

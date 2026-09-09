@@ -1,14 +1,14 @@
 package info
 
 import (
-	"github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/domain"
 	"time"
 )
 
 // 配置, 每一个配置一行记录
 type Config struct {
-	ConfigId    lea.ObjectID        `bson:"_id"`
-	UserId      lea.ObjectID        `bson:"UserId"`
+	ConfigId    domain.ObjectID     `bson:"_id"`
+	UserId      domain.ObjectID     `bson:"UserId"`
 	Key         string              `bson:"Key"`
 	ValueStr    string              `bson:"ValueStr,omitempty"`    // "1"
 	ValueArr    []string            `bson:"ValueArr,omitempty"`    // ["1","b","c"]

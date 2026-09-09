@@ -1,13 +1,13 @@
 package info
 
 import (
-	"github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/domain"
 	"time"
 )
 
 // http://docs.mongodb.org/manual/tutorial/expire-data/
 type Session struct {
-	Id lea.ObjectID `bson:"_id,omitempty"` // 没有意义
+	Id domain.ObjectID `bson:"_id,omitempty"` // 没有意义
 
 	SessionId string `bson:"SessionId"` // SessionId
 

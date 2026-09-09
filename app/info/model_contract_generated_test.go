@@ -6,7 +6,7 @@ package info
 //
 // 2026-08-29 (08-25-mongo-driver-migration): the 17 ObjectID fields frozen as
 // zeroMarshalError are updated to zeroPresent. mgo's ObjectId (string kind, zero
-// value "") failed to marshal when zero; mongo-driver/v2's lea.ObjectID ([12]byte)
+// value "") failed to marshal when zero; mongo-driver/v2's domain.ObjectID ([12]byte)
 // marshals a zero value as ObjectId(000000000000000000000000). Writes of zero
 // ObjectID fields failed loudly under mgo, so no working path depended on the old
 // behavior; the change is sanctioned as part of the driver migration.
@@ -26,8 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yangphere/leanote/app/lea"
-	"go.mongodb.org/mongo-driver/v2/bson"
+	"github.com/yangphere/leanote/app/domain"
 )
 
 const (
@@ -254,6 +253,7 @@ var legacyTagInventory = []legacyTagSpec{
 }
 
 var fixtureKeySets = map[string]string{
+	"HasShareNote":       "Seq,ToUserId,UserId,_id",
 	"ApiNoteContent":     "Content,UserId,_id",
 	"BlogComment":        "Content,CreatedTime,LikeNum,LikeUserIds,NoteId,ToCommendId,ToUserId,UserId,_id",
 	"BlogStat":           "CommentNum,LikeNum,ReadNum,_id",
@@ -289,9 +289,11 @@ var fixtureKeySets = map[string]string{
 	"UserBlogBase":       "Logo,SubTitle,Title",
 	"NoteContent":        "Abstract,Content,CreatedTime,IsBlog,UpdatedTime,UpdatedUserId,UserId,_id",
 	"Suggestion":         "Addr,Suggestion,UserId,_id",
+	"NoteImage":          "ImageId,NoteId,_id",
 }
 
 var jsonFullGoldens = map[string]string{
+	"HasShareNote":       "{\"HasShareNotebookId\":\"54d7620d99c37b0306000001\",\"UserId\":\"54d7620d99c37b0306000002\",\"ToUserId\":\"54d7620d99c37b0306000003\",\"Seq\":4}",
 	"Album":              "{\"AlbumId\":\"54d7620d99c37b0306000001\",\"UserId\":\"54d7620d99c37b0306000002\",\"Name\":\"album-name\",\"Type\":2,\"Seq\":3,\"CreatedTime\":\"2020-05-06T07:08:09Z\"}",
 	"ApiNoteContent":     "{\"NoteId\":\"54d7620d99c37b0306000001\",\"UserId\":\"54d7620d99c37b0306000002\",\"Content\":\"\\u003cp\\u003eapi content\\u003c/p\\u003e\"}",
 	"ApiNotebook":        "{\"NotebookId\":\"54d7620d99c37b0306000001\",\"UserId\":\"54d7620d99c37b0306000002\",\"ParentNotebookId\":\"54d7620d99c37b0306000003\",\"Seq\":4,\"Title\":\"nb-title\",\"UrlTitle\":\"nb-url\",\"IsBlog\":true,\"CreatedTime\":\"2020-05-06T07:08:09Z\",\"UpdatedTime\":\"2020-05-06T07:08:09Z\",\"Usn\":7,\"IsDeleted\":true}",
@@ -323,6 +325,7 @@ var jsonFullGoldens = map[string]string{
 	"ShareNotebook":      "{\"ShareNotebookId\":\"54d7620d99c37b0306000001\",\"UserId\":\"54d7620d99c37b0306000002\",\"ToUserId\":\"54d7620d99c37b0306000003\",\"ToGroupId\":\"54d7620d99c37b0306000004\",\"ToGroup\":{\"GroupId\":\"54d7620d99c37b030600001e\",\"UserId\":\"54d7620d99c37b030600001f\",\"Title\":\"group-title\",\"UserCount\":5,\"CreatedTime\":\"2020-05-06T07:08:09Z\",\"Users\":[{\"UserId\":\"54d7620d99c37b030600005a\",\"Email\":\"u@e.c\",\"Verified\":true,\"Username\":\"uname\",\"UsernameRaw\":\"uName\",\"CreatedTime\":\"2020-05-06T07:08:09Z\",\"Logo\":\"logo.png\",\"Theme\":\"\",\"NotebookWidth\":0,\"NoteListWidth\":0,\"MdEditorWidth\":0,\"LeftIsMin\":false,\"ThirdUserId\":\"\",\"ThirdUsername\":\"\",\"ThirdType\":0,\"FromUserId\":\"\",\"Usn\":0,\"FullSyncBefore\":\"0001-01-01T00:00:00Z\"}]},\"NotebookId\":\"54d7620d99c37b0306000005\",\"Seq\":6,\"Perm\":1,\"CreatedTime\":\"2020-05-06T07:08:09Z\"}",
 	"ShareNotebooks":     "{\"ParentNotebookId\":\"54d7620d99c37b0306000003\",\"Title\":\"nb-title\",\"UrlTitle\":\"nb-url\",\"NumberNotes\":12,\"IsTrash\":true,\"IsBlog\":true,\"UpdatedTime\":\"2020-05-06T07:08:09Z\",\"Usn\":13,\"IsDeleted\":true,\"ShareNotebookId\":\"54d7620d99c37b0306000001\",\"ToUserId\":\"54d7620d99c37b0306000003\",\"ToGroupId\":\"54d7620d99c37b0306000004\",\"ToGroup\":{\"GroupId\":\"54d7620d99c37b030600001e\",\"UserId\":\"54d7620d99c37b030600001f\",\"Title\":\"group-title\",\"UserCount\":5,\"CreatedTime\":\"2020-05-06T07:08:09Z\",\"Users\":[{\"UserId\":\"54d7620d99c37b030600005a\",\"Email\":\"u@e.c\",\"Verified\":true,\"Username\":\"uname\",\"UsernameRaw\":\"uName\",\"CreatedTime\":\"2020-05-06T07:08:09Z\",\"Logo\":\"logo.png\",\"Theme\":\"\",\"NotebookWidth\":0,\"NoteListWidth\":0,\"MdEditorWidth\":0,\"LeftIsMin\":false,\"ThirdUserId\":\"\",\"ThirdUsername\":\"\",\"ThirdType\":0,\"FromUserId\":\"\",\"Usn\":0,\"FullSyncBefore\":\"0001-01-01T00:00:00Z\"}]},\"Perm\":1,\"Subs\":null,\"Seq\":6,\"NotebookId\":\"54d7620d99c37b0306000001\",\"IsDefault\":true}",
 	"Suggestion":         "{\"Id\":\"54d7620d99c37b0306000001\",\"UserId\":\"54d7620d99c37b0306000002\",\"Addr\":\"addr\",\"Suggestion\":\"sugg\"}",
+	"NoteImage":          "{\"NoteImageId\":\"54d7620d99c37b0306000001\",\"NoteId\":\"54d7620d99c37b0306000002\",\"ImageId\":\"54d7620d99c37b0306000003\"}",
 	"Tag":                "{\"UserId\":\"54d7620d99c37b0306000001\",\"Tags\":[\"x\",\"y\"]}",
 	"TagCount":           "{\"TagCountId\":\"54d7620d99c37b0306000001\",\"UserId\":\"54d7620d99c37b0306000002\",\"Tag\":\"tc\",\"IsBlog\":true,\"Count\":7}",
 	"Theme":              "{\"ThemeId\":\"54d7620d99c37b0306000001\",\"UserId\":\"54d7620d99c37b0306000002\",\"Name\":\"theme-name\",\"Version\":\"1.0\",\"Author\":\"au\",\"AuthorUrl\":\"url\",\"Path\":\"themes/p\",\"Info\":{\"k\":\"v\"},\"IsActive\":true,\"IsDefault\":true,\"Style\":\"style\",\"CreatedTime\":\"2020-05-06T07:08:09Z\",\"UpdatedTime\":\"2020-05-06T07:08:09Z\"}",
@@ -337,6 +340,7 @@ var jsonFullGoldens = map[string]string{
 }
 
 var jsonZeroGoldens = map[string]string{
+	"HasShareNote":       "{\"HasShareNotebookId\":\"\",\"UserId\":\"\",\"ToUserId\":\"\",\"Seq\":0}",
 	"Album":              "{\"AlbumId\":\"\",\"UserId\":\"\",\"Name\":\"\",\"Type\":0,\"Seq\":0,\"CreatedTime\":\"0001-01-01T00:00:00Z\"}",
 	"ApiNoteContent":     "{\"NoteId\":\"\",\"UserId\":\"\",\"Content\":\"\"}",
 	"ApiNotebook":        "{\"NotebookId\":\"\",\"UserId\":\"\",\"ParentNotebookId\":\"\",\"Seq\":0,\"Title\":\"\",\"UrlTitle\":\"\",\"IsBlog\":false,\"CreatedTime\":\"0001-01-01T00:00:00Z\",\"UpdatedTime\":\"0001-01-01T00:00:00Z\",\"Usn\":0,\"IsDeleted\":false}",
@@ -368,6 +372,7 @@ var jsonZeroGoldens = map[string]string{
 	"ShareNotebook":      "{\"ShareNotebookId\":\"\",\"UserId\":\"\",\"ToUserId\":\"\",\"ToGroupId\":\"\",\"ToGroup\":{\"GroupId\":\"\",\"UserId\":\"\",\"Title\":\"\",\"UserCount\":0,\"CreatedTime\":\"0001-01-01T00:00:00Z\",\"Users\":null},\"NotebookId\":\"\",\"Seq\":0,\"Perm\":0,\"CreatedTime\":\"0001-01-01T00:00:00Z\"}",
 	"ShareNotebooks":     "{\"ParentNotebookId\":\"\",\"Title\":\"\",\"UrlTitle\":\"\",\"NumberNotes\":0,\"IsTrash\":false,\"IsBlog\":false,\"UpdatedTime\":\"0001-01-01T00:00:00Z\",\"Usn\":0,\"IsDeleted\":false,\"ShareNotebookId\":\"\",\"ToUserId\":\"\",\"ToGroupId\":\"\",\"ToGroup\":{\"GroupId\":\"\",\"UserId\":\"\",\"Title\":\"\",\"UserCount\":0,\"CreatedTime\":\"0001-01-01T00:00:00Z\",\"Users\":null},\"Perm\":0,\"Subs\":null,\"Seq\":0,\"NotebookId\":\"\",\"IsDefault\":false}",
 	"Suggestion":         "{\"Id\":\"\",\"UserId\":\"\",\"Addr\":\"\",\"Suggestion\":\"\"}",
+	"NoteImage":          "{\"NoteImageId\":\"\",\"NoteId\":\"\",\"ImageId\":\"\"}",
 	"Tag":                "{\"UserId\":\"\",\"Tags\":null}",
 	"TagCount":           "{\"TagCountId\":\"\",\"UserId\":\"\",\"Tag\":\"\",\"IsBlog\":false,\"Count\":0}",
 	"Theme":              "{\"ThemeId\":\"\",\"UserId\":\"\",\"Name\":\"\",\"Version\":\"\",\"Author\":\"\",\"AuthorUrl\":\"\",\"Path\":\"\",\"Info\":null,\"IsActive\":false,\"IsDefault\":false,\"Style\":\"\",\"CreatedTime\":\"0001-01-01T00:00:00Z\",\"UpdatedTime\":\"0001-01-01T00:00:00Z\"}",
@@ -383,6 +388,7 @@ var jsonZeroGoldens = map[string]string{
 
 // contractRegistry mirrors every model type covered by the inventory/goldens.
 var contractRegistry = map[string]reflect.Type{
+	"HasShareNote":       reflect.TypeOf(HasShareNote{}),
 	"ApiNoteContent":     reflect.TypeOf(ApiNoteContent{}),
 	"BlogComment":        reflect.TypeOf(BlogComment{}),
 	"BlogStat":           reflect.TypeOf(BlogStat{}),
@@ -418,36 +424,37 @@ var contractRegistry = map[string]reflect.Type{
 	"UserBlogBase":       reflect.TypeOf(UserBlogBase{}),
 	"NoteContent":        reflect.TypeOf(NoteContent{}),
 	"Suggestion":         reflect.TypeOf(Suggestion{}),
+	"NoteImage":          reflect.TypeOf(NoteImage{}),
 }
 
-var oidType = reflect.TypeOf(lea.ObjectID{})
+var oidType = reflect.TypeOf(domain.ObjectID{})
 
-func leaMustOid(hex string) lea.ObjectID {
-	oid, err := bson.ObjectIDFromHex(hex)
+func leaMustOid(hex string) domain.ObjectID {
+	oid, err := domain.ParseObjectID(hex)
 	if err != nil {
 		panic(err)
 	}
-	return lea.ObjectID(oid)
+	return oid
 }
 
-func mustOid(hex string) lea.ObjectID {
-	oid, err := bson.ObjectIDFromHex(hex)
+func mustOid(hex string) domain.ObjectID {
+	oid, err := domain.ParseObjectID(hex)
 	if err != nil {
 		panic(err)
 	}
-	return lea.ObjectID(oid)
+	return oid
 }
 
 var timeType = reflect.TypeOf(time.Time{})
 
 var counter int32
 
-func nextOid() lea.ObjectID {
+func nextOid() domain.ObjectID {
 	counter++
 	return mustOid(fmt.Sprintf("54d7620d99c37b0306000%03x", counter%1000))
 }
 
-func oid(n int) lea.ObjectID {
+func oid(n int) domain.ObjectID {
 	return mustOid(fmt.Sprintf("54d7620d99c37b0306000%03x", n))
 }
 
@@ -467,7 +474,7 @@ func exportedFields(t reflect.Type) []reflect.StructField {
 
 func seedAll(v reflect.Value) {
 	if v.Type() == oidType {
-		if v.String() == "" {
+		if v.Interface().(domain.ObjectID).IsZero() {
 			v.Set(reflect.ValueOf(nextOid()))
 		}
 		return
@@ -535,18 +542,6 @@ func makeNonZero(t reflect.Type, depth int) reflect.Value {
 	return reflect.Zero(t)
 }
 
-func toBsonM(v interface{}) (bson.M, error) {
-	data, err := bson.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-	var m bson.M
-	if err := bson.Unmarshal(data, &m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 func legacyFields(t reflect.Type) []reflect.StructField {
 	var out []reflect.StructField
 	for _, f := range exportedFields(t) {
@@ -574,7 +569,7 @@ func seedExcept(v reflect.Value, skip string, skipTarget bool) {
 			if skipTarget && f.Name == skip {
 				continue
 			}
-			if f.Type == oidType && fv.CanSet() && fv.String() == "" {
+			if f.Type == oidType && fv.CanSet() && fv.Interface().(domain.ObjectID).IsZero() {
 				fv.Set(reflect.ValueOf(nextOid()))
 				continue
 			}
@@ -625,6 +620,7 @@ func miniGroup() Group {
 func buildFixtures() map[string]interface{} {
 	fix := map[string]interface{}{}
 	fix["Album"] = Album{AlbumId: oid(1), UserId: oid(2), Name: "album-name", Type: 2, Seq: 3, CreatedTime: ts()}
+	fix["HasShareNote"] = HasShareNote{HasShareNotebookId: oid(1), UserId: oid(2), ToUserId: oid(3), Seq: 4}
 	fix["ApiNoteContent"] = ApiNoteContent{NoteId: oid(1), UserId: oid(2), Content: "<p>api content</p>"}
 	fix["ApiNotebook"] = ApiNotebook{NotebookId: oid(1), UserId: oid(2), ParentNotebookId: oid(3), Seq: 4, Title: "nb-title", UrlTitle: "nb-url", IsBlog: true, CreatedTime: ts(), UpdatedTime: ts(), Usn: 7, IsDeleted: true}
 	fix["Attach"] = Attach{AttachId: oid(1), NoteId: oid(2), UploadUserId: oid(3), Name: "attach-name", Title: "attach-title", Size: 12345, Type: "doc", Path: "files/x/a.doc", CreatedTime: ts()}
@@ -648,6 +644,7 @@ func buildFixtures() map[string]interface{} {
 	fix["ShareNote"] = ShareNote{ShareNoteId: oid(1), UserId: oid(2), ToUserId: oid(3), ToGroupId: oid(4), ToGroup: miniGroup(), NoteId: oid(5), Perm: 1, CreatedTime: ts()}
 	fix["ShareNotebook"] = ShareNotebook{ShareNotebookId: oid(1), UserId: oid(2), ToUserId: oid(3), ToGroupId: oid(4), ToGroup: miniGroup(), NotebookId: oid(5), Seq: 6, Perm: 1, CreatedTime: ts()}
 	fix["Suggestion"] = Suggestion{Id: oid(1), UserId: oid(2), Addr: "addr", Suggestion: "sugg"}
+	fix["NoteImage"] = NoteImage{NoteImageId: oid(1), NoteId: oid(2), ImageId: oid(3)}
 	fix["Tag"] = Tag{UserId: oid(1), Tags: []string{"x", "y"}}
 	fix["TagCount"] = TagCount{TagCountId: oid(1), UserId: oid(2), Tag: "tc", IsBlog: true, Count: 7}
 	fix["Theme"] = Theme{ThemeId: oid(1), UserId: oid(2), Name: "theme-name", Version: "1.0", Author: "au", AuthorUrl: "url", Path: "themes/p", Info: map[string]interface{}{"k": "v"}, IsActive: true, IsDefault: true, Style: "style", CreatedTime: ts(), UpdatedTime: ts()}
