@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 14
-- **Last Active**: 2026-09-01
+- **Total Sessions**: 15
+- **Last Active**: 2026-09-09
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~345 | Active |
+| `journal-1.md` | ~384 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 15 | 2026-09-09 | 完成 09-08-domain-contracts 规格审核修复并归档 | `50a0fa93` | `dev` |
 | 14 | 2026-09-01 | CI/CD 交付与发布收口 | `2dd4d18` | `dev` |
 | 13 | 2026-08-31 | 完成 TinyMCE 8 升级 | `05f2b400de28b7847fa26ee2e2815eea1a38e227` | `dev` |
 | 12 | 2026-08-30 | Bootstrap 5.3 升级收口 | `619b569` | `codex/bootstrap-5-3-upgrade` |

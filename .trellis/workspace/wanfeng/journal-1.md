@@ -343,3 +343,42 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 15: 完成 09-08-domain-contracts 规格审核修复并归档
+<!-- trellis-session: v=2 fp=8d33550b8d65f928 -->
+
+**Date**: 2026-09-09
+**Task**: 完成 09-08-domain-contracts 规格审核修复并归档
+**Branch**: `dev`
+
+### Summary
+
+修复领域契约规格审核发现的问题，完成验证并归档规划任务。
+
+### Main Changes
+
+- 补充 ApiTag.GetSyncTags 兼容性备注并强化冲突 action 校验
+- 移除无证据消费者、修正路由备注并重生成模型目录
+- 更新规格审核、验收矩阵与验证记录
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `50a0fa93` | docs(task): 修复领域契约审核问题 |
+
+### Testing
+
+- [OK] task.py validate 09-08-domain-contracts
+- [OK] go test ./app/info -count=1
+- [OK] go vet ./app/info
+- [OK] git diff HEAD --check
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 按依赖顺序激活后续 ready 叶任务
