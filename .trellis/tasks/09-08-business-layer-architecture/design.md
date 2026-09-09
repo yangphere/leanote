@@ -38,7 +38,7 @@ Browser / external API / CLI clients
 ## 3. Cross-layer invariants
 
 - `/api/*` 方法、参数、状态码、JSON 信封、字段和 token 生命周期不变。
-- mutation 必须递增 USN，sync 必须返回变化；失败不得产生部分成功 envelope。
+- 对 D-01 纳入统一同步语义的 notebook/tag delete，必须原子递增 USN、写入 tombstone 并由 sync 返回对应变化；旧差异只作基线对照，不能静默修正为历史通过。note-save 按 D-06 优先同事务，失败不消耗 USN/不返回成功；无事务时显式补偿并暴露 `partial_write`，失败不得伪造成功 envelope。
 - 资源查询同时约束 `UserId`；not-found、无权限和 duplicate key 语义保持。
 - 未编辑笔记不保存，实际编辑只允许已登记的 HTML 规范化。
 - 生成资源稳定且 CI 重建零 diff；浏览器与发布 artifact 必须绑定同一 commit/run/attempt。

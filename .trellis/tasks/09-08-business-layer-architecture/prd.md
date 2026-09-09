@@ -27,7 +27,7 @@
 - 内容媒体：文件、附件、图片、相册、PDF 和上传持久化。
 - 分享发布：分享、博客、评论、群组、主题和预览。
 - 管理运维：管理端、配置、升级、邮件和运维审计。
-- 每个领域服务必须保留用户所有权条件、USN mutation/sync 配对和失败语义；不得在 controller 中复制业务规则。
+- 每个领域服务必须保留用户所有权条件、USN mutation/sync 配对和失败语义；按已确认 D-01，notebook/tag 删除分配新 USN、写入 tombstone 并进入 sync，旧差异仅作基线对照。note-save 的原子 USN、同事务/显式补偿、部分写入状态和重试幂等性遵循 D-06；不得在 controller 中复制业务规则。
 
 ### Infrastructure and interface layers
 

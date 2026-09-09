@@ -20,7 +20,7 @@
 - [ ] `application-publishing`：分享、博客、评论、群组、主题、预览。
 - [ ] `application-admin`：管理端、配置、升级、邮件、运维审计。
 
-每个任务都要验证所有权查询、USN 配对、错误 envelope、幂等/冲突和跨服务调用，不把授权或 mutation 逻辑复制到 controller。
+每个任务都要验证所有权查询、由 D-01 决定的 notebook/tag delete 新 USN tombstone/sync 配对、错误 envelope、幂等/冲突和跨服务调用；旧差异作为基线对照，不把授权或 mutation 逻辑复制到 controller。
 
 ## Phase 3：基础设施和接口适配
 
