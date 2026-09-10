@@ -382,3 +382,25 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Next Steps
 
 - 按依赖顺序激活后续 ready 叶任务
+
+
+## Session 16: 修复 Mongo 持久化一致性边界
+<!-- trellis-session: v=2 fp=eb7fe3563d0fffc5 -->
+
+**Date**: 2026-09-10
+**Task**: 修复 Mongo 持久化一致性边界
+**Branch**: `dev`
+
+### Summary
+
+完成事务降级、outbox 幂等与租约、token 兼容、索引预检及对应 Mongo 7/8 验证；持久化任务已归档，跨层身份服务与 Golden/USN 证据仍按规格保留 partial。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `008c306d` | fix(db): 修复 Mongo 持久化一致性边界 |
+
+### Status
+
+[OK] **Completed**
