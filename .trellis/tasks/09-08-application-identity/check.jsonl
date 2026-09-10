@@ -1,2 +1,21 @@
-{"file": ".trellis/spec/backend/error-handling.md", "reason": "检查认证错误处理"}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "检查业务层质量约束"}
+{"file":".trellis/spec/backend/index.md","reason":"复核后端规范索引和预开发清单"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"检查 Mongo session/token、查询所有权、超时和 fail-closed"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"检查认证错误向上返回、envelope 和不吞 DB 错误"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查服务边界、真实 HTTP、Golden replay 和测试门禁"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"检查密码/token/secret 脱敏和单点日志责任"}
+{"file":".trellis/spec/guides/index.md","reason":"复核跨层与复用思考指南入口"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"复核身份跨 HTTP、service、Mongo 和响应的格式/错误边界"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"复核认证、demo、权限和 token 规则的单一事实来源"}
+{"file":"CONTEXT.md","reason":"复核 API、所有权、数据库字段和 Golden 不变量"}
+{"file":"docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md","reason":"复核 Cookie、API token 和迁移兼容取舍"}
+{"file":".trellis/tasks/09-08-business-layer-architecture/design.md","reason":"复核父任务轨道顺序和跨子任务验收责任"}
+{"file":".trellis/tasks/archive/2026-09/09-08-domain-contracts/research/validation-2026-09-09.md","reason":"复核领域已完成证据和必须下游承接的 unknown"}
+{"file":".trellis/tasks/archive/2026-09/09-08-domain-contracts/research/spec-audit-2026-09-09.md","reason":"复核领域复审发现的 API 方法、参数和认证冲突"}
+{"file":".trellis/tasks/archive/2026-08/08-25-revel-migration/design.md","reason":"复核 _ID 稳定标识、Cookie 回写时序和 ClearSession 兼容约束"}
+{"file":"app/controllers/api/API列表-v0.1.md","reason":"复核发布 API action、参数和方法冲突"}
+{"file":"app/controllers/api/API设计-v0.1.md","reason":"复核 token、userId 和错误 envelope 的文档基线"}
+{"file":".trellis/tasks/09-08-application-identity/prd.md","reason":"复核完善后的身份业务需求、兼容基线和已批准的 U-01～U-05 决策"}
+{"file":".trellis/tasks/09-08-application-identity/design.md","reason":"复核 principal、session/token seam、adapter ownership 和错误设计"}
+{"file":".trellis/tasks/09-08-application-identity/implement.md","reason":"复核实施顺序、验证命令和回滚边界"}
+{"file":".trellis/tasks/09-08-application-identity/research/spec-audit-2026-09-09.md","reason":"复核本轮规格审核证据、修订和下游 unknown"}
+{"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"按责任层复核身份服务、adapter、Golden 和未闭合证据"}

@@ -1,2 +1,7 @@
-{"file": "CONTEXT.md", "reason": "读取 Schema/ObjectID/所有权不变量"}
-{"file": "docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md", "reason": "核对 Mongo driver 兼容边界"}
+{"file":"CONTEXT.md","reason":"读取 Schema/ObjectID/所有权不变量"}
+{"file":"docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md","reason":"核对 Mongo driver、Cookie/API token 兼容边界"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"读取 timeout、索引、事务、所有权和 Mongo 7/8 规范"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"读取 duplicate/not-found/partial_write/side_effect 错误契约"}
+{"file":".trellis/tasks/09-08-application-identity/prd.md","reason":"读取 identity 对 transaction/outbox/TTL/token/唯一身份的前置要求"}
+{"file":".trellis/tasks/09-08-application-identity/design.md","reason":"读取 persistence seam、session idle TTL 和 action token 原子性要求"}
+{"file":".trellis/tasks/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"按阶段执行事务、索引、outbox 和 Mongo 证据门禁"}

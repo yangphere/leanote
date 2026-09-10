@@ -1,2 +1,6 @@
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "检查 DB 查询和超时规范"}
-{"file": ".trellis/spec/backend/error-handling.md", "reason": "检查错误映射"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"检查 DB 查询、超时、索引、事务和 fail-closed 规范"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"检查 duplicate/not-found/partial_write/side_effect 错误映射"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查 Mongo fixture、真实证据和不吞错门禁"}
+{"file":".trellis/tasks/09-08-application-identity/prd.md","reason":"承接 identity 的事务、outbox、TTL/index、token 和唯一身份契约"}
+{"file":".trellis/tasks/09-08-application-identity/design.md","reason":"承接 session/token resolver 与注册副作用边界"}
+{"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"对齐 identity 的持久化证据责任和下游 unknown"}

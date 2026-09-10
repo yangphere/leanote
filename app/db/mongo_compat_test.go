@@ -67,6 +67,9 @@ func testCollection(t *testing.T) (*Collection, *mongo.Collection) {
 		testColl = wrapCollection(testRawColl)
 	})
 	if testSetupErr != nil {
+		if os.Getenv("LEANOTE_DB_TEST_URI") != "" || os.Getenv("LEANOTE_REQUIRE_MONGO_TESTS") == "1" {
+			t.Fatalf("MongoDB fixture is required but unavailable: %v", testSetupErr)
+		}
 		t.Skipf("MongoDB unavailable for wrapper tests: %v", testSetupErr)
 	}
 	return testColl, testRawColl

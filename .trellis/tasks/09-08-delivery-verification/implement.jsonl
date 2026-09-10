@@ -1,2 +1,5 @@
-{"file": "CONTEXT.md", "reason": "读取现代化门禁和跨层不变量"}
-{"file": "docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md", "reason": "核对发布和无自动部署边界"}
+{"file":"CONTEXT.md","reason":"读取现代化门禁和跨层不变量"}
+{"file":"docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md","reason":"核对发布和无自动部署边界"}
+{"file":".trellis/tasks/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"读取 persistence transaction/index/outbox/token 交接证据"}
+{"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"读取 identity service/adapter/Golden 交接证据"}
+{"file":".trellis/tasks/09-08-interface-http/prd.md","reason":"读取 HTTP route/session/replay/production-config 交接契约"}

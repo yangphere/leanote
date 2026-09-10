@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"errors"
 	"strings"
 
@@ -15,6 +16,7 @@ import (
 type Query struct {
 	coll       *Collection
 	filter     interface{}
+	parent     context.Context
 	sort       bson.D
 	skip       *int64
 	limit      *int64
@@ -113,7 +115,7 @@ func (o findOptions) applyFind(opts *options.FindOptionsBuilder) {
 // limit option, and a limit is irrelevant to a single-document result —
 // sorting + first document equals sorting + limit(1) (BlogService callers).
 func (q *Query) One(result interface{}) error {
-	ctx, cancel := operationContext()
+	ctx, cancel := boundedOperationContext(q.parent)
 	defer cancel()
 
 	opts := options.FindOne()
@@ -132,7 +134,7 @@ func (q *Query) One(result interface{}) error {
 
 // All decodes every matching document into result, always closing the cursor.
 func (q *Query) All(result interface{}) error {
-	ctx, cancel := operationContext()
+	ctx, cancel := boundedOperationContext(q.parent)
 	defer cancel()
 
 	opts := options.Find()
@@ -158,7 +160,7 @@ func (q *Query) All(result interface{}) error {
 
 // Count returns the number of matching documents.
 func (q *Query) Count() (int, error) {
-	ctx, cancel := operationContext()
+	ctx, cancel := boundedOperationContext(q.parent)
 	defer cancel()
 
 	n, err := q.coll.coll.CountDocuments(ctx, q.filter)
@@ -172,7 +174,7 @@ func (q *Query) Count() (int, error) {
 // Distinct decodes the distinct values of key into result, preserving the
 // element type of the caller's slice (mgo behavior).
 func (q *Query) Distinct(key string, result interface{}) error {
-	ctx, cancel := operationContext()
+	ctx, cancel := boundedOperationContext(q.parent)
 	defer cancel()
 
 	if err := q.coll.coll.Distinct(ctx, key, q.filter).Decode(result); err != nil {

@@ -35,6 +35,7 @@ var TagCounts *Collection
 var UserBlogs *Collection
 
 var Tokens *Collection
+var Outbox *Collection
 
 var Suggestions *Collection
 
@@ -102,6 +103,7 @@ func InitWithError(url, dbname string) error {
 	if dbname == "" {
 		return errors.New("mongo database name is required")
 	}
+	resetCollections()
 	if err := dialMongo(url); err != nil {
 		client = nil
 		database = nil
@@ -146,6 +148,7 @@ func InitWithError(url, dbname string) error {
 
 	// find password
 	Tokens = wrapCollection(database.Collection("tokens"))
+	Outbox = wrapCollection(database.Collection("outbox"))
 
 	// Suggestion
 	Suggestions = wrapCollection(database.Collection("suggestions"))
@@ -169,6 +172,13 @@ func InitWithError(url, dbname string) error {
 
 	// session
 	Sessions = wrapCollection(database.Collection("sessions"))
+	if err := EnsurePersistenceIndexes(context.Background()); err != nil {
+		_ = client.Disconnect(context.Background())
+		client = nil
+		database = nil
+		resetCollections()
+		return err
+	}
 	return nil
 }
 
@@ -178,12 +188,45 @@ func close() {
 	}
 }
 
+func resetCollections() {
+	Notebooks = nil
+	Notes = nil
+	NoteContents = nil
+	NoteContentHistories = nil
+	ShareNotes = nil
+	ShareNotebooks = nil
+	HasShareNotes = nil
+	Blogs = nil
+	Users = nil
+	Groups = nil
+	GroupUsers = nil
+	Tags = nil
+	NoteTags = nil
+	TagCounts = nil
+	UserBlogs = nil
+	Tokens = nil
+	Outbox = nil
+	Suggestions = nil
+	Albums = nil
+	Files = nil
+	Attachs = nil
+	NoteImages = nil
+	Configs = nil
+	EmailLogs = nil
+	BlogLikes = nil
+	BlogComments = nil
+	Reports = nil
+	BlogSingles = nil
+	Themes = nil
+	Sessions = nil
+}
+
 // FindInCollection runs a find against an arbitrary database. It exists for
 // test-support paths only (e2e run markers) and must not be used for
 // business data access.
 func FindInCollection(database, collection string, filter, result interface{}) error {
 	if client == nil {
-		return errors.New("mongo client is not initialized")
+		return ErrMongoClientNotInitialized
 	}
 	ctx, cancel := operationContext()
 	defer cancel()

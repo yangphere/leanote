@@ -3,7 +3,7 @@
   "name": "application-identity",
   "title": "应用层：身份认证与会话",
   "description": "收敛用户、密码、Session、Token、登录注册和认证授权业务，保持 Web/API 认证语义。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": "application layer / identity and authentication",
   "package": null,
@@ -12,7 +12,7 @@
   "assignee": "wanfeng",
   "createdAt": "2026-09-08",
   "completedAt": null,
-  "branch": null,
+  "branch": "dev",
   "base_branch": "dev",
   "worktree_path": null,
   "commit": null,
@@ -21,6 +21,12 @@
   "children": [],
   "parent": "09-08-business-layer-architecture",
   "relatedFiles": [],
-  "notes": "",
-  "meta": {"layer": "application", "depends_on": ["09-08-domain-contracts"]}
+  "notes": "Implementation gate: wait for 09-08-infrastructure-persistence AC-P2..AC-P6 and their identity-service evidence (transaction/compensation, outbox, TTL/index, token compatibility and unique identity indexes) before business coding. branch=base_branch=dev is the repository's documented single-branch workflow; it is not a blocker. This task remains in_progress only as an activated planning gate and must not claim implementation completion until its dependency and cross-layer evidence close.",
+  "meta": {
+    "layer": "application",
+    "depends_on": [
+      "09-08-domain-contracts",
+      "09-08-infrastructure-persistence"
+    ]
+  }
 }

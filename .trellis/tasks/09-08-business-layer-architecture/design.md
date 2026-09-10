@@ -46,9 +46,9 @@ Browser / external API / CLI clients
 ## 4. Migration order and rollback
 
 1. `domain-contracts` 建立跨层回归和模型边界。
-2. 五个 application 子任务可在领域契约完成后并行实现，但共享服务/数据契约由领域任务冻结；它们的验收只覆盖 service/adapter contract，不提前要求新 HTTP、真实页面或 container smoke。
-3. `infrastructure-persistence` 收敛 MongoDB driver 与错误/超时。
-4. `interface-http` 在应用服务和持久化边界稳定后迁移全部 controller、harness 和启动入口，并承担 production-config seam、真实 HTTP 路由和页面 adapter smoke。
+2. `infrastructure-persistence` 先于身份应用任务收敛 MongoDB driver、事务/补偿、索引、TTL、outbox 和 token 兼容边界；其验收只覆盖持久化 contract 和 Mongo 7/8 证据。
+3. `application-identity` 在 persistence contract 完成后收敛 Auth/User/Session/Token service；其他非身份 application 叶可在领域契约完成后并行，但不得绕过 persistence 提供身份所需的存储语义。
+4. `interface-http` 在 identity、其他应用服务和持久化边界稳定后迁移全部 controller、harness 和启动入口，并承担 production-config seam、真实 HTTP 路由和页面 adapter smoke。
 5. `presentation-frontend` 维护生成链和编辑器/页面适配，可与 HTTP 的纯资源工作并行，但最终由交付层联验。
 6. `delivery-verification` 汇合全部层，阻断缺失的真实服务、浏览器、container/PDF 或发布证据；它消费各层 contract，不把 application 任务的局部结果升级为跨层通过。
 

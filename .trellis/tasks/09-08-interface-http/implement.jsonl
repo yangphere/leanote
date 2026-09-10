@@ -1,2 +1,6 @@
-{"file": "CONTEXT.md", "reason": "读取 API/URL/Session 不变量"}
-{"file": "docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md", "reason": "核对 Revel 迁出设计"}
+{"file":"CONTEXT.md","reason":"读取 API/URL/Session 不变量"}
+{"file":"docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md","reason":"核对 Revel 迁出设计"}
+{"file":".trellis/tasks/09-08-application-identity/prd.md","reason":"实现 identity action methods、principal userId、_ID fallback 和 SessionWriter seam"}
+{"file":".trellis/tasks/09-08-application-identity/design.md","reason":"实现 principal、token/session resolver 和错误映射边界"}
+{"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"执行 identity API/Session/Golden replay 交接"}
+{"file":".trellis/tasks/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"读取 TTL/index、token、outbox 和 transaction 已通过证据"}

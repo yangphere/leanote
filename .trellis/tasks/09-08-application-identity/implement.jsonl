@@ -1,2 +1,18 @@
-{"file": "CONTEXT.md", "reason": "保持 API token 与身份不变量"}
-{"file": "docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md", "reason": "读取 Session/API 迁移边界"}
+{"file":"CONTEXT.md","reason":"固定 API 外部契约、用户所有权和 session/token 兼容不变量"}
+{"file":"docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md","reason":"固定 Web Cookie 一次性重新登录、API token 保持有效和 Cookie 安全属性"}
+{"file":".trellis/spec/backend/index.md","reason":"定位后端目录、数据库、错误、质量和日志规范"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"固定 Mongo session/token 查询、超时、索引和 fail-closed 约束"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"固定认证错误传播、envelope 和禁止吞错规则"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"固定服务边界、Golden replay、真实 HTTP 和测试门禁"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"固定密码、token、Cookie 和配置敏感信息禁止写入日志"}
+{"file":".trellis/spec/guides/index.md","reason":"加载跨层和复用思考指南入口"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"审核 HTTP→service→Mongo→响应的身份数据流与边界"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"避免 Web/API/admin/member 重复认证规则和第二事实来源"}
+{"file":".trellis/tasks/09-08-business-layer-architecture/design.md","reason":"遵循应用轨道顺序及与 interface/infrastructure/delivery 的责任边界"}
+{"file":".trellis/tasks/archive/2026-09/09-08-domain-contracts/research/validation-2026-09-09.md","reason":"读取领域模型、输入契约、API unknown 和下游证据交接"}
+{"file":".trellis/tasks/archive/2026-09/09-08-domain-contracts/research/spec-audit-2026-09-09.md","reason":"复用领域任务已确认的 API 方法、参数、DTO 和证据边界冲突"}
+{"file":".trellis/tasks/archive/2026-08/08-25-revel-migration/design.md","reason":"确认 _ID 稳定匿名标识、session 回写顺序和旧 ClearSession 兼容约束"}
+{"file":"app/controllers/api/API列表-v0.1.md","reason":"核对发布 API action、参数和历史文档语义"}
+{"file":"app/controllers/api/API设计-v0.1.md","reason":"核对 API token/userId 文档与当前 controller 的差异"}
+{"file":".trellis/tasks/09-08-application-identity/research/spec-audit-2026-09-09.md","reason":"实现前读取本任务身份规格审核、已批准决策和下游证据边界"}
+{"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"按责任层执行身份 service、adapter、Golden 和证据门禁"}

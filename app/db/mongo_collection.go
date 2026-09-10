@@ -57,12 +57,26 @@ func (c *Collection) logNotFound(op string) {
 
 // Find starts a query chain compatible with mgo's Query.
 func (c *Collection) Find(query interface{}) *Query {
-	return &Query{coll: c, filter: query}
+	return &Query{coll: c, filter: query, parent: context.Background()}
+}
+
+// FindContext starts a query that preserves a transaction session carried by
+// parent while applying the normal operation timeout at execution time.
+func (c *Collection) FindContext(parent context.Context, query interface{}) *Query {
+	if parent == nil {
+		parent = context.Background()
+	}
+	return &Query{coll: c, filter: query, parent: parent}
 }
 
 // FindId queries a single document by its _id field.
 func (c *Collection) FindId(id interface{}) *Query {
 	return c.Find(bson.M{"_id": id})
+}
+
+// FindIdContext is the transaction-aware form of FindId.
+func (c *Collection) FindIdContext(parent context.Context, id interface{}) *Query {
+	return c.FindContext(parent, bson.M{"_id": id})
 }
 
 // DropIndex removes an index by its key fields, replicating mgo's index-name
@@ -80,7 +94,13 @@ func (c *Collection) DropIndex(key ...string) error {
 
 // Insert stores one or more documents.
 func (c *Collection) Insert(docs ...interface{}) error {
-	ctx, cancel := operationContext()
+	return c.InsertContext(context.Background(), docs...)
+}
+
+// InsertContext is the transaction-aware form of Insert. The parent context
+// may carry a Mongo session; the adapter still applies its operation timeout.
+func (c *Collection) InsertContext(parent context.Context, docs ...interface{}) error {
+	ctx, cancel := boundedOperationContext(parent)
 	defer cancel()
 	var err error
 	if len(docs) == 1 {
@@ -121,7 +141,12 @@ func splitUpdateKind(update interface{}) (replacement bool, err error) {
 // Update replaces one document. Replacement-style documents (no $ keys)
 // route through ReplaceOne, mirroring mgo where Update accepted both forms.
 func (c *Collection) Update(query, update interface{}) error {
-	ctx, cancel := operationContext()
+	return c.UpdateContext(context.Background(), query, update)
+}
+
+// UpdateContext preserves a transaction session carried by parent.
+func (c *Collection) UpdateContext(parent context.Context, query, update interface{}) error {
+	ctx, cancel := boundedOperationContext(parent)
 	defer cancel()
 	replacement, err := splitUpdateKind(update)
 	if err != nil {
@@ -146,7 +171,12 @@ func (c *Collection) Update(query, update interface{}) error {
 
 // UpdateAll updates every matching document and returns the matched count.
 func (c *Collection) UpdateAll(query, update interface{}) (int, error) {
-	ctx, cancel := operationContext()
+	return c.UpdateAllContext(context.Background(), query, update)
+}
+
+// UpdateAllContext preserves a transaction session carried by parent.
+func (c *Collection) UpdateAllContext(parent context.Context, query, update interface{}) (int, error) {
+	ctx, cancel := boundedOperationContext(parent)
 	defer cancel()
 	res, err := c.coll.UpdateMany(ctx, query, update)
 	if err != nil {
@@ -159,7 +189,12 @@ func (c *Collection) UpdateAll(query, update interface{}) (int, error) {
 // Upsert updates a document or inserts it when the query matches nothing.
 // Replacement-style documents route through ReplaceOne (mgo parity).
 func (c *Collection) Upsert(query, update interface{}) (interface{}, error) {
-	ctx, cancel := operationContext()
+	return c.UpsertContext(context.Background(), query, update)
+}
+
+// UpsertContext preserves a transaction session carried by parent.
+func (c *Collection) UpsertContext(parent context.Context, query, update interface{}) (interface{}, error) {
+	ctx, cancel := boundedOperationContext(parent)
 	defer cancel()
 	replacement, err := splitUpdateKind(update)
 	if err != nil {
@@ -181,7 +216,12 @@ func (c *Collection) Upsert(query, update interface{}) (interface{}, error) {
 
 // Remove deletes one document; no match is not an error (mgo semantics).
 func (c *Collection) Remove(query interface{}) error {
-	ctx, cancel := operationContext()
+	return c.RemoveContext(context.Background(), query)
+}
+
+// RemoveContext preserves a transaction session carried by parent.
+func (c *Collection) RemoveContext(parent context.Context, query interface{}) error {
+	ctx, cancel := boundedOperationContext(parent)
 	defer cancel()
 	_, err := c.coll.DeleteOne(ctx, query)
 	if err != nil {
@@ -192,7 +232,12 @@ func (c *Collection) Remove(query interface{}) error {
 
 // RemoveAll deletes every matching document and returns the removed count.
 func (c *Collection) RemoveAll(query interface{}) (int, error) {
-	ctx, cancel := operationContext()
+	return c.RemoveAllContext(context.Background(), query)
+}
+
+// RemoveAllContext preserves a transaction session carried by parent.
+func (c *Collection) RemoveAllContext(parent context.Context, query interface{}) (int, error) {
+	ctx, cancel := boundedOperationContext(parent)
 	defer cancel()
 	res, err := c.coll.DeleteMany(ctx, query)
 	if err != nil {

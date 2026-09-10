@@ -53,8 +53,20 @@ func contextWithTimeout(d time.Duration) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), d)
 }
 
+// boundedOperationContext preserves an existing Mongo session carried by the
+// parent context while applying the configured operation timeout.
+func boundedOperationContext(parent context.Context) (context.Context, context.CancelFunc) {
+	if parent == nil {
+		parent = context.Background()
+	}
+	if operationTimeout <= time.Nanosecond {
+		return context.WithDeadline(parent, time.Now().Add(-time.Second))
+	}
+	return context.WithTimeout(parent, operationTimeout)
+}
+
 func operationContext() (context.Context, context.CancelFunc) {
-	return contextWithTimeout(operationTimeout)
+	return boundedOperationContext(context.Background())
 }
 
 // dialMongo connects and pings the server; failures are fatal at startup.
