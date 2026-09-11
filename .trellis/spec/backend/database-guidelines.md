@@ -43,6 +43,85 @@ There is no migration framework. Schema changes ship as code changes plus fixtur
 - Masking a database error as empty data; the caller must receive the error (see `app/httpserver` handlers and `error-handling.md`).
 - Unit tests must keep covering the uninitialized-client path (non-nil error asserted) and identity tests must distinguish a missing/invalid marker from a database error — both fail closed, neither exposes credentials.
 
+## Scenario: Multi-step initialization with transaction fallback
+
+### 1. Scope / Trigger
+
+- Trigger: a service operation creates a primary record plus required side effects such as default notebooks, share rows, copied note metadata, action tokens, or outbox events.
+- Ownership: `app/db.ExecuteUserInitialization` owns the transaction/compensation runner; the service owns step construction and any cleanup inside one step that performs multiple writes.
+
+### 2. Signatures
+
+```go
+type InitializationStep struct {
+    Name       string
+    Apply      func(context.Context) error
+    Compensate func(context.Context) error
+}
+
+func ExecuteUserInitialization(ctx context.Context, plan UserInitializationPlan, transaction TransactionRunner) (UserInitializationResult, error)
+```
+
+### 3. Contracts
+
+- A step is considered applied only after its `Apply` returns `nil`; the generic compensation loop cannot see partial writes made inside a failed `Apply`.
+- Multi-write steps must either split into one write per step or clean their own already-applied writes before returning the failure.
+- Outbox enqueue is part of the durable success boundary. A failed enqueue returns `ErrSideEffect`; a partial initialization returns `ErrPartialWrite`.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|---|---|
+| Transaction succeeds | `Committed=true`, no compensation |
+| Transaction unsupported before writes | compensation mode may apply idempotent steps |
+| Step N fails after prior steps completed | prior completed steps are compensated in reverse order |
+| Step N performs write A, then write B fails | step N cleans write A itself or is split so write A has its own `Compensate` |
+| Outbox enqueue fails | return `ErrSideEffect`, do not report user registration success |
+| Compensation cleanup fails | return `ErrPartialWrite` with observable failure context |
+
+### 5. Good / Base / Bad Cases
+
+- Good: registration `shared_resources` deletes any `has_share_notes` / `share_*` rows it wrote if a later share insert in the same step fails.
+- Base: a single insert step can rely on its `Compensate` because it either finishes or fails before being marked applied.
+- Bad: looping over many copied notes inside one `Apply` and returning on the second failure while leaving the first copied note behind.
+
+### 6. Tests Required
+
+- Contract tests for transaction success, transaction-unsupported fallback, partial failure compensation, outbox `ErrSideEffect`, and transient transaction errors.
+- Service tests for every multi-write step proving an in-step failure removes the writes completed earlier in the same step.
+- Persistence tests must keep real Mongo transaction and standalone fallback behavior separate; do not treat focused mocks as live Mongo evidence.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```go
+Apply: func(ctx context.Context) error {
+    for _, item := range items {
+        if err := insert(ctx, item); err != nil {
+            return err // earlier inserts in this same step are invisible to generic compensation
+        }
+    }
+    return nil
+}
+```
+
+#### Correct
+
+```go
+Apply: func(ctx context.Context) error {
+    applied := make([]Item, 0, len(items))
+    for _, item := range items {
+        if err := insert(ctx, item); err != nil {
+            _ = remove(ctx, applied)
+            return err
+        }
+        applied = append(applied, item)
+    }
+    return nil
+}
+```
+
 ## Scenario: Framework-neutral ObjectID and dynamic JSON boundaries
 
 ### 1. Scope / Trigger

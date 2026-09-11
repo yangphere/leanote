@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -34,6 +35,18 @@ var apiTestDatabaseCounter uint64
 type apiTestAccount struct {
 	email    string
 	password string
+}
+
+type fakeHTTPAuthService struct {
+	loginErr error
+}
+
+func (f fakeHTTPAuthService) Login(string, string) (info.User, error) {
+	return info.User{}, f.loginErr
+}
+
+func (f fakeHTTPAuthService) Register(string, string, string) (bool, string) {
+	return false, ""
 }
 
 // firstPartyAPIApp boots the real conf/routes with the api batch registered.
@@ -135,6 +148,29 @@ func apiLoginForm(account apiTestAccount, password string) string {
 	return "email=" + url.QueryEscape(account.email) + "&pwd=" + url.QueryEscape(password)
 }
 
+func TestApiAuthServerLoginSurfacesStorageError(t *testing.T) {
+	saved := authService
+	authService = fakeHTTPAuthService{loginErr: errors.New("database unavailable")}
+	defer func() { authService = saved }()
+
+	routes, err := httpserver.ParseRoutes([]byte("POST /api/auth/login ApiAuth.Login"))
+	if err != nil {
+		t.Fatalf("ParseRoutes: %v", err)
+	}
+	registry := httpserver.NewRegistry()
+	registry.Register("ApiAuth", "Login", nil, (&ApiAuthServer{}).Login)
+	app := &httpserver.App{Routes: httpserver.CompileRoutes(routes), Registry: registry}
+	rec := apiPost(t, app, "/api/auth/login", "email=user%40example.test&pwd=secret")
+
+	var got info.ApiRe
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode login response: %v body=%q", err, rec.Body.String())
+	}
+	if got.Ok || got.Msg != "storage" {
+		t.Fatalf("login response = %+v, want storage failure", got)
+	}
+}
+
 func TestApiAuthLoginRoundTrip(t *testing.T) {
 	app, account := firstPartyAPIApp(t)
 
@@ -183,6 +219,17 @@ func TestApiAuthLogoutClearsToken(t *testing.T) {
 	// The stored userId for the token must be gone.
 	if uid := sessionService.GetUserId(issued.Token); uid != "" {
 		t.Fatalf("token still resolves userId %q after logout", uid)
+	}
+}
+
+func TestApiAuthLogoutWithoutTokenIsIdempotent(t *testing.T) {
+	app, _ := firstPartyAPIApp(t)
+	rec := apiPost(t, app, "/api/auth/logout", "")
+	var out struct {
+		Ok bool
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil || !out.Ok {
+		t.Fatalf("logout without token body=%q err=%v", rec.Body.String(), err)
 	}
 }
 

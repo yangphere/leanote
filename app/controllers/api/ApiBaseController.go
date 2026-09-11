@@ -55,8 +55,14 @@ func (c ApiBaseContrller) uploadAttach(name string, noteId string) (ok bool, msg
 
 	var data []byte
 	c.Params.Bind(&data, name)
-	handel := c.Params.Files[name][0]
+	files := c.Params.Files[name]
+	if len(files) == 0 {
+		msg = "fileRequired"
+		return
+	}
+	handel := files[0]
 	if data == nil || len(data) == 0 {
+		msg = "fileRequired"
 		return
 	}
 
@@ -137,8 +143,14 @@ func (c ApiBaseContrller) upload(name string, noteId string, isAttach bool) (ok 
 
 	var data []byte
 	c.Params.Bind(&data, name)
-	handel := c.Params.Files[name][0]
+	files := c.Params.Files[name]
+	if len(files) == 0 {
+		msg = "fileRequired"
+		return
+	}
+	handel := files[0]
 	if data == nil || len(data) == 0 {
+		msg = "fileRequired"
 		return
 	}
 

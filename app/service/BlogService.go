@@ -443,10 +443,14 @@ func (this *BlogService) ListAllBlogs(userId, tag string, keywords string, isRec
 	if userId != "" {
 		query["UserId"] = db.MustObjectIDFromHex(userId)
 	}
-	// 不是demo的博客
-	demoUserId := configService.GetGlobalStringConfig("demoUserId")
-	if userId == "" && demoUserId != "" {
-		query["UserId"] = bson.M{"$ne": db.MustObjectIDFromHex(demoUserId)}
+	// 平台列表必须先通过统一 demo 身份配置校验；配置异常时不冒险
+	// 暴露本应排除的 demo 内容。
+	if userId == "" {
+		demo, err := configService.DemoAccount()
+		if err != nil {
+			return pageInfo, nil
+		}
+		query["UserId"] = bson.M{"$ne": demo.UserID}
 	}
 
 	if isRecommend {

@@ -5,6 +5,7 @@ package db
 // override with LEANOTE_DB_TEST_URI) and use a dedicated throwaway database.
 
 import (
+	"context"
 	"errors"
 	"os"
 	"sync"
@@ -31,6 +32,16 @@ func TestFindInCollectionRequiresInitializedClient(t *testing.T) {
 	var markers []bson.M
 	if err := FindInCollection(testDatabaseName, testCollectionName, bson.M{}, &markers); err == nil {
 		t.Fatal("FindInCollection() with an uninitialized client must fail")
+	}
+}
+
+func TestCompatUpdateOneMatchedContextReturnsNotFoundOnZeroMatch(t *testing.T) {
+	coll, _ := testCollection(t)
+	seedCompatDocs(t, compatSeed())
+
+	err := coll.UpdateOneMatchedContext(context.Background(), bson.M{"Title": "missing"}, bson.M{"$set": bson.M{"Count": 10}})
+	if !errors.Is(err, ErrDocumentNotFound) {
+		t.Fatalf("UpdateOneMatchedContext no match err=%v, want ErrDocumentNotFound", err)
 	}
 }
 

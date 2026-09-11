@@ -14,11 +14,31 @@ var noteService *service.NoteService
 var trashService *service.TrashService
 var notebookService *service.NotebookService
 var noteContentHistoryService *service.NoteContentHistoryService
-var authService *service.AuthService
 var shareService *service.ShareService
 var blogService *service.BlogService
 var tagService *service.TagService
-var pwdService *service.PwdService
+
+type pwdServiceContract interface {
+	FindPwd(string) (bool, string)
+	UpdatePwd(string, string) (bool, string)
+}
+
+type authServiceContract interface {
+	Login(string, string) (info.User, error)
+	Register(string, string, string) (bool, string)
+}
+
+type sessionServiceContract interface {
+	LoginTimesIsOver(string) (bool, error)
+	GetCaptcha(string) (string, error)
+	IncrLoginTimes(string) error
+	ClearUserToken(string) (bool, error)
+	ClearTransientSessionState(string) error
+	SetCaptcha(string, string) error
+}
+
+var pwdService pwdServiceContract
+var authService authServiceContract
 var tokenService *service.TokenService
 var suggestionService *service.SuggestionService
 var albumService *service.AlbumService
@@ -27,7 +47,7 @@ var fileService *service.FileService
 var attachService *service.AttachService
 var configService *service.ConfigService
 var emailService *service.EmailService
-var sessionService *service.SessionService
+var sessionService sessionServiceContract
 var themeService *service.ThemeService
 
 var pageSize = 1000

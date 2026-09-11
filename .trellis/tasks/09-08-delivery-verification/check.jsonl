@@ -4,6 +4,6 @@
 {"file":".trellis/spec/frontend/type-safety.md","reason":"核对浏览器 artifact validator、JCS digest 和 release contract test 的权威入口"}
 {"file":".trellis/spec/frontend/quality-guidelines.md","reason":"核对真实浏览器 artifact 的脱敏、失败关闭和质量门要求"}
 {"file":".trellis/spec/frontend/directory-structure.md","reason":"核对四个稳定 browser-smoke coverage ID"}
-{"file":".trellis/tasks/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"汇合 persistence transaction/index/outbox/token 证据"}
+{"file":".trellis/tasks/archive/2026-09/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"汇合 persistence transaction/index/outbox/token 证据"}
 {"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"汇合 identity principal/session/API Golden 证据"}
 {"file":".trellis/tasks/09-08-interface-http/prd.md","reason":"汇合 route/session/replay 和 production-config 证据"}

@@ -10,7 +10,7 @@
 
 ## Invariants
 
-公开 URL/API、method、参数、状态码、JSON/JSONP、Session、i18n、gzip、静态资源和模板行为保持；Web cookie 可一次性失效，API token 保持。`app/httpserver` 的 production-config seam 统一负责运行时来源、secret/Mongo 校验、稳定错误码和 bind/dial/healthz 时序；其他任务只消费其契约。生产 secret/config fail closed。
+公开 URL/API、method、参数、状态码、JSON/JSONP、Session、i18n、gzip、静态资源和模板行为保持；匿名期 `_ID` 稳定但认证成功时必须轮换并失效旧 fallback 映射；Web cookie 可一次性失效，API token 保持。P-06 清理失败不得返回伪成功，P-07 注册 Cookie 提交失败不得设置认证 Cookie 或跳转受保护页面；API token 仅从 query/form 读取，任何未来 header 扩展的冲突规则需另立契约。`app/httpserver` 的 production-config seam 统一负责运行时来源、secret/Mongo 校验、稳定错误码和 bind/dial/healthz 时序；其他任务只消费其契约。生产 secret/config fail closed。CSRF 与通用限流保持现状，不在本任务隐式新增。
 
 ## Rollback
 

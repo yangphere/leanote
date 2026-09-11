@@ -1,7 +1,9 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
@@ -13,6 +15,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // 公用Controller, 其它Controller继承它
@@ -84,6 +87,55 @@ func (c BaseController) GetSession(key string) string {
 	}
 	return v.(string)
 }
+
+// AnonymousSessionID is the stable cookie-local identity used for captcha and
+// no-token API fallback. It must not use Revel's encoded-cookie value, which
+// changes whenever session contents are written.
+func (c BaseController) AnonymousSessionID() (string, error) {
+	if value, ok := c.Session["_ID"]; ok {
+		if id, ok := value.(string); ok && id != "" {
+			return id, nil
+		}
+	}
+	id, err := db.NewAnonymousSessionID()
+	if err != nil {
+		return "", fmt.Errorf("create anonymous session ID: %w", err)
+	}
+	c.Session["_ID"] = id
+	return id, nil
+}
+
+// RotateAuthenticatedSession issues a fresh stable identity at the successful
+// login boundary, creates its fallback mapping, then retires the anonymous
+// mapping. A failed persistence operation leaves the old identity in place so
+// the controller cannot report an authenticated session it did not establish.
+func (c BaseController) RotateAuthenticatedSession(userID string) error {
+	oldID, err := c.AnonymousSessionID()
+	if err != nil {
+		return err
+	}
+	newID, err := db.NewAnonymousSessionID()
+	if err != nil {
+		return fmt.Errorf("rotate anonymous session ID: %w", err)
+	}
+	if err := db.CreateSessionForToken(context.Background(), newID, userID, time.Now()); err != nil {
+		return fmt.Errorf("create rotated session mapping: %w", err)
+	}
+	if err := sessionService.ClearTransientSessionState(oldID); err != nil {
+		_, _ = sessionService.ClearUserToken(newID)
+		return fmt.Errorf("clear anonymous session state: %w", err)
+	}
+	if _, err := sessionService.ClearUserToken(oldID); err != nil {
+		// Best-effort compensation avoids leaving a new authenticated mapping
+		// active when invalidating the old identity failed.
+		_, _ = sessionService.ClearUserToken(newID)
+		return fmt.Errorf("retire anonymous session mapping: %w", err)
+	}
+	c.Session["_ID"] = newID
+	delete(c.Session, "_token")
+	delete(c.Session, "_userId")
+	return nil
+}
 func (c BaseController) SetSession(userInfo info.User) {
 	if userInfo.UserId.Hex() != "" {
 		c.Session["UserId"] = userInfo.UserId.Hex()
@@ -114,7 +166,16 @@ func (c BaseController) ClearSession() {
 	delete(c.Session, "UserId")
 	delete(c.Session, "Email")
 	delete(c.Session, "Username")
+	delete(c.Session, "UsernameRaw")
+	delete(c.Session, "Logo")
+	delete(c.Session, "Verified")
+	delete(c.Session, "Theme")
 	delete(c.Session, "theme")
+	delete(c.Session, "NotebookWidth")
+	delete(c.Session, "NoteListWidth")
+	delete(c.Session, "LeftIsMin")
+	delete(c.Session, "_token")
+	delete(c.Session, "_userId")
 }
 
 // 修改session

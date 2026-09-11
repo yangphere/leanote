@@ -145,6 +145,7 @@ func IssueActionToken(parent context.Context, userID domain.ObjectID, email, val
 	ctx, cancel := boundedOperationContext(parent)
 	defer cancel()
 	token := NewActionToken(userID, value, tokenType, createdAt)
+	token.Email = email
 	// Legacy documents use _id=userId and therefore cannot match the new
 	// (UserId,Type) upsert filter. Retire the matching legacy token first so
 	// re-issuing never leaves two active tokens for one purpose. The legacy
@@ -229,20 +230,34 @@ func ResolveActionToken(parent context.Context, value string, tokenType int, now
 	return token, nil
 }
 
-// ConsumeActionToken atomically marks one matching token as used. A second
-// consumer receives mongo.ErrNoDocuments and cannot reuse the token.
-func ConsumeActionToken(parent context.Context, value string, tokenType int, consumedAt time.Time) (ActionToken, error) {
+func actionTokenConsumeFilter(value string, tokenType int, consumedAt time.Time, ttl time.Duration) bson.M {
+	return bson.M{
+		"Token":       value,
+		"Type":        tokenType,
+		"CreatedTime": bson.M{"$gt": consumedAt.Add(-ttl)},
+		"ConsumedAt":  bson.M{"$exists": false},
+	}
+}
+
+// ConsumeValidActionToken atomically marks one still-valid matching token as
+// used. CreatedTime is checked in the same update filter, so work performed
+// after an earlier Resolve cannot consume a token at or beyond its TTL.
+func ConsumeValidActionToken(parent context.Context, value string, tokenType int, consumedAt time.Time, ttl time.Duration) (ActionToken, error) {
 	if Tokens == nil {
 		return ActionToken{}, ErrMongoClientNotInitialized
+	}
+	if ttl <= 0 {
+		return ActionToken{}, fmt.Errorf("consume action token: invalid TTL")
 	}
 	ctx, cancel := boundedOperationContext(parent)
 	defer cancel()
 	var raw bson.M
-	err := Tokens.coll.FindOneAndUpdate(ctx, bson.M{
-		"Token":      value,
-		"Type":       tokenType,
-		"ConsumedAt": bson.M{"$exists": false},
-	}, bson.M{"$set": bson.M{"ConsumedAt": consumedAt}}, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&raw)
+	err := Tokens.coll.FindOneAndUpdate(
+		ctx,
+		actionTokenConsumeFilter(value, tokenType, consumedAt, ttl),
+		bson.M{"$set": bson.M{"ConsumedAt": consumedAt}},
+		options.FindOneAndUpdate().SetReturnDocument(options.After),
+	).Decode(&raw)
 	if err != nil {
 		return ActionToken{}, err
 	}

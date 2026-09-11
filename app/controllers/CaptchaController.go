@@ -4,7 +4,7 @@ import (
 	"github.com/revel/revel"
 	//	"encoding/json"
 	//	"go.mongodb.org/mongo-driver/v2/bson"
-	. "github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/info"
 	"github.com/yangphere/leanote/app/lea/captcha"
 	//	"github.com/yangphere/leanote/app/types"
 	//	"io/ioutil"
@@ -29,18 +29,25 @@ func (r Ca) Apply(req *revel.Request, resp *revel.Response) {
 }
 
 func (c Captcha) Get() revel.Result {
-	c.Response.ContentType = "image/png"
+	sessionId, err := c.AnonymousSessionID()
+	if err != nil {
+		return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+	}
 	image, str := captcha.Fetch()
+	if err := sessionService.SetCaptcha(sessionId, str); err != nil {
+		return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+	}
+	c.Response.ContentType = "image/png"
 	out := io.Writer(c.Response.GetWriter())
-	image.WriteTo(out)
+	if _, err := image.WriteTo(out); err != nil {
+		c.Response.ContentType = ""
+		return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+	}
 
-	sessionId := c.GetSession("_ID")
 	//	LogJ(c.Session)
 	//	Log("------")
 	//	Log(str)
 	//	Log(sessionId)
-	Log("..")
-	sessionService.SetCaptcha(sessionId, str)
 
-	return c.Render()
+	return Ca("")
 }

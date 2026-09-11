@@ -15,6 +15,7 @@
 - 消费 `application-identity` 与 `infrastructure-persistence` 已确认的 principal、SessionWriter、`Session["_ID"]`、API fallback、token TTL 和错误 seam，不在 HTTP 层复制认证或持久化规则。
 - 对 identity action 使用固定方法矩阵；未列方法返回 405。显式 `userId` 只能与 principal 一致；显式 invalid/expired token 不得回退到 Web session。
 - 完成 `ApiUser` first-party registry 注册、`_token/_userId` Cookie 回写顺序和 Set/Delete/Commit/Encode 失败传播，并用真实 HTTP replay 验证。
+- 接收 `application-identity` 于 2026-09-10 确认的 P-01～P-08：匿名期 `_ID` 稳定、登录成功轮换并失效旧 fallback；保持无 CSRF、query/form token、`_ID`+Captcha 基线；登出清理失败显式失败；注册 Cookie 提交失败返回 `registered_relogin_required`；API token 使用 32 字节 CSPRNG/base64url、摘要存储及旧 24 位 token 过渡。HTTP 层只实现映射、Cookie/响应时序和 replay，不复制这些业务规则。
 
 ## Acceptance criteria
 
@@ -23,6 +24,7 @@
 - [ ] Web/API 参数、Session、JSON/JSONP/text/template/file/redirect 响应和错误状态与 Golden 一致。
 - [ ] API token 保持有效，Web 旧 cookie 按约匿名并可重新登录；cookie 安全属性测试通过。
 - [ ] identity action matrix 的方法、405、principal `userId`、`Session["_ID"]` fallback、显式 invalid token fail-closed 和 SessionWriter 写失败均有 contract/replay 证据。
+- [ ] P-01 session rotation、P-06 logout cleanup failure、P-07 `registered_relogin_required` 和 P-03 query/form-only transport 的 HTTP contract/replay 证据通过；无 CSRF 与仅 `_ID`+Captcha 风险已记录，不得伪造为安全能力。
 - [ ] `ApiUser` first-party actions 已注册并可达；API Auth/User envelope、Content-Type、字段顺序和 Golden 保持兼容。
 - [ ] production-config 在 bind/dial/healthz 前完成来源、secret/Mongo 校验，失败返回稳定错误码并以退出码 78 fail closed；有效配置的 healthz 语义与 delivery contract 一致。
 - [ ] harness、`sh/run.sh`、`sh/package.sh`、CI 和文档不再依赖 Revel；`rg 'github.com/revel|revel\.' app cmd go.mod sh conf` 对生产范围零命中。

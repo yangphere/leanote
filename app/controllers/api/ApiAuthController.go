@@ -1,10 +1,12 @@
 package api
 
 import (
+	"errors"
+
 	"github.com/revel/revel"
-	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/service"
 	//	"strconv"
 )
 
@@ -26,10 +28,15 @@ func (c ApiAuth) Login(email, pwd string) revel.Result {
 
 	userInfo, err := authService.Login(email, pwd)
 	if err == nil {
-		token := db.NewObjectID().Hex()
-		sessionService.SetUserId(token, userInfo.UserId.Hex())
+		token, err := sessionService.IssueUserToken(userInfo.UserId.Hex())
+		if err != nil {
+			return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+		}
 		return c.RenderJSON(info.AuthOk{Ok: true, Token: token, UserId: userInfo.UserId, Email: userInfo.Email, Username: userInfo.Username})
 	} else {
+		if !errors.Is(err, service.ErrInvalidCredentials) {
+			return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+		}
 		// 登录错误, 则错误次数++
 		msg = "wrongUsernameOrPassword"
 	}
@@ -40,7 +47,9 @@ func (c ApiAuth) Login(email, pwd string) revel.Result {
 // [Ok]
 func (c ApiAuth) Logout() revel.Result {
 	token := c.getToken()
-	sessionService.Clear(token)
+	if _, err := sessionService.ClearUserToken(token); err != nil {
+		return c.RenderJSON(info.ApiRe{Ok: false, Msg: "logout_cleanup_failed"})
+	}
 	re := info.NewApiRe()
 	re.Ok = true
 	return c.RenderJSON(re)

@@ -11,6 +11,7 @@
 {"file":".trellis/tasks/09-08-business-layer-architecture/design.md","reason":"复核父任务轨道顺序和跨子任务验收责任"}
 {"file":".trellis/tasks/archive/2026-09/09-08-domain-contracts/research/validation-2026-09-09.md","reason":"复核领域已完成证据和必须下游承接的 unknown"}
 {"file":".trellis/tasks/archive/2026-09/09-08-domain-contracts/research/spec-audit-2026-09-09.md","reason":"复核领域复审发现的 API 方法、参数和认证冲突"}
+{"file":".trellis/tasks/archive/2026-09/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"复核 persistence contract/fixture 与最终 Mongo、邮件、并发和跨层证据的状态边界"}
 {"file":".trellis/tasks/archive/2026-08/08-25-revel-migration/design.md","reason":"复核 _ID 稳定标识、Cookie 回写时序和 ClearSession 兼容约束"}
 {"file":"app/controllers/api/API列表-v0.1.md","reason":"复核发布 API action、参数和方法冲突"}
 {"file":"app/controllers/api/API设计-v0.1.md","reason":"复核 token、userId 和错误 envelope 的文档基线"}
@@ -19,3 +20,6 @@
 {"file":".trellis/tasks/09-08-application-identity/implement.md","reason":"复核实施顺序、验证命令和回滚边界"}
 {"file":".trellis/tasks/09-08-application-identity/research/spec-audit-2026-09-09.md","reason":"复核本轮规格审核证据、修订和下游 unknown"}
 {"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"按责任层复核身份服务、adapter、Golden 和未闭合证据"}
+{"file":".trellis/tasks/09-08-interface-http/prd.md","reason":"复核 HTTP 层对已确认 session rotation、logout/register failure、query/form token 和 Cookie replay 契约的承接"}
+{"file":".trellis/tasks/09-08-interface-http/design.md","reason":"复核 HTTP invariant、SessionWriter 时序和无 CSRF/限流兼容边界"}
+{"file":".trellis/tasks/09-08-delivery-verification/acceptance/evidence-matrix.md","reason":"复核跨层 identity/persistence/interface 的 artifact 绑定和 blocked 规则"}

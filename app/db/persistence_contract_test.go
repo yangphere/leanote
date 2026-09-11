@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"strings"
 	"testing"
@@ -97,6 +98,9 @@ func TestPersistenceIndexModelsDeclareRequiredBoundaries(t *testing.T) {
 	if !hasIndex(models["sessions"], "UpdatedTime", 10800) {
 		t.Fatal("sessions must declare a 10800-second UpdatedTime TTL index")
 	}
+	if !hasUniqueIndex(models["sessions"], "SessionId") {
+		t.Fatal("sessions must declare a unique SessionId index for atomic upsert")
+	}
 	if !hasUniqueIndex(models["tokens"], "UserId", "Type") {
 		t.Fatal("tokens must declare a unique (UserId,Type) index")
 	}
@@ -129,6 +133,49 @@ func TestSessionExpiredUsesInclusiveThreeHourBoundary(t *testing.T) {
 	}
 }
 
+func TestSessionFieldUpsertDoesNotUpdateSamePathTwice(t *testing.T) {
+	now := time.Date(2026, 9, 11, 15, 0, 0, 0, time.UTC)
+	update := sessionFieldUpsert("anonymous", bson.M{"Captcha": "answer"}, now)
+	set := update["$set"].(bson.M)
+	insert := update["$setOnInsert"].(bson.M)
+	for key := range set {
+		if _, duplicated := insert[key]; duplicated {
+			t.Fatalf("session upsert updates %q in both $set and $setOnInsert: %#v", key, update)
+		}
+	}
+}
+
+func TestAPISessionTokenUsesRandomBase64URLAndDigestOnlyStorageForm(t *testing.T) {
+	token, err := NewAPISessionToken()
+	if err != nil {
+		t.Fatalf("NewAPISessionToken: %v", err)
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(token)
+	if err != nil || len(raw) != apiSessionTokenBytes {
+		t.Fatalf("token=%q decoded=%d err=%v, want %d random bytes", token, len(raw), err, apiSessionTokenBytes)
+	}
+	digest := SessionTokenDigest(token)
+	if digest == token || len(digest) != 64 {
+		t.Fatalf("digest=%q must be a SHA-256 hex value distinct from the raw token", digest)
+	}
+	filters := sessionTokenFilters(token)
+	if len(filters) != 1 || filters[0]["SessionId"] != digest {
+		t.Fatalf("new token filters=%#v, want digest-only lookup", filters)
+	}
+}
+
+func TestSessionTokenFiltersAllowOnlyStrictLegacyObjectIDs(t *testing.T) {
+	legacy := "507f1f77bcf86cd799439011"
+	filters := sessionTokenFilters(legacy)
+	if len(filters) != 2 || filters[0]["SessionId"] != SessionTokenDigest(legacy) || filters[1]["SessionId"] != legacy {
+		t.Fatalf("legacy filters=%#v, want digest then exact legacy ObjectID", filters)
+	}
+	filters = sessionTokenFilters("not-an-object-id")
+	if len(filters) != 1 {
+		t.Fatalf("non-legacy filters=%#v, want no plaintext fallback", filters)
+	}
+}
+
 func TestActionTokenIssueCreatesIndependentIDAndExpiresInclusively(t *testing.T) {
 	userID := domain.ObjectID{1}
 	created := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
@@ -145,6 +192,23 @@ func TestActionTokenIssueCreatesIndependentIDAndExpiresInclusively(t *testing.T)
 	}
 	if ActionTokenExpired(created, created.Add(2*time.Hour-time.Nanosecond), 2*time.Hour) {
 		t.Fatal("action token must remain valid just before expiry")
+	}
+}
+
+func TestActionTokenConsumeFilterRejectsInclusiveTTLBoundary(t *testing.T) {
+	consumedAt := time.Date(2026, 9, 11, 12, 0, 0, 0, time.UTC)
+	ttl := 2 * time.Hour
+	filter := actionTokenConsumeFilter("secret", 7, consumedAt, ttl)
+
+	created, ok := filter["CreatedTime"].(bson.M)
+	if !ok {
+		t.Fatalf("CreatedTime filter = %#v, want BSON comparison", filter["CreatedTime"])
+	}
+	if len(created) != 1 || created["$gt"] != consumedAt.Add(-ttl) {
+		t.Fatalf("CreatedTime filter = %#v, want strict $gt cutoff %s", created, consumedAt.Add(-ttl))
+	}
+	if filter["Token"] != "secret" || filter["Type"] != 7 {
+		t.Fatalf("consume identity filter = %#v", filter)
 	}
 }
 
@@ -406,5 +470,34 @@ func TestExecuteUserInitializationExposesOutboxSideEffectFailure(t *testing.T) {
 	result, err := ExecuteUserInitialization(context.Background(), plan, nil)
 	if !errors.Is(err, ErrSideEffect) || !errors.Is(err, ErrPartialWrite) || !result.PartialWrite || result.FailedStep != "outbox" {
 		t.Fatalf("outbox failure result = %+v, err=%v", result, err)
+	}
+}
+
+func TestExecutePasswordTokenMutationDoesNotConsumeAfterPasswordFailure(t *testing.T) {
+	consumed := false
+	err := ExecutePasswordTokenMutation(context.Background(), func(ctx context.Context, apply func(context.Context) error) error {
+		return apply(ctx)
+	}, func(context.Context) error {
+		return errors.New("password update failed")
+	}, func(context.Context) error {
+		consumed = true
+		return nil
+	})
+	if err == nil || consumed {
+		t.Fatalf("mutation err=%v consumed=%v, want update failure before consume", err, consumed)
+	}
+}
+
+func TestExecutePasswordTokenMutationFailsClosedWithoutTransaction(t *testing.T) {
+	called := false
+	err := ExecutePasswordTokenMutation(context.Background(), nil, func(context.Context) error {
+		called = true
+		return nil
+	}, func(context.Context) error {
+		called = true
+		return nil
+	})
+	if !errors.Is(err, ErrPartialWrite) || called {
+		t.Fatalf("no-transaction err=%v called=%v, want fail-closed partial_write", err, called)
 	}
 }

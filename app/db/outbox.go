@@ -119,6 +119,41 @@ func outboxIDForKey(key string) domain.ObjectID {
 	return id
 }
 
+func outboxClaimableFilter(now time.Time) bson.M {
+	return bson.M{"$or": []bson.M{
+		{"Status": bson.M{"$in": []string{OutboxStatusPending, OutboxStatusRetry}}, "NextAttemptAt": bson.M{"$lte": now}},
+		{"Status": OutboxStatusSending, "LeaseUntil": bson.M{"$lte": now}},
+		{"Status": OutboxStatusSending, "LeaseUntil": bson.M{"$exists": false}, "UpdatedAt": bson.M{"$lte": now.Add(-OutboxLeaseTTL)}},
+	}}
+}
+
+// NextOutboxEvent returns the identity of the oldest deliverable event. The
+// actual lease is still acquired by DeliverOutbox, so multiple workers may
+// safely observe the same candidate without delivering it twice.
+func NextOutboxEvent(parent context.Context, now time.Time) (OutboxEvent, error) {
+	if Outbox == nil {
+		return OutboxEvent{}, fmt.Errorf("find next outbox event: %w", ErrMongoClientNotInitialized)
+	}
+	ctx, cancel := boundedOperationContext(parent)
+	defer cancel()
+	var raw bson.M
+	err := Outbox.coll.FindOne(
+		ctx,
+		outboxClaimableFilter(now),
+		options.FindOne().
+			SetProjection(bson.M{"_id": 1}).
+			SetSort(bson.D{{Key: "NextAttemptAt", Value: 1}, {Key: "CreatedAt", Value: 1}, {Key: "_id", Value: 1}}),
+	).Decode(&raw)
+	if err != nil {
+		return OutboxEvent{}, err
+	}
+	id, err := decodeObjectIDValue(raw["_id"])
+	if err != nil || id.IsZero() {
+		return OutboxEvent{}, fmt.Errorf("decode next outbox event id: %w", err)
+	}
+	return OutboxEvent{ID: id}, nil
+}
+
 // DeliverOutbox claims and delivers one event synchronously. No goroutine is
 // created here; the caller owns scheduling and can retry the returned
 // side_effect error through a durable worker loop.
@@ -133,14 +168,9 @@ func DeliverOutbox(parent context.Context, eventID domain.ObjectID, now time.Tim
 	defer cancelClaim()
 	leaseID := NewObjectID().Hex()
 	var raw bson.M
-	err := Outbox.coll.FindOneAndUpdate(claimCtx, bson.M{
-		"_id": eventID,
-		"$or": []bson.M{
-			{"Status": bson.M{"$in": []string{OutboxStatusPending, OutboxStatusRetry}}, "NextAttemptAt": bson.M{"$lte": now}},
-			{"Status": OutboxStatusSending, "LeaseUntil": bson.M{"$lte": now}},
-			{"Status": OutboxStatusSending, "LeaseUntil": bson.M{"$exists": false}, "UpdatedAt": bson.M{"$lte": now.Add(-OutboxLeaseTTL)}},
-		},
-	}, bson.M{
+	filter := outboxClaimableFilter(now)
+	filter["_id"] = eventID
+	err := Outbox.coll.FindOneAndUpdate(claimCtx, filter, bson.M{
 		"$set": bson.M{"Status": OutboxStatusSending, "LeaseUntil": now.Add(OutboxLeaseTTL), "LeaseId": leaseID, "UpdatedAt": now},
 		"$inc": bson.M{"Attempts": 1},
 	}, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&raw)

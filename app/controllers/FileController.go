@@ -59,6 +59,13 @@ func (c File) PasteImage(noteId string) revel.Result {
 
 // 头像设置
 func (c File) UploadAvatar() revel.Result {
+	isDemo, err := configService.IsDemoUser(c.GetUserId())
+	if err != nil {
+		return c.RenderJSON(info.Re{Ok: false, Msg: demoPolicyErrorMessage(err)})
+	}
+	if isDemo {
+		return c.RenderJSON(info.Re{Ok: false, Msg: "cannotUpdateDemo"})
+	}
 	re := c.uploadImage("logo", "")
 
 	c.ViewArgs["fileUrlPath"] = re.Id
@@ -105,7 +112,11 @@ func (c File) uploadImage(from, albumId string) (re info.Re) {
 
 	var data []byte
 	c.Params.Bind(&data, "file")
-	handel := c.Params.Files["file"][0]
+	files := c.Params.Files["file"]
+	if len(files) == 0 {
+		return re
+	}
+	handel := files[0]
 	if data == nil || len(data) == 0 {
 		return re
 	}

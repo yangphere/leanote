@@ -114,21 +114,27 @@ func TestActionTokenMongoReplaceAndConsume(t *testing.T) {
 	if two.ID.IsZero() || two.UserID != userID || two.Token != "second" {
 		t.Fatalf("replacement token = %+v", two)
 	}
+	if two.Email != "user@example.test" {
+		t.Fatalf("replacement token email=%q, want issued email", two.Email)
+	}
 	if one.ID != two.ID {
 		t.Fatalf("replacement should atomically update one active document: first=%s second=%s", one.ID.Hex(), two.ID.Hex())
 	}
 
 	resolved, err := ResolveActionToken(context.Background(), "second", 0, created.Add(time.Minute), 2*time.Hour)
-	if err != nil || resolved.Token != "second" {
+	if err != nil || resolved.Token != "second" || resolved.Email != "user@example.test" {
 		t.Fatalf("resolve replacement token = %+v, err=%v", resolved, err)
 	}
 	if _, err := ResolveActionToken(context.Background(), "second", 1, created.Add(time.Minute), 2*time.Hour); !errors.Is(err, ErrTokenTypeMismatch) {
 		t.Fatalf("wrong token type err=%v, want ErrTokenTypeMismatch", err)
 	}
-	if _, err := ConsumeActionToken(context.Background(), "second", 0, created.Add(2*time.Minute)); err != nil {
+	if _, err := ConsumeValidActionToken(context.Background(), "second", 0, two.CreatedTime.Add(2*time.Hour), 2*time.Hour); !errors.Is(err, mongo.ErrNoDocuments) {
+		t.Fatalf("consume at TTL boundary err=%v, want mongo.ErrNoDocuments", err)
+	}
+	if _, err := ConsumeValidActionToken(context.Background(), "second", 0, created.Add(2*time.Minute), 2*time.Hour); err != nil {
 		t.Fatalf("consume token: %v", err)
 	}
-	if _, err := ConsumeActionToken(context.Background(), "second", 0, created.Add(3*time.Minute)); !errors.Is(err, mongo.ErrNoDocuments) {
+	if _, err := ConsumeValidActionToken(context.Background(), "second", 0, created.Add(3*time.Minute), 2*time.Hour); !errors.Is(err, mongo.ErrNoDocuments) {
 		t.Fatalf("second consume err=%v, want mongo.ErrNoDocuments", err)
 	}
 }
@@ -224,11 +230,12 @@ func TestSessionMongoRefreshRejectsInclusiveExpiry(t *testing.T) {
 	defer func() { Sessions = saved }()
 
 	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
-	session := info.Session{Id: NewObjectID(), SessionId: "session-1", UserId: "user-1", CreatedTime: now.Add(-time.Hour), UpdatedTime: now.Add(-time.Hour)}
+	token := "api-session-token"
+	session := info.Session{Id: NewObjectID(), SessionId: SessionTokenDigest(token), UserId: "user-1", CreatedTime: now.Add(-time.Hour), UpdatedTime: now.Add(-time.Hour)}
 	if err := Sessions.Insert(session); err != nil {
 		t.Fatalf("insert session: %v", err)
 	}
-	got, err := ResolveSessionAndRefresh(context.Background(), session.SessionId, now)
+	got, err := ResolveSessionAndRefresh(context.Background(), token, now)
 	if err != nil || !got.UpdatedTime.Equal(now) {
 		t.Fatalf("refresh valid session = %+v, err=%v", got, err)
 	}
@@ -236,8 +243,47 @@ func TestSessionMongoRefreshRejectsInclusiveExpiry(t *testing.T) {
 	if err := Sessions.Update(bson.M{"SessionId": session.SessionId}, bson.M{"$set": bson.M{"UpdatedTime": now.Add(-SessionIdleTTL)}}); err != nil {
 		t.Fatalf("age session to boundary: %v", err)
 	}
-	if _, err := ResolveSessionAndRefresh(context.Background(), session.SessionId, now); !errors.Is(err, ErrSessionNotFound) {
+	if _, err := ResolveSessionAndRefresh(context.Background(), token, now); !errors.Is(err, ErrSessionNotFound) {
 		t.Fatalf("expired session err=%v, want ErrSessionNotFound", err)
+	}
+}
+
+func TestSessionMongoResolveAndDeleteUseDigestThenLegacyFallback(t *testing.T) {
+	databaseRef := persistenceTestDatabase(t)
+	collection := databaseRef.Collection("persistence_sessions_token_lookup")
+	if err := collection.Drop(context.Background()); err != nil {
+		t.Fatalf("drop sessions: %v", err)
+	}
+	saved := Sessions
+	Sessions = wrapCollection(collection)
+	defer func() { Sessions = saved }()
+
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	rawToken := "api-session-token"
+	legacyToken := "507f1f77bcf86cd799439011"
+	for _, session := range []info.Session{
+		{Id: NewObjectID(), SessionId: SessionTokenDigest(rawToken), UserId: "digest-user", CreatedTime: now, UpdatedTime: now},
+		{Id: NewObjectID(), SessionId: legacyToken, UserId: "legacy-user", CreatedTime: now, UpdatedTime: now},
+	} {
+		if err := Sessions.Insert(session); err != nil {
+			t.Fatalf("insert session: %v", err)
+		}
+	}
+
+	got, err := ResolveSessionAndRefresh(context.Background(), rawToken, now.Add(time.Minute))
+	if err != nil || got.UserId != "digest-user" {
+		t.Fatalf("resolve digest token=%+v err=%v", got, err)
+	}
+	got, err = ResolveSessionAndRefresh(context.Background(), legacyToken, now.Add(2*time.Minute))
+	if err != nil || got.UserId != "legacy-user" {
+		t.Fatalf("resolve legacy token=%+v err=%v", got, err)
+	}
+	deleted, err := DeleteSessionForToken(context.Background(), legacyToken)
+	if err != nil || !deleted {
+		t.Fatalf("delete legacy token deleted=%v err=%v", deleted, err)
+	}
+	if _, err := ResolveSessionAndRefresh(context.Background(), legacyToken, now.Add(3*time.Minute)); !errors.Is(err, ErrSessionNotFound) {
+		t.Fatalf("legacy token remained resolvable: %v", err)
 	}
 }
 

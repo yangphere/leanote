@@ -1,11 +1,14 @@
 package api
 
 import (
+	"errors"
+	"strings"
+
+	"github.com/revel/revel"
+	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	"github.com/yangphere/leanote/app/service"
 	//		. "github.com/yangphere/leanote/app/lea"
-	"github.com/revel/revel"
-	"strings"
 )
 
 var userService *service.UserService
@@ -13,7 +16,6 @@ var noteService *service.NoteService
 var trashService *service.TrashService
 var notebookService *service.NotebookService
 var noteContentHistoryService *service.NoteContentHistoryService
-var authService *service.AuthService
 var shareService *service.ShareService
 var blogService *service.BlogService
 var tagService *service.TagService
@@ -32,6 +34,13 @@ var pageSize = 1000
 var defaultSortField = "UpdatedTime"
 var leanoteUserId = "admin" // 不能更改
 
+type authServiceContract interface {
+	Login(string, string) (info.User, error)
+	Register(string, string, string) (bool, string)
+}
+
+var authService authServiceContract
+
 // 状态
 const (
 	S_DEFAULT                 = iota // 0
@@ -45,6 +54,7 @@ const (
 // 拦截器
 // 不需要拦截的url
 var commonUrl = map[string]map[string]bool{"ApiAuth": map[string]bool{"Login": true,
+	"Logout":   true,
 	"Register": true,
 },
 	// 文件的操作也不用登录, userId会从session中获取
@@ -71,14 +81,27 @@ func needValidate(controller, method string) bool {
 // 这里得到token, 若不是login, logout等公用操作, 必须验证是否已登录
 func AuthInterceptor(c *revel.Controller) revel.Result {
 	// 得到token /api/user/info?userId=xxx&token=xxxxx
-	token := c.Params.Values.Get("token")
-	noToken := false
-	if token == "" {
-		// 若无, 则取sessionId
-		token = c.Session.ID()
-		noToken = true
+	provided := false
+	token := ""
+	if values, ok := c.Params.Values["token"]; ok {
+		provided = true
+		if len(values) > 0 {
+			token = values[0]
+		}
 	}
-	c.Session["_token"] = token
+	if !provided {
+		if value, ok := c.Session["_ID"]; ok {
+			token, _ = value.(string)
+		}
+		if token == "" {
+			var err error
+			token, err = db.NewAnonymousSessionID()
+			if err != nil {
+				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+			}
+			c.Session["_ID"] = token
+		}
+	}
 
 	// 全部变成首字大写
 	var controller = strings.Title(c.Name)
@@ -86,16 +109,17 @@ func AuthInterceptor(c *revel.Controller) revel.Result {
 
 	// 验证是否已登录
 	// 通过sessionService判断该token下是否有userId, 并返回userId
-	userId := sessionService.GetUserId(token)
-	if noToken && userId == "" {
-		// 从session中获取, api/file/getImage, api/file/getAttach, api/file/getAllAttach
-		// 客户端
-		userIdI, _ := c.Session["UserId"]
-		if userIdI != nil {
-			userId = userIdI.(string)
-		}
+	userId, err := sessionService.ResolveUserID(token)
+	if err != nil && !errors.Is(err, db.ErrSessionNotFound) {
+		return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
 	}
-	c.Session["_userId"] = userId
+	if err == nil && userId != "" {
+		c.Session["_token"] = token
+		c.Session["_userId"] = userId
+	} else {
+		delete(c.Session, "_token")
+		delete(c.Session, "_userId")
+	}
 
 	// 是否需要验证?
 	if !needValidate(controller, method) {

@@ -1,16 +1,19 @@
 package api
 
 import (
+	"errors"
+
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/httpserver"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/service"
 )
 
 // apiCommonUrl is the ported api whitelist (api/init.go commonUrl):
 // actions reachable without a valid token.
 var apiCommonUrl = map[string]map[string]bool{
-	"ApiAuth": {"Login": true, "Register": true},
+	"ApiAuth": {"Login": true, "Logout": true, "Register": true},
 	"ApiFile": {"GetImage": true, "GetAttach": true, "GetAllAttachs": true},
 }
 
@@ -43,21 +46,33 @@ func apiUserId(c *httpserver.Context) string {
 // envelope. Whitelisted actions pass through.
 func apiAuthBefore(whitelist map[string]map[string]bool) httpserver.BeforeFunc {
 	return func(c *httpserver.Context) httpserver.Result {
-		token := c.Params.String("token")
-		noToken := false
-		if token == "" {
-			token = c.SessionID
-			noToken = true
-		}
-		c.SetSession("_token", token)
-
-		userId := sessionService.GetUserId(token)
-		if noToken && userId == "" {
-			if v, ok := c.Session["UserId"]; ok {
-				userId = v
+		token, supplied := c.Params.Get("token")
+		if !supplied {
+			var ok bool
+			token, ok = c.Session["_ID"]
+			if !ok || token == "" {
+				var err error
+				token, err = db.NewAnonymousSessionID()
+				if err != nil {
+					return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+				}
+				c.SetSession("_ID", token)
 			}
 		}
-		c.SetSession("_userId", userId)
+
+		// Explicit invalid tokens never fall back to a cookie identity. The
+		// same rule applies to an unmapped anonymous _ID: lookup is read-only.
+		userId, err := sessionService.ResolveUserID(token)
+		if err == nil && userId != "" {
+			c.SetSession("_token", token)
+			c.SetSession("_userId", userId)
+		} else {
+			if err != nil && !errors.Is(err, db.ErrSessionNotFound) {
+				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+			}
+			c.DeleteSession("_token")
+			c.DeleteSession("_userId")
+		}
 
 		if !needValidateAPI(whitelist, c.Controller, c.Action) {
 			return nil
@@ -85,9 +100,14 @@ type ApiAuthServer struct{}
 func (s *ApiAuthServer) Login(c *httpserver.Context) httpserver.Result {
 	userInfo, err := authService.Login(c.Params.String("email"), c.Params.String("pwd"))
 	if err == nil {
-		token := db.NewObjectID().Hex()
-		sessionService.SetUserId(token, userInfo.UserId.Hex())
+		token, err := sessionService.IssueUserToken(userInfo.UserId.Hex())
+		if err != nil {
+			return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+		}
 		return c.RenderJSON(info.AuthOk{Ok: true, Token: token, UserId: userInfo.UserId, Email: userInfo.Email, Username: userInfo.Username})
+	}
+	if !errors.Is(err, service.ErrInvalidCredentials) {
+		return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
 	}
 	re := info.ApiRe{Ok: false, Msg: c.Message("wrongUsernameOrPassword")}
 	return c.RenderJSON(re)
@@ -96,7 +116,9 @@ func (s *ApiAuthServer) Login(c *httpserver.Context) httpserver.Result {
 // Logout clears the token's stored userId.
 func (s *ApiAuthServer) Logout(c *httpserver.Context) httpserver.Result {
 	token := c.Params.String("token")
-	sessionService.Clear(token)
+	if _, err := sessionService.ClearUserToken(token); err != nil {
+		return c.RenderJSON(info.ApiRe{Ok: false, Msg: "logout_cleanup_failed"})
+	}
 	re := info.ApiRe{Ok: true}
 	return c.RenderJSON(re)
 }

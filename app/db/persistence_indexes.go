@@ -37,6 +37,13 @@ func PersistenceIndexModels() map[string][]mongo.IndexModel {
 	return map[string][]mongo.IndexModel{
 		"sessions": {
 			{
+				Keys: bson.D{{Key: "SessionId", Value: 1}},
+				Options: options.Index().
+					SetName("sessions_SessionId_unique").
+					SetUnique(true).
+					SetPartialFilterExpression(nonEmptyStringFilter("SessionId")),
+			},
+			{
 				Keys: bson.D{{Key: "UpdatedTime", Value: 1}},
 				Options: options.Index().
 					SetName("sessions_UpdatedTime_ttl_10800").

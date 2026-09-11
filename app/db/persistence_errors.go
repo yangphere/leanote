@@ -12,6 +12,7 @@ var (
 	ErrPartialWrite              = errors.New("partial_write")
 	ErrSideEffect                = errors.New("side_effect")
 	ErrDuplicateIdentity         = errors.New("duplicate_identity")
+	ErrDocumentNotFound          = errors.New("document_not_found")
 	ErrTokenExpired              = errors.New("token expired")
 	ErrTokenTypeMismatch         = errors.New("token type mismatch")
 )
@@ -43,7 +44,7 @@ func (e *PersistenceError) Is(target error) bool {
 		return e.Code == other.Code
 	}
 	switch target {
-	case ErrPartialWrite, ErrSideEffect, ErrDuplicateIdentity, ErrTokenExpired, ErrTokenTypeMismatch:
+	case ErrPartialWrite, ErrSideEffect, ErrDuplicateIdentity, ErrDocumentNotFound, ErrTokenExpired, ErrTokenTypeMismatch:
 		return e.Code == target.Error()
 	default:
 		return false

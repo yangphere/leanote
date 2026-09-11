@@ -1,10 +1,12 @@
 package api
 
 import (
+	"errors"
 	"github.com/revel/revel"
 	//	"encoding/json"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/service"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
 	//	"github.com/yangphere/leanote/app/types"
@@ -43,7 +45,12 @@ func (c ApiUser) Info() revel.Result {
 // [OK]
 func (c ApiUser) UpdateUsername(username string) revel.Result {
 	re := info.NewApiRe()
-	if c.GetUsername() == "demo" {
+	isDemo, err := c.isDemoUser()
+	if err != nil {
+		re.Msg = apiDemoPolicyErrorMessage(err)
+		return c.RenderJSON(re)
+	}
+	if isDemo {
 		re.Msg = "cannotUpdateDemo"
 		return c.RenderJSON(re)
 	}
@@ -60,7 +67,12 @@ func (c ApiUser) UpdateUsername(username string) revel.Result {
 // [OK]
 func (c ApiUser) UpdatePwd(oldPwd, pwd string) revel.Result {
 	re := info.NewApiRe()
-	if c.GetUsername() == "demo" {
+	isDemo, err := c.isDemoUser()
+	if err != nil {
+		re.Msg = apiDemoPolicyErrorMessage(err)
+		return c.RenderJSON(re)
+	}
+	if isDemo {
 		re.Msg = "cannotUpdateDemo"
 		return c.RenderJSON(re)
 	}
@@ -86,10 +98,21 @@ func (c ApiUser) GetSyncState() revel.Result {
 // 成功返回{Logo: url} 头像新url
 // [OK]
 func (c ApiUser) UpdateLogo() revel.Result {
+	isDemo, err := c.isDemoUser()
+	if err != nil {
+		return c.RenderJSON(info.ApiRe{Ok: false, Msg: apiDemoPolicyErrorMessage(err)})
+	}
+	if isDemo {
+		return c.RenderJSON(info.ApiRe{Ok: false, Msg: "cannotUpdateDemo"})
+	}
 	ok, msg, url := c.uploadImage()
 
 	if ok {
-		ok = userService.UpdateAvatar(c.getUserId(), url)
+		if !userService.UpdateAvatar(c.getUserId(), url) {
+			re := info.NewApiRe()
+			re.Msg = "storage"
+			return c.RenderJSON(re)
+		}
 		return c.RenderJSON(map[string]string{"Logo": url})
 	} else {
 		re := info.NewApiRe()
@@ -105,8 +128,14 @@ func (c ApiUser) uploadImage() (ok bool, msg, url string) {
 
 	var data []byte
 	c.Params.Bind(&data, "file")
-	handel := c.Params.Files["file"][0]
+	files := c.Params.Files["file"]
+	if len(files) == 0 {
+		msg = "fileRequired"
+		return
+	}
+	handel := files[0]
 	if data == nil || len(data) == 0 {
+		msg = "fileRequired"
 		return
 	}
 
@@ -157,4 +186,15 @@ func (c ApiUser) uploadImage() (ok bool, msg, url string) {
 	ok = true
 	url = configService.GetSiteUrl() + "/" + fileUrlPath + "/" + filename
 	return
+}
+
+func (c ApiUser) isDemoUser() (bool, error) {
+	return configService.IsDemoUser(c.getUserId())
+}
+
+func apiDemoPolicyErrorMessage(err error) string {
+	if errors.Is(err, service.ErrDemoConfiguration) {
+		return "configuration"
+	}
+	return "storage"
 }

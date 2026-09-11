@@ -1,15 +1,41 @@
 package main
 
 import (
+	"bytes"
+	"errors"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/yangphere/leanote/app/httpserver"
 	i18n "github.com/yangphere/leanote/app/lea/i18n"
 )
+
+func TestLogOutboxDeliveryErrorDoesNotExposeTransportDetails(t *testing.T) {
+	var output bytes.Buffer
+	savedWriter := log.Writer()
+	savedFlags := log.Flags()
+	log.SetOutput(&output)
+	log.SetFlags(0)
+	t.Cleanup(func() {
+		log.SetOutput(savedWriter)
+		log.SetFlags(savedFlags)
+	})
+
+	logOutboxDeliveryError(errors.New("smtp rejected user@example.test token=secret-token"))
+
+	got := output.String()
+	if strings.Contains(got, "user@example.test") || strings.Contains(got, "secret-token") {
+		t.Fatalf("outbox retry log exposed transport details: %q", got)
+	}
+	if !strings.Contains(got, "outbox delivery pending retry") {
+		t.Fatalf("outbox retry log = %q, want stable operational message", got)
+	}
+}
 
 func TestSetupPresentationRendersTemplatesWithConfiguredMessages(t *testing.T) {
 	root := t.TempDir()

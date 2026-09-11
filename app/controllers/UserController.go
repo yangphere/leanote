@@ -30,7 +30,12 @@ func (c User) Account(tab int) revel.Result {
 // 修改用户名, 需要重置session
 func (c User) UpdateUsername(username string) revel.Result {
 	re := info.NewRe()
-	if c.GetUserId() == configService.GetGlobalStringConfig("demoUserId") {
+	isDemo, err := configService.IsDemoUser(c.GetUserId())
+	if err != nil {
+		re.Msg = demoPolicyErrorMessage(err)
+		return c.RenderRe(re)
+	}
+	if isDemo {
 		re.Msg = "cannotUpdateDemo"
 		return c.RenderRe(re)
 	}
@@ -49,7 +54,12 @@ func (c User) UpdateUsername(username string) revel.Result {
 // 修改密码
 func (c User) UpdatePwd(oldPwd, pwd string) revel.Result {
 	re := info.NewRe()
-	if c.GetUserId() == configService.GetGlobalStringConfig("demoUserId") {
+	isDemo, err := configService.IsDemoUser(c.GetUserId())
+	if err != nil {
+		re.Msg = demoPolicyErrorMessage(err)
+		return c.RenderRe(re)
+	}
+	if isDemo {
 		re.Msg = "cannotUpdateDemo"
 		return c.RenderRe(re)
 	}

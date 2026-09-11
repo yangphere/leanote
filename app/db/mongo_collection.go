@@ -146,12 +146,39 @@ func (c *Collection) Update(query, update interface{}) error {
 
 // UpdateContext preserves a transaction session carried by parent.
 func (c *Collection) UpdateContext(parent context.Context, query, update interface{}) error {
+	res, err := c.updateOneContext(parent, query, update)
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		c.logNotFound("update")
+	}
+	return nil
+}
+
+// UpdateOneMatchedContext preserves UpdateContext's operator/replacement
+// compatibility while returning ErrDocumentNotFound when nothing matches.
+// Sensitive multi-step mutations use this form so a missing user cannot be
+// mistaken for a successful write and followed by token consumption.
+func (c *Collection) UpdateOneMatchedContext(parent context.Context, query, update interface{}) error {
+	res, err := c.updateOneContext(parent, query, update)
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		c.logNotFound("update")
+		return ErrDocumentNotFound
+	}
+	return nil
+}
+
+func (c *Collection) updateOneContext(parent context.Context, query, update interface{}) (*mongo.UpdateResult, error) {
 	ctx, cancel := boundedOperationContext(parent)
 	defer cancel()
 	replacement, err := splitUpdateKind(update)
 	if err != nil {
 		c.logFailure("update", err)
-		return err
+		return nil, err
 	}
 	var res *mongo.UpdateResult
 	if replacement {
@@ -161,12 +188,9 @@ func (c *Collection) UpdateContext(parent context.Context, query, update interfa
 	}
 	if err != nil {
 		c.logFailure("update", err)
-		return err
+		return nil, err
 	}
-	if res.MatchedCount == 0 {
-		c.logNotFound("update")
-	}
-	return nil
+	return res, nil
 }
 
 // UpdateAll updates every matching document and returns the matched count.

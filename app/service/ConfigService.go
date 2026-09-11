@@ -1,9 +1,11 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/db"
+	"github.com/yangphere/leanote/app/domain"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -26,6 +28,14 @@ type ConfigService struct {
 	GlobalArrayConfigs  map[string][]string
 	GlobalMapConfigs    map[string]map[string]string
 	GlobalArrMapConfigs map[string][]map[string]string
+	findDemoUser        func(string) (info.User, error)
+}
+
+var ErrDemoConfiguration = errors.New("demo configuration")
+
+type DemoAccount struct {
+	UserID domain.ObjectID
+	Login  string
 }
 
 // appStart时 将全局的配置从数据库中得到作为全局
@@ -164,6 +174,51 @@ func (this *ConfigService) UpdateGlobalArrMapConfig(userId, key string, value []
 // 获取全局配置, 博客平台使用
 func (this *ConfigService) GetGlobalStringConfig(key string) string {
 	return this.GlobalStringConfigs[key]
+}
+
+// DemoAccount validates the complete demo identity configuration. demoUserId
+// is authoritative, while demoUsername must resolve to that same identity;
+// incomplete or inconsistent configuration never degrades into a username
+// guess or an unprotected non-demo result.
+func (this *ConfigService) DemoAccount() (DemoAccount, error) {
+	idValue := strings.TrimSpace(this.GetGlobalStringConfig("demoUserId"))
+	login := strings.ToLower(strings.TrimSpace(this.GetGlobalStringConfig("demoUsername")))
+	if idValue == "" || login == "" {
+		return DemoAccount{}, fmt.Errorf("%w: missing identity", ErrDemoConfiguration)
+	}
+	id, err := domain.ParseObjectID(idValue)
+	if err != nil || id.IsZero() {
+		return DemoAccount{}, fmt.Errorf("%w: invalid user id", ErrDemoConfiguration)
+	}
+	finder := this.findDemoUser
+	if finder == nil {
+		if userService == nil {
+			return DemoAccount{}, errors.New("demo user service is not initialized")
+		}
+		finder = userService.FindUserInfoByName
+	}
+	user, err := finder(login)
+	if err != nil {
+		return DemoAccount{}, fmt.Errorf("resolve demo username: %w", err)
+	}
+	if user.UserId.IsZero() || user.UserId != id {
+		return DemoAccount{}, fmt.Errorf("%w: username identity mismatch", ErrDemoConfiguration)
+	}
+	return DemoAccount{UserID: id, Login: login}, nil
+}
+
+// IsDemoUser compares an authenticated principal only after the shared demo
+// configuration has passed DemoAccount validation.
+func (this *ConfigService) IsDemoUser(userID string) (bool, error) {
+	account, err := this.DemoAccount()
+	if err != nil {
+		return false, err
+	}
+	id, err := domain.ParseObjectID(strings.TrimSpace(userID))
+	if err != nil || id.IsZero() {
+		return false, fmt.Errorf("validate demo principal: invalid user id")
+	}
+	return id == account.UserID, nil
 }
 func (this *ConfigService) GetGlobalArrayConfig(key string) []string {
 	arr := this.GlobalArrayConfigs[key]

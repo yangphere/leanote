@@ -1,9 +1,12 @@
 package controllers
 
 import (
+	"errors"
+
 	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/service"
 	"strings"
 	//	"strconv"
 )
@@ -12,6 +15,17 @@ import (
 
 type Auth struct {
 	BaseController
+}
+
+func authLoginStorageError(err error) bool {
+	return err != nil && !errors.Is(err, service.ErrInvalidCredentials)
+}
+
+func demoPolicyErrorMessage(err error) string {
+	if errors.Is(err, service.ErrDemoConfiguration) {
+		return "configuration"
+	}
+	return "storage"
 }
 
 // --------
@@ -23,9 +37,11 @@ func (c Auth) Login(email, from string) revel.Result {
 	c.ViewArgs["from"] = from
 	c.ViewArgs["openRegister"] = configService.IsOpenRegister()
 
-	sessionId := c.Session.ID()
-	if sessionService.LoginTimesIsOver(sessionId) {
-		c.ViewArgs["needCaptcha"] = true
+	sessionID, err := c.AnonymousSessionID()
+	if err == nil {
+		if over, readErr := sessionService.LoginTimesIsOver(sessionID); readErr == nil && over {
+			c.ViewArgs["needCaptcha"] = true
+		}
 	}
 
 	c.SetLocale()
@@ -37,66 +53,90 @@ func (c Auth) Login(email, from string) revel.Result {
 	return c.RenderTemplate("home/login.html")
 }
 
-// 为了demo和register
-func (c Auth) doLogin(email, pwd string) revel.Result {
-	sessionId := c.Session.ID()
-	var msg = ""
-
-	userInfo, err := authService.Login(email, pwd)
-	if err != nil {
-		// 登录错误, 则错误次数++
-		msg = "wrongUsernameOrPassword"
-	} else {
-		c.SetSession(userInfo)
-		sessionService.ClearLoginTimes(sessionId)
-		return c.RenderJSON(info.Re{Ok: true})
-	}
-
-	return c.RenderJSON(info.Re{Ok: false, Item: sessionService.LoginTimesIsOver(sessionId), Msg: c.Message(msg)})
-}
 func (c Auth) DoLogin(email, pwd string, captcha string) revel.Result {
-	sessionId := c.Session.ID()
+	sessionId, err := c.AnonymousSessionID()
+	if err != nil {
+		return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+	}
 	var msg = ""
 
 	// > 5次需要验证码, 直到登录成功
-	if sessionService.LoginTimesIsOver(sessionId) && sessionService.GetCaptcha(sessionId) != captcha {
+	over, err := sessionService.LoginTimesIsOver(sessionId)
+	if err != nil {
+		return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+	}
+	storedCaptcha := ""
+	if over {
+		storedCaptcha, err = sessionService.GetCaptcha(sessionId)
+		if err != nil {
+			return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+		}
+	}
+	if over && storedCaptcha != captcha {
 		msg = "captchaError"
 	} else {
 		userInfo, err := authService.Login(email, pwd)
 		if err != nil {
+			if authLoginStorageError(err) {
+				return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+			}
 			// 登录错误, 则错误次数++
 			msg = "wrongUsernameOrPassword"
-			sessionService.IncrLoginTimes(sessionId)
+			if err := sessionService.IncrLoginTimes(sessionId); err != nil {
+				return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+			}
 		} else {
+			if err := c.RotateAuthenticatedSession(userInfo.UserId.Hex()); err != nil {
+				return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+			}
 			c.SetSession(userInfo)
-			sessionService.ClearLoginTimes(sessionId)
 			return c.RenderJSON(info.Re{Ok: true})
 		}
 	}
 
-	return c.RenderJSON(info.Re{Ok: false, Item: sessionService.LoginTimesIsOver(sessionId), Msg: c.Message(msg)})
+	over, err = sessionService.LoginTimesIsOver(sessionId)
+	if err != nil {
+		return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+	}
+	return c.RenderJSON(info.Re{Ok: false, Item: over, Msg: c.Message(msg)})
 }
 
 // 注销
 func (c Auth) Logout() revel.Result {
-	sessionId := c.Session.ID()
-	sessionService.Clear(sessionId)
+	sessionId, err := c.AnonymousSessionID()
+	if err != nil {
+		return c.RenderJSON(info.Re{Ok: false, Msg: "logout_cleanup_failed"})
+	}
+	if _, err := sessionService.ClearUserToken(sessionId); err != nil {
+		return c.RenderJSON(info.Re{Ok: false, Msg: "logout_cleanup_failed"})
+	}
 	c.ClearSession()
 	return c.Redirect("/login")
 }
 
 // 体验一下
 func (c Auth) Demo() revel.Result {
-	email := configService.GetGlobalStringConfig("demoUsername")
+	account, err := configService.DemoAccount()
+	if err != nil {
+		return c.RenderJSON(info.Re{Ok: false, Msg: demoPolicyErrorMessage(err)})
+	}
 	pwd := configService.GetGlobalStringConfig("demoPassword")
 
-	userInfo, err := authService.Login(email, pwd)
+	userInfo, err := authService.Login(account.Login, pwd)
 	if err != nil {
+		if authLoginStorageError(err) {
+			return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+		}
 		return c.RenderJSON(info.Re{Ok: false})
-	} else {
-		c.SetSession(userInfo)
-		return c.Redirect("/note")
 	}
+	if userInfo.UserId != account.UserID {
+		return c.RenderJSON(info.Re{Ok: false, Msg: "configuration"})
+	}
+	if err := c.RotateAuthenticatedSession(userInfo.UserId.Hex()); err != nil {
+		return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+	}
+	c.SetSession(userInfo)
+	return c.Redirect("/note")
 }
 
 // --------
@@ -134,7 +174,15 @@ func (c Auth) DoRegister(email, pwd, iu string) revel.Result {
 
 	// 注册成功, 则立即登录之
 	if re.Ok {
-		c.doLogin(email, pwd)
+		userInfo, err := authService.Login(email, pwd)
+		if err != nil || c.RotateAuthenticatedSession(userInfo.UserId.Hex()) != nil {
+			// Registration has already committed. Do not pretend the session
+			// write succeeded; the user must authenticate in a new request.
+			re.Ok = false
+			re.Msg = "registered_relogin_required"
+			return c.RenderRe(re)
+		}
+		c.SetSession(userInfo)
 	}
 
 	return c.RenderRe(re)
@@ -149,9 +197,8 @@ func (c Auth) FindPassword() revel.Result {
 	return c.RenderTemplate("home/find_password.html")
 }
 func (c Auth) DoFindPassword(email string) revel.Result {
-	pwdService.FindPwd(email)
 	re := info.NewRe()
-	re.Ok = true
+	re.Ok, re.Msg = pwdService.FindPwd(email)
 	return c.RenderJSON(re)
 }
 

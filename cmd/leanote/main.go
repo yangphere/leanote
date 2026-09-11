@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/controllers"
@@ -51,7 +53,9 @@ func main() {
 		orInt(*port, cfg.IntDefault("http.port", 9000)))
 	shutdownTimeout := httpserver.ShutdownTimeout(cfg)
 
+	databaseReady := true
 	if err := initDatabase(cfg, *runMode); err != nil {
+		databaseReady = false
 		var configErr *httpserver.ConfigError
 		if errors.As(err, &configErr) {
 			logConfigError(err)
@@ -75,6 +79,9 @@ func main() {
 		log.Fatalf("parse routes: %v", err)
 	}
 	service.InitService()
+	if databaseReady && !service.ConfigS.InitGlobalConfigs() {
+		log.Printf("global configuration unavailable; email delivery will retry through outbox")
+	}
 	controllers.InitService()
 	api.InitService()
 	registry := httpserver.NewRegistry()
@@ -94,13 +101,41 @@ func main() {
 
 	log.Printf("leanote starting: addr=%s runMode=%s shutdownTimeout=%s", addr, *runMode, shutdownTimeout)
 	srv := httpserver.NewServer(addr, app, shutdownTimeout)
+	var stopOutbox context.CancelFunc
+	var outboxDone chan struct{}
+	if databaseReady {
+		worker := service.NewOutboxWorker(service.EmailS.DeliverOutbox)
+		worker.SetErrorHandler(logOutboxDeliveryError)
+		workerCtx, cancel := context.WithCancel(context.Background())
+		stopOutbox = cancel
+		outboxDone = make(chan struct{})
+		go func() {
+			defer close(outboxDone)
+			worker.Run(workerCtx)
+		}()
+	}
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, os.Interrupt)
-	if err := srv.Run(signals, nil); err != nil {
-		log.Fatalf("shutdown: %v", err)
+	runErr := srv.Run(signals, nil)
+	if stopOutbox != nil {
+		stopOutbox()
+		select {
+		case <-outboxDone:
+		case <-time.After(shutdownTimeout):
+			runErr = errors.Join(runErr, errors.New("outbox worker shutdown timed out"))
+		}
+	}
+	if runErr != nil {
+		log.Fatalf("shutdown: %v", runErr)
 	}
 	log.Printf("leanote stopped cleanly")
+}
+
+func logOutboxDeliveryError(error) {
+	// SMTP responses can echo recipient data. The durable outbox retains the
+	// diagnostic state; the process log emits only a stable, redacted signal.
+	log.Printf("outbox delivery pending retry")
 }
 
 func applicationBase(confPath string) string {

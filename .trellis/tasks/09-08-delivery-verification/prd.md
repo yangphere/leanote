@@ -12,11 +12,13 @@
 - 真实 Chrome、Edge、Firefox、Safari 的 current/previous 八槽位各执行固定四项 coverage，artifact 绑定同一 commit/run/attempt 并通过 JCS digest 校验。
 - 任一环境缺失、失败、清理失败或 artifact 缺失均保持 blocked，不能用局部单测替代。
 - 汇合并核对 `infrastructure-persistence` 的事务/索引/TTL/outbox/token 证据、`application-identity` 的 principal/Session/API Golden 证据和 `interface-http` 的 route/session/replay 证据；任何交接矩阵缺项都保持 blocked。
+- identity 交接按 2026-09-10 已确认的 P-01～P-08 验证：匿名期 `_ID` 稳定且登录成功轮换、无 CSRF/query-form token/`_ID`+Captcha 兼容基线、登出和注册 Cookie 失败 envelope、32 字节 API token 摘要存储及旧 token 过渡。书面确认不替代真实 Mongo/HTTP/browser/mail/release artifact。
 
 ## Acceptance criteria
 
 - [ ] 所有子任务依赖、Go/JS/Golden/USN 和跨层权限回归通过。
 - [ ] identity → persistence → interface 的交接矩阵逐项有 commit/run/attempt 绑定证据，且不存在把 mock、controller 直调或历史 artifact 当作真实通过的情况。
+- [ ] identity P-01/P-06/P-07 与 persistence P-08 摘要 token contract 的跨层 replay、失败路径和日志脱敏有绑定证据；无 CSRF 与通用限流保持现状的风险记录可复核。
 - [ ] 质量门 summary 与失败路径准确记录 discovery/execution、stage、exit code 和脱敏原因。
 - [ ] 八槽浏览器 artifact、生产配置矩阵、tarball、容器、PDF 和 GHCR 证据可复核。
 - [ ] 发布前验证阻止错误版本、重复 tag/release/image、跨 run artifact 和不一致 digest。
