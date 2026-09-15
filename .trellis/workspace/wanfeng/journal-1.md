@@ -404,3 +404,40 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 17: 完成笔记工作区持久化与安全重试
+<!-- trellis-session: v=2 fp=031fcc81bbb33eae -->
+
+**Date**: 2026-09-15
+**Task**: 完成笔记工作区持久化与安全重试
+**Branch**: `dev`
+
+### Summary
+
+收敛 notes application 契约、durable operation receipt、USN 与安全重放语义，补齐 Mongo/HTTP/Golden 回归并归档 09-08-application-notes；17 个 Web action、Mongo 7/副本集、kill/restart/failpoint、浏览器、PDF 与跨主机文件系统证据继续由 sibling 任务承接。
+
+### Main Changes
+
+- 引入纯 notes application 边界和 owner-scoped receipt/lease/CAS，统一笔记、笔记本、标签、回收站及复制操作的重试与失败语义。
+- 补齐 copy/shared-copy、client no-op、API Files 三态、Session BSON fixture 与关联 Trellis 规格/验收材料。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `58eb8929` | feat(notes): 收敛笔记工作区持久化与安全重试 |
+
+### Testing
+
+- [OK] 五个 Go 包：288 executed，287 passed，0 failed，1 replica-set skip。
+- [OK] HTTP/Golden harness：108 executed，106 passed，0 failed，2 sibling-owned skips。
+- [OK] gofmt、go vet（含 harness）、go build、Node note-save、6 个 task validate、application dependency scan 与 diff hygiene 通过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 由 delivery-verification 等 sibling 任务继续补齐 17 个 Web action、Mongo 7/副本集、kill/restart/failpoint、浏览器、PDF 与跨主机文件系统证据。
