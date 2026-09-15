@@ -15,12 +15,12 @@
 可并行但必须分别验收：
 
 - [ ] `application-identity`：用户、密码、Session、Token、认证授权。
-- [ ] `application-notes`：笔记、笔记本、标签、回收站、历史、建议、同步。
-- [ ] `application-content`：文件、附件、图片、相册、PDF、上传。
+- [ ] `application-notes`：笔记、笔记本、标签、回收站、历史、同步，以及 note-specific asset receipt/idempotency adapter；Suggestion/feedback 交给 admin。
+- [ ] `application-content`：通用文件根/路径安全/publish/verify primitive、附件、图片、相册、PDF、上传，并验收 notes adapter 的消费合同。
 - [ ] `application-publishing`：分享、博客、评论、群组、主题、预览。
 - [ ] `application-admin`：管理端、配置、升级、邮件、运维审计。
 
-每个任务都要验证所有权查询、由 D-01 决定的 notebook/tag delete 新 USN tombstone/sync 配对、错误 envelope、幂等/冲突和跨服务调用；旧差异作为基线对照，不把授权或 mutation 逻辑复制到 controller。
+每个任务都要验证所有权查询、由 D-01 决定的 notebook/tag delete 新 USN tombstone/sync 配对、错误 envelope、幂等/冲突和跨服务调用；旧差异作为基线对照，不把授权或 mutation 逻辑复制到 controller。边界检查针对纯 application contract 和 controller collection/client，不把允许的 `app/service → app/db` 与 BSON map 误报为约 190 处全库迁移门禁。
 
 ## Phase 3：基础设施和接口适配
 

@@ -47,6 +47,11 @@ type Note struct {
 	Usn int `bson:"Usn"` // UpdateSequenceNum
 
 	IsDeleted bool `bson:"IsDeleted"` // 删除位
+
+	// Mutation leases fence multi-step workspace writes.  They are internal
+	// persistence fields and must never become part of the public JSON model.
+	MutationLeaseID    string    `bson:"MutationLeaseId,omitempty" json:"-"`
+	MutationLeaseUntil time.Time `bson:"MutationLeaseUntil,omitempty" json:"-"`
 }
 
 // 内容
@@ -91,18 +96,24 @@ type NoteContentHistory struct {
 type NoteOrContent struct {
 	NotebookId string
 	NoteId     string
-	UserId     string
-	Title      string
-	Desc       string
-	Src        string
-	ImgSrc     string
-	Tags       string
-	Content    string
-	Abstract   string
-	IsNew      bool
-	IsMarkdown bool
-	FromUserId string // 为共享而新建
-	IsBlog     bool   // 是否是blog, 更新note不需要修改, 添加note时才有可能用到, 此时需要判断notebook是否设为Blog
+	// Optional operation generation fields are presence-sensitive at the Web
+	// adapter. ExpectedUsn remains an int so legacy form binding keeps the
+	// existing shape; the controller only passes it to the service when the
+	// request actually contains the field.
+	OperationId string
+	ExpectedUsn int
+	UserId      string
+	Title       string
+	Desc        string
+	Src         string
+	ImgSrc      string
+	Tags        string
+	Content     string
+	Abstract    string
+	IsNew       bool
+	IsMarkdown  bool
+	FromUserId  string // 为共享而新建
+	IsBlog      bool   // 是否是blog, 更新note不需要修改, 添加note时才有可能用到, 此时需要判断notebook是否设为Blog
 }
 
 // 分开的

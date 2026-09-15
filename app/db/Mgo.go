@@ -36,6 +36,7 @@ var UserBlogs *Collection
 
 var Tokens *Collection
 var Outbox *Collection
+var WorkspaceOperations *Collection
 
 var Suggestions *Collection
 
@@ -149,6 +150,7 @@ func InitWithError(url, dbname string) error {
 	// find password
 	Tokens = wrapCollection(database.Collection("tokens"))
 	Outbox = wrapCollection(database.Collection("outbox"))
+	WorkspaceOperations = wrapCollection(database.Collection("workspace_operations"))
 
 	// Suggestion
 	Suggestions = wrapCollection(database.Collection("suggestions"))
@@ -206,6 +208,7 @@ func resetCollections() {
 	UserBlogs = nil
 	Tokens = nil
 	Outbox = nil
+	WorkspaceOperations = nil
 	Suggestions = nil
 	Albums = nil
 	Files = nil

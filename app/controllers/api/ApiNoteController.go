@@ -1,16 +1,22 @@
 package api
 
 import (
+	"context"
+	"fmt"
+	"net/url"
+
 	"github.com/revel/revel"
 	//	"encoding/json"
+	applicationnotes "github.com/yangphere/leanote/app/application/notes"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/service"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"os"
 	"os/exec"
-	// "strings"
 	"regexp"
+	"strings"
 	"time"
 	//	"github.com/yangphere/leanote/app/types"
 	//	"io/ioutil"
@@ -239,39 +245,120 @@ func (c ApiNote) AddNote(noteOrContent info.ApiNote) revel.Result {
 		re.Msg = "notebookIdNotExists"
 		return c.RenderJSON(re)
 	}
+	if !noteService.CanCreateNote(c.getUserId(), c.getUserId(), noteOrContent.NotebookId) {
+		re.Msg = "notebookIdNotExists"
+		return c.RenderJSON(re)
+	}
 
 	noteId := db.NewObjectID()
-	// TODO 先上传图片/附件, 如果不成功, 则返回false
-	//
+	clientNoteID := noteOrContent.NoteId != ""
+	if clientNoteID {
+		if !db.IsValidObjectIDHex(noteOrContent.NoteId) {
+			re.Msg = "noteIdNotExists"
+			return c.RenderJSON(re)
+		}
+		noteId = db.MustObjectIDFromHex(noteOrContent.NoteId)
+	}
+	var createOperationID string
+	var createInputDigest string
+	var createAssets []applicationnotes.OperationAsset
+	if clientNoteID {
+		contentDigests := make(map[int][]byte, len(noteOrContent.Files))
+		for index, file := range noteOrContent.Files {
+			if !file.HasBody || file.LocalFileId == "" {
+				continue
+			}
+			var data []byte
+			c.Params.Bind(&data, "FileDatas["+file.LocalFileId+"]")
+			contentDigests[index] = data
+		}
+		var identityErr error
+		createOperationID, createInputDigest, createAssets, identityErr = newAPINoteCreateOperationWithContent(userId, noteId, noteOrContent, contentDigests)
+		if identityErr != nil {
+			re.Msg = "saveFailed"
+			return c.RenderJSON(re)
+		}
+		if category := noteService.BeginNoteCreateAssetReceipt(userId, noteId, createOperationID, createInputDigest, createAssets); category != "" {
+			if category == service.WorkspaceConflict {
+				re.Msg = "conflict"
+			} else {
+				re.Msg = "saveFailed"
+			}
+			return c.RenderJSON(re)
+		}
+	}
+	assetByIndex := make(map[int]string, len(createAssets))
+	for _, asset := range createAssets {
+		assetByIndex[asset.Index] = asset.AssetID
+	}
+	// Keep only request-owned asset identities.  For a stable create retry this
+	// includes assets written by an earlier attempt; cleanup is safe because it
+	// runs only when the note is proven not to exist.
+	cleanupFiles := make([]info.NoteFile, len(noteOrContent.Files))
+	copy(cleanupFiles, noteOrContent.Files)
+	for i := range cleanupFiles {
+		cleanupFiles[i].FileId = ""
+		if assetID := assetByIndex[i]; assetID != "" && cleanupFiles[i].HasBody {
+			cleanupFiles[i].FileId = assetID
+		}
+	}
+	cleanupAfterCreateFailure := func() error {
+		cleanupErr := cleanupUncommittedAPINoteAssets(noteId.Hex(), userId.Hex(), cleanupFiles)
+		if cleanupErr != nil {
+			Log(cleanupErr.Error())
+			// The pending receipt remains the recovery identity while either the
+			// row or the file is uncertain.  Terminal failure is only safe after
+			// cleanup has been verified.
+			return cleanupErr
+		}
+		if createOperationID == "" {
+			return nil
+		}
+		if category := noteService.FailNoteCreateAssetReceipt(userId, createOperationID); category != "" {
+			return fmt.Errorf("close note create asset receipt: %s", category)
+		}
+		return nil
+	}
 	attachNum := 0
 	if noteOrContent.Files != nil && len(noteOrContent.Files) > 0 {
 		for i, file := range noteOrContent.Files {
 			if file.HasBody {
 				if file.LocalFileId != "" {
 					// FileDatas[54c7ae27d98d0329dd000000]
-					ok, msg, fileId := c.upload("FileDatas["+file.LocalFileId+"]", noteId.Hex(), file.IsAttach)
+					ok, msg, fileId := c.uploadWithAssetIdentity("FileDatas["+file.LocalFileId+"]", noteId.Hex(), file.IsAttach, assetByIndex[i])
 
 					if !ok {
 						re.Ok = false
 						if msg != "" {
 							Log(msg)
 							Log(file.LocalFileId)
-							re.Msg = "fileUploadError"
+							if msg == apiUploadPartialWrite {
+								re.Msg = apiUploadPartialWrite
+							} else {
+								re.Msg = "fileUploadError"
+							}
 						}
 						// 报不是图片的错误没关系, 证明客户端传来非图片的数据
 						if msg != "notImage" {
+							if cleanupAfterCreateFailure() != nil {
+								re.Msg = "partial_write"
+							}
 							return c.RenderJSON(re)
 						}
 					} else {
 						// 建立映射
 						file.FileId = fileId
 						noteOrContent.Files[i] = file
+						cleanupFiles[i] = file
 
 						if file.IsAttach {
 							attachNum++
 						}
 					}
 				} else {
+					if cleanupAfterCreateFailure() != nil {
+						re.Msg = "partial_write"
+					}
 					return c.RenderJSON(re)
 				}
 			}
@@ -315,10 +402,23 @@ func (c ApiNote) AddNote(noteOrContent info.ApiNote) revel.Result {
 		note.Desc = SubStringHTMLToRaw(noteContent.Abstract, 200)
 	}
 
-	note = noteService.AddNoteAndContentApi(note, noteContent, myUserId)
-
-	if note.NoteId.IsZero() {
+	var ok bool
+	var msg string
+	if createOperationID != "" {
+		note, ok, msg = noteService.AddNoteAndContentApiResultWithIdentity(note, noteContent, myUserId, createOperationID, createInputDigest, createAssets)
+	} else {
+		note, ok, msg = noteService.AddNoteAndContentApiResult(note, noteContent, myUserId)
+	}
+	if !ok || note.NoteId.IsZero() {
 		re.Ok = false
+		re.Msg = nonEmptyAPIMessage(msg)
+		// A non-zero note means the required create committed and a later
+		// projection/repair failed; its assets are still live.  A zero result
+		// is the only safe cleanup trigger, and the helper rechecks the store
+		// for a possible partial note before deleting anything.
+		if note.NoteId.IsZero() && cleanupAfterCreateFailure() != nil {
+			re.Msg = "partial_write"
+		}
 		return c.RenderJSON(re)
 	}
 
@@ -334,6 +434,37 @@ func (c ApiNote) AddNote(noteOrContent info.ApiNote) revel.Result {
 	noteOrContent.Abstract = ""
 	//	apiNote := info.NoteToApiNote(note, noteOrContent.Files)
 	return c.RenderJSON(noteOrContent)
+}
+
+func nonEmptyAPIMessage(msg string) string {
+	if strings.TrimSpace(msg) == "" {
+		return "saveFailed"
+	}
+	return msg
+}
+
+// apiNoteFilesPresent decodes the API update's three-state files contract at
+// the request boundary. An absent collection leaves assets unchanged; either
+// marker represents an explicit empty collection; indexed fields or a
+// non-empty decoded collection represent complete replacement values.
+func apiNoteFilesPresent(values url.Values, files []info.NoteFile) bool {
+	if len(files) > 0 {
+		return true
+	}
+	for key, fieldValues := range values {
+		if key == "Files" || strings.HasPrefix(key, "Files[") {
+			return true
+		}
+		if key != "FilesPresent" && key != "HasFiles" {
+			continue
+		}
+		for _, value := range fieldValues {
+			if value == "1" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // 更新笔记
@@ -371,59 +502,75 @@ func (c ApiNote) UpdateNote(noteOrContent info.ApiNote) revel.Result {
 		re.Msg = "notExists"
 		return c.RenderJSON(re)
 	}
-	if note.Usn != noteOrContent.Usn {
-		re.Msg = "conflict"
-		Log("conflict")
+	if c.Has("NotebookId") && (!db.IsValidObjectIDHex(noteOrContent.NotebookId) || !noteService.CanCreateNote(userId, userId, noteOrContent.NotebookId)) {
+		re.Msg = "notebookIdNotExists"
 		return c.RenderJSON(re)
 	}
-	Log("没有冲突")
 
-	// 如果传了files
-	// TODO 测试
-	/*
-		for key, v := range c.Params.Values {
-			Log(key)
-			Log(v)
-		}
-	*/
-	//	Log(c.Has("Files[0]"))
-	if c.Has("Files[0][LocalFileId]") {
-		//		LogJ(c.Params.Files)
-		if noteOrContent.Files != nil && len(noteOrContent.Files) > 0 {
-			for i, file := range noteOrContent.Files {
-				if file.HasBody {
-					if file.LocalFileId != "" {
-						// FileDatas[54c7ae27d98d0329dd000000]
-						ok, msg, fileId := c.upload("FileDatas["+file.LocalFileId+"]", noteId, file.IsAttach)
-						if !ok {
-							Log("upload file error")
-							re.Ok = false
-							if msg == "" {
-								re.Msg = "fileUploadError"
-							} else {
-								re.Msg = msg
-							}
-							return c.RenderJSON(re)
-						} else {
-							// 建立映射
-							file.FileId = fileId
-							noteOrContent.Files[i] = file
-						}
-					} else {
-						return c.RenderJSON(re)
-					}
-				}
+	var assetWork *applicationnotes.AssetMutation
+	filesPresent := apiNoteFilesPresent(c.Params.Values, noteOrContent.Files)
+	if filesPresent {
+		contentDigests := make(map[int][]byte, len(noteOrContent.Files))
+		for i, file := range noteOrContent.Files {
+			if !file.HasBody || file.LocalFileId == "" {
+				continue
+			}
+			var data []byte
+			c.Params.Bind(&data, "FileDatas["+file.LocalFileId+"]")
+			if _, present := c.Params.Files["FileDatas["+file.LocalFileId+"]"]; present {
+				contentDigests[i] = data
 			}
 		}
-
-		//		Log("after upload")
-		//		LogJ(noteOrContent.Files)
-
+		assetSeed := stableAPIUpdateAssetSeedWithContent(db.MustObjectIDFromHex(userId), note.NoteId, noteOrContent.Usn, noteOrContent, contentDigests)
+		if assetSeed == "" {
+			re.Msg = "saveFailed"
+			return c.RenderJSON(re)
+		}
+		files := append([]info.NoteFile(nil), noteOrContent.Files...)
+		assets := make([]applicationnotes.OperationAsset, 0, len(files))
+		assetByIndex := make(map[int]string, len(files))
+		for i, file := range files {
+			if !file.HasBody {
+				continue
+			}
+			if file.LocalFileId == "" {
+				re.Msg = "fileRequired"
+				return c.RenderJSON(re)
+			}
+			assetID := stableAPIAssetID(assetSeed, file.LocalFileId, i, file.IsAttach)
+			file.FileId = assetID
+			files[i] = file
+			assetByIndex[i] = assetID
+			assets = append(assets, applicationnotes.OperationAsset{
+				AssetID: assetID, LocalFileID: file.LocalFileId, Index: i, IsAttach: file.IsAttach,
+			})
+		}
+		noteOrContent.Files = files
+		assetWork = &applicationnotes.AssetMutation{
+			Assets: assets,
+			Apply: func(ctx context.Context, expectedUSN int) error {
+				for i, file := range files {
+					if !file.HasBody {
+						continue
+					}
+					ok, msg, _ := c.uploadWithAssetIdentity("FileDatas["+file.LocalFileId+"]", noteId, file.IsAttach, assetByIndex[i])
+					if !ok {
+						if msg == "" {
+							msg = "fileUploadError"
+						}
+						return fmt.Errorf("upload asset: %s", msg)
+					}
+				}
+				return attachService.UpdateOrDeleteAttachApiResultAtUSNWithOperation(ctx, noteId, userId, files, expectedUSN, assetWork.OperationID)
+			},
+			Verify: func(ctx context.Context) (bool, error) {
+				// SaveNote's wrapper verifies the committed note generation before
+				// invoking this asset-level final-state check.  Do not pass the
+				// request's pre-mutation USN here.
+				return attachService.VerifyUpdateOrDeleteAttachApiAtUSN(ctx, noteId, userId, files, 0)
+			},
+		}
 	}
-
-	// 移到外面来, 删除最后一个file时也要处理, 不然总删不掉
-	// 附件问题, 根据Files, 有些要删除的, 只留下这些
-	attachService.UpdateOrDeleteAttachApi(noteId, userId, noteOrContent.Files)
 
 	// Desc前台传来
 	if c.Has("Desc") {
@@ -483,22 +630,8 @@ func (c ApiNote) UpdateNote(noteOrContent info.ApiNote) revel.Result {
 
 	noteUpdate["UpdatedTime"] = noteOrContent.UpdatedTime
 
-	afterNoteUsn := 0
-	noteOk := false
-	noteMsg := ""
-	if needUpdateNote {
-		noteOk, noteMsg, afterNoteUsn = noteService.UpdateNote(c.getUserId(), noteOrContent.NoteId, noteUpdate, noteOrContent.Usn)
-		if !noteOk {
-			re.Ok = false
-			re.Msg = noteMsg
-			return c.RenderJSON(re)
-		}
-	}
-
-	//-------------
-	afterContentUsn := 0
-	contentOk := false
-	contentMsg := ""
+	var content *string
+	var abstract *string
 	if c.Has("Content") {
 		// 把fileId替换下
 		c.fixPostNotecontent(&noteOrContent)
@@ -509,29 +642,30 @@ func (c ApiNote) UpdateNote(noteOrContent info.ApiNote) revel.Result {
 
 		//		Log("--------> afte fixed")
 		//		Log(noteOrContent.Content)
-		contentOk, contentMsg, afterContentUsn = noteService.UpdateNoteContent(c.getUserId(),
-			noteOrContent.NoteId,
-			noteOrContent.Content,
-			noteOrContent.Abstract,
-			needUpdateNote,
-			noteOrContent.Usn,
-			noteOrContent.UpdatedTime)
+		content = &noteOrContent.Content
+		abstract = &noteOrContent.Abstract
 	}
-
-	if needUpdateNote {
-		re.Ok = noteOk
-		re.Msg = noteMsg
-		re.Usn = afterNoteUsn
-	} else {
-		re.Ok = contentOk
-		re.Msg = contentMsg
-		re.Usn = afterContentUsn
+	if !needUpdateNote {
+		noteUpdate = nil
 	}
+	expectedUSN := noteOrContent.Usn
+	result := noteService.SaveNote(service.SaveNoteCommand{
+		ActorUserID: c.getUserId(),
+		NoteID:      noteOrContent.NoteId,
+		ExpectedUSN: &expectedUSN,
+		Metadata:    noteUpdate,
+		Content:     content,
+		Abstract:    abstract,
+		UpdatedTime: noteOrContent.UpdatedTime,
+		AssetWork:   assetWork,
+	})
+	re.Ok = result.OK()
+	re.Msg = workspaceAPIMessage(result.Error)
+	re.Usn = result.USN
 
 	if !re.Ok {
 		return c.RenderJSON(re)
 	}
-
 	noteOrContent.Content = ""
 	noteOrContent.Usn = re.Usn
 	noteOrContent.UpdatedTime = time.Now()
@@ -541,6 +675,17 @@ func (c ApiNote) UpdateNote(noteOrContent info.ApiNote) revel.Result {
 	noteOrContent.UserId = c.getUserId()
 
 	return c.RenderJSON(noteOrContent)
+}
+
+func workspaceAPIMessage(category service.WorkspaceErrorCategory) string {
+	switch category {
+	case service.WorkspaceNotFound:
+		return "notExists"
+	case service.WorkspaceUnauthorized:
+		return "noAuth"
+	default:
+		return string(category)
+	}
 }
 
 // 删除trash

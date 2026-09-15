@@ -77,15 +77,20 @@ func tokenLinkError(err error) string {
 // 自增Usn
 // 每次notebook,note添加, 修改, 删除, 都要修改
 func (this *UserService) IncrUsn(userId string) int {
-	user := info.User{}
-	query := bson.M{"_id": db.MustObjectIDFromHex(userId)}
-	db.GetByQWithFields(db.Users, query, []string{"Usn"}, &user)
-	usn := user.Usn
-	usn += 1
-	Log("inc Usn")
-	db.UpdateByQField(db.Users, query, "Usn", usn)
+	usn, err := this.AllocateUsn(context.Background(), userId)
+	if err != nil {
+		return 0
+	}
 	return usn
-	//	return db.Update(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId)}, bson.M{"$inc": bson.M{"ReadNum": 1}})
+}
+
+// AllocateUsn is the error-preserving workspace counter boundary. New
+// mutations must use it instead of interpreting a zero return as success.
+func (this *UserService) AllocateUsn(ctx context.Context, userId string) (int, error) {
+	if !db.IsValidObjectIDHex(userId) {
+		return 0, fmt.Errorf("allocate workspace usn: invalid user id")
+	}
+	return db.AllocateUserUSN(ctx, db.MustObjectIDFromHex(userId))
 }
 
 func (this *UserService) GetUsn(userId string) int {

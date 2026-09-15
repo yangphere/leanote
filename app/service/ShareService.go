@@ -1,10 +1,14 @@
 package service
 
 import (
+	"context"
+	"errors"
+
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"sort"
 	"time"
 )
@@ -619,8 +623,21 @@ func (this *ShareService) DeleteShareNote(noteId string, userId, toUserId string
 
 // 删除笔记时要删除该noteId的所有...
 func (this *ShareService) DeleteShareNoteAll(noteId string, userId string) bool {
-	return db.DeleteAll(db.ShareNotes,
-		bson.M{"NoteId": db.MustObjectIDFromHex(noteId), "UserId": db.MustObjectIDFromHex(userId)})
+	return this.deleteShareNoteAll(context.Background(), db.MustObjectIDFromHex(noteId), db.MustObjectIDFromHex(userId)) == nil
+}
+
+func (this *ShareService) deleteShareNoteAll(ctx context.Context, noteID, ownerID ObjectID) error {
+	_, err := db.ShareNotes.RemoveAllContext(ctx, bson.M{"NoteId": noteID, "UserId": ownerID})
+	return err
+}
+
+func (this *ShareService) verifyShareNoteAllDeleted(ctx context.Context, noteID, ownerID ObjectID) (bool, error) {
+	var share info.ShareNote
+	err := db.ShareNotes.FindContext(ctx, bson.M{"NoteId": noteID, "UserId": ownerID}).One(&share)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return true, nil
+	}
+	return false, err
 }
 
 // 删除share notebook

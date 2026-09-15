@@ -21,6 +21,6 @@
   "children": [],
   "parent": "09-08-business-layer-architecture",
   "relatedFiles": [],
-  "notes": "",
-  "meta": {"layer": "presentation", "depends_on": ["09-08-domain-contracts"]}
+  "notes": "Accepts notes KD-N6 first-party Web work: generate and reuse OperationId for update/copy/shared-copy/delete/move batch, send ExpectedUsn for update, reuse values only for the same unknown-result intent and rotate them for a new intent. Real browser evidence remains unrun and is handed to delivery-verification; server receipt/mapper defects must reopen application-notes.",
+  "meta": {"layer": "presentation", "depends_on": ["09-08-domain-contracts", "09-08-application-notes"]}
 }

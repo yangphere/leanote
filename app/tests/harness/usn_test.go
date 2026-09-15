@@ -6,6 +6,10 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/yangphere/leanote/app/db"
+	"github.com/yangphere/leanote/app/info"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func TestUSNMutationPairsAndConflicts(t *testing.T) {
@@ -57,12 +61,12 @@ func TestUSNMutationPairsAndConflicts(t *testing.T) {
 	notebookConflict := captureGolden(t, store, admin, "usn/notebook_delete_conflict.json", RequestSpec{Method: http.MethodPost, Path: "/api/notebook/deleteNotebook", Form: map[string][]string{"notebookId": {notebookID}, "usn": {strconv.Itoa(updatedNotebookUsn - 1)}}, Auth: "admin"})
 	assertConflictEnvelope(t, notebookConflict)
 	beforeNotebookDelete := currentUserUSN(t, admin, "admin")
-	captureGolden(t, store, admin, "usn/notebook_delete.json", RequestSpec{Method: http.MethodPost, Path: "/api/notebook/deleteNotebook", Form: map[string][]string{"notebookId": {notebookID}, "usn": {strconv.Itoa(updatedNotebookUsn)}}, Auth: "admin"})
-	if after := currentUserUSN(t, admin, "admin"); after != beforeNotebookDelete {
-		t.Fatalf("DeleteNotebook bumped user Usn from %d to %d; baseline requires the known no-bump behavior", beforeNotebookDelete, after)
-	}
-	notebookDelta = captureGolden(t, store, admin, "usn/notebook_syncAfterDelete.json", RequestSpec{Method: http.MethodGet, Path: "/api/notebook/getSyncNotebooks", Query: map[string][]string{"afterUsn": {strconv.Itoa(updatedNotebookUsn)}, "maxEntry": {"100"}}, Auth: "admin"})
-	assertSyncEmpty(t, notebookDelta)
+	captureGolden(t, store, admin, "usn/target_d01_notebook_delete.json", RequestSpec{Method: http.MethodPost, Path: "/api/notebook/deleteNotebook", Form: map[string][]string{"notebookId": {notebookID}, "usn": {strconv.Itoa(updatedNotebookUsn)}}, Auth: "admin"})
+	afterNotebookDelete := currentUserUSN(t, admin, "admin")
+	assertGreater(t, afterNotebookDelete, beforeNotebookDelete, "DeleteNotebook user Usn")
+	assertStoredNotebookTombstone(t, "USN Notebook Updated", afterNotebookDelete)
+	notebookDelta = captureGolden(t, store, admin, "usn/target_d01_notebook_syncAfterDelete.json", RequestSpec{Method: http.MethodGet, Path: "/api/notebook/getSyncNotebooks", Query: map[string][]string{"afterUsn": {strconv.Itoa(updatedNotebookUsn)}, "maxEntry": {"100"}}, Auth: "admin"})
+	assertSyncDeletedTitle(t, notebookDelta, "USN Notebook Updated")
 
 	tagBefore := currentUserUSN(t, admin, "admin")
 	captureGolden(t, store, admin, "usn/tag_add.json", RequestSpec{Method: http.MethodPost, Path: "/api/tag/addTag", Form: map[string][]string{"tag": {"usn-tag"}}, Auth: "admin"})
@@ -73,15 +77,12 @@ func TestUSNMutationPairsAndConflicts(t *testing.T) {
 
 	tagConflict := captureGolden(t, store, admin, "usn/tag_delete_conflict.json", RequestSpec{Method: http.MethodPost, Path: "/api/tag/deleteTag", Form: map[string][]string{"tag": {"usn-tag"}, "usn": {strconv.Itoa(tagUsn - 1)}}, Auth: "admin"})
 	assertConflictEnvelope(t, tagConflict)
-	captureGolden(t, store, admin, "usn/tag_delete.json", RequestSpec{Method: http.MethodPost, Path: "/api/tag/deleteTag", Form: map[string][]string{"tag": {"usn-tag"}, "usn": {strconv.Itoa(tagUsn)}}, Auth: "admin"})
-	if after := currentUserUSN(t, admin, "admin"); after <= tagUsn {
-		t.Fatalf("DeleteTag did not bump user Usn beyond %d: %d", tagUsn, after)
-	}
-	if stored := fixtureTagByName(t, "usn-tag"); stored != tagUsn {
-		t.Fatalf("DeleteTag stored Usn = %d, want the known old input Usn %d", stored, tagUsn)
-	}
-	tagDelta = captureGolden(t, store, admin, "usn/tag_syncAfterDelete.json", RequestSpec{Method: http.MethodGet, Path: "/api/tag/getSyncTags", Query: map[string][]string{"afterUsn": {strconv.Itoa(tagUsn)}, "maxEntry": {"100"}}, Auth: "admin"})
-	assertSyncEmpty(t, tagDelta)
+	captureGolden(t, store, admin, "usn/target_d01_tag_delete.json", RequestSpec{Method: http.MethodPost, Path: "/api/tag/deleteTag", Form: map[string][]string{"tag": {"usn-tag"}, "usn": {strconv.Itoa(tagUsn)}}, Auth: "admin"})
+	afterTagDelete := currentUserUSN(t, admin, "admin")
+	assertGreater(t, afterTagDelete, tagUsn, "DeleteTag user Usn")
+	assertStoredTagTombstone(t, "usn-tag", afterTagDelete)
+	tagDelta = captureGolden(t, store, admin, "usn/target_d01_tag_syncAfterDelete.json", RequestSpec{Method: http.MethodGet, Path: "/api/tag/getSyncTags", Query: map[string][]string{"afterUsn": {strconv.Itoa(tagUsn)}, "maxEntry": {"100"}}, Auth: "admin"})
+	assertSyncDeletedTitle(t, tagDelta, "usn-tag")
 }
 
 func TestUSNSyncBoundaries(t *testing.T) {
@@ -171,11 +172,43 @@ func assertSyncContainsTitle(t testing.TB, snapshot Snapshot, title string) {
 func assertSyncDeletedTitle(t testing.TB, snapshot Snapshot, title string) {
 	t.Helper()
 	for _, entry := range decodeSyncEntries(t, snapshot) {
-		if entry["Title"] == title && entry["IsDeleted"] == true {
+		if (entry["Title"] == title || entry["Tag"] == title) && entry["IsDeleted"] == true {
 			return
 		}
 	}
 	t.Fatalf("sync response does not contain deleted %q: %s", title, describeSnapshot(snapshot))
+}
+
+func assertStoredNotebookTombstone(t testing.TB, title string, wantUSN int) {
+	t.Helper()
+	var notebook info.Notebook
+	ctx, cancel := harnessContext()
+	defer cancel()
+	if err := fixtureDatabase(t).Collection("notebooks").FindOne(ctx, bson.M{
+		"UserId": db.MustObjectIDFromHex(fixtureAdminID),
+		"Title":  title,
+	}).Decode(&notebook); err != nil {
+		t.Fatalf("find deleted notebook %q: %v", title, err)
+	}
+	if !notebook.IsDeleted || notebook.Usn != wantUSN {
+		t.Fatalf("stored notebook %q tombstone = {IsDeleted:%t Usn:%d}, want {IsDeleted:true Usn:%d}", title, notebook.IsDeleted, notebook.Usn, wantUSN)
+	}
+}
+
+func assertStoredTagTombstone(t testing.TB, tag string, wantUSN int) {
+	t.Helper()
+	var noteTag info.NoteTag
+	ctx, cancel := harnessContext()
+	defer cancel()
+	if err := fixtureDatabase(t).Collection("note_tags").FindOne(ctx, bson.M{
+		"UserId": db.MustObjectIDFromHex(fixtureAdminID),
+		"Tag":    tag,
+	}).Decode(&noteTag); err != nil {
+		t.Fatalf("find deleted tag %q: %v", tag, err)
+	}
+	if !noteTag.IsDeleted || noteTag.Usn != wantUSN {
+		t.Fatalf("stored tag %q tombstone = {IsDeleted:%t Usn:%d}, want {IsDeleted:true Usn:%d}", tag, noteTag.IsDeleted, noteTag.Usn, wantUSN)
+	}
 }
 
 func assertSyncEmpty(t testing.TB, snapshot Snapshot) {

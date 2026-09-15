@@ -22,7 +22,6 @@ func TestGoldenAPIActions(t *testing.T) {
 	t.Cleanup(func() { removeGeneratedAdminLogo(t, repoRoot) })
 
 	protectedActions := []string{
-		"auth/logout",
 		"user/info", "user/updateUsername", "user/updatePwd", "user/getSyncState", "user/updateLogo",
 		"notebook/getSyncNotebooks", "notebook/getNotebooks", "notebook/addNotebook", "notebook/updateNotebook", "notebook/deleteNotebook",
 		"note/getSyncNotes", "note/getNotes", "note/getTrashNotes", "note/getNote", "note/getNoteAndContent", "note/getNoteContent", "note/addNote", "note/updateNote", "note/deleteTrash", "note/exportPdf",
@@ -38,6 +37,14 @@ func TestGoldenAPIActions(t *testing.T) {
 			})
 			assertNotLoggedInEnvelope(t, snapshot)
 		}
+	}
+	for _, auth := range []string{"none", "invalid"} {
+		snapshot := captureGolden(t, store, NewClient(server.BaseURL), "api/auth/logout_"+auth+".json", RequestSpec{
+			Method: http.MethodGet,
+			Path:   "/api/auth/logout",
+			Auth:   auth,
+		})
+		assertIdempotentLogoutEnvelope(t, snapshot)
 	}
 
 	captureGolden(t, store, admin, "api/auth_login.json", RequestSpec{
@@ -167,6 +174,20 @@ func assertNotLoggedInEnvelope(t testing.TB, snapshot Snapshot) {
 	}
 	if response.OK == nil || *response.OK || response.Msg != "NOTLOGIN" {
 		t.Fatalf("unexpected unauthenticated envelope: %s", describeSnapshot(snapshot))
+	}
+}
+
+func assertIdempotentLogoutEnvelope(t testing.TB, snapshot Snapshot) {
+	t.Helper()
+	var response struct {
+		OK  *bool
+		Msg string
+	}
+	if err := json.Unmarshal(snapshot.Body, &response); err != nil {
+		t.Fatalf("decode idempotent logout response %s: %v", describeSnapshot(snapshot), err)
+	}
+	if response.OK == nil || !*response.OK || response.Msg != "" {
+		t.Fatalf("unexpected idempotent logout envelope: %s", describeSnapshot(snapshot))
 	}
 }
 

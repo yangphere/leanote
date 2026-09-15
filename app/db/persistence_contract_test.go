@@ -116,6 +116,9 @@ func TestPersistenceIndexModelsDeclareRequiredBoundaries(t *testing.T) {
 	if !hasUniqueIndex(models["outbox"], "IdempotencyKey") {
 		t.Fatal("outbox must declare a unique idempotency-key index")
 	}
+	if !hasIndex(models["workspace_operations"], "TerminalAt", WorkspaceOperationTerminalSeconds) {
+		t.Fatal("workspace operations must expire only after terminal retention")
+	}
 }
 
 func TestSessionExpiredUsesInclusiveThreeHourBoundary(t *testing.T) {

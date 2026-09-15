@@ -11,6 +11,7 @@
 - 保留服务端模板、历史 URL、`leaui_image` iframe、四个第一方 TinyMCE 插件和保存状态语义。
 - i18n 扫描、语言文件、CSS/JS 资源和 `note-dev.html`→`note.html` 由脚本唯一生成。
 - 业务页面错误、资源 4xx/5xx、console/pageerror、上传与编辑清理必须可观察。
+- 第一方 Web 对 `UpdateNoteOrContent`、copy/shared-copy、delete/move batch 为每次用户意图生成 `OperationId`，对 update 同时传递 `ExpectedUsn`；同一 unknown-result 重试必须复用原值，新用户意图必须生成新值。不持久凭据或把 payload hash 冒充 operation generation。
 
 ## Acceptance criteria
 
@@ -18,6 +19,7 @@
 - [ ] 版本唯一性、生产无 migrate、旧 jQuery/旧 TinyMCE 副本清理和插件资源契约通过。
 - [ ] 登录、笔记、markdown、modal/tab/dropdown、上传、相册、admin/member/blog 和 iframe smoke 通过。
 - [ ] 未编辑不保存，编辑保存只发生允许的 HTML 规范化且 revision/error 状态正确。
+- [ ] 真实第一方 Web 证明 `OperationId`/`ExpectedUsn` 在 update、copy/shared-copy、delete/move batch 中的生成、unknown-result 复用、新意图换代、stale conflict 和页面重载边界；字段省略时仍按旧客户端 `RetrySafe=false` 契约。
 - [ ] 真实浏览器矩阵证据交给 `delivery-verification`，本任务不以 Chromium 代替 Safari。
 
 ## Out of scope

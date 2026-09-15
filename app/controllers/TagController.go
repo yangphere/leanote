@@ -16,15 +16,18 @@ type Tag struct {
 // 更新Tag
 func (c Tag) UpdateTag(tag string) revel.Result {
 	ret := info.NewRe()
-	ret.Ok = true
-	ret.Item = tagService.AddOrUpdateTag(c.GetUserId(), tag)
+	item, ok, msg := tagService.AddOrUpdateTagResult(c.GetUserId(), tag)
+	ret.Ok = ok
+	ret.Msg = msg
+	if ok {
+		ret.Item = item
+	}
 	return c.RenderJSON(ret)
 }
 
 // 删除标签
 func (c Tag) DeleteTag(tag string) revel.Result {
 	ret := info.Re{}
-	ret.Ok = true
-	ret.Item = tagService.DeleteTag(c.GetUserId(), tag)
+	ret.Item, ret.Ok = tagService.DeleteTagResult(c.GetUserId(), tag)
 	return c.RenderJSON(ret)
 }

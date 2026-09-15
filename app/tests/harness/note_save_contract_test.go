@@ -127,6 +127,7 @@ func TestUpdateNoteOrContentReportsPartialWriteAsFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("delete note content to force partial write: %v", err)
 	}
+	beforeFailedUpdateUSN := currentUserUSN(t, client, "admin")
 
 	snapshot, err := client.Do(RequestSpec{
 		Method: http.MethodPost,
@@ -149,6 +150,13 @@ func TestUpdateNoteOrContentReportsPartialWriteAsFailure(t *testing.T) {
 	}
 	if response.Ok || response.Msg == "" {
 		t.Fatalf("partial-write envelope = %s, want Ok=false and non-empty Msg", snapshot.Body)
+	}
+	if after := currentUserUSN(t, client, "admin"); after != beforeFailedUpdateUSN {
+		t.Fatalf("failed combined update changed user Usn from %d to %d", beforeFailedUpdateUSN, after)
+	}
+	storedNoteID, _ := fixtureNoteByTitle(t, "partial write note")
+	if storedNoteID != noteID {
+		t.Fatalf("failed combined update changed metadata; original note %s not found", noteID)
 	}
 }
 

@@ -23,15 +23,15 @@
 ### Application layer
 
 - 身份认证：用户、密码、Session、Token、登录/注册和认证授权边界。
-- 笔记工作区：笔记、笔记本、标签、回收站、内容历史、建议和同步 USN。
-- 内容媒体：文件、附件、图片、相册、PDF 和上传持久化。
+- 笔记工作区：笔记、笔记本、标签、回收站、内容历史和同步 USN；拥有 note-specific asset idempotency/receipt 适配，Suggestion/feedback 交给管理运维域。
+- 内容媒体：拥有通用文件根、路径安全、发布/校验、下载、附件、图片、相册、PDF 和上传持久化 primitive，并验收 notes receipt adapter 对其 Apply/Verify 合同的消费。
 - 分享发布：分享、博客、评论、群组、主题和预览。
 - 管理运维：管理端、配置、升级、邮件和运维审计。
 - 每个领域服务必须保留用户所有权条件、USN mutation/sync 配对和失败语义；按已确认 D-01，notebook/tag 删除分配新 USN、写入 tombstone 并进入 sync，旧差异仅作基线对照。note-save 的原子 USN、同事务/显式补偿、部分写入状态和重试幂等性遵循 D-06；不得在 controller 中复制业务规则。
 
 ### Infrastructure and interface layers
 
-- `app/db` 负责 MongoDB driver、查询/更新结果、ObjectID、BSON、超时和错误映射，业务层不直接持有 driver collection。
+- `app/db` 负责 MongoDB driver、查询/更新结果、ObjectID、BSON、超时和错误映射。纯 application contract 不依赖 `app/db`/BSON；仓库既有 `app/service → app/db` 兼容边界及内部 BSON map 允许保留，但 controller 不得直接持有 collection/client，也不得复制 USN、权限或 receipt 状态机。本轨不要求无依据的全库 BSON 重构。
 - HTTP 适配负责路由、参数绑定、Session、模板、i18n、鉴权、中间件和完整 controller registry；完成后不再依赖 Revel。
 
 ### Presentation and delivery layers
@@ -43,7 +43,7 @@
 
 - [ ] 领域契约任务冻结并通过模型/API/USN/所有权/Schema/HTML 回归测试。
 - [ ] 五个应用领域任务各自完成服务边界、调用方迁移、错误和权限回归；无 controller 级重复业务规则。
-- [ ] 持久化边界完成 MongoDB 7/8 兼容、查询语义和超时/错误契约；业务服务不直接依赖 driver 类型。
+- [ ] 持久化边界完成 MongoDB 7/8 兼容、查询语义和超时/错误契约；纯 application contract 无 driver/`app/db`/BSON 依赖，controller 无 collection/client，既有 service→db 适配可保留。
 - [ ] HTTP 适配完成全部公开路由、catch-all registry、参数/session/template/middleware 和旧入口清扫；生产源码、harness、启动与打包不再使用 Revel。
 - [ ] 前端构建与编辑器资源在 Node 24 下可复现，核心库契约、生成物漂移和业务页面回归通过。
 - [ ] 交付层完成质量门、8 槽真实浏览器矩阵、生产配置、容器非 root、外置 Mongo、完整 PDF、tarball 和 GHCR 证据；任一缺失保持 blocked。

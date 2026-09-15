@@ -1,2 +1,9 @@
-{"file": ".trellis/spec/backend/error-handling.md", "reason": "检查冲突和失败语义"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "检查跨层同步数据流"}
+{"file":"CONTEXT.md","reason":"复核 API、USN、所有权、Golden 和未编辑 HTML 不变量"}
+{"file":".trellis/spec/backend/index.md","reason":"加载 backend 全量质量检查入口"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"检查 Mongo 边界、owner query、transaction/compensation 和环境证据"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"检查 conflict/storage/partial_write 是否被吞成成功或空结果"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查测试、真实 HTTP、Mongo Golden 与回归范围"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"检查跨层 command/result/USN/sync/adapter 数据流"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"检查是否引入权限、USN、错误或 projection 的第二事实来源"}
+{"file":".trellis/tasks/09-08-application-notes/research/spec-audit-2026-09-11.md","reason":"按已识别缺口和已确认 KD-N1 至 KD-N5 执行规格与实现复核"}
+{"file":".trellis/tasks/09-08-application-notes/research/action-inventory.md","reason":"复核 38 个 action 是否逐项保持 wire contract、owner、USN、错误和跨域边界"}

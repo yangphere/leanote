@@ -30,6 +30,9 @@ func (c Notebook) DeleteNotebook(notebookId string) revel.Result {
 
 // 添加notebook
 func (c Notebook) AddNotebook(notebookId, title, parentNotebookId string) revel.Result {
+	if !db.IsValidObjectIDHex(notebookId) || (parentNotebookId != "" && !db.IsValidObjectIDHex(parentNotebookId)) {
+		return c.RenderJSON(false)
+	}
 	notebook := info.Notebook{NotebookId: db.MustObjectIDFromHex(notebookId),
 		Title:  title,
 		Seq:    -1,
@@ -63,14 +66,17 @@ type DragNotebooksInfo struct {
 	CurNotebookId    string
 	ParentNotebookId string
 	Siblings         []string
+	OperationId      string
 }
 
 // 传过来的data是JSON.stringfy数据
 func (c Notebook) DragNotebooks(data string) revel.Result {
 	info := DragNotebooksInfo{}
-	json.Unmarshal([]byte(data), &info)
+	if err := json.Unmarshal([]byte(data), &info); err != nil {
+		return c.RenderJSON(false)
+	}
 
-	return c.RenderJSON(notebookService.DragNotebooks(c.GetUserId(), info.CurNotebookId, info.ParentNotebookId, info.Siblings))
+	return c.RenderJSON(notebookService.DragNotebooks(c.GetUserId(), info.CurNotebookId, info.ParentNotebookId, info.Siblings, info.OperationId))
 }
 
 // 设置notebook <-> blog

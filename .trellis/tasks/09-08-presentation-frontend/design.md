@@ -10,7 +10,7 @@ manifest 与 Node scripts 负责源码到生成资源；模板负责服务端呈
 
 ## Invariants
 
-Node 24、版本唯一、无 CDN/生产 migrate、生成资源零漂移；编辑器只读/编辑保存状态与 HTML 语义保持；资源错误可观测。
+Node 24、版本唯一、无 CDN/生产 migrate、生成资源零漂移；编辑器只读/编辑保存状态与 HTML 语义保持；资源错误可观测。`OperationId` 代表一次用户意图：unknown-result 重试复用，新意图换代；`ExpectedUsn` 来自当前已确认 revision，不从服务端错误响应猜测。
 
 ## Rollback
 

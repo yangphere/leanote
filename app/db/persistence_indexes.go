@@ -7,14 +7,17 @@ import (
 	"sort"
 	"time"
 
+	applicationnotes "github.com/yangphere/leanote/app/application/notes"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 const (
-	SessionIdleTTL          = 3 * time.Hour
-	SessionTTLSeconds int32 = 10800
+	SessionIdleTTL                          = 3 * time.Hour
+	SessionTTLSeconds                 int32 = 10800
+	WorkspaceOperationTerminalTTL           = 30 * 24 * time.Hour
+	WorkspaceOperationTerminalSeconds int32 = 30 * 24 * 60 * 60
 )
 
 // PersistenceIndexConflictError makes startup failure actionable when a new
@@ -73,6 +76,27 @@ func PersistenceIndexModels() map[string][]mongo.IndexModel {
 					SetName("outbox_IdempotencyKey_unique").
 					SetUnique(true).
 					SetPartialFilterExpression(nonEmptyStringFilter("IdempotencyKey")),
+			},
+		},
+		"workspace_operations": {
+			{
+				Keys:    bson.D{{Key: "Status", Value: 1}, {Key: "LeaseUntil", Value: 1}},
+				Options: options.Index().SetName("workspace_operations_Status_LeaseUntil"),
+			},
+			{
+				Keys:    bson.D{{Key: "OwnerId", Value: 1}, {Key: "ResourceId", Value: 1}, {Key: "Kind", Value: 1}},
+				Options: options.Index().SetName("workspace_operations_Owner_Resource_Kind"),
+			},
+			{
+				Keys: bson.D{{Key: "TerminalAt", Value: 1}},
+				Options: options.Index().
+					SetName("workspace_operations_TerminalAt_ttl_30d").
+					SetExpireAfterSeconds(WorkspaceOperationTerminalSeconds).
+					SetPartialFilterExpression(bson.M{"Status": bson.M{"$in": []applicationnotes.OperationStatus{
+						applicationnotes.OperationCommitted,
+						applicationnotes.OperationCompensated,
+						applicationnotes.OperationFailed,
+					}}}),
 			},
 		},
 		"users": {

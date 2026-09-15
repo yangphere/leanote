@@ -32,6 +32,6 @@
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "2026-09-13 ownership correction: application-notes owns note-specific asset receipt/idempotency adapters; application-content owns generic file-root/path/publish/verify/download/album/PDF primitives; Suggestion/feedback belongs to application-admin. Pure application contracts stay free of app/db/BSON, while the existing app/service -> app/db compatibility boundary and internal BSON maps remain allowed; controllers must not hold Mongo collection/client or duplicate business state machines. Cross-topology/browser/PDF/failpoint evidence stays with receiving siblings and does not create a reverse dependency.",
   "meta": {"layer": "coordination", "depends_on": []}
 }

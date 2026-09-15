@@ -21,6 +21,6 @@
   "children": [],
   "parent": "09-08-business-layer-architecture",
   "relatedFiles": [],
-  "notes": "",
+  "notes": "Accepts application-notes closure evidence without upgrading delegated work: Mongo 8.0.29 standalone server replay passed, while the auditable live action map is 21/38, not the 105/103 Go test event count. This task must cover the remaining 17 Web actions, first-party OperationId/ExpectedUsn generation and reuse, Mongo 7 standalone, Mongo 8 replica-set, kill/restart, Mongo failpoints, cross-host filesystem failpoints, browser and PDF artifacts. Record server-passed and delegated-unrun separately; any notes server defect reopens application-notes.",
   "meta": {"layer": "delivery", "depends_on": ["09-08-domain-contracts", "09-08-application-identity", "09-08-application-notes", "09-08-application-content", "09-08-application-publishing", "09-08-application-admin", "09-08-infrastructure-persistence", "09-08-interface-http", "09-08-presentation-frontend"]}
 }

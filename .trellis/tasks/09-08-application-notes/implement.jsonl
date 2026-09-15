@@ -1,2 +1,9 @@
-{"file": "CONTEXT.md", "reason": "读取 USN 和所有权契约"}
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "复用查询和更新约束"}
+{"file":"CONTEXT.md","reason":"冻结外部 API、USN、所有权、Golden 与未编辑 HTML 不变量"}
+{"file":".trellis/spec/backend/index.md","reason":"读取 backend 层索引和实施前检查入口"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"遵守 Mongo 单一边界、owner 查询、事务补偿与真实环境契约"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"保持 note-save envelope 并让 storage/partial_write 清晰传播"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"执行聚焦回归、真实 HTTP 与 Mongo Golden 质量门"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"约束 adapter、application、repository、Mongo 和前端保存状态的数据流"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"把 actor/owner、USN 与错误映射收敛到单一事实来源"}
+{"file":".trellis/tasks/09-08-application-notes/research/spec-audit-2026-09-11.md","reason":"提供现有实现证据、规格缺口、已确认 KD-N1 至 KD-N5 和编码前门禁"}
+{"file":".trellis/tasks/09-08-application-notes/research/action-inventory.md","reason":"冻结 38 个 Web/API/history action 的输入、actor owner、结果、USN、多写和跨域责任"}

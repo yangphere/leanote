@@ -3,7 +3,7 @@
   "name": "application-notes",
   "title": "应用层：笔记工作区与同步",
   "description": "收敛笔记、笔记本、标签、回收站、历史和 USN 同步业务，保持所有权与增量同步语义。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": "application layer / notes workspace and USN sync",
   "package": null,
@@ -12,7 +12,7 @@
   "assignee": "wanfeng",
   "createdAt": "2026-09-08",
   "completedAt": null,
-  "branch": null,
+  "branch": "dev",
   "base_branch": "dev",
   "worktree_path": null,
   "commit": null,
@@ -21,6 +21,12 @@
   "children": [],
   "parent": "09-08-business-layer-architecture",
   "relatedFiles": [],
-  "notes": "",
-  "meta": {"layer": "application", "depends_on": ["09-08-domain-contracts"]}
+  "notes": "2026-09-11 specification audit selected this ready leaf and confirmed KD-N1 through KD-N5; Q-N9 converged as KD-N6 on 2026-09-12. Optional OperationId/ExpectedUsn fields preserve old-client wire behavior and omitted IDs remain RetrySafe=false. The 2026-09-15 four-layer review repair closed committed-primary projection replay, durable client no-op receipts, copy receipt fail-closed checks, stable shared-copy frozen source asset manifests, legacy shared-copy single-USN compatibility, identity/containment/Mongo fixture test gaps, mutation lookup/count/cycle error propagation, controller-owned receipt transitions, terminal ResultState cleanup, and overbroad acceptance claims. Current JSON evidence is 288 discovered/executed, 283 passed, 0 failed, 5 environment/sibling skips across five focused Go packages on Mongo 8.0.29 standalone, plus 108 discovered/executed, 106 passed, 0 failed, 2 sibling-owned skips in the fixed-digest real Revel HTTP/Golden harness. gofmt, go vet including harness, go build, Node note-save, application dependency scan, six task validations, dependency graph and diff hygiene pass. These event counts do not mean 38-action coverage: the auditable live mapping remains 21/38 and the other 17 Web actions remain delivery-verification delegated-unrun. Ownership live negatives are limited to foreign API note read and unauthorized shared create. Mongo 7/replica-set, kill/restart/failpoint, first-party Web generation/reuse, browser, cross-host filesystem, PDF and Android evidence remain delegated-unrun in receiving sibling tasks. Phase 3.3 trellis-update-spec is complete and this leaf is ready for Phase 3.4, but status remains in_progress with commit=null; commit and archive require separate authorization. If later authorized to archive, branch and base_branch are both dev and task.py archive requires explicit --skip-branch-validation after reconfirmation. Exact candidate, commands, timing, topology and skips are in acceptance/evidence-matrix.md.",
+  "meta": {
+    "layer": "application",
+    "depends_on": [
+      "09-08-domain-contracts",
+      "09-08-infrastructure-persistence"
+    ]
+  }
 }

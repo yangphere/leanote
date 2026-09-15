@@ -122,6 +122,80 @@ Apply: func(ctx context.Context) error {
 }
 ```
 
+## Scenario: Durable standalone mutation receipts
+
+### 1. Scope / Trigger
+
+- Trigger: a multi-step mutation can commit a database write while the caller loses the result, or a subsequent verification read is temporarily unavailable.
+- Ownership: `app/application/notes` owns the receipt state machine; `app/db/workspace_operation_store.go` persists its owner-scoped, version-fenced receipts. Services construct immutable plans and do not create a second receipt from changed current generations.
+
+### 2. Signatures
+
+```go
+func NewClientOperationIdentity(kind string, ownerID domain.ObjectID, clientOperationID string) (string, error)
+func ExecuteStandalone(ctx context.Context, plan MutationPlan, store OperationStore, now time.Time) (MutationResult, error)
+```
+
+### 3. Contracts
+
+- An optional caller `OperationId` is an owner-and-kind-scoped stable receipt key. The complete canonical request, including that ID, remains in `InputDigest`; reusing the same ID with different input conflicts.
+- A caller-supplied `OperationId` still creates and commits a receipt when the canonical command is a no-op. It consumes no business USN, but freezes the original result so the same input replays and different input conflicts. Only legacy calls without `OperationId` may return a no-op without receipt state.
+- A receipt freezes before/desired state and assigned per-step USNs on first execution. Retries address that receipt and resume from its frozen state; they never derive a replacement key from generations observed after a partial write.
+- A committed required-write receipt is not proof that a repairable projection completed. Wrapper flows such as copy/shared-copy must re-enter the single create/repair runner or verify the separate projection receipt before reporting retry success.
+- Stable shared-copy freezes the ordered source image/attachment identity manifest in the root receipt before destination creation. A retry consumes that manifest and the committed destination content snapshot; it must not re-enumerate later source assets into the original operation.
+- Legacy callers without an `OperationId` retain the existing wire contract and receive no unknown-result retry guarantee.
+- If `Apply` returns an error and `Verify` cannot determine whether it applied, persist `repair_pending` with `CurrentStep`, before state, desired state, and assigned USNs intact. A retry must verify first and must not blindly repeat the apply.
+- Only terminal receipts are redacted. `repair_pending` is recoverable and must not be redacted as a failed operation.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|---|---|
+| Same owner/kind/OperationId and same canonical input | return/recover the original receipt |
+| Same owner/kind/OperationId and different input | conflict before business writes |
+| Caller OperationId with a no-op command | commit a zero-write receipt and freeze the original result; do not allocate USN |
+| Required receipt committed but projection receipt missing/pending | resume or verify the projection; do not report clean success |
+| Shared-copy source gains an image/attachment after the root receipt begins | retry only the frozen manifest; do not copy the later asset under the old `OperationId` |
+| Apply error, Verify confirms desired state | record the step and continue/commit |
+| Apply error, Verify returns unavailable/error | `repair_pending` plus `partial_write`; preserve recovery state |
+| Retry of `repair_pending` | verify frozen current step before any replay |
+| Committed receipt no longer matches current resources | fail closed; do not replay an old mutation |
+
+### 5. Good / Base / Bad Cases
+
+- Good: a notebook reorder retry supplies the original `OperationId`, loads its receipt, and observes the already-assigned per-notebook USNs without allocating again.
+- Base: an old notebook caller omits the ID and retains its prior non-retry-safe behavior.
+- Bad: a copy wrapper sees the destination row plus a committed create receipt and returns before the separate tag/count/image projection receipt is committed.
+- Bad: a shared-copy retry enumerates the current source attachments after the root receipt committed and silently adds newly discovered assets to the old operation.
+- Bad: a client-generated no-op returns before `Begin`, allowing the same `OperationId` to be reused later with a different command.
+- Bad: creating an ID from the request for lookup, then creating a second ID from the request plus current generations for storage; the retry can never find the stored receipt.
+
+### 6. Tests Required
+
+- Unit test production-style terminal redaction semantics: an Apply+Verify error leaves a `repair_pending` receipt whose next call only verifies and commits without another Apply.
+- Service tests assert same `OperationId` has a stable receipt ID/digest, changed input conflicts, and before-state retains original generations.
+- Service tests cover caller-generated no-op replay/conflict without a USN allocation, plus copy/shared-copy retries where the primary create receipt committed but the projection receipt must still be repaired.
+- Service tests prove stable shared-copy persists/consumes the frozen image/attachment manifest and excludes assets added to the source after the first attempt; legacy no-`OperationId` copy retains its historical ordering and USN behavior.
+- Mongo-backed tests, when the configured fixture is available, cover response-loss replay and partial resume without duplicate step USNs or writes. If unavailable, skip explicitly rather than treating the unit test as cross-process evidence.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```go
+if verifyErr != nil {
+    return failReceipt(ctx, result, receipt, store, step.Name, verifyErr)
+}
+```
+
+#### Correct
+
+```go
+if verifyErr != nil {
+    return pendingStep(ctx, result, receipt, store, step.Name, verifyErr)
+}
+```
+
 ## Scenario: Framework-neutral ObjectID and dynamic JSON boundaries
 
 ### 1. Scope / Trigger

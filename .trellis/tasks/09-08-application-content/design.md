@@ -2,11 +2,11 @@
 
 ## Boundaries
 
-File/Attach/NoteImage/Album/PDF service 负责资源生命周期和权限；filesystem/PDF/Mongo 是基础设施；HTTP adapter 只处理下载、上传和错误响应。
+File/Attach/NoteImage/Album/PDF service 负责通用资源生命周期和权限；filesystem/PDF/Mongo 是基础设施；HTTP adapter 只处理下载、上传和错误响应。notes 拥有 note-specific receipt/idempotency adapter，本任务提供并验收其消费的通用 publish/verify/reconcile/copy/delete primitive，不引入第二套 receipt 状态机。
 
 ## Data flow
 
-资源请求 → 所有权/分享判定 → metadata service → storage/DB/PDF boundary →安全路径和结果 envelope。上传临时文件在成功或失败后均有明确清理。
+资源请求 → 所有权/分享判定 → metadata service → storage/DB/PDF boundary → 安全路径和结果 envelope。note mutation 由 notes adapter 携带 stable operation/destination/digest 调用 primitive，provider 返回可区分的 Apply/Verify 结果。上传临时文件在成功或失败后均有明确清理。
 
 ## Invariants
 

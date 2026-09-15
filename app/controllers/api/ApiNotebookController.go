@@ -60,7 +60,7 @@ func (c ApiNotebook) GetSyncNotebooks(afterUsn, maxEntry int) revel.Result {
 // [OK]
 // info.SubNotebooks
 func (c ApiNotebook) GetNotebooks() revel.Result {
-	notebooks := notebookService.GeSyncNotebooks(c.getUserId(), 0, 99999)
+	notebooks := notebookService.GetActiveNotebooks(c.getUserId())
 	return c.RenderJSON(c.fixNotebooks(notebooks))
 }
 

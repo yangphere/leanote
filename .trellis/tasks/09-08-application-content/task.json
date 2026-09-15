@@ -21,6 +21,6 @@
   "children": [],
   "parent": "09-08-business-layer-architecture",
   "relatedFiles": [],
-  "notes": "",
-  "meta": {"layer": "application", "depends_on": ["09-08-domain-contracts"]}
+  "notes": "Accepts the 2026-09-13 application-notes handoff: notes owns note-specific asset receipt/idempotency adapters; this task owns and validates generic file-root, path-safety, no-clobber publish, digest Verify, download, album and PDF primitives. Provider contracts must prove safe Apply/Verify consumption without duplicating the notes receipt state machine; cross-host/process evidence is delegated to delivery-verification.",
+  "meta": {"layer": "application", "depends_on": ["09-08-domain-contracts", "09-08-application-notes"]}
 }

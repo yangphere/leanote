@@ -6,7 +6,7 @@
 
 ## Scope
 
-`ConfigService.go`、`UpgradeService.go`、`EmailService.go`、admin controllers、管理模板和相关日志/配置适配。
+`ConfigService.go`、`UpgradeService.go`、`EmailService.go`、Suggestion/feedback 提交与邮件 outbox、admin controllers、管理模板和相关日志/配置适配。Suggestion/feedback 是 `application-notes` 明确交接的接收项，不再留在 notes 中作为无 owner 能力。
 
 ## Requirements
 
@@ -16,6 +16,7 @@
 - 升级、邮件和数据维护操作记录可定位错误，不吞异常、不打印凭据。
 - 管理页面与 API 的状态码、错误文本和重定向保持兼容。
 - 管理业务设置通过 ConfigService 单一 seam；生产启动配置规则统一由 `interface-http` production-config seam 提供，后续消息解析器替换另记 MOD-003。
+- Suggestion/feedback 必须显式定义 anonymous policy、`Addr`/`Suggestion` 的 missing/blank/长度/HTML 边界、重复提交 identity 和 durable success。持久化成功与邮件 transport 分离：邮件经 outbox 投递，transport 失败不回滚已提交 feedback，请求路径禁止无结果 goroutine。
 
 ## Acceptance criteria
 
@@ -24,6 +25,7 @@
 - [ ] 邮件/升级失败可观测且不产生虚假的成功响应。
 - [ ] 敏感值不出现在日志、summary、制品或测试 fixture。
 - [ ] 管理服务和 adapter 的可执行文件 allowlist、argv 参数化、超时、错误和敏感日志回归通过；数据库凭据及 PDF callback secret/token 不出现在 argv、环境快照、日志或错误输出；管理页面 smoke 由 interface/delivery 任务验收。
+- [ ] Suggestion/feedback 的匿名/登录策略、输入边界、重复提交、持久化成功、outbox 投递、transport 失败和重试均有 service/DB/HTTP contract；无结果 goroutine 扫描为 0，且邮件失败不把已持久化 feedback 映射为失败。
 
 ## Out of scope
 

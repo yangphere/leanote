@@ -9,8 +9,8 @@ import (
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/service"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -69,46 +69,49 @@ func (c Attach) uploadAttach(noteId string) (re info.Re) {
 		return re
 	}
 
+	handel := c.Params.Files["file"][0]
+	clientOperationID := strings.TrimSpace(c.Params.Get("OperationId"))
 	// 生成上传路径
 	//	filePath := "files/" + c.GetUserId() + "/attachs"
 	newGuid := NewGuid()
-	filePath := "files/" + GetRandomFilePath(c.GetUserId(), newGuid) + "/attachs"
-	dir := revel.BasePath + "/" + filePath
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		return re
+	if clientOperationID != "" {
+		note := noteService.GetNoteById(noteId)
+		if note.NoteId.IsZero() || note.UserId.IsZero() {
+			return re
+		}
+		newGuid = service.StableWebAttachID(note.UserId, note.NoteId, clientOperationID).Hex()
 	}
-
-	handel := c.Params.Files["file"][0]
+	filePath := "files/" + GetRandomFilePath(c.GetUserId(), newGuid) + "/attachs"
 
 	// 生成新的文件名
 	filename := handel.Filename
 	_, ext := SplitFilename(filename) // .doc
 	filename = newGuid + ext
-	toPath := dir + "/" + filename
-	err = ioutil.WriteFile(toPath, data, 0777)
-	if err != nil {
-		return re
-	}
 
 	// add File to db
 	fileType := ""
 	if ext != "" {
 		fileType = strings.ToLower(ext[1:])
 	}
-	filesize := GetFilesize(toPath)
 	fileInfo = info.Attach{Name: filename,
 		Title:        handel.Filename,
 		NoteId:       db.MustObjectIDFromHex(noteId),
 		UploadUserId: c.GetObjectUserId(),
 		Path:         filePath + "/" + filename,
 		Type:         fileType,
-		Size:         filesize}
+		Size:         int64(len(data))}
 
 	id := db.NewObjectID()
+	if clientOperationID != "" {
+		note := noteService.GetNoteById(noteId)
+		if note.NoteId.IsZero() || note.UserId.IsZero() {
+			return re
+		}
+		id = service.StableWebAttachID(note.UserId, note.NoteId, clientOperationID)
+	}
 	fileInfo.AttachId = id
 	fileId = id.Hex()
-	Ok, resultMsg = attachService.AddAttach(fileInfo, false)
+	Ok, resultMsg = attachService.UploadWebAttach(fileInfo, data, clientOperationID)
 	if resultMsg != "" {
 		resultMsg = c.Message(resultMsg)
 	}
@@ -123,7 +126,7 @@ func (c Attach) uploadAttach(noteId string) (re info.Re) {
 // 删除附件
 func (c Attach) DeleteAttach(attachId string) revel.Result {
 	re := info.NewRe()
-	re.Ok, re.Msg = attachService.DeleteAttach(attachId, c.GetUserId())
+	re.Ok, re.Msg = attachService.DeleteAttachWithOperation(attachId, c.GetUserId(), strings.TrimSpace(c.Params.Get("OperationId")))
 	return c.RenderJSON(re)
 }
 

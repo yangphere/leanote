@@ -6,6 +6,7 @@ import (
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/service"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"os"
 	"os/exec"
@@ -180,6 +181,18 @@ func (c Note) UpdateNoteOrContent(noteOrContent info.NoteOrContent) revel.Result
 
 	// 新添加note
 	if noteOrContent.IsNew {
+		if !db.IsValidObjectIDHex(noteOrContent.NoteId) {
+			re.Msg = "noteIdNotExists"
+			return c.RenderJSON(re)
+		}
+		if !db.IsValidObjectIDHex(noteOrContent.NotebookId) {
+			re.Msg = "notebookIdNotExists"
+			return c.RenderJSON(re)
+		}
+		if noteOrContent.FromUserId != "" && !db.IsValidObjectIDHex(noteOrContent.FromUserId) {
+			re.Msg = "noAuth"
+			return c.RenderJSON(re)
+		}
 		userId := c.GetObjectUserId()
 		//		myUserId := userId
 		// 为共享新建?
@@ -236,39 +249,41 @@ func (c Note) UpdateNoteOrContent(noteOrContent info.NoteOrContent) revel.Result
 		noteUpdate["Tags"] = strings.Split(noteOrContent.Tags, ",")
 	}
 
-	// web端不控制
-	if needUpdateNote {
-		ok, msg, _ := noteService.UpdateNote(c.GetUserId(),
-			noteOrContent.NoteId, noteUpdate, -1)
-		if !ok {
-			re.Msg = nonEmptySaveMessage(msg)
-			return c.RenderJSON(re)
-		}
-	}
-
-	//-------------
-	// afterContentUsn := 0
-	// contentOk := false
-	// contentMsg := ""
+	var content *string
+	var abstract *string
 	if c.Has("Content") {
-		//		noteService.UpdateNoteContent(noteOrContent.UserId, c.GetUserId(),
-		//			noteOrContent.NoteId, noteOrContent.Content, noteOrContent.Abstract)
-		// contentOk, contentMsg, afterContentUsn =
-		ok, msg, _ := noteService.UpdateNoteContent(c.GetUserId(),
-			noteOrContent.NoteId, noteOrContent.Content, noteOrContent.Abstract,
-			needUpdateNote, -1, time.Now())
-		if !ok {
-			re.Msg = nonEmptySaveMessage(msg)
-			return c.RenderJSON(re)
-		}
+		content = &noteOrContent.Content
+		abstract = &noteOrContent.Abstract
 	}
-
-	// Log("usn", "afterContentUsn", afterContentUsn + "")
-	// Log(contentOk)
-	// Log(contentMsg)
-
-	re.Ok = true
+	if !needUpdateNote {
+		noteUpdate = nil
+	}
+	var expectedUSN *int
+	if c.Has("ExpectedUsn") {
+		expected := noteOrContent.ExpectedUsn
+		expectedUSN = &expected
+	}
+	result := noteService.SaveNote(service.SaveNoteCommand{
+		ActorUserID: c.GetUserId(), OperationID: noteOrContent.OperationId,
+		NoteID: noteOrContent.NoteId, ExpectedUSN: expectedUSN, Metadata: noteUpdate,
+		Content: content, Abstract: abstract, UpdatedTime: time.Now(),
+	})
+	re.Ok = result.OK()
+	if !re.Ok {
+		re.Msg = workspaceWebSaveMessage(result.Error)
+	}
 	return c.RenderJSON(re)
+}
+
+func workspaceWebSaveMessage(category service.WorkspaceErrorCategory) string {
+	switch category {
+	case service.WorkspaceNotFound:
+		return "notExists"
+	case service.WorkspaceUnauthorized:
+		return "noAuth"
+	default:
+		return nonEmptySaveMessage(string(category))
+	}
 }
 
 func nonEmptySaveMessage(msg string) string {
@@ -281,18 +296,7 @@ func nonEmptySaveMessage(msg string) string {
 // 删除note/ 删除别人共享给我的笔记
 // userId 是note.UserId
 func (c Note) DeleteNote(noteIds []string, isShared bool) revel.Result {
-	if !isShared {
-		for _, noteId := range noteIds {
-			trashService.DeleteNote(noteId, c.GetUserId())
-		}
-		return c.RenderJSON(true)
-	}
-
-	for _, noteId := range noteIds {
-		trashService.DeleteSharedNote(noteId, c.GetUserId())
-	}
-
-	return c.RenderJSON(true)
+	return c.RenderJSON(noteService.DeleteNotesWithOperation(c.GetUserId(), noteIds, isShared, c.Params.Get("OperationId")).OK())
 }
 
 // 删除trash, 已弃用, 用DeleteNote
@@ -302,36 +306,24 @@ func (c Note) DeleteTrash(noteId string) revel.Result {
 
 // 移动note
 func (c Note) MoveNote(noteIds []string, notebookId string) revel.Result {
-	userId := c.GetUserId()
-	for _, noteId := range noteIds {
-		noteService.MoveNote(noteId, notebookId, userId)
-	}
-	return c.RenderJSON(true)
+	return c.RenderJSON(noteService.MoveNotesWithOperation(c.GetUserId(), noteIds, notebookId, c.Params.Get("OperationId")).OK())
 }
 
 // 复制note
 func (c Note) CopyNote(noteIds []string, notebookId string) revel.Result {
-	copyNotes := make([]info.Note, len(noteIds))
-	userId := c.GetUserId()
-	for i, noteId := range noteIds {
-		copyNotes[i] = noteService.CopyNote(noteId, notebookId, userId)
-	}
+	result := noteService.CopyNotesWithOperation(c.GetUserId(), noteIds, notebookId, c.Params.Get("OperationId"))
 	re := info.NewRe()
-	re.Ok = true
-	re.Item = copyNotes
+	re.Ok = result.OK()
+	re.Item = result.Notes
 	return c.RenderJSON(re)
 }
 
 // 复制别人共享的笔记给我
 func (c Note) CopySharedNote(noteIds []string, notebookId, fromUserId string) revel.Result {
-	copyNotes := make([]info.Note, len(noteIds))
-	userId := c.GetUserId()
-	for i, noteId := range noteIds {
-		copyNotes[i] = noteService.CopySharedNote(noteId, notebookId, fromUserId, userId)
-	}
+	result := noteService.CopySharedNotesWithOperation(c.GetUserId(), noteIds, notebookId, fromUserId, c.Params.Get("OperationId"))
 	re := info.NewRe()
-	re.Ok = true
-	re.Item = copyNotes
+	re.Ok = result.OK()
+	re.Item = result.Notes
 	return c.RenderJSON(re)
 }
 

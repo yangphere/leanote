@@ -1,16 +1,24 @@
 package service
 
 import (
+	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/revel/revel"
+	applicationnotes "github.com/yangphere/leanote/app/application/notes"
 	"github.com/yangphere/leanote/app/db"
+	"github.com/yangphere/leanote/app/domain"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -245,6 +253,23 @@ func (this *FileService) GetFile(userId, fileId string) string {
 // 复制共享的笔记时, 复制其中的图片到我本地
 // 复制图片
 func (this *FileService) CopyImage(userId, fileId, toUserId string) (bool, string) {
+	return this.CopyImageWithOperation(userId, fileId, toUserId, "")
+}
+
+func stableCopiedImageID(operationID, sourceFileID, destinationOwnerID string) domain.ObjectID {
+	sum := sha256.Sum256([]byte("note-copy-image\x00" + operationID + "\x00" + sourceFileID + "\x00" + destinationOwnerID))
+	var raw [12]byte
+	copy(raw[:], sum[:12])
+	if raw == ([12]byte{}) {
+		raw[11] = 1
+	}
+	return domain.ObjectID(raw)
+}
+
+func (this *FileService) CopyImageWithOperation(userId, fileId, toUserId, operationID string) (bool, string) {
+	if operationID != "" {
+		return this.copyImageDurable(userId, fileId, toUserId, operationID)
+	}
 	// 是否已经复制过了
 	file2 := info.File{}
 	db.GetByQ(db.Files, bson.M{"UserId": db.MustObjectIDFromHex(toUserId), "FromFileId": db.MustObjectIDFromHex(fileId)}, &file2)
@@ -291,7 +316,89 @@ func (this *FileService) CopyImage(userId, fileId, toUserId string) (bool, strin
 	if Ok {
 		return Ok, id.Hex()
 	}
+	_ = os.Remove(revel.BasePath + "/" + filePath)
 	return false, ""
+}
+
+func (this *FileService) copyImageDurable(userID, sourceFileID, destinationUserID, operationID string) (bool, string) {
+	if !db.IsValidObjectIDHex(userID) || !db.IsValidObjectIDHex(sourceFileID) || !db.IsValidObjectIDHex(destinationUserID) {
+		return false, ""
+	}
+	var source info.File
+	if err := db.Files.FindContext(context.Background(), bson.M{"_id": db.MustObjectIDFromHex(sourceFileID), "UserId": db.MustObjectIDFromHex(userID)}).One(&source); err != nil {
+		return false, ""
+	}
+	data, err := os.ReadFile(filepath.Join(revel.BasePath, filepath.FromSlash(strings.TrimLeft(source.Path, "/"))))
+	if err != nil {
+		return false, ""
+	}
+	destinationOwner := db.MustObjectIDFromHex(destinationUserID)
+	destinationID := stableCopiedImageID(operationID, sourceFileID, destinationUserID)
+	_, ext := SplitFilename(source.Name)
+	filename := destinationID.Hex() + ext
+	relativePath := "files/" + destinationUserID + "/" + destinationID.Hex() + "/images/" + filename
+	target := filepath.Join(revel.BasePath, filepath.FromSlash(relativePath))
+	contentDigest := sha256.Sum256(data)
+	assetOperationID, err := applicationnotes.NewClientOperationIdentity("note_copy_image", destinationOwner, operationID+":"+sourceFileID)
+	if err != nil {
+		return false, ""
+	}
+	_, digest, desired, err := applicationnotes.NewOperationIdentity("note_copy_image_input", destinationOwner, destinationID, struct{ SourceFileID, SHA256 string }{sourceFileID, hex.EncodeToString(contentDigest[:])})
+	if err != nil {
+		return false, ""
+	}
+	destination := info.File{FileId: destinationID, UserId: destinationOwner, AlbumId: db.MustObjectIDFromHex(DEFAULT_ALBUM_ID), Name: filename, Title: source.Title, Path: relativePath, Size: int64(len(data)), FromFileId: source.FileId, IsDefaultAlbum: true, CreatedTime: time.Now()}
+	plan := db.WorkspaceMutationPlan{OperationID: assetOperationID, OwnerID: destinationOwner, ResourceID: destinationID, Kind: "note_copy_image", InputDigest: digest, DesiredState: desired, FailurePolicy: applicationnotes.FailurePending,
+		Assets: []applicationnotes.OperationAsset{{AssetID: destinationID.Hex(), LocalFileID: sourceFileID, ContentSHA256: hex.EncodeToString(contentDigest[:])}},
+		Steps: []db.WorkspaceMutationStep{
+			{Name: "publish_file", ReplaySafe: false, Apply: func(context.Context) error { return publishFileNoClobber(target, data, 0755) }, Verify: func(context.Context) (bool, error) {
+				got, err := fileDigest(target)
+				if errors.Is(err, os.ErrNotExist) {
+					return false, nil
+				}
+				return got == contentDigest, err
+			}},
+			{Name: "image_row", ReplaySafe: true, Apply: func(ctx context.Context) error {
+				// Keep the final row step self-sufficient: a resumed operation
+				// must not accept an existing row if the published file vanished
+				// after the earlier step was recorded.
+				if err := publishFileNoClobber(target, data, 0755); err != nil {
+					return err
+				}
+				var existing info.File
+				err := db.Files.FindContext(ctx, bson.M{"_id": destinationID, "UserId": destinationOwner}).One(&existing)
+				if err == nil {
+					if existing.Path != relativePath || existing.FromFileId != source.FileId {
+						return fmt.Errorf("image identity conflict")
+					}
+					return nil
+				}
+				if !errors.Is(err, mongo.ErrNoDocuments) {
+					return err
+				}
+				return db.Files.InsertContext(ctx, destination)
+			}, Verify: func(ctx context.Context) (bool, error) {
+				var existing info.File
+				err := db.Files.FindContext(ctx, bson.M{"_id": destinationID, "UserId": destinationOwner, "FromFileId": source.FileId, "Path": relativePath}).One(&existing)
+				if errors.Is(err, mongo.ErrNoDocuments) {
+					return false, nil
+				}
+				if err != nil {
+					return false, err
+				}
+				got, digestErr := fileDigest(target)
+				if errors.Is(digestErr, os.ErrNotExist) {
+					return false, nil
+				}
+				return got == contentDigest, digestErr
+			}},
+		},
+	}
+	result, runErr := db.RunWorkspaceRepair(context.Background(), plan)
+	if runErr != nil || !result.Committed {
+		return false, ""
+	}
+	return true, destinationID.Hex()
 }
 
 // 是否是我的文件
