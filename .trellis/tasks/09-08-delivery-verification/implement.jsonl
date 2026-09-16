@@ -3,3 +3,5 @@
 {"file":".trellis/tasks/archive/2026-09/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"读取 persistence transaction/index/outbox/token 交接证据"}
 {"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"读取 identity service/adapter/Golden 交接证据"}
 {"file":".trellis/tasks/09-08-interface-http/prd.md","reason":"读取 HTTP route/session/replay/production-config 交接契约"}
+{"file":".trellis/tasks/09-08-application-content/prd.md","reason":"读取 durable delete、bounded decode 与 untrusted PDF contract"}
+{"file":".trellis/tasks/09-08-application-content/acceptance/evidence-matrix.md","reason":"执行 cross-host quarantine 与 Linux PDF sandbox delegated evidence"}

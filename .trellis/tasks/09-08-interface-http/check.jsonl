@@ -5,3 +5,5 @@
 {"file":".trellis/tasks/09-08-application-identity/prd.md","reason":"消费 identity principal、方法矩阵、userId 和 SessionWriter 契约"}
 {"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"承接 identity service/adapter 和下游 replay 证据"}
 {"file":".trellis/tasks/archive/2026-09/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"承接 TTL/index、token/session/outbox 持久化证据"}
+{"file":".trellis/tasks/09-08-application-content/prd.md","reason":"复核 ContentRoots 配置门禁与 content ownership"}
+{"file":".trellis/tasks/09-08-application-content/design.md","reason":"确认 HTTP 只绑定 typed roots，不复制 resolver/state machine"}

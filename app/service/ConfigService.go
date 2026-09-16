@@ -9,6 +9,7 @@ import (
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"math"
 	"os"
 	"os/exec"
 	"strconv"
@@ -626,6 +627,27 @@ func (this *ConfigService) IsGoodSubDomain(domain string) bool {
 func (this *ConfigService) GetUploadSize(key string) float64 {
 	f, _ := strconv.ParseFloat(this.GetGlobalStringConfig(key), 64)
 	return f
+}
+
+// GetUploadLimitBytes is the fail-closed upload configuration boundary used
+// by content commands.  The legacy float-only getter remains for display
+// compatibility, but upload paths must not turn malformed values into an
+// implicit 1000 MB allowance.
+func (this *ConfigService) GetUploadLimitBytes(key string) (int64, error) {
+	value := strings.TrimSpace(this.GetGlobalStringConfig(key))
+	megabytes, err := strconv.ParseFloat(value, 64)
+	if err != nil || math.IsNaN(megabytes) || math.IsInf(megabytes, 0) || megabytes <= 0 {
+		return 0, fmt.Errorf("invalid upload size configuration for %s", key)
+	}
+	const bytesPerMegabyte = 1024 * 1024
+	if megabytes > float64(math.MaxInt64)/bytesPerMegabyte {
+		return 0, fmt.Errorf("upload size configuration overflows for %s", key)
+	}
+	limit := int64(megabytes * bytesPerMegabyte)
+	if limit <= 0 {
+		return 0, fmt.Errorf("upload size configuration is below one byte for %s", key)
+	}
+	return limit, nil
 }
 func (this *ConfigService) GetInt64(key string) int64 {
 	f, _ := strconv.ParseInt(this.GetGlobalStringConfig(key), 10, 64)

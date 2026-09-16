@@ -4,3 +4,5 @@
 {"file":".trellis/tasks/09-08-application-identity/design.md","reason":"实现 principal、token/session resolver 和错误映射边界"}
 {"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"执行 identity API/Session/Golden replay 交接"}
 {"file":".trellis/tasks/archive/2026-09/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"读取 TTL/index、token、outbox 和 transaction 已通过证据"}
+{"file":".trellis/tasks/09-08-application-content/prd.md","reason":"消费 typed ContentRoots 与 paired quarantine startup contract"}
+{"file":".trellis/tasks/09-08-application-content/design.md","reason":"只实现配置绑定，不复制 content path resolver/quarantine state machine"}

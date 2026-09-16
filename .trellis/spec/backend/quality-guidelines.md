@@ -187,3 +187,103 @@ go version -m "$HOME/gopath/bin/revel" | grep -E 'golang.org/x/tools[[:space:]]+
 Wrong:   go install github.com/revel/cmd/revel@v1.0.3
 Correct: go build -o "$HOME/gopath/bin/revel" github.com/revel/cmd/revel
 ```
+
+## Scenario: Content roots, deletion recovery, and self-contained PDF export
+
+### 1. Scope / Trigger
+
+Use this contract for filesystem-backed content, a deletion that must survive
+process loss, or a note-to-PDF boundary. `app/application/content` owns logical
+paths, manifest state, and renderer input validation; `app/service/contentfs`
+owns absolute paths and durable filesystem operations; controllers only map the
+authenticated request and the application result. This prevents a controller
+or a renderer subprocess from becoming an alternate filesystem/network owner.
+
+### 2. Signatures
+
+```go
+roots, err := contentfs.ValidateContentRoots(contentfs.ContentRootsConfig{ /* pairs + temporary + served roots */ })
+manifest, err := content.NewDeleteManifest(identity, source, now)
+err = store.CompareAndSwap(ctx, lookupKey, version, digest, next)
+document, err := content.SerializeSelfContainedPDF(content.PDFDocumentRequest{ /* authorized resources */ })
+err = service.InitContentRuntime(basePath)
+```
+
+- `ContentRootsConfig` supplies private and public `DurableRootConfig` pairs,
+  a temporary root, and every HTTP-served root.
+- `DeleteIdentity.LookupKey` is derived from action/owner/kind/asset; only an
+  explicit operation ID, or legacy generation plus content digest, can produce
+  its `OperationKey`.
+- `PDFDocumentRequest.Resources` is an already-authorized map of bounded image
+  bytes. It has no URL fetcher, callback URL, or credential field.
+
+### 3. Contracts
+
+- Roots must already be absolute, accessible directories after symlink
+  canonicalization. Data, quarantine, temporary, and served roots cannot
+  overlap; each data/quarantine pair must support an atomic rename on one
+  filesystem; quarantine cannot be HTTP-served. Failure prevents
+  `cmd/leanote` from listening.
+- A deletion writes a generic content manifest before irreversible work. State
+  progresses only `prepared -> quarantined -> metadata_mutated -> terminal`;
+  every transition increments `Version` and recomputes `StateDigest`. The
+  terminal record clears source, quarantine, and content digest. It is not a
+  notes receipt and must not own USN or history.
+- Manifests are staged at `0600`, published without replacement or atomically
+  replaced under an owner-scoped lease, directory-synced, and read with a 1 MiB
+  limit. Terminal records are retained for seven days before GC.
+- The serializer strips user-controlled active elements, event/style/form
+  attributes, and unapproved external references. It may emit only the pinned
+  completion script and `data:image/...` values created from validated,
+  authorized resources; validate again immediately before process execution.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|---|---|
+| Missing, relative, inaccessible, overlapping, served, or cross-filesystem root | initialization fails closed; no listener fallback |
+| Missing operation ID with missing legacy generation/digest | `ErrorValidation` (`legacy_delete_identity_incomplete`) |
+| Canceled manifest operation | `ErrorTimeout`; do not report a successful delete |
+| Existing lease, stale CAS, malformed/oversized manifest, or root ambiguity | typed `ErrorConflict`; recovery must not guess |
+| Unsupported no-replace/replace/sync filesystem primitive | typed `ErrorUnsupportedFS` or `ErrorUnknownResult`; caller verifies before retry |
+| Empty/oversized/invalid PDF resource or invalid image bytes | typed resource/media error; no renderer start |
+| User HTML containing script, SVG, refresh, external URL, or active attribute | remove untrusted content or reject the final document; never fetch it |
+
+### 5. Good / Base / Bad Cases
+
+- Good: initialize both durable pairs before HTTP registration; create and CAS
+  a manifest around quarantine/metadata repair; render only a validated,
+  self-contained document through direct argv and stdin.
+- Base: a terminal manifest contains recovery identity and timestamp but no
+  path or content digest; a note with no approved embedded resource still
+  exports after sanitization.
+- Bad: call `os.Remove` from a controller or service before durable recovery
+  state exists; recover from a corrupt manifest by deleting a guessed path; let
+  `wkhtmltopdf` resolve `http`, `file`, CSS, SVG, or callback resources.
+
+### 6. Tests Required
+
+- Root tests cover canonicalization, all overlap directions, served-root
+  exclusion, same-filesystem probe failure, and startup error propagation.
+- Manifest tests cover explicit and legacy identities, every valid transition,
+  terminal scrubbing, stale CAS, held lease, cancellation, oversized/trailing
+  JSON, root mismatch, sync failure, and seven-day terminal GC.
+- PDF tests cover Markdown and HTML serialization, resource MIME/size/decode
+  checks, stripping `script`/`svg`/`background`/`xlink:href`, final-document
+  validation, direct-argv timeout/cancel, stderr/output bounds, PDF magic, and
+  cleanup. Linux delivery additionally proves local-file denial and zero
+  outbound traffic with real `wkhtmltopdf`.
+
+### 7. Wrong vs Correct
+
+```go
+// Wrong: controller-owned deletion has no restart-safe recovery boundary.
+_ = os.Remove(path)
+_ = db.Delete(assetID)
+
+// Correct: generic recovery state is durable before the irreversible path.
+manifest, err := content.NewDeleteManifest(identity, source, now)
+if err == nil {
+    err = manifestStore.Create(ctx, manifest)
+}
+```

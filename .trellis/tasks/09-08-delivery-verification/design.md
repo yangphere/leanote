@@ -2,7 +2,7 @@
 
 ## Boundaries
 
-交付层消费各子任务的稳定 artifact 和测试入口，负责跨层矩阵、质量门、容器/PDF、浏览器和发布；不修改业务规则。它接收 notes 的 38-action inventory、presentation 的第一方 operation generation、content 的 asset primitive 与 persistence 的跨拓扑入口；发现 provider/server 缺陷时回流到 owner task。
+交付层消费各子任务的稳定 artifact 和测试入口，负责跨层矩阵、质量门、容器/PDF、浏览器和发布；不修改业务规则。它接收 notes 的 38-action inventory、presentation 的第一方 operation generation、content 的 asset primitive、PDF self-contained/sandbox contract 与 persistence 的跨拓扑入口；发现 provider/server 缺陷时回流到 owner task。
 
 ## Evidence flow
 

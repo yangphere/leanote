@@ -56,20 +56,22 @@ func (c Attach) uploadAttach(noteId string) (re info.Re) {
 	// defer file.Close()
 
 	// data, err := ioutil.ReadAll(file)
-	if data == nil || len(data) == 0 {
+	files := c.Params.Files["file"]
+	if data == nil || len(data) == 0 || len(files) != 1 {
 		return re
 	}
 	// > 5M?
-	maxFileSize := configService.GetUploadSize("uploadAttachSize")
-	if maxFileSize <= 0 {
-		maxFileSize = 1000
+	maxFileSize, err := configService.GetUploadLimitBytes("uploadAttachSize")
+	if err != nil {
+		resultMsg = "upload config error"
+		return re
 	}
-	if float64(len(data)) > maxFileSize*float64(1024*1024) {
-		resultMsg = fmt.Sprintf("The file's size is bigger than %vM", maxFileSize)
+	if int64(len(data)) > maxFileSize {
+		resultMsg = fmt.Sprintf("The file's size is bigger than %vM", float64(maxFileSize)/(1024*1024))
 		return re
 	}
 
-	handel := c.Params.Files["file"][0]
+	handel := files[0]
 	clientOperationID := strings.TrimSpace(c.Params.Get("OperationId"))
 	// 生成上传路径
 	//	filePath := "files/" + c.GetUserId() + "/attachs"

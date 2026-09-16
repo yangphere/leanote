@@ -8,7 +8,7 @@
 
 - PR/push 质量门覆盖 Go 1.26/1.27、MongoDB 8.0、Node 24、JS/build、Chromium、Golden/USN、打包和容器 smoke。
 - 发布严格使用 `vX.Y.Z` tag，产出可复验 tarball/SHA-256 与 Linux/amd64 非 root GHCR 镜像，禁止 `latest` 别名和自动生产部署。
-- 按 `interface-http` production-config seam 验证生产配置、退出码 78、`/healthz`、外置 Mongo、上传持久化和完整 PDF 行为，必须有 Linux/container 正向证据。
+- 按 `interface-http` production-config seam 验证生产配置、退出码 78、`/healthz`、外置 Mongo、上传持久化和完整 PDF 行为，必须有 Linux/container 正向证据；content roots 需证明 data/quarantine paired volume、non-public、non-root writable、restart persistence 及 cross-device/static-reachable/overlap fail-closed。PDF 同时消费 `application-content` 的不可信 HTML contract，证明 local-file deny、零 outbound，以及 `file://`、private/metadata/redirect/CSS/script-fetch 恶意输入不能读取或嵌入目标内容。
 - 真实 Chrome、Edge、Firefox、Safari 的 current/previous 八槽位各执行固定四项 coverage，artifact 绑定同一 commit/run/attempt 并通过 JCS digest 校验。
 - 任一环境缺失、失败、清理失败或 artifact 缺失均保持 blocked，不能用局部单测替代。
 - 汇合并核对 `infrastructure-persistence` 的事务/索引/TTL/outbox/token 证据、`application-identity` 的 principal/Session/API Golden 证据和 `interface-http` 的 route/session/replay 证据；任何交接矩阵缺项都保持 blocked。
@@ -26,7 +26,7 @@
 - [ ] Mongo 7 standalone、Mongo 8 replica-set 分别执行 notes durable mutation；在 claim/apply/verify/save/commit 边界注入 kill/restart 与 Mongo failpoint，证明恢复后不重复 USN/history/destination asset、不回拨 counter、不伪造成功。
 - [ ] 跨主机/持久化卷文件系统 failpoint 验证 no-clobber publish、digest Verify、DB row/projection 与重启续跑；与 application-content provider contract 同一 candidate 绑定。
 - [ ] 质量门 summary 与失败路径准确记录 discovery/execution、stage、exit code 和脱敏原因。
-- [ ] 八槽浏览器 artifact、生产配置矩阵、tarball、容器、PDF 和 GHCR 证据可复核。
+- [ ] 八槽浏览器 artifact、生产配置矩阵、tarball、容器、PDF 和 GHCR 证据可复核；PDF artifact 同时包含 self-contained 正向样例、local-file/zero-outbound 观测和恶意 HTML 负向样例。
 - [ ] 发布前验证阻止错误版本、重复 tag/release/image、跨 run artifact 和不一致 digest。
 - [ ] 仅在全部证据通过后创建 Release/GHCR；否则任务状态为 blocked 并记录恢复条件。
 - [ ] 如逐 action、浏览器、跨拓扑或 failpoint 发现 notes 服务端契约缺陷，重开 `09-08-application-notes`；交接不允许把缺陷归类为“只属交付环境”。

@@ -25,6 +25,8 @@ import (
 	"github.com/yangphere/leanote/app/service"
 )
 
+var initContentRuntime = service.InitContentRuntime
+
 func main() {
 	confPath := flag.String("conf", "", "path to the canonical production app.conf")
 	runMode := flag.String("runMode", "", "active app.conf section (must be prod)")
@@ -81,6 +83,9 @@ func main() {
 	service.InitService()
 	if databaseReady && !service.ConfigS.InitGlobalConfigs() {
 		log.Printf("global configuration unavailable; email delivery will retry through outbox")
+	}
+	if err := initializeContentRuntime(appBase); err != nil {
+		log.Fatalf("initialize content runtime: %v", err)
 	}
 	controllers.InitService()
 	api.InitService()
@@ -153,6 +158,10 @@ func applicationBase(confPath string) string {
 
 func staticAssetRoot(appBase, base string) string {
 	return filepath.Join(appBase, base)
+}
+
+func initializeContentRuntime(appBase string) error {
+	return initContentRuntime(appBase)
 }
 
 func staticHandler(appBase, base string) http.Handler {

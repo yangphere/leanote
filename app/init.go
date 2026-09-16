@@ -440,6 +440,9 @@ func init() {
 		admin.InitService()
 		member.InitService()
 		service.ConfigS.InitGlobalConfigs()
+		if err := service.InitContentRuntime(revel.BasePath); err != nil {
+			panic(fmt.Sprintf("initialize content runtime: %v", err))
+		}
 		api.InitService()
 	})
 }

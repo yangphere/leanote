@@ -21,6 +21,6 @@
   "children": [],
   "parent": "09-08-business-layer-architecture",
   "relatedFiles": [],
-  "notes": "Accepts the application-notes Suggestion/feedback handoff. Planning must freeze anonymous policy, Addr/Suggestion input boundaries, duplicate identity, durable persistence success and legacy wire shape; email is delivered through an outbox, transport failure does not roll back persisted feedback, and request-path fire-and-forget goroutines are forbidden.",
-  "meta": {"layer": "application", "depends_on": ["09-08-domain-contracts", "09-08-application-notes"]}
+  "notes": "Accepts the application-notes Suggestion/feedback handoff. Planning must freeze anonymous policy, Addr/Suggestion input boundaries, duplicate identity, durable persistence success and legacy wire shape; email is delivered through an outbox, transport failure does not roll back persisted feedback, and request-path fire-and-forget goroutines are forbidden. PDF ownership handoff is descriptor-only: admin validates configuration and allow policy, while application-content exclusively owns renderer process, sandbox, timeout, artifacts and cleanup.",
+  "meta": {"layer": "application", "depends_on": ["09-08-domain-contracts", "09-08-application-notes", "09-08-application-content"]}
 }

@@ -1,20 +1,22 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
 	"github.com/revel/revel"
 	//	"encoding/json"
+	applicationcontent "github.com/yangphere/leanote/app/application/content"
 	applicationnotes "github.com/yangphere/leanote/app/application/notes"
 	"github.com/yangphere/leanote/app/db"
+	"github.com/yangphere/leanote/app/domain"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
 	"github.com/yangphere/leanote/app/service"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"os"
-	"os/exec"
 	"regexp"
 	"strings"
 	"time"
@@ -712,77 +714,25 @@ func (c ApiNote) GetHistories(noteId string) revel.Result {
 // 导出成PDF
 func (c ApiNote) ExportPdf(noteId string) revel.Result {
 	re := info.NewApiRe()
-	userId := c.getUserId()
-	if noteId == "" {
+	actorID, actorErr := domain.ParseObjectID(c.getUserId())
+	noteID, noteErr := domain.ParseObjectID(noteId)
+	if actorErr != nil || noteErr != nil || actorID.IsZero() || noteID.IsZero() {
 		re.Msg = "noteNotExists"
 		return c.RenderJSON(re)
 	}
-
-	note := noteService.GetNoteById(noteId)
-	if note.NoteId.IsZero() {
-		re.Msg = "noteNotExists"
+	if service.ContentPDF == nil {
+		re.Msg = "sysError"
 		return c.RenderJSON(re)
 	}
-
-	noteUserId := note.UserId.Hex()
-	// 是否有权限
-	if noteUserId != userId {
-		// 是否是有权限协作的
-		if !note.IsBlog && !shareService.HasReadPerm(noteUserId, userId, noteId) {
+	artifact, err := service.ContentPDF.Export(c.RequestContext(), actorID, noteID)
+	if err != nil {
+		var contentErr *applicationcontent.Error
+		if errors.As(err, &contentErr) && (contentErr.Category == applicationcontent.ErrorUnauthorized || contentErr.Category == applicationcontent.ErrorNotFound) {
 			re.Msg = "noteNotExists"
 			return c.RenderJSON(re)
 		}
-	}
-
-	// path 判断是否需要重新生成之
-	guid := NewGuid()
-	fileUrlPath := "files/export_pdf"
-	dir := revel.BasePath + "/" + fileUrlPath
-	if !MkdirAll(dir) {
-		re.Msg = "noDir"
-		return c.RenderJSON(re)
-	}
-	filename := guid + ".pdf"
-	path := dir + "/" + filename
-
-	appKey, _ := revel.Config.String("app.secretLeanote")
-	if appKey == "" {
-		appKey, _ = revel.Config.String("app.secret")
-	}
-
-	// 生成之
-	binPath := configService.GetGlobalStringConfig("exportPdfBinPath")
-	// 默认路径
-	if binPath == "" {
-		binPath = "/usr/local/bin/wkhtmltopdf"
-	}
-
-	url := configService.GetSiteUrl() + "/note/toPdf?noteId=" + noteId + "&appKey=" + appKey
-	var cc string
-	if note.IsMarkdown {
-		cc = binPath + " --lowquality --window-status done \"" + url + "\"  \"" + path + "\"" //  \"" + cookieDomain + "\" \"" + cookieName + "\" \"" + cookieValue + "\""
-	} else {
-		cc = binPath + " --lowquality \"" + url + "\"  \"" + path + "\"" //  \"" + cookieDomain + "\" \"" + cookieName + "\" \"" + cookieValue + "\""
-	}
-
-	cmd := exec.Command("/bin/sh", "-c", cc)
-	_, err := cmd.Output()
-	if err != nil {
 		re.Msg = "sysError"
 		return c.RenderJSON(re)
 	}
-	file, err := os.Open(path)
-	if err != nil {
-		re.Msg = "sysError"
-		return c.RenderJSON(re)
-	}
-
-	filenameReturn := note.Title
-	filenameReturn = FixFilename(filenameReturn)
-	if filenameReturn == "" {
-		filenameReturn = "Untitled.pdf"
-	} else {
-		filenameReturn += ".pdf"
-	}
-	return c.RenderBinary(file, filenameReturn, revel.Attachment, time.Now()) // revel.Attachment
+	return c.RenderBinary(bytes.NewReader(artifact.Data), artifact.Filename, revel.Attachment, time.Now())
 }

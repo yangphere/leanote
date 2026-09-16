@@ -4,6 +4,7 @@ import (
 	"github.com/revel/revel"
 	//	"encoding/json"
 	"fmt"
+	applicationcontent "github.com/yangphere/leanote/app/application/content"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
@@ -113,7 +114,7 @@ func (c File) uploadImage(from, albumId string) (re info.Re) {
 	var data []byte
 	c.Params.Bind(&data, "file")
 	files := c.Params.Files["file"]
-	if len(files) == 0 {
+	if len(files) != 1 {
 		return re
 	}
 	handel := files[0]
@@ -142,53 +143,48 @@ func (c File) uploadImage(from, albumId string) (re info.Re) {
 	}
 
 	dir := revel.BasePath + "/" + fileUrlPath
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		return re
-	}
 	// 生成新的文件名
 	filename := handel.Filename
 
 	var ext string
 	if from == "pasteImage" {
 		handel.Filename = c.Message("unTitled")
-		ext = ".png" // TODO 可能不是png类型
 	} else {
 		_, ext = SplitFilename(filename)
-		if ext != ".gif" && ext != ".jpg" && ext != ".png" && ext != ".bmp" && ext != ".jpeg" {
-			resultMsg = "Please upload image"
-			return re
-		}
+		ext = strings.ToLower(ext)
 	}
 
-	filename = newGuid + ext
-	// data, err := ioutil.ReadAll(file)
-	// if err != nil {
-	// 	LogJ(err)
-	// 	return re
-	// }
-
-	var maxFileSize float64
+	configKey := "uploadImageSize"
 	if from == "logo" {
-		maxFileSize = configService.GetUploadSize("uploadAvatarSize")
+		configKey = "uploadAvatarSize"
 	} else if from == "blogLogo" {
-		maxFileSize = configService.GetUploadSize("uploadBlogLogoSize")
-	} else {
-		maxFileSize = configService.GetUploadSize("uploadImageSize")
+		configKey = "uploadBlogLogoSize"
 	}
-	if maxFileSize <= 0 {
-		maxFileSize = 1000
+	maxFileSize, err := configService.GetUploadLimitBytes(configKey)
+	if err != nil {
+		resultMsg = "upload config error"
+		return re
 	}
-
-	// > 2M?
-	if float64(len(data)) > maxFileSize*float64(1024*1024) {
+	if int64(len(data)) > maxFileSize {
 		resultCode = 0
-		resultMsg = fmt.Sprintf("The file Size is bigger than %vM", maxFileSize)
+		resultMsg = fmt.Sprintf("The file Size is bigger than %vM", float64(maxFileSize)/(1024*1024))
+		return re
+	}
+	media, err := applicationcontent.ValidateImage(data, ext, applicationcontent.HardImageBudget())
+	if err != nil {
+		resultMsg = "Please upload image"
+		return re
+	}
+	if ext == "" {
+		ext = media.Extension
+	}
+	filename = newGuid + ext
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return re
 	}
 
 	toPath := dir + "/" + filename
-	err = ioutil.WriteFile(toPath, data, 0777)
+	err = ioutil.WriteFile(toPath, data, 0600)
 	if err != nil {
 		LogJ(err)
 		return re

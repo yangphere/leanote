@@ -23,6 +23,15 @@ type BaseController struct {
 	*revel.Controller
 }
 
+func (c BaseController) RequestContext() context.Context {
+	if c.Controller != nil && c.Request != nil && c.Request.In != nil {
+		if request, ok := c.Request.In.GetRaw().(interface{ Context() context.Context }); ok {
+			return request.Context()
+		}
+	}
+	return context.Background()
+}
+
 // 覆盖revel.Message
 func (c *BaseController) Message(message string, args ...interface{}) (value string) {
 	return i18n.Message(c.Request.Locale, message, args...)

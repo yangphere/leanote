@@ -9,7 +9,7 @@
 - 根据 `conf/routes` 建立完整显式路由和受限 catch-all registry，禁止任意反射调用。
 - 迁移全部主站、API、admin、member controller actions、参数绑定、结果转换和 BEFORE 钩子。
 - Session、`ViewArgs`、i18n、模板函数、gzip、恢复、日志和生产 secret/cookie 安全默认值统一由 HTTP 层提供。
-- HTTP 层的 production-config seam 是生产启动配置的唯一事实来源；它公开稳定的错误码、来源校验和 bind/dial/healthz 时序供 application-admin 与 delivery 消费。
+- HTTP 层的 production-config seam 是生产启动配置的唯一事实来源；它公开稳定的错误码、来源校验和 bind/dial/healthz 时序供 application-admin 与 delivery 消费，并按 `application-content` contract 绑定 typed `ContentRoots`。private/public data root、各自 non-public same-filesystem quarantine root 和 temporary root 必须在 bind 前完成 absolute/canonical、可写、same-filesystem、non-public 与 no-overlap 校验；HTTP 层不复制 path resolver 或 quarantine 状态机。
 - 将 Golden/USN harness、开发启动、打包入口迁移到 `cmd/leanote`。
 - 完成后清除 module/import/runtime/app/cmd/文档中的 Revel 生产依赖，不保留双运行时 fallback。
 - 消费 `application-identity` 与 `infrastructure-persistence` 已确认的 principal、SessionWriter、`Session["_ID"]`、API fallback、token TTL 和错误 seam，不在 HTTP 层复制认证或持久化规则。
@@ -26,7 +26,7 @@
 - [ ] identity action matrix 的方法、405、principal `userId`、`Session["_ID"]` fallback、显式 invalid token fail-closed 和 SessionWriter 写失败均有 contract/replay 证据。
 - [ ] P-01 session rotation、P-06 logout cleanup failure、P-07 `registered_relogin_required` 和 P-03 query/form-only transport 的 HTTP contract/replay 证据通过；无 CSRF 与仅 `_ID`+Captcha 风险已记录，不得伪造为安全能力。
 - [ ] `ApiUser` first-party actions 已注册并可达；API Auth/User envelope、Content-Type、字段顺序和 Golden 保持兼容。
-- [ ] production-config 在 bind/dial/healthz 前完成来源、secret/Mongo 校验，失败返回稳定错误码并以退出码 78 fail closed；有效配置的 healthz 语义与 delivery contract 一致。
+- [ ] production-config 在 bind/dial/healthz 前完成来源、secret/Mongo 和 typed `ContentRoots` 校验；缺失/相对/不可写/cross-device quarantine/static-reachable/overlap 均返回稳定错误码并以退出码 78 fail closed，有效配置的 healthz 语义与 delivery contract 一致。
 - [ ] harness、`sh/run.sh`、`sh/package.sh`、CI 和文档不再依赖 Revel；`rg 'github.com/revel|revel\.' app cmd go.mod sh conf` 对生产范围零命中。
 
 ## Out of scope

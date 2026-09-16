@@ -7,9 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/httpserver"
-	"github.com/yangphere/leanote/app/info"
 )
 
 // firstPartyApp builds the post-Revel server over the REAL conf/routes with
@@ -90,50 +88,23 @@ func TestFirstPartyUnregisteredRoutes404(t *testing.T) {
 	}
 }
 
-func TestFirstPartyNoteToPDFRendersRealTemplate(t *testing.T) {
-	views, err := httpserver.LoadTemplates("../../app/views")
-	if err != nil {
-		t.Fatalf("LoadTemplates: %v", err)
-	}
-	savedRenderer := httpserver.TemplateRenderer
-	httpserver.TemplateRenderer = httpserver.TemplateSetRenderer(views)
-	defer func() { httpserver.TemplateRenderer = savedRenderer }()
-
-	noteID := db.NewObjectID()
-	server := &NotePDFServer{
-		AppSecret: "pdf-secret",
-		Dependencies: notePDFDependencies{
-			GetNoteByID: func(string) info.Note {
-				return info.Note{NoteId: noteID, UserId: db.NewObjectID(), Title: "Release note", Tags: []string{"ci"}}
-			},
-			GetNoteContent: func(string, string) info.NoteContent {
-				return info.NoteContent{Content: "<p>PDF body</p>"}
-			},
-			GetUserInfo:    func(string) info.User { return info.User{} },
-			GetUserBlog:    func(string) info.UserBlog { return info.UserBlog{} },
-			GetImageBase64: func(string, string) string { return "" },
-		},
-	}
+func TestFirstPartyNoteToPDFBindsButDoesNotTrustLegacyAppKey(t *testing.T) {
+	server := &NotePDFServer{}
 
 	app := &httpserver.App{
 		Routes:   httpserver.CompileRoutes(parseRoutesForTest(t, "* /note/toPdf Note.ToPdf")),
 		Registry: httpserver.NewRegistry(),
 	}
 	server.Register(app.Registry)
-	req := httptest.NewRequest(http.MethodGet, "/note/toPdf?noteId="+noteID.Hex()+"&appKey=pdf-secret", nil)
+	req := httptest.NewRequest(http.MethodGet, "/note/toPdf?noteId=507f1f77bcf86cd799439011&appKey=pdf-secret", nil)
 	rec := httptest.NewRecorder()
 	app.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("ToPdf status = %d, want 200", rec.Code)
 	}
-	if got := rec.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/html") {
-		t.Fatalf("ToPdf content type = %q, want text/html", got)
-	}
-	for _, want := range []string{"Release note", "PDF body"} {
-		if !strings.Contains(rec.Body.String(), want) {
-			t.Fatalf("ToPdf body missing %q: %s", want, rec.Body.String())
-		}
+	if rec.Body.String() != "no note" {
+		t.Fatalf("ToPdf body = %q, want no note", rec.Body.String())
 	}
 }
 
@@ -150,16 +121,7 @@ func TestRegisterHTTPExposesNoteToPDFWhenProductionConfigIsPresent(t *testing.T)
 }
 
 func TestFirstPartyNoteToPDFRejectsInvalidNoteIDBeforeLookup(t *testing.T) {
-	lookedUp := false
-	server := &NotePDFServer{
-		AppSecret: "pdf-secret",
-		Dependencies: notePDFDependencies{
-			GetNoteByID: func(string) info.Note {
-				lookedUp = true
-				return info.Note{}
-			},
-		},
-	}
+	server := &NotePDFServer{}
 	app := &httpserver.App{
 		Routes:   httpserver.CompileRoutes(parseRoutesForTest(t, "* /note/toPdf Note.ToPdf")),
 		Registry: httpserver.NewRegistry(),
@@ -171,36 +133,5 @@ func TestFirstPartyNoteToPDFRejectsInvalidNoteIDBeforeLookup(t *testing.T) {
 
 	if rec.Code != http.StatusOK || rec.Body.String() != "no note" {
 		t.Fatalf("invalid note id response = %d %q, want 200 no note", rec.Code, rec.Body.String())
-	}
-	if lookedUp {
-		t.Fatal("invalid note id reached the database lookup")
-	}
-}
-
-func TestNotePDFViewInlinesRelativeImagesAndMarkdownImages(t *testing.T) {
-	noteID := db.NewObjectID()
-	ownerID := db.NewObjectID()
-	imageID := "5483207cf4e87203a4000001"
-	args, ok := buildNotePDFView(noteID.Hex(), "", "http://127.0.0.1:9000", notePDFDependencies{
-		GetNoteByID: func(string) info.Note {
-			return info.Note{NoteId: noteID, UserId: ownerID, IsMarkdown: true}
-		},
-		GetNoteContent: func(string, string) info.NoteContent {
-			return info.NoteContent{Content: "![image](/file/outputImage?fileId=" + imageID + ")"}
-		},
-		GetUserInfo: func(string) info.User { return info.User{} },
-		GetUserBlog: func(string) info.UserBlog { return info.UserBlog{} },
-		GetImageBase64: func(userID, fileID string) string {
-			if userID == ownerID.Hex() && fileID == imageID {
-				return "data:image/png;base64,AAAA"
-			}
-			return ""
-		},
-	})
-	if !ok {
-		t.Fatal("buildNotePDFView reported a missing note")
-	}
-	if got := args["content"]; got != "![](data:image/png;base64,AAAA)" {
-		t.Fatalf("inlined markdown = %q", got)
 	}
 }

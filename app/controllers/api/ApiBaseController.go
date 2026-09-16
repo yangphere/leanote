@@ -8,6 +8,7 @@ import (
 
 	"github.com/revel/revel"
 	//	"encoding/json"
+	applicationcontent "github.com/yangphere/leanote/app/application/content"
 	"github.com/yangphere/leanote/app/controllers"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
@@ -70,7 +71,7 @@ func (c ApiBaseContrller) uploadAttachWithIdentity(name string, noteId string, a
 	var data []byte
 	c.Params.Bind(&data, name)
 	files := c.Params.Files[name]
-	if len(files) == 0 {
+	if len(files) != 1 {
 		msg = "fileRequired"
 		return
 	}
@@ -91,11 +92,12 @@ func (c ApiBaseContrller) uploadAttachWithIdentity(name string, noteId string, a
 	// 	return
 	// }
 	// > 5M?
-	maxFileSize := configService.GetUploadSize("uploadAttachSize")
-	if maxFileSize <= 0 {
-		maxFileSize = 1000
+	maxFileSize, configErr := configService.GetUploadLimitBytes("uploadAttachSize")
+	if configErr != nil {
+		msg = "uploadConfigError"
+		return
 	}
-	if float64(len(data)) > maxFileSize*float64(1024*1024) {
+	if int64(len(data)) > maxFileSize {
 		msg = "fileIsTooLarge"
 		return
 	}
@@ -209,7 +211,7 @@ func (c ApiBaseContrller) uploadWithAssetIdentity(name string, noteId string, is
 	var data []byte
 	c.Params.Bind(&data, name)
 	files := c.Params.Files[name]
-	if len(files) == 0 {
+	if len(files) != 1 {
 		msg = "fileRequired"
 		return
 	}
@@ -232,10 +234,7 @@ func (c ApiBaseContrller) uploadWithAssetIdentity(name string, noteId string, is
 	}
 
 	dir := revel.BasePath + "/" + fileUrlPath
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		return
-	}
+	var err error
 	// 生成新的文件名
 	filename := handel.Filename
 	_, ext := SplitFilename(filename)
@@ -250,17 +249,23 @@ func (c ApiBaseContrller) uploadWithAssetIdentity(name string, noteId string, is
 	// 	return
 	// }
 
-	maxFileSize := configService.GetUploadSize("uploadImageSize")
-	if maxFileSize <= 0 {
-		maxFileSize = 1000
+	maxFileSize, configErr := configService.GetUploadLimitBytes("uploadImageSize")
+	if configErr != nil {
+		msg = "uploadConfigError"
+		return
 	}
-
-	// > 2M?
-	if float64(len(data)) > maxFileSize*float64(1024*1024) {
+	if int64(len(data)) > maxFileSize {
 		msg = "fileIsTooLarge"
 		return
 	}
-
+	ext = strings.ToLower(ext)
+	media, mediaErr := applicationcontent.ValidateImage(data, ext, applicationcontent.HardImageBudget())
+	if mediaErr != nil {
+		msg = "notImage"
+		return
+	}
+	ext = media.Extension
+	filename = newGuid + ext
 	toPath := dir + "/" + filename
 	fileID := db.NewObjectID()
 	if assetID != "" {
@@ -285,7 +290,10 @@ func (c ApiBaseContrller) uploadWithAssetIdentity(name string, noteId string, is
 			return false, "", ""
 		}
 	}
-	err = ioutil.WriteFile(toPath, data, 0777)
+	if err := os.MkdirAll(filepath.Dir(toPath), 0755); err != nil {
+		return false, "", ""
+	}
+	err = ioutil.WriteFile(toPath, data, 0600)
 	if err != nil {
 		return
 	}

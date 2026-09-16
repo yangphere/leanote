@@ -2,8 +2,8 @@
   "id": "application-content",
   "name": "application-content",
   "title": "应用层：内容、文件与媒体",
-  "description": "收敛附件、图片、相册、PDF 和上传资源业务，保持文件安全、持久化与内容输出契约。",
-  "status": "planning",
+  "description": "收敛附件、图片、相册、远程导入、PDF 和上传资源业务，保持文件安全、持久化一致性与内容输出契约。",
+  "status": "in_progress",
   "dev_type": null,
   "scope": "application layer / content files and media",
   "package": null,
@@ -12,7 +12,7 @@
   "assignee": "wanfeng",
   "createdAt": "2026-09-08",
   "completedAt": null,
-  "branch": null,
+  "branch": "dev",
   "base_branch": "dev",
   "worktree_path": null,
   "commit": null,
@@ -20,7 +20,28 @@
   "subtasks": [],
   "children": [],
   "parent": "09-08-business-layer-architecture",
-  "relatedFiles": [],
-  "notes": "Accepts the 2026-09-13 application-notes handoff: notes owns note-specific asset receipt/idempotency adapters; this task owns and validates generic file-root, path-safety, no-clobber publish, digest Verify, download, album and PDF primitives. Provider contracts must prove safe Apply/Verify consumption without duplicating the notes receipt state machine; cross-host/process evidence is delegated to delivery-verification.",
-  "meta": {"layer": "application", "depends_on": ["09-08-domain-contracts", "09-08-application-notes"]}
+  "relatedFiles": [
+    "app/application/notes/contracts.go",
+    "app/controllers/FileController.go",
+    "app/controllers/AttachController.go",
+    "app/controllers/AlbumController.go",
+    "app/controllers/NoteController.go",
+    "app/controllers/api/ApiFileController.go",
+    "app/controllers/api/ApiNoteController.go",
+    "app/service/FileService.go",
+    "app/service/AttachService.go",
+    "app/service/NoteImageService.go",
+    "app/service/AlbumService.go",
+    "app/lea/netutil/NetUtil.go",
+    "app/lea/html2image",
+    "conf/routes"
+  ],
+  "notes": "2026-09-15 specification audit completed; 2026-09-16 review repair added untrusted-PDF isolation, bounded image decoding, durable standalone-delete recovery and a synchronized admin descriptor/content renderer handoff. D-C1 remains public-only remote HTTP/HTTPS with no private-network allowlist or fallback. Notes owns note-specific receipt/idempotency; content owns generic quarantine lifecycle state without duplicating notes receipt. Implementation approval was granted after the final-plan review; content roots, standalone manifest primitives, and the shared PDF renderer/runtime seam are now in place, while delete-flow integration, remote fetch, tar.gz, provider migration, and delivery evidence remain open.",
+  "meta": {
+    "layer": "application",
+    "depends_on": [
+      "09-08-domain-contracts",
+      "09-08-application-notes"
+    ]
+  }
 }

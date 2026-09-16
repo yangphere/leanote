@@ -7,3 +7,4 @@
 {"file":".trellis/tasks/archive/2026-09/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"汇合 persistence transaction/index/outbox/token 证据"}
 {"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"汇合 identity principal/session/API Golden 证据"}
 {"file":".trellis/tasks/09-08-interface-http/prd.md","reason":"汇合 route/session/replay 和 production-config 证据"}
+{"file":".trellis/tasks/09-08-application-content/acceptance/evidence-matrix.md","reason":"汇合 quarantine restart 与 PDF sandbox/zero-outbound 交接证据"}

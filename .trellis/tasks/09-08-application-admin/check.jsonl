@@ -1,2 +1,4 @@
 {"file": ".trellis/spec/backend/error-handling.md", "reason": "检查管理操作错误处理"}
 {"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "检查敏感数据和质量约束"}
+{"file": ".trellis/tasks/09-08-application-content/prd.md", "reason": "核对 PDF descriptor provider 与 renderer execution ownership handoff"}
+{"file": ".trellis/tasks/09-08-application-content/design.md", "reason": "确认 PDF process/sandbox/cleanup 仅由 content 拥有"}

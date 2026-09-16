@@ -100,6 +100,37 @@ func TestApplicationBaseUsesConfigParentUnlessItIsConfDirectory(t *testing.T) {
 	}
 }
 
+func TestInitializeContentRuntimeForwardsApplicationBase(t *testing.T) {
+	savedInitializer := initContentRuntime
+	t.Cleanup(func() { initContentRuntime = savedInitializer })
+
+	var gotBase string
+	initContentRuntime = func(base string) error {
+		gotBase = base
+		return nil
+	}
+
+	if err := initializeContentRuntime("release-root"); err != nil {
+		t.Fatalf("initializeContentRuntime() error = %v", err)
+	}
+	if gotBase != "release-root" {
+		t.Fatalf("initializer base = %q, want release-root", gotBase)
+	}
+}
+
+func TestInitializeContentRuntimePropagatesStartupFailure(t *testing.T) {
+	savedInitializer := initContentRuntime
+	t.Cleanup(func() { initContentRuntime = savedInitializer })
+
+	want := errors.New("content roots invalid")
+	initContentRuntime = func(string) error { return want }
+
+	err := initializeContentRuntime("release-root")
+	if !errors.Is(err, want) {
+		t.Fatalf("initializeContentRuntime() error = %v, want wrapped %v", err, want)
+	}
+}
+
 func TestStaticAssetRootIsRelativeToApplicationBase(t *testing.T) {
 	root := filepath.Join("workspace", "release")
 	if got, want := staticAssetRoot(root, "public"), filepath.Join(root, "public"); got != want {

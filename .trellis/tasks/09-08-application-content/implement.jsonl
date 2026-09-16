@@ -1,2 +1,15 @@
-{"file": "CONTEXT.md", "reason": "读取资源所有权和 HTML 不变量"}
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "复用持久化边界约束"}
+{"file":"CONTEXT.md","reason":"读取 ObjectID、所有权、Golden、生成资源和兼容性不变量"}
+{"file":".trellis/spec/backend/index.md","reason":"进入后端开发前加载规格索引"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"约束 owner-scoped Mongo 持久化和错误传播"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"建立 content typed error 与终止边界日志"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查单一事实来源、测试与清理策略"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-notes/prd.md","reason":"消费 notes receipt、Files presence 和跨域 ownership 契约"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-notes/design.md","reason":"对齐 AssetMutation Apply/Verify 和 unknown-result recovery"}
+{"file":".trellis/tasks/09-08-application-content/research/spec-audit-2026-09-15.md","reason":"读取已识别缺陷、D-C1 决策和最终规划批准门"}
+{"file":".trellis/tasks/09-08-application-content/research/action-inventory.md","reason":"按 callable/integration/provider/dormant 清单实施"}
+{"file":".trellis/tasks/09-08-application-content/acceptance/evidence-matrix.md","reason":"逐项记录 focused 与 delegated evidence 状态"}
+{"file":".trellis/tasks/09-08-interface-http/prd.md","reason":"对齐 HTTP mapper、route、method 和 Content-Type ownership"}
+{"file":".trellis/tasks/09-08-application-admin/prd.md","reason":"对齐 PDF executable 配置入口 ownership"}
+{"file":".trellis/tasks/09-08-application-admin/design.md","reason":"消费 admin descriptor-only handoff，避免复制 PDF process seam"}
+{"file":".trellis/tasks/09-08-delivery-verification/prd.md","reason":"对齐 Linux PDF、跨主机文件系统和真实浏览器交接"}
+{"file":".trellis/tasks/09-08-delivery-verification/acceptance/evidence-matrix.md","reason":"保持 quarantine restart 与 PDF sandbox 未执行证据为 delegated-unrun"}

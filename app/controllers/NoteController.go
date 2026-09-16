@@ -1,22 +1,22 @@
 package controllers
 
 import (
+	"bytes"
+	"errors"
+
 	"github.com/revel/revel"
 	//	"encoding/json"
+	applicationcontent "github.com/yangphere/leanote/app/application/content"
 	"github.com/yangphere/leanote/app/db"
+	"github.com/yangphere/leanote/app/domain"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
 	"github.com/yangphere/leanote/app/service"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"os"
-	"os/exec"
-	"regexp"
-	"runtime"
 	"strings"
 	"time"
 	//	"github.com/yangphere/leanote/app/types"
 	//	"io/ioutil"
-	"fmt"
 	//	"bytes"
 	//	"os"
 )
@@ -343,183 +343,28 @@ func (c Note) SearchNoteByTags(tags []string) revel.Result {
 
 // 生成PDF
 func (c Note) ToPdf(noteId, appKey string) revel.Result {
-	// 虽然传了cookie但是这里还是不能得到userId, 所以还是通过appKey来验证之
-	appKeyTrue, _ := revel.Config.String("app.secret")
-	if appKeyTrue != appKey {
-		return c.RenderText("auth error")
-	}
-	note := noteService.GetNoteById(noteId)
-	if note.NoteId.IsZero() {
-		return c.RenderText("no note")
-	}
-
-	noteUserId := note.UserId.Hex()
-	content := noteService.GetNoteContent(noteId, noteUserId)
-	userInfo := userService.GetUserInfo(noteUserId)
-
-	//------------------
-	// 将content的图片转换为base64
-	contentStr := content.Content
-
-	siteUrlPattern := configService.GetSiteUrl()
-	if strings.Contains(siteUrlPattern, "https") {
-		siteUrlPattern = strings.Replace(siteUrlPattern, "https", "https*", 1)
-	} else {
-		siteUrlPattern = strings.Replace(siteUrlPattern, "http", "https*", 1)
-	}
-
-	siteUrlPattern = "(?:" + siteUrlPattern + ")*"
-
-	regImage, _ := regexp.Compile(`<img .*?(src=('|")` + siteUrlPattern + `/(file/outputImage|api/file/getImage)\?fileId=([a-z0-9A-Z]{24})("|'))`)
-
-	findsImage := regImage.FindAllStringSubmatch(contentStr, -1) // 查找所有的
-	//	[<img src="http://leanote.com/api/getImage?fileId=3354672e8d38f411286b000069" alt="" width="692" height="302" data-mce-src="http://leanote.com/file/outputImage?fileId=54672e8d38f411286b000069" src="http://leanote.com/file/outputImage?fileId=54672e8d38f411286b000069" " file/outputImage 54672e8d38f411286b000069 "]
-	for _, eachFind := range findsImage {
-		if len(eachFind) == 6 {
-			fileId := eachFind[4]
-			// 得到base64编码文件
-			fileBase64 := fileService.GetImageBase64(noteUserId, fileId)
-			if fileBase64 == "" {
-				continue
-			}
-
-			// 1
-			// src="http://leanote.com/file/outputImage?fileId=54672e8d38f411286b000069"
-			allFixed := strings.Replace(eachFind[0], eachFind[1], "src=\""+fileBase64+"\"", -1)
-			contentStr = strings.Replace(contentStr, eachFind[0], allFixed, -1)
-		}
-	}
-
-	// markdown
-	if note.IsMarkdown {
-		// ![enter image description here](url)
-		regImageMarkdown, _ := regexp.Compile(`!\[.*?\]\(` + siteUrlPattern + `/(file/outputImage|api/file/getImage)\?fileId=([a-z0-9A-Z]{24})\)`)
-		findsImageMarkdown := regImageMarkdown.FindAllStringSubmatch(contentStr, -1) // 查找所有的
-		for _, eachFind := range findsImageMarkdown {
-			if len(eachFind) == 3 {
-				fileId := eachFind[2]
-				// 得到base64编码文件
-				fileBase64 := fileService.GetImageBase64(noteUserId, fileId)
-				if fileBase64 == "" {
-					continue
-				}
-
-				// 1
-				// src="http://leanote.com/file/outputImage?fileId=54672e8d38f411286b000069"
-				allFixed := "![](" + fileBase64 + ")"
-				contentStr = strings.Replace(contentStr, eachFind[0], allFixed, -1)
-			}
-		}
-	}
-
-	if note.Tags != nil && len(note.Tags) > 0 && note.Tags[0] != "" {
-	} else {
-		note.Tags = nil
-	}
-	c.ViewArgs["blog"] = note
-	c.ViewArgs["content"] = contentStr
-	c.ViewArgs["userInfo"] = userInfo
-	userBlog := blogService.GetUserBlog(noteUserId)
-	c.ViewArgs["userBlog"] = userBlog
-
-	return c.RenderTemplate("file/pdf.html")
+	// Retained only for wire binding until interface-http freezes the legacy
+	// route. appKey is never a renderer credential or callback secret.
+	_, _ = noteId, appKey
+	return c.RenderText("no note")
 }
 
 // 导出成PDF
 func (c Note) ExportPdf(noteId string) revel.Result {
-	re := info.NewRe()
-	userId := c.GetUserId()
-	note := noteService.GetNoteById(noteId)
-	if note.NoteId.IsZero() {
-		re.Msg = "No Note"
+	actorID, actorErr := domain.ParseObjectID(c.GetUserId())
+	noteID, noteErr := domain.ParseObjectID(noteId)
+	if actorErr != nil || noteErr != nil || actorID.IsZero() || noteID.IsZero() || service.ContentPDF == nil {
 		return c.RenderText("error")
 	}
-
-	noteUserId := note.UserId.Hex()
-	// 是否有权限
-	if noteUserId != userId {
-		// 是否是有权限协作的
-		if !note.IsBlog && !shareService.HasReadPerm(noteUserId, userId, noteId) {
-			re.Msg = "No Perm"
+	artifact, err := service.ContentPDF.Export(c.RequestContext(), actorID, noteID)
+	if err != nil {
+		var contentErr *applicationcontent.Error
+		if errors.As(err, &contentErr) && contentErr.Category == applicationcontent.ErrorUnauthorized {
 			return c.RenderText("No Perm")
 		}
+		return c.RenderText("error")
 	}
-
-	// path 判断是否需要重新生成之
-	guid := NewGuid()
-	fileUrlPath := "files/export_pdf"
-	dir := revel.BasePath + "/" + fileUrlPath
-	if !MkdirAll(dir) {
-		return c.RenderText("error, no dir")
-	}
-	filename := guid + ".pdf"
-	path := dir + "/" + filename
-
-	// leanote.com的secret
-	appKey, _ := revel.Config.String("app.secretLeanote")
-	if appKey == "" {
-		appKey, _ = revel.Config.String("app.secret")
-	}
-
-	// 生成之
-	binPath := configService.GetGlobalStringConfig("exportPdfBinPath")
-	// 默认路径
-	if binPath == "" {
-		if runtime.GOOS == "windows" {
-			binPath = `C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe`
-		} else {
-			binPath = "/usr/local/bin/wkhtmltopdf"
-		}
-	}
-
-	url := configService.GetSiteUrl() + "/note/toPdf?noteId=" + noteId + "&appKey=" + appKey
-	//	cc := binPath + " --no-stop-slow-scripts --javascript-delay 10000 \"" + url + "\"  \"" + path + "\"" //  \"" + cookieDomain + "\" \"" + cookieName + "\" \"" + cookieValue + "\""
-	//	cc := binPath + " \"" + url + "\"  \"" + path + "\"" //  \"" + cookieDomain + "\" \"" + cookieName + "\" \"" + cookieValue + "\""
-	// 等待--window-status为done的状态
-	// http://madalgo.au.dk/~jakobt/wkhtmltoxdoc/wkhtmltopdf_0.10.0_rc2-doc.html
-	// wkhtmltopdf参数大全
-	var cc string
-	// var cc []string
-	var ccWindows []string
-	if note.IsMarkdown {
-		cc = binPath + " --lowquality --window-status done \"" + url + "\"  \"" + path + "\"" //  \"" + cookieDomain + "\" \"" + cookieName + "\" \"" + cookieValue + "\""
-		// cc = []string{binPath, "--lowquality", "--window-status", "done", "\"" + url + "\"", "\"" + path + "\""}
-		ccWindows = []string{"/C", binPath, "--lowquality", "--window-status", "done", url, path}
-	} else {
-		cc = binPath + " --lowquality \"" + url + "\"  \"" + path + "\"" //  \"" + cookieDomain + "\" \"" + cookieName + "\" \"" + cookieValue + "\""
-		// cc = []string{binPath, "--lowquality", "\"" + url + "\"", "\"" + path + "\""}
-		ccWindows = []string{"/C", binPath, "--lowquality", url, path}
-	}
-
-	var cmd *exec.Cmd
-
-	// fmt.Println("-------1", runtime.GOOS, ccWindows)
-	if runtime.GOOS == "windows" {
-		fmt.Println(ccWindows)
-		// cmd = exec.Command("cmd", ccWindows...)
-		cmd = exec.Command(ccWindows[1], ccWindows[2:]...)
-	} else {
-		fmt.Println(cc)
-		cmd = exec.Command("/bin/sh", "-c", cc)
-	}
-	_, err := cmd.Output()
-	if err != nil {
-		return c.RenderText("export pdf error. %v", err)
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		return c.RenderText("export pdf error. %v", err)
-	}
-	// http://stackoverflow.com/questions/8588818/chrome-pdf-display-duplicate-headers-received-from-the-server
-	//	filenameReturn = strings.Replace(filenameReturn, ",", "-", -1)
-	filenameReturn := note.Title
-	filenameReturn = FixFilename(filenameReturn)
-	if filenameReturn == "" {
-		filenameReturn = "Untitled.pdf"
-	} else {
-		filenameReturn += ".pdf"
-	}
-	return c.RenderBinary(file, filenameReturn, revel.Attachment, time.Now()) // revel.Attachment
+	return c.RenderBinary(bytes.NewReader(artifact.Data), artifact.Filename, revel.Attachment, time.Now())
 }
 
 // 设置/取消Blog; 置顶
