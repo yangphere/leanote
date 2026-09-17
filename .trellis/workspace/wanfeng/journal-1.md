@@ -441,3 +441,38 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Next Steps
 
 - 由 delivery-verification 等 sibling 任务继续补齐 17 个 Web action、Mongo 7/副本集、kill/restart/failpoint、浏览器、PDF 与跨主机文件系统证据。
+
+
+## Session 18: 收敛内容、文件与媒体业务边界
+<!-- trellis-session: v=2 fp=37714083ff7ae181 -->
+
+**Date**: 2026-09-18
+**Task**: 收敛内容、文件与媒体业务边界
+**Branch**: `dev`
+
+### Summary
+
+完成内容应用层、文件系统、PDF、远程抓取与附件生命周期收敛；新增回归覆盖并通过聚焦测试、race、vet、build。完整测试仍受 Docker Desktop Mongo fixture 不可用阻断，真实 Mongo、浏览器、Linux PDF 与接口错误契约仍待后续交付任务闭合。
+
+### Main Changes
+
+- 提取 application/content 纯边界与 contentfs、contentpdf、contentremote 能力
+- 统一附件、图片、归档、删除/恢复与 API 适配测试
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c50b14c9` | feat(content): 收敛内容、文件与媒体业务边界 |
+
+### Testing
+
+- [OK] 聚焦 Go 测试、race、go vet、go build、gofmt、diff check、Trellis validate 通过
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 在交付验证任务中补齐真实 Mongo、浏览器、Linux/container PDF 与 HTTP 错误契约证据
