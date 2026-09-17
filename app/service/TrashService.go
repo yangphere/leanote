@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 
 	applicationnotes "github.com/yangphere/leanote/app/application/notes"
 	"github.com/yangphere/leanote/app/db"
@@ -216,29 +218,38 @@ func (this *TrashService) deleteTrashDurable(note info.Note, userId string, expe
 	if err != nil {
 		return false, "storage", afterUSN
 	}
+	deleteAssets := []applicationnotes.OperationAsset{}
+	if receipt, receiptErr := db.GetWorkspaceOperation(context.Background(), note.UserId, operationID); receiptErr == nil {
+		deleteAssets = append(deleteAssets, receipt.Assets...)
+	} else if !errors.Is(receiptErr, mongo.ErrNoDocuments) {
+		return false, "partial_write", afterUSN
+	} else {
+		var attachments []info.Attach
+		if err := db.Attachs.FindContext(context.Background(), bson.M{"NoteId": note.NoteId}).All(&attachments); err != nil {
+			return false, "partial_write", afterUSN
+		}
+		slices.SortFunc(attachments, func(left, right info.Attach) int {
+			return strings.Compare(left.AttachId.Hex(), right.AttachId.Hex())
+		})
+		for index, attachment := range attachments {
+			deleteAssets = append(deleteAssets, applicationnotes.OperationAsset{AssetID: attachment.AttachId.Hex(), Index: index, IsAttach: true})
+		}
+	}
 	plan := db.WorkspaceMutationPlan{
 		OperationID: operationID, OwnerID: note.UserId, ResourceID: note.NoteId,
-		Kind: "note_delete_cleanup", InputDigest: digest, DesiredState: desired,
+		Kind: "note_delete_cleanup", InputDigest: digest, DesiredState: desired, Assets: deleteAssets,
 		FailurePolicy: applicationnotes.FailurePending,
 		Steps: []db.WorkspaceMutationStep{
-			{Name: "attachments", ReplaySafe: true,
-				Apply: func(ctx context.Context) error { return attachService.deleteAllAttachs(ctx, note.NoteId, note.UserId) },
-				Verify: func(ctx context.Context) (bool, error) {
-					return attachService.verifyAllAttachsDeleted(ctx, note.NoteId, note.UserId)
-				},
-			},
-			{Name: "image_index", ReplaySafe: true,
+			{Name: "content_assets", ReplaySafe: true,
 				Apply: func(ctx context.Context) error {
-					_, err := db.NoteImages.RemoveAllContext(ctx, bson.M{"NoteId": note.NoteId})
-					return err
+					return ContentAssets.DeleteNote(ctx, applicationnotes.DeleteNoteAssetsCommand{
+						OperationID: operationID, ActorID: db.MustObjectIDFromHex(userId), OwnerID: note.UserId, NoteID: note.NoteId,
+					})
 				},
 				Verify: func(ctx context.Context) (bool, error) {
-					var image info.NoteImage
-					err := db.NoteImages.FindContext(ctx, bson.M{"NoteId": note.NoteId}).One(&image)
-					if errors.Is(err, mongo.ErrNoDocuments) {
-						return true, nil
-					}
-					return false, err
+					return ContentAssets.VerifyDeleteNote(ctx, applicationnotes.DeleteNoteAssetsCommand{
+						OperationID: operationID, ActorID: db.MustObjectIDFromHex(userId), OwnerID: note.UserId, NoteID: note.NoteId,
+					})
 				},
 			},
 			{Name: "content", ReplaySafe: true,

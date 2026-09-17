@@ -31,6 +31,7 @@ type DeleteIdentity struct {
 	OperationID   string
 	Generation    int64
 	ContentDigest [sha256.Size]byte
+	ContentSize   int64
 }
 
 func (identity DeleteIdentity) LookupKey() (string, error) {
@@ -48,10 +49,10 @@ func (identity DeleteIdentity) OperationKey() (string, error) {
 	if identity.OperationID != "" {
 		return deleteKey("operation", lookup, identity.OperationID), nil
 	}
-	if identity.Generation < 0 || identity.ContentDigest == ([sha256.Size]byte{}) {
+	if identity.Generation < 0 || identity.ContentDigest == ([sha256.Size]byte{}) || identity.ContentSize <= 0 {
 		return "", validationError("legacy_delete_identity_incomplete", nil)
 	}
-	return deleteKey("legacy", lookup, stringInt(identity.Generation), hex.EncodeToString(identity.ContentDigest[:])), nil
+	return deleteKey("legacy", lookup, stringInt(identity.Generation), hex.EncodeToString(identity.ContentDigest[:]), stringInt(identity.ContentSize)), nil
 }
 
 func (identity DeleteIdentity) validateBase() error {
@@ -83,6 +84,7 @@ type DeleteManifest struct {
 	Version       uint64
 	StateDigest   [sha256.Size]byte
 	ContentDigest [sha256.Size]byte
+	ContentSize   int64
 	Generation    int64
 	Stage         DeleteStage
 	Source        LogicalPath
@@ -106,7 +108,7 @@ func NewDeleteManifest(identity DeleteIdentity, source LogicalPath, now time.Tim
 	}
 	manifest := DeleteManifest{
 		LookupKey: lookup, OperationKey: operation, Action: identity.Action, OwnerID: identity.OwnerID,
-		Kind: identity.Kind, AssetID: identity.AssetID, Version: 1, ContentDigest: identity.ContentDigest,
+		Kind: identity.Kind, AssetID: identity.AssetID, Version: 1, ContentDigest: identity.ContentDigest, ContentSize: identity.ContentSize,
 		Generation: identity.Generation, Stage: DeleteStagePrepared, Source: source, CreatedAt: now.UTC(), UpdatedAt: now.UTC(),
 	}
 	manifest.StateDigest = manifest.digest()
@@ -125,6 +127,7 @@ func (manifest DeleteManifest) Terminal(now time.Time) (DeleteManifest, error) {
 	manifest.Source = LogicalPath{}
 	manifest.Quarantine = LogicalPath{}
 	manifest.ContentDigest = [sha256.Size]byte{}
+	manifest.ContentSize = 0
 	manifest.TerminalAt = now.UTC()
 	manifest.UpdatedAt = now.UTC()
 	manifest.StateDigest = manifest.digest()
@@ -159,15 +162,15 @@ func (manifest DeleteManifest) Validate() error {
 	}
 	switch manifest.Stage {
 	case DeleteStagePrepared:
-		if manifest.Source == (LogicalPath{}) || manifest.ContentDigest == ([sha256.Size]byte{}) {
+		if manifest.Source == (LogicalPath{}) || manifest.ContentDigest == ([sha256.Size]byte{}) || manifest.ContentSize <= 0 {
 			return validationError("prepared_delete_manifest_incomplete", nil)
 		}
 	case DeleteStageQuarantined, DeleteStageMetadata:
-		if manifest.Source == (LogicalPath{}) || manifest.Quarantine == (LogicalPath{}) || manifest.ContentDigest == ([sha256.Size]byte{}) {
+		if manifest.Source == (LogicalPath{}) || manifest.Quarantine == (LogicalPath{}) || manifest.ContentDigest == ([sha256.Size]byte{}) || manifest.ContentSize <= 0 {
 			return validationError("active_delete_manifest_incomplete", nil)
 		}
 	case DeleteStageTerminal:
-		if manifest.Source != (LogicalPath{}) || manifest.Quarantine != (LogicalPath{}) || manifest.ContentDigest != ([sha256.Size]byte{}) || manifest.TerminalAt.IsZero() {
+		if manifest.Source != (LogicalPath{}) || manifest.Quarantine != (LogicalPath{}) || manifest.ContentDigest != ([sha256.Size]byte{}) || manifest.ContentSize != 0 || manifest.TerminalAt.IsZero() {
 			return validationError("terminal_delete_manifest_leaks_content", nil)
 		}
 	default:
@@ -181,7 +184,7 @@ func (manifest DeleteManifest) Validate() error {
 
 func (manifest DeleteManifest) digest() [sha256.Size]byte {
 	parts := []string{manifest.LookupKey, manifest.OperationKey, manifest.Action, manifest.OwnerID.Hex(), string(manifest.Kind), manifest.AssetID,
-		stringInt(int64(manifest.Version)), hex.EncodeToString(manifest.ContentDigest[:]), stringInt(manifest.Generation), string(manifest.Stage),
+		stringInt(int64(manifest.Version)), hex.EncodeToString(manifest.ContentDigest[:]), stringInt(manifest.ContentSize), stringInt(manifest.Generation), string(manifest.Stage),
 		string(manifest.Source.Kind), manifest.Source.Value, string(manifest.Quarantine.Kind), manifest.Quarantine.Value,
 		manifest.CreatedAt.UTC().Format(time.RFC3339Nano), manifest.UpdatedAt.UTC().Format(time.RFC3339Nano), manifest.TerminalAt.UTC().Format(time.RFC3339Nano)}
 	return sha256.Sum256([]byte(strings.Join(parts, "\x00")))

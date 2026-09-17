@@ -265,17 +265,20 @@ func (c ApiNote) AddNote(noteOrContent info.ApiNote) revel.Result {
 	var createInputDigest string
 	var createAssets []applicationnotes.OperationAsset
 	if clientNoteID {
-		contentDigests := make(map[int][]byte, len(noteOrContent.Files))
+		contentDigests := make(map[int]string, len(noteOrContent.Files))
 		for index, file := range noteOrContent.Files {
 			if !file.HasBody || file.LocalFileId == "" {
 				continue
 			}
-			var data []byte
-			c.Params.Bind(&data, "FileDatas["+file.LocalFileId+"]")
-			contentDigests[index] = data
+			candidate, message := c.prepareAPINoteAsset("FileDatas["+file.LocalFileId+"]", noteId.Hex(), file.IsAttach, "")
+			if message != "" {
+				re.Msg = message
+				return c.RenderJSON(re)
+			}
+			contentDigests[index] = candidate.Digest
 		}
 		var identityErr error
-		createOperationID, createInputDigest, createAssets, identityErr = newAPINoteCreateOperationWithContent(userId, noteId, noteOrContent, contentDigests)
+		createOperationID, createInputDigest, createAssets, identityErr = newAPINoteCreateOperationWithDigests(userId, noteId, noteOrContent, contentDigests)
 		if identityErr != nil {
 			re.Msg = "saveFailed"
 			return c.RenderJSON(re)
@@ -305,7 +308,7 @@ func (c ApiNote) AddNote(noteOrContent info.ApiNote) revel.Result {
 		}
 	}
 	cleanupAfterCreateFailure := func() error {
-		cleanupErr := cleanupUncommittedAPINoteAssets(noteId.Hex(), userId.Hex(), cleanupFiles)
+		cleanupErr := attachService.CleanupAPINoteAssets(noteId.Hex(), userId.Hex(), cleanupFiles)
 		if cleanupErr != nil {
 			Log(cleanupErr.Error())
 			// The pending receipt remains the recovery identity while either the
@@ -406,10 +409,26 @@ func (c ApiNote) AddNote(noteOrContent info.ApiNote) revel.Result {
 
 	var ok bool
 	var msg string
+	committedAssets := make([]applicationnotes.OperationAsset, 0, len(noteOrContent.Files))
+	for index, file := range noteOrContent.Files {
+		if file.FileId == "" {
+			continue
+		}
+		asset := applicationnotes.OperationAsset{AssetID: file.FileId, LocalFileID: file.LocalFileId, Index: index, IsAttach: file.IsAttach}
+		if frozenID := assetByIndex[index]; frozenID != "" {
+			for _, frozen := range createAssets {
+				if frozen.AssetID == frozenID {
+					asset.ContentSHA256 = frozen.ContentSHA256
+					break
+				}
+			}
+		}
+		committedAssets = append(committedAssets, asset)
+	}
 	if createOperationID != "" {
-		note, ok, msg = noteService.AddNoteAndContentApiResultWithIdentity(note, noteContent, myUserId, createOperationID, createInputDigest, createAssets)
+		note, ok, msg = noteService.AddNoteAndContentApiResultWithIdentity(note, noteContent, myUserId, createOperationID, createInputDigest, committedAssets)
 	} else {
-		note, ok, msg = noteService.AddNoteAndContentApiResult(note, noteContent, myUserId)
+		note, ok, msg = noteService.AddNoteAndContentApiResultWithAssets(note, noteContent, myUserId, committedAssets)
 	}
 	if !ok || note.NoteId.IsZero() {
 		re.Ok = false
@@ -421,6 +440,12 @@ func (c ApiNote) AddNote(noteOrContent info.ApiNote) revel.Result {
 		if note.NoteId.IsZero() && cleanupAfterCreateFailure() != nil {
 			re.Msg = "partial_write"
 		}
+		return c.RenderJSON(re)
+	}
+	if err := attachService.FinalizeAPINoteAssets(note.NoteId.Hex(), userId.Hex(), noteOrContent.Files); err != nil {
+		Log(err.Error())
+		re.Ok = false
+		re.Msg = apiUploadPartialWrite
 		return c.RenderJSON(re)
 	}
 
@@ -512,24 +537,26 @@ func (c ApiNote) UpdateNote(noteOrContent info.ApiNote) revel.Result {
 	var assetWork *applicationnotes.AssetMutation
 	filesPresent := apiNoteFilesPresent(c.Params.Values, noteOrContent.Files)
 	if filesPresent {
-		contentDigests := make(map[int][]byte, len(noteOrContent.Files))
+		contentDigests := make(map[int]string, len(noteOrContent.Files))
 		for i, file := range noteOrContent.Files {
 			if !file.HasBody || file.LocalFileId == "" {
 				continue
 			}
-			var data []byte
-			c.Params.Bind(&data, "FileDatas["+file.LocalFileId+"]")
 			if _, present := c.Params.Files["FileDatas["+file.LocalFileId+"]"]; present {
-				contentDigests[i] = data
+				candidate, message := c.prepareAPINoteAsset("FileDatas["+file.LocalFileId+"]", noteId, file.IsAttach, "")
+				if message != "" {
+					re.Msg = message
+					return c.RenderJSON(re)
+				}
+				contentDigests[i] = candidate.Digest
 			}
 		}
-		assetSeed := stableAPIUpdateAssetSeedWithContent(db.MustObjectIDFromHex(userId), note.NoteId, noteOrContent.Usn, noteOrContent, contentDigests)
+		assetSeed := stableAPIUpdateAssetSeedWithDigests(db.MustObjectIDFromHex(userId), note.NoteId, noteOrContent.Usn, noteOrContent, contentDigests)
 		if assetSeed == "" {
 			re.Msg = "saveFailed"
 			return c.RenderJSON(re)
 		}
 		files := append([]info.NoteFile(nil), noteOrContent.Files...)
-		assets := make([]applicationnotes.OperationAsset, 0, len(files))
 		assetByIndex := make(map[int]string, len(files))
 		for i, file := range files {
 			if !file.HasBody {
@@ -543,9 +570,19 @@ func (c ApiNote) UpdateNote(noteOrContent info.ApiNote) revel.Result {
 			file.FileId = assetID
 			files[i] = file
 			assetByIndex[i] = assetID
-			assets = append(assets, applicationnotes.OperationAsset{
-				AssetID: assetID, LocalFileID: file.LocalFileId, Index: i, IsAttach: file.IsAttach,
-			})
+		}
+		assets := make([]applicationnotes.OperationAsset, 0, len(files))
+		for i, file := range files {
+			if file.FileId == "" || !db.IsValidObjectIDHex(file.FileId) {
+				re.Msg = "fileRequired"
+				return c.RenderJSON(re)
+			}
+			asset := applicationnotes.OperationAsset{AssetID: file.FileId, Index: i, IsAttach: file.IsAttach}
+			if file.HasBody {
+				asset.LocalFileID = file.LocalFileId
+				asset.ContentSHA256 = contentDigests[i]
+			}
+			assets = append(assets, asset)
 		}
 		noteOrContent.Files = files
 		assetWork = &applicationnotes.AssetMutation{
@@ -563,13 +600,19 @@ func (c ApiNote) UpdateNote(noteOrContent info.ApiNote) revel.Result {
 						return fmt.Errorf("upload asset: %s", msg)
 					}
 				}
-				return attachService.UpdateOrDeleteAttachApiResultAtUSNWithOperation(ctx, noteId, userId, files, expectedUSN, assetWork.OperationID)
+				if err := service.ContentAssets.ReconcileNote(ctx, applicationnotes.ReconcileNoteAssetsCommand{
+					OperationID: assetWork.OperationID, ActorID: db.MustObjectIDFromHex(userId), OwnerID: note.UserId,
+					NoteID: note.NoteId, Generation: expectedUSN,
+				}); err != nil {
+					return err
+				}
+				return attachService.FinalizeAPINoteAssets(note.NoteId.Hex(), note.UserId.Hex(), files)
 			},
 			Verify: func(ctx context.Context) (bool, error) {
-				// SaveNote's wrapper verifies the committed note generation before
-				// invoking this asset-level final-state check.  Do not pass the
-				// request's pre-mutation USN here.
-				return attachService.VerifyUpdateOrDeleteAttachApiAtUSN(ctx, noteId, userId, files, 0)
+				return service.ContentAssets.VerifyReconcileNote(ctx, applicationnotes.ReconcileNoteAssetsCommand{
+					OperationID: assetWork.OperationID, ActorID: db.MustObjectIDFromHex(userId), OwnerID: note.UserId,
+					NoteID: note.NoteId,
+				})
 			},
 		}
 	}

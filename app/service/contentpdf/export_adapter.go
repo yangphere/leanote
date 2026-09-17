@@ -3,12 +3,14 @@ package contentpdf
 import (
 	"context"
 	"errors"
+	"io"
 	"path"
 
 	application "github.com/yangphere/leanote/app/application/content"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/domain"
 	"github.com/yangphere/leanote/app/info"
+	"github.com/yangphere/leanote/app/service/contentremote"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -117,12 +119,18 @@ type NotePort struct {
 }
 
 func (port NotePort) LoadAuthorized(ctx context.Context, actorID, noteID domain.ObjectID) (application.PDFNoteSnapshot, error) {
+	if err := pdfAdapterContextError(ctx, "pdf_note_canceled"); err != nil {
+		return application.PDFNoteSnapshot{}, err
+	}
 	if port.Repository == nil || actorID.IsZero() || noteID.IsZero() {
 		return application.PDFNoteSnapshot{}, application.NewError(application.ErrorValidation, "pdf_note_identity", nil)
 	}
 	note, err := port.Repository.FindNote(ctx, noteID)
 	if err != nil {
 		return application.PDFNoteSnapshot{}, repositoryError("pdf_note_lookup", err)
+	}
+	if err := pdfAdapterContextError(ctx, "pdf_note_canceled"); err != nil {
+		return application.PDFNoteSnapshot{}, err
 	}
 	if note.NoteId != noteID || note.UserId.IsZero() || note.IsDeleted {
 		return application.PDFNoteSnapshot{}, application.NewError(application.ErrorNotFound, "pdf_note_missing", nil)
@@ -140,6 +148,9 @@ func (port NotePort) LoadAuthorized(ctx context.Context, actorID, noteID domain.
 	if err != nil {
 		return application.PDFNoteSnapshot{}, repositoryError("pdf_note_content", err)
 	}
+	if err := pdfAdapterContextError(ctx, "pdf_note_canceled"); err != nil {
+		return application.PDFNoteSnapshot{}, err
+	}
 	if content.NoteId != noteID || content.UserId != note.UserId {
 		return application.PDFNoteSnapshot{}, application.NewError(application.ErrorConflict, "pdf_note_content_identity", nil)
 	}
@@ -154,13 +165,19 @@ type ResourcePort struct {
 	Store      application.ContentStore
 }
 
-func (port ResourcePort) LoadAuthorized(ctx context.Context, ownerID, fileID domain.ObjectID) (resource application.PDFResource, resultErr error) {
-	if port.Repository == nil || port.Store == nil || ownerID.IsZero() || fileID.IsZero() {
+func (port ResourcePort) LoadAuthorized(ctx context.Context, ownerID, fileID domain.ObjectID, maxBytes int64) (resource application.PDFResource, resultErr error) {
+	if err := pdfAdapterContextError(ctx, "pdf_resource_canceled"); err != nil {
+		return application.PDFResource{}, err
+	}
+	if port.Repository == nil || port.Store == nil || ownerID.IsZero() || fileID.IsZero() || maxBytes <= 0 {
 		return application.PDFResource{}, application.NewError(application.ErrorValidation, "pdf_resource_identity", nil)
 	}
 	file, err := port.Repository.FindFile(ctx, ownerID, fileID)
 	if err != nil {
 		return application.PDFResource{}, repositoryError("pdf_resource_lookup", err)
+	}
+	if err := pdfAdapterContextError(ctx, "pdf_resource_canceled"); err != nil {
+		return application.PDFResource{}, err
 	}
 	if file.FileId != fileID || file.UserId != ownerID {
 		return application.PDFResource{}, application.NewError(application.ErrorNotFound, "pdf_resource_missing", nil)
@@ -173,27 +190,82 @@ func (port ResourcePort) LoadAuthorized(ctx context.Context, ownerID, fileID dom
 	if err != nil {
 		return application.PDFResource{}, err
 	}
+	if opened.Reader == nil {
+		return application.PDFResource{}, application.NewError(application.ErrorStorageUnavailable, "pdf_resource_reader_missing", nil)
+	}
 	defer func() {
 		if closeErr := opened.Reader.Close(); closeErr != nil {
 			resource = application.PDFResource{}
-			resultErr = application.NewError(application.ErrorStorageUnavailable, "pdf_resource_close", errors.Join(resultErr, closeErr))
+			category := application.ErrorStorageUnavailable
+			if resultErr != nil {
+				category = application.ErrorUnknownResult
+			}
+			resultErr = application.NewError(category, "pdf_resource_close", errors.Join(resultErr, closeErr))
 		}
 	}()
-	if opened.Size <= 0 || opened.Size > maxPDFImageBytes {
+	if maxBytes > maxPDFImageBytes {
+		maxBytes = maxPDFImageBytes
+	}
+	if opened.Size <= 0 || opened.Size > maxBytes {
 		return application.PDFResource{}, application.NewError(application.ErrorTooLarge, "pdf_resource_size", nil)
 	}
-	data, err := application.ReadBounded(opened.Reader, maxPDFImageBytes)
+	data, err := application.ReadBounded(pdfContextReader{ctx: ctx, reader: opened.Reader}, maxBytes)
 	if err != nil {
+		if ctx.Err() != nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return application.PDFResource{}, application.NewError(application.ErrorTimeout, "pdf_resource_read_canceled", errors.Join(err, ctx.Err()))
+		}
+		return application.PDFResource{}, err
+	}
+	if err := pdfAdapterContextError(ctx, "pdf_resource_read_canceled"); err != nil {
 		return application.PDFResource{}, err
 	}
 	metadata, err := application.ValidateImage(data, path.Ext(logical.Value), application.HardImageBudget())
 	if err != nil {
 		return application.PDFResource{}, err
 	}
+	if err := pdfAdapterContextError(ctx, "pdf_resource_decode_canceled"); err != nil {
+		return application.PDFResource{}, err
+	}
 	return application.PDFResource{MIME: metadata.MIME, Data: data}, nil
 }
 
+type RemoteFetcher interface {
+	Fetch(context.Context, string, int64) (contentremote.Result, error)
+}
+
+type RemoteResourcePort struct {
+	Fetcher          RemoteFetcher
+	UploadImageBytes func() (int64, error)
+}
+
+func (port RemoteResourcePort) LoadPublic(ctx context.Context, rawURL string, maxBytes int64) (application.PDFResource, error) {
+	if err := pdfAdapterContextError(ctx, "pdf_remote_resource_canceled"); err != nil {
+		return application.PDFResource{}, err
+	}
+	if port.Fetcher == nil || port.UploadImageBytes == nil || maxBytes <= 0 {
+		return application.PDFResource{}, application.NewError(application.ErrorDependency, "pdf_remote_resource_unavailable", nil)
+	}
+	uploadLimit, err := port.UploadImageBytes()
+	if err != nil || uploadLimit <= 0 {
+		return application.PDFResource{}, application.NewError(application.ErrorDependency, "pdf_remote_limit", err)
+	}
+	if maxBytes > uploadLimit {
+		maxBytes = uploadLimit
+	}
+	result, err := port.Fetcher.Fetch(ctx, rawURL, maxBytes)
+	if err != nil {
+		return application.PDFResource{}, err
+	}
+	if err := pdfAdapterContextError(ctx, "pdf_remote_resource_canceled"); err != nil {
+		return application.PDFResource{}, err
+	}
+	return application.PDFResource{MIME: result.Metadata.MIME, Data: append([]byte(nil), result.Data...)}, nil
+}
+
 func repositoryError(code string, err error) error {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return application.NewError(application.ErrorTimeout, code+"_canceled", err)
+	}
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return application.NewError(application.ErrorNotFound, code, err)
 	}
@@ -204,5 +276,25 @@ func repositoryError(code string, err error) error {
 	return application.NewError(application.ErrorDependency, code, err)
 }
 
+type pdfContextReader struct {
+	ctx    context.Context
+	reader io.Reader
+}
+
+func (reader pdfContextReader) Read(buffer []byte) (int, error) {
+	if err := reader.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return reader.reader.Read(buffer)
+}
+
+func pdfAdapterContextError(ctx context.Context, code string) error {
+	if err := ctx.Err(); err != nil {
+		return application.NewError(application.ErrorTimeout, code, err)
+	}
+	return nil
+}
+
 var _ application.PDFNotePort = NotePort{}
 var _ application.PDFResourcePort = ResourcePort{}
+var _ application.PDFRemoteResourcePort = RemoteResourcePort{}

@@ -161,7 +161,14 @@ func staticAssetRoot(appBase, base string) string {
 }
 
 func initializeContentRuntime(appBase string) error {
-	return initContentRuntime(appBase)
+	// This explicit compatibility mapping is removed when interface-http binds
+	// deployment-supplied roots. The service initializer never derives paths.
+	return initContentRuntime(service.ContentRoots{
+		PrivateFiles: service.ContentRootPair{Data: filepath.Join(appBase, "files"), Quarantine: filepath.Join(appBase, ".content-private-quarantine")},
+		PublicUpload: service.ContentRootPair{Data: filepath.Join(appBase, "public", "upload"), Quarantine: filepath.Join(appBase, ".content-public-quarantine")},
+		Temporary:    filepath.Join(appBase, ".content-temporary"),
+		ServedRoots:  []string{filepath.Join(appBase, "public")},
+	})
 }
 
 func staticHandler(appBase, base string) http.Handler {

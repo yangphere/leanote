@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/revel/revel"
+	applicationcontent "github.com/yangphere/leanote/app/application/content"
 	applicationnotes "github.com/yangphere/leanote/app/application/notes"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/domain"
@@ -28,6 +30,94 @@ type AttachService struct {
 
 type webAttachUploadState struct {
 	ExpectedUSN int `json:"expectedUsn"`
+}
+
+type WebAttachmentUploadInput struct {
+	ActorID          string
+	NoteID           string
+	OriginalFilename string
+	Reader           io.ReadCloser
+	Limit            int64
+	OperationID      string
+}
+
+// UploadWebAttachment owns attachment identity, storage naming, and logical
+// destination construction. HTTP adapters supply only trusted principal text
+// plus the bounded multipart payload.
+func (this *AttachService) UploadWebAttachment(input WebAttachmentUploadInput) (attachment info.Attach, ok bool, message string) {
+	reader := input.Reader
+	if reader == nil {
+		return info.Attach{}, false, "error"
+	}
+	defer func() {
+		if reader != nil {
+			_ = reader.Close()
+		}
+	}()
+	actorID, actorErr := domain.ParseObjectID(strings.TrimSpace(input.ActorID))
+	noteID, noteErr := domain.ParseObjectID(strings.TrimSpace(input.NoteID))
+	if actorErr != nil || actorID.IsZero() || noteErr != nil || noteID.IsZero() {
+		return info.Attach{}, false, "No Perm"
+	}
+	title, err := applicationcontent.CleanVisibleText(input.OriginalFilename, false)
+	if err != nil {
+		return info.Attach{}, false, "invalid filename"
+	}
+	note := noteService.GetNoteById(noteID.Hex())
+	if note.NoteId != noteID || note.UserId.IsZero() || note.IsDeleted || !shareService.HasUpdateNotePerm(noteID.Hex(), actorID.Hex()) {
+		return info.Attach{}, false, "No Perm"
+	}
+	data, err := readAndCloseWebAttachmentPayload(reader, input.Limit)
+	reader = nil
+	if err != nil {
+		var contentErr *applicationcontent.Error
+		if errors.As(err, &contentErr) && contentErr.Category == applicationcontent.ErrorTooLarge {
+			return info.Attach{}, false, "too large"
+		}
+		return info.Attach{}, false, "error"
+	}
+
+	assetID := db.NewObjectID()
+	operationID := strings.TrimSpace(input.OperationID)
+	if operationID != "" {
+		assetID = StableWebAttachID(note.UserId, noteID, operationID)
+	}
+	_, extension := SplitFilename(title)
+	extension = strings.ToLower(extension)
+	storedName, storedPath := webAttachmentStorage(note.UserId, assetID, extension)
+	attachment = info.Attach{
+		AttachId: assetID, Name: storedName, Title: title, NoteId: noteID, UploadUserId: actorID,
+		Path: storedPath, Type: strings.TrimPrefix(extension, "."), Size: int64(len(data)),
+	}
+	ok, message = this.UploadWebAttach(attachment, data, operationID)
+	attachment.Path = ""
+	return attachment, ok, message
+}
+
+func webAttachmentStorage(ownerID, assetID domain.ObjectID, extension string) (string, string) {
+	storedName := assetID.Hex() + extension
+	storedDirectory := "files/" + GetRandomFilePath(ownerID.Hex(), assetID.Hex()) + "/attachs"
+	return storedName, storedDirectory + "/" + storedName
+}
+
+func readWebAttachmentPayload(reader io.Reader, limit int64) ([]byte, error) {
+	data, err := applicationcontent.ReadBounded(reader, limit)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, applicationcontent.NewError(applicationcontent.ErrorValidation, "attachment_payload_empty", nil)
+	}
+	return data, nil
+}
+
+func readAndCloseWebAttachmentPayload(reader io.ReadCloser, limit int64) ([]byte, error) {
+	data, readErr := readWebAttachmentPayload(reader, limit)
+	closeErr := reader.Close()
+	if closeErr != nil {
+		return nil, applicationcontent.NewError(applicationcontent.ErrorStorageUnavailable, "attachment_payload_close", errors.Join(readErr, closeErr))
+	}
+	return data, readErr
 }
 
 func webAttachUploadIdentity(ownerID, noteID, attachID domain.ObjectID, clientOperationID, title, fileType string, _ int, data []byte) (string, string, error) {
@@ -50,35 +140,73 @@ func webAttachUploadIdentity(ownerID, noteID, attachID domain.ObjectID, clientOp
 // requests use a durable outer receipt so a crash can verify the file/row/note
 // combination and resume without overwriting an already committed asset.
 func (this *AttachService) UploadWebAttach(attach info.Attach, data []byte, clientOperationID string) (bool, string) {
+	cleanTitle, err := applicationcontent.CleanVisibleText(attach.Title, false)
+	if err != nil {
+		return false, "invalid filename"
+	}
+	attach.Title = cleanTitle
 	note := noteService.GetNoteById(attach.NoteId.Hex())
 	if note.NoteId.IsZero() || note.IsDeleted || !shareService.HasUpdateNotePerm(note.NoteId.Hex(), attach.UploadUserId.Hex()) {
 		return false, "No Perm"
 	}
 	attach.Size = int64(len(data))
-	target := filepath.Join(revel.BasePath, filepath.FromSlash(strings.TrimLeft(attach.Path, "/")))
+	if contentStore == nil || (clientOperationID == "" && contentCreateRepair == nil) {
+		return false, "db error"
+	}
+	logical, err := applicationcontent.ParseStoredPath(attach.Path)
+	if err != nil {
+		return false, "db error"
+	}
+	contentDigest := sha256.Sum256(data)
+	assetIdentity := applicationcontent.AssetIdentity{
+		OperationID: attach.AttachId.Hex(), Generation: int64(note.Usn), OwnerID: note.UserId,
+		Kind: applicationcontent.AssetAttachment, SourceID: attach.AttachId.Hex(), DestinationID: attach.AttachId.Hex(), Digest: contentDigest,
+	}
+	publish := func(ctx context.Context) error {
+		_, err := contentStore.Publish(ctx, applicationcontent.PublishRequest{
+			Identity: assetIdentity, Destination: logical, Source: bytes.NewReader(data),
+		})
+		return err
+	}
+	verifyFile := func(ctx context.Context) (bool, error) {
+		verified, err := contentStore.Verify(ctx, applicationcontent.VerifyRequest{
+			Identity: assetIdentity, Destination: logical, ExpectedDigest: contentDigest,
+		})
+		return verified.Status == applicationcontent.VerificationApplied, err
+	}
 	if clientOperationID == "" {
-		if err := publishFileNoClobber(target, data, 0777); err != nil {
+		if attach.CreatedTime.IsZero() {
+			attach.CreatedTime = time.Now()
+		}
+		_, err := contentCreateRepair.Execute(context.Background(), applicationcontent.CreateRepairCommand{
+			Identity: applicationcontent.CreateIdentity{
+				Action: "web_attachment_upload", OwnerID: note.UserId, RecordOwnerID: attach.UploadUserId, ParentID: note.NoteId,
+				Kind: applicationcontent.AssetAttachment, AssetID: attach.AttachId.Hex(), Generation: int64(note.Usn), ContentDigest: contentDigest, RecordDigest: contentCreateAttachmentRecordDigest(attach), ContentSize: int64(len(data)),
+			},
+			Destination: logical,
+			Source:      bytes.NewReader(data),
+			ApplyMetadata: func(ctx context.Context) error {
+				return this.insertAttachIfMissing(ctx, attach, attach.UploadUserId)
+			},
+		})
+		if err != nil {
+			var contentErr *applicationcontent.Error
+			if errors.As(err, &contentErr) && contentErr.Category == applicationcontent.ErrorPartialWrite {
+				return false, "partial_write"
+			}
 			return false, "db error"
 		}
-		return this.AddAttachWithOperation(attach, false, "")
+		return true, "attach success"
 	}
 	operationID, digest, err := webAttachUploadIdentity(note.UserId, note.NoteId, attach.AttachId, clientOperationID, attach.Title, attach.Type, note.Usn, data)
 	if err != nil {
 		return false, "db error"
 	}
-	contentDigest := sha256.Sum256(data)
 	asset := applicationnotes.OperationAsset{AssetID: attach.AttachId.Hex(), IsAttach: true, ContentSHA256: hex.EncodeToString(contentDigest[:])}
 	state := webAttachUploadState{ExpectedUSN: note.Usn}
 	before, err := applicationnotes.CanonicalState(state)
 	if err != nil {
 		return false, "db error"
-	}
-	verifyFile := func() (bool, error) {
-		got, statErr := fileDigest(target)
-		if errors.Is(statErr, os.ErrNotExist) {
-			return false, nil
-		}
-		return got == contentDigest, statErr
 	}
 	plan := db.WorkspaceMutationPlan{
 		OperationID: operationID, OwnerID: note.UserId, ResourceID: note.NoteId,
@@ -90,16 +218,16 @@ func (this *AttachService) UploadWebAttach(attach info.Attach, data []byte, clie
 		FailurePolicy: applicationnotes.FailurePending,
 		Steps: []db.WorkspaceMutationStep{
 			{Name: "publish_file", ReplaySafe: false,
-				Apply:  func(context.Context) error { return publishFileNoClobber(target, data, 0777) },
-				Verify: func(context.Context) (bool, error) { return verifyFile() },
+				Apply:  publish,
+				Verify: verifyFile,
 			},
 			{Name: "attach_and_note", ReplaySafe: true,
-				Apply: func(context.Context) error {
+				Apply: func(ctx context.Context) error {
 					// This step is the combined file/row/note boundary. A resumed
 					// operation may reach it after the earlier publish step was
 					// persisted, so re-establish the no-clobber file invariant before
 					// accepting an existing row as success.
-					if err := publishFileNoClobber(target, data, 0777); err != nil {
+					if err := publish(ctx); err != nil {
 						return err
 					}
 					ok, msg := this.addAttachToNoteAtGeneration(attach, clientOperationID, state.ExpectedUSN)
@@ -110,13 +238,16 @@ func (this *AttachService) UploadWebAttach(attach info.Attach, data []byte, clie
 				},
 				Verify: func(ctx context.Context) (bool, error) {
 					var found info.Attach
-					if err := db.Attachs.FindContext(ctx, bson.M{"_id": attach.AttachId, "NoteId": note.NoteId, "UploadUserId": attach.UploadUserId, "Path": attach.Path, "Size": attach.Size}).One(&found); err != nil {
+					if err := db.Attachs.FindContext(ctx, bson.M{"_id": attach.AttachId, "NoteId": note.NoteId, "UploadUserId": attach.UploadUserId}).One(&found); err != nil {
 						if errors.Is(err, mongo.ErrNoDocuments) {
 							return false, nil
 						}
 						return false, err
 					}
-					fileOK, err := verifyFile()
+					if !sameAttachmentWrite(found, attach) {
+						return false, fmt.Errorf("attachment identity conflict")
+					}
+					fileOK, err := verifyFile(ctx)
 					return fileOK && this.verifyAttachNum(ctx, note.NoteId, note.UserId, attach.AttachId), err
 				},
 			},
@@ -207,6 +338,11 @@ func (this *AttachService) AddAttach(attach info.Attach, fromApi bool) (ok bool,
 }
 
 func (this *AttachService) AddAttachWithOperation(attach info.Attach, fromApi bool, clientOperationID string) (ok bool, msg string) {
+	cleanTitle, err := applicationcontent.CleanVisibleText(attach.Title, false)
+	if err != nil {
+		return false, "invalid filename"
+	}
+	attach.Title = cleanTitle
 	attach.CreatedTime = time.Now()
 	if !fromApi {
 		return this.addAttachToNote(attach, clientOperationID)
@@ -303,7 +439,7 @@ func (this *AttachService) insertAttachIfMissing(ctx context.Context, attach inf
 	var existing info.Attach
 	err := db.Attachs.FindContext(ctx, bson.M{"_id": attach.AttachId, "NoteId": attach.NoteId, "UploadUserId": ownerID}).One(&existing)
 	if err == nil {
-		if existing.Path != attach.Path || existing.Size != attach.Size {
+		if !sameAttachmentWrite(existing, attach) {
 			return fmt.Errorf("attachment identity conflict")
 		}
 		return nil
@@ -312,6 +448,17 @@ func (this *AttachService) insertAttachIfMissing(ctx context.Context, attach inf
 		return err
 	}
 	return db.Attachs.InsertContext(ctx, attach)
+}
+
+func sameAttachmentWrite(existing, expected info.Attach) bool {
+	return existing.AttachId == expected.AttachId &&
+		existing.NoteId == expected.NoteId &&
+		existing.UploadUserId == expected.UploadUserId &&
+		existing.Name == expected.Name &&
+		existing.Title == expected.Title &&
+		existing.Path == expected.Path &&
+		existing.Type == expected.Type &&
+		existing.Size == expected.Size
 }
 
 func (this *AttachService) verifyAttachNum(ctx context.Context, noteID, ownerID, attachID domain.ObjectID) bool {
@@ -340,28 +487,6 @@ func (this *AttachService) updateNoteAttachNum(noteId ObjectID, addNum int) bool
 		Log(note.AttachNum)
 	*/
 	return db.UpdateByQField(db.Notes, bson.M{"_id": noteId}, "AttachNum", num)
-}
-
-// list attachs
-func (this *AttachService) ListAttachs(noteId, userId string) []info.Attach {
-	attachs := []info.Attach{}
-
-	// 判断是否有权限为笔记添加附件, userId为空时表示是分享笔记的附件
-	if userId != "" && !shareService.HasUpdateNotePerm(noteId, userId) {
-		return attachs
-	}
-
-	// 笔记是否是自己的
-	note := noteService.GetNoteByIdAndUserId(noteId, userId)
-	if note.NoteId.IsZero() {
-		return attachs
-	}
-
-	// TODO 这里, 优化权限控制
-
-	db.ListByQ(db.Attachs, bson.M{"NoteId": db.MustObjectIDFromHex(noteId)}, &attachs)
-
-	return attachs
 }
 
 // api调用, 通过noteIds得到note's attachs, 通过noteId归类返回
@@ -403,13 +528,11 @@ func (this *AttachService) deleteAllAttachs(ctx context.Context, noteID, ownerID
 		return err
 	}
 	for _, attach := range attachs {
-		path := strings.TrimLeft(attach.Path, "/")
-		if err := os.Remove(revel.BasePath + "/" + path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		if err := deleteAttachmentThroughContent(ctx, "delete_all_note_attachments", ownerID, attach.AttachId, ""); err != nil {
 			return err
 		}
 	}
-	_, err = db.Attachs.RemoveAllContext(ctx, bson.M{"NoteId": noteID})
-	return err
+	return nil
 }
 
 func (this *AttachService) verifyAllAttachsDeleted(ctx context.Context, noteID, ownerID domain.ObjectID) (bool, error) {
@@ -557,11 +680,7 @@ func (this *AttachService) deleteAttachState(state webAttachDeleteState, userID,
 	expectedUSN := note.Usn
 	assetWork := &applicationnotes.AssetMutation{Assets: []applicationnotes.OperationAsset{{AssetID: attach.AttachId.Hex(), IsAttach: true}}}
 	assetWork.Apply = func(ctx context.Context, committedUSN int) error {
-		path := filepath.Join(revel.BasePath, filepath.FromSlash(strings.TrimLeft(attach.Path, "/")))
-		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-		if err := db.Attachs.RemoveContext(ctx, bson.M{"_id": attach.AttachId, "NoteId": note.NoteId}); err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+		if err := deleteAttachmentThroughContent(ctx, "web_attachment_delete", note.UserId, attach.AttachId, assetWork.OperationID); err != nil {
 			return err
 		}
 		return this.updateNoteAttachNumContext(ctx, note.NoteId, note.UserId, &committedUSN, assetWork.OperationID)
@@ -584,6 +703,19 @@ func (this *AttachService) deleteAttachState(state webAttachDeleteState, userID,
 	return false, "db error"
 }
 
+func attachmentDeleteCommand(action string, ownerID, assetID domain.ObjectID, operationID string) applicationcontent.DeleteAssetCommand {
+	return applicationcontent.DeleteAssetCommand{
+		Action: action, OwnerID: ownerID, Kind: applicationcontent.AssetAttachment, AssetID: assetID, OperationID: operationID,
+	}
+}
+
+func deleteAttachmentThroughContent(ctx context.Context, action string, ownerID, assetID domain.ObjectID, operationID string) error {
+	if contentStore == nil || contentDeleteManifests == nil || contentLifecycle == nil {
+		return applicationcontent.NewError(applicationcontent.ErrorDependency, "attachment_delete_runtime", nil)
+	}
+	return noteAssetDeleteService().Delete(ctx, attachmentDeleteCommand(action, ownerID, assetID, operationID))
+}
+
 func (this *AttachService) verifyAttachNumAfterDelete(ctx context.Context, noteID, ownerID domain.ObjectID) bool {
 	count, err := db.Attachs.FindContext(ctx, bson.M{"NoteId": noteID}).Count()
 	if err != nil {
@@ -591,44 +723,6 @@ func (this *AttachService) verifyAttachNumAfterDelete(ctx context.Context, noteI
 	}
 	var note info.Note
 	return db.Notes.FindContext(ctx, bson.M{"_id": noteID, "UserId": ownerID, "AttachNum": count}).One(&note) == nil
-}
-
-// 获取文件路径
-// 要判断是否具有权限
-// userId是否具有attach的访问权限
-func (this *AttachService) GetAttach(attachId, userId string) (attach info.Attach) {
-	if attachId == "" {
-		return
-	}
-
-	attach = info.Attach{}
-	db.Get(db.Attachs, attachId, &attach)
-	path := attach.Path
-	if path == "" {
-		return
-	}
-
-	note := noteService.GetNoteById(attach.NoteId.Hex())
-
-	// 判断权限
-
-	// 笔记是否是公开的
-	if note.IsBlog {
-		return
-	}
-
-	// 笔记是否是我的
-	if note.UserId.Hex() == userId {
-		return
-	}
-
-	// 我是否有权限查看或协作
-	if shareService.HasReadNotePerm(attach.NoteId.Hex(), userId) {
-		return
-	}
-
-	attach = info.Attach{}
-	return
 }
 
 // 复制笔记时需要复制附件
@@ -641,6 +735,9 @@ func (this *AttachService) CopyAttachs(noteId, toNoteId, toUserId string) bool {
 // Stable calls reuse the destination attachment identity and remove a copied
 // file when the attachment row cannot be committed.
 func (this *AttachService) CopyAttachsWithOperation(noteId, toNoteId, toUserId, operationID string) bool {
+	if !db.IsValidObjectIDHex(noteId) || !db.IsValidObjectIDHex(toNoteId) || !db.IsValidObjectIDHex(toUserId) {
+		return false
+	}
 	attachs := []info.Attach{}
 	if err := db.Attachs.FindContext(context.Background(), bson.M{"NoteId": db.MustObjectIDFromHex(noteId)}).All(&attachs); err != nil {
 		return false
@@ -681,6 +778,14 @@ func (this *AttachService) CopyAttachsWithManifest(noteId, toNoteId, toUserId, o
 }
 
 func (this *AttachService) copyAttachSet(attachs []info.Attach, toNoteId, toUserId, operationID string) bool {
+	if !db.IsValidObjectIDHex(toNoteId) || !db.IsValidObjectIDHex(toUserId) {
+		return false
+	}
+	var err error
+	attachs, err = cleanAttachmentTitlesForCopy(attachs)
+	if err != nil {
+		return false
+	}
 	toNoteIdO := db.MustObjectIDFromHex(toNoteId)
 	for _, attach := range attachs {
 		sourceAttachID := attach.AttachId.Hex()
@@ -735,6 +840,18 @@ func (this *AttachService) copyAttachSet(attachs []info.Attach, toNoteId, toUser
 	}
 
 	return true
+}
+
+func cleanAttachmentTitlesForCopy(attachments []info.Attach) ([]info.Attach, error) {
+	cleaned := append([]info.Attach(nil), attachments...)
+	for index := range cleaned {
+		title, err := applicationcontent.CleanVisibleText(cleaned[index].Title, false)
+		if err != nil {
+			return nil, err
+		}
+		cleaned[index].Title = title
+	}
+	return cleaned, nil
 }
 
 func stableCopiedAttachID(operationID, sourceAttachID, destinationOwnerID string) ObjectID {
@@ -884,13 +1001,7 @@ func (this *AttachService) updateOrDeleteAttachApiResult(ctx context.Context, no
 		if nowAttachs[attach.AttachId.Hex()] {
 			continue
 		}
-		path := strings.TrimLeft(attach.Path, "/")
-		if err := os.Remove(revel.BasePath + "/" + path); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-		// Remove the durable row only after the file is gone. If the database
-		// write fails, the row remains available for a retry to finish cleanup.
-		if err := db.Attachs.RemoveContext(ctx, bson.M{"_id": attach.AttachId, "NoteId": noteID, "UploadUserId": ownerID}); err != nil {
+		if err := deleteAttachmentThroughContent(ctx, "reconcile_note_attachment", ownerID, attach.AttachId, operationID); err != nil {
 			return err
 		}
 	}

@@ -3,15 +3,10 @@ package controllers
 import (
 	"github.com/revel/revel"
 	//	"encoding/json"
-	"archive/tar"
-	"compress/gzip"
 	"fmt"
-	"github.com/yangphere/leanote/app/db"
+	applicationcontent "github.com/yangphere/leanote/app/application/content"
 	"github.com/yangphere/leanote/app/info"
-	. "github.com/yangphere/leanote/app/lea"
 	"github.com/yangphere/leanote/app/service"
-	"io"
-	"os"
 	"strings"
 	"time"
 )
@@ -41,23 +36,8 @@ func (c Attach) uploadAttach(noteId string) (re info.Re) {
 		re.Item = fileInfo
 	}()
 
-	// 判断是否有权限为笔记添加附件
-	if !shareService.HasUpdateNotePerm(noteId, c.GetUserId()) {
-		return re
-	}
-
-	var data []byte
-	c.Params.Bind(&data, "file")
-
-	// file, handel, err := c.Request.FormFile("file")
-	// if err != nil {
-	// 	return re
-	// }
-	// defer file.Close()
-
-	// data, err := ioutil.ReadAll(file)
 	files := c.Params.Files["file"]
-	if data == nil || len(data) == 0 || len(files) != 1 {
+	if len(files) != 1 {
 		return re
 	}
 	// > 5M?
@@ -66,59 +46,25 @@ func (c Attach) uploadAttach(noteId string) (re info.Re) {
 		resultMsg = "upload config error"
 		return re
 	}
-	if int64(len(data)) > maxFileSize {
-		resultMsg = fmt.Sprintf("The file's size is bigger than %vM", float64(maxFileSize)/(1024*1024))
+	reader, err := files[0].Open()
+	if err != nil {
 		return re
 	}
 
 	handel := files[0]
 	clientOperationID := strings.TrimSpace(c.Params.Get("OperationId"))
-	// 生成上传路径
-	//	filePath := "files/" + c.GetUserId() + "/attachs"
-	newGuid := NewGuid()
-	if clientOperationID != "" {
-		note := noteService.GetNoteById(noteId)
-		if note.NoteId.IsZero() || note.UserId.IsZero() {
-			return re
-		}
-		newGuid = service.StableWebAttachID(note.UserId, note.NoteId, clientOperationID).Hex()
+	fileInfo, Ok, resultMsg = attachService.UploadWebAttachment(service.WebAttachmentUploadInput{
+		ActorID: c.GetUserId(), NoteID: noteId, OriginalFilename: handel.Filename,
+		Reader: reader, Limit: maxFileSize, OperationID: clientOperationID,
+	})
+	if resultMsg == "too large" {
+		resultMsg = fmt.Sprintf("The file's size is bigger than %vM", float64(maxFileSize)/(1024*1024))
 	}
-	filePath := "files/" + GetRandomFilePath(c.GetUserId(), newGuid) + "/attachs"
-
-	// 生成新的文件名
-	filename := handel.Filename
-	_, ext := SplitFilename(filename) // .doc
-	filename = newGuid + ext
-
-	// add File to db
-	fileType := ""
-	if ext != "" {
-		fileType = strings.ToLower(ext[1:])
-	}
-	fileInfo = info.Attach{Name: filename,
-		Title:        handel.Filename,
-		NoteId:       db.MustObjectIDFromHex(noteId),
-		UploadUserId: c.GetObjectUserId(),
-		Path:         filePath + "/" + filename,
-		Type:         fileType,
-		Size:         int64(len(data))}
-
-	id := db.NewObjectID()
-	if clientOperationID != "" {
-		note := noteService.GetNoteById(noteId)
-		if note.NoteId.IsZero() || note.UserId.IsZero() {
-			return re
-		}
-		id = service.StableWebAttachID(note.UserId, note.NoteId, clientOperationID)
-	}
-	fileInfo.AttachId = id
-	fileId = id.Hex()
-	Ok, resultMsg = attachService.UploadWebAttach(fileInfo, data, clientOperationID)
+	fileId = fileInfo.AttachId.Hex()
 	if resultMsg != "" {
 		resultMsg = c.Message(resultMsg)
 	}
 
-	fileInfo.Path = "" // 不要返回
 	if Ok {
 		resultMsg = "success"
 	}
@@ -135,104 +81,32 @@ func (c Attach) DeleteAttach(attachId string) revel.Result {
 // get all attachs by noteId
 func (c Attach) GetAttachs(noteId string) revel.Result {
 	re := info.NewRe()
+	attachments, _, err := attachService.ListReadable(c.RequestContext(), c.GetUserId(), noteId)
+	if err != nil {
+		re.Msg = "error"
+		return c.RenderJSON(re)
+	}
 	re.Ok = true
-	re.List = attachService.ListAttachs(noteId, c.GetUserId())
+	re.List = attachments
 	return c.RenderJSON(re)
 }
 
 // 下载附件
 // 权限判断
 func (c Attach) Download(attachId string) revel.Result {
-	attach := attachService.GetAttach(attachId, c.GetUserId()) // 得到路径
-	path := attach.Path
-	if path == "" {
+	download, err := attachService.OpenReadable(c.RequestContext(), c.GetUserId(), attachId)
+	if err != nil {
 		return c.RenderText("")
 	}
-	fn := revel.BasePath + "/" + strings.TrimLeft(path, "/")
-	file, _ := os.Open(fn)
-	return c.RenderBinary(file, attach.Title, revel.Attachment, time.Now()) // revel.Attachment
-	// return c.RenderFile(file, revel.Attachment) // revel.Attachment
+	filename := applicationcontent.AttachmentDownloadFilename(download.DisplayName)
+	return c.RenderBinary(download.Reader, filename, revel.Attachment, time.Now())
 }
 
 func (c Attach) DownloadAll(noteId string) revel.Result {
-	note := noteService.GetNoteById(noteId)
-	if note.NoteId.IsZero() {
-		return c.RenderText("")
-	}
-	// 得到文件列表
-	attachs := attachService.ListAttachs(noteId, c.GetUserId())
-	if attachs == nil || len(attachs) == 0 {
-		return c.RenderText("")
-	}
-
-	/*
-		dir := revel.BasePath + "/files/tmp"
-		err := os.MkdirAll(dir, 0755)
-		if err != nil {
-			return c.RenderText("")
-		}
-	*/
-
-	filename := note.Title + ".tar.gz"
-	if note.Title == "" {
-		filename = "all.tar.gz"
-	}
-
-	dir := revel.BasePath + "/files/attach_all"
-
-	if !MkdirAll(dir) {
-		return c.RenderText("error")
-	}
-
-	// file write
-	fw, err := os.Create(dir + "/" + filename)
+	archive, title, err := attachService.OpenReadableArchive(c.RequestContext(), c.GetUserId(), noteId)
 	if err != nil {
-		return c.RenderText("error")
+		return c.RenderText("")
 	}
-	// defer fw.Close() // 不需要关闭, 还要读取给用户下载
-
-	// gzip write
-	gw := gzip.NewWriter(fw)
-	defer gw.Close()
-
-	// tar write
-	tw := tar.NewWriter(gw)
-	defer tw.Close()
-
-	// 遍历文件列表
-	for _, attach := range attachs {
-		fn := revel.BasePath + "/" + strings.TrimLeft(attach.Path, "/")
-		fr, err := os.Open(fn)
-		fileInfo, _ := fr.Stat()
-		if err != nil {
-			return c.RenderText("")
-		}
-		defer fr.Close()
-
-		// 信息头
-		h := new(tar.Header)
-		h.Name = attach.Title
-		h.Size = fileInfo.Size()
-		h.Mode = int64(fileInfo.Mode())
-		h.ModTime = fileInfo.ModTime()
-
-		// 写信息头
-		err = tw.WriteHeader(h)
-		if err != nil {
-			panic(err)
-		}
-
-		// 写文件
-		_, err = io.Copy(tw, fr)
-		if err != nil {
-			panic(err)
-		}
-	} // for
-
-	//    tw.Close()
-	//    gw.Close()
-	//    fw.Close()
-	//    file, _ := os.Open(dir + "/" + filename)
-	// fw.Seek(0, 0)
-	return c.RenderBinary(fw, filename, revel.Attachment, time.Now()) // revel.Attachment
+	filename := applicationcontent.ArchiveDownloadFilename(title)
+	return c.RenderBinary(archive, filename, revel.Attachment, time.Now())
 }

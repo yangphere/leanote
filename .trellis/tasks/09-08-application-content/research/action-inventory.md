@@ -5,7 +5,19 @@
 - Current method 来自 generic `*` route 或 first-party caller，不代表未来 method 决策；method/status/Content-Type 由 `interface-http` 冻结。
 - principal 均由 session/token 注入；当前 `userId/toUserId` 是不可信参数，目标 contract 不以其授权。
 - response 逐 action 保持 `Re`、`ApiRe`、direct JSON/boolean、text/template 或 binary；content 返回 typed result。
-- evidence 当前为 planned/delegated-unrun，不是 passed。
+- evidence 以 `acceptance/evidence-matrix.md` 为准；foundation focused tests 可为 partial，不等于对应 action passed。
+
+## 2026-09-17 implementation overlay
+
+- C-W22/C-A04 已接入同一 PDF application service 并有 focused adapter tests，但真实 HTTP、强 readability、remote resources 与 Linux sandbox 未闭合，状态仍为 partial。
+- C-W01～C-W10 中 Web upload/paste/avatar/blog-logo、list/title、read、delete、copy-http 已接入 content/service primitive；`CopyImage` 只允许 server-verified note destination 或 same-actor legacy request，缺 target note identity 的 cross-owner legacy request fail closed。Mongo/HTTP/browser/restart evidence仍 partial。
+- C-W16～C-W20 album CRUD 已接 strict owner-scoped service boundary；C-A01 image read 共用同一授权读取链。ApiNote stable image/attachment multipart 由 controller presence/open 转入 `AttachService` 的 pre-note create-repair lifecycle；C-A02/C-A03 attachment download 已在上一批迁移。
+- C-P01 的 filesystem publish/Verify primitive 已实现；C-P02～C-P04 已由一个 production `ContentAssetPort` adapter 接入既有 notes receipt，Reconcile/Copy/Delete 各有 Apply/Verify，但 real Mongo unknown-result、restart 与跨 filesystem evidence 仍 partial/delegated-unrun。
+- Storage reliability follow-up：C-W01～C-W04、C-W10 与无 `OperationId` 的 C-W11 已接同一 create-repair manifest；generated identity 只支持 server-side bounded recovery，不改变 legacy client retry 语义。C-W07 delete manifest 使用 crash-recoverable shard OS lock/owner epoch，delete/create terminal GC 接同步 startup maintenance；真实 Mongo/Linux/restart/cross-host evidence 仍 partial/open。
+- C-D01～C-D04 决策不变；不得用“尚未迁移”作为重新发布 dormant surface 的理由。
+- 静态复核数量为 22 Web + 4 API callable、2 ApiNote integrations、4 provider primitives，未发现新增 route/action。Web attachment upload 的 actor/note strict parse、asset identity、logical path 与 metadata construction 已下沉 service；匿名 `DownloadAll` 与单附件读取统一允许 public-note authorization。
+- content runtime initializer 只接受 typed `ContentRoots`；filesystem store 与 PDF backend 消费同一次 root validation 返回的 canonical temporary path。`interface-http` 仍负责把唯一 production-config source 绑定到该 contract；当前 entrypoint application-base compatibility mapping 不是完成证据。
+- ApiNote Add/Update 通过 C-P02 provider 收敛 projection/Verify；multipart body 的 stable image/attachment publish、finalize 与 create-failure cleanup 也已由 `AttachService` 使用 typed create-repair/delete lifecycle。controller 只保留 presence/open 与旧 wire 映射；real HTTP/Mongo/restart evidence 仍未完成，不能据此关闭 C-I01/C-I02。
 
 ## Callable Web actions (22)
 
@@ -63,10 +75,10 @@
 
 | ID | Surface/evidence | Decision |
 | --- | --- | --- |
-| C-D01 | ApiFile.CopyImage，`ApiFileController.go:26-57` block comment | do not route/revive |
-| C-D02 | ApiFile.GetImages，同一 comment | do not route/revive |
-| C-D03 | ApiFile.UpdateImageTitle/DeleteImage，同一 comment | do not route/revive |
-| C-D04 | `app/lea/html2image` fixed true/false，无 caller/route | reachability/build 后清理；不恢复 |
+| C-D01 | historical ApiFile.CopyImage block；无 route/registry/caller | 注释实现已删除；do not route/revive |
+| C-D02 | historical ApiFile.GetImages block；无 route/registry/caller | 注释实现已删除；do not route/revive |
+| C-D03 | historical ApiFile.UpdateImageTitle/DeleteImage block；无 route/registry/caller | 注释实现已删除；do not route/revive |
+| C-D04 | historical `app/lea/html2image`；全仓仅 self references，无 caller/route | package 已删除；不恢复 |
 
 ## Evidence ownership
 

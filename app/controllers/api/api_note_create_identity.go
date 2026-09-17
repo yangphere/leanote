@@ -30,6 +30,7 @@ type apiNoteCreateIdentityInput struct {
 }
 
 type apiNoteCreateFileIdentity struct {
+	FileID        string
 	LocalFileID   string
 	Type          string
 	Title         string
@@ -50,6 +51,14 @@ func newAPINoteCreateOperation(ownerID, noteID domain.ObjectID, request info.Api
 // uploaded. A local file id is only a client-side name; it is not proof that
 // two retries contain the same asset.
 func newAPINoteCreateOperationWithContent(ownerID, noteID domain.ObjectID, request info.ApiNote, content map[int][]byte) (string, string, []applicationnotes.OperationAsset, error) {
+	digests := make(map[int]string, len(content))
+	for index, data := range content {
+		digests[index] = apiAssetContentDigest(data)
+	}
+	return newAPINoteCreateOperationWithDigests(ownerID, noteID, request, digests)
+}
+
+func newAPINoteCreateOperationWithDigests(ownerID, noteID domain.ObjectID, request info.ApiNote, digests map[int]string) (string, string, []applicationnotes.OperationAsset, error) {
 	if ownerID.IsZero() || noteID.IsZero() {
 		return "", "", nil, fmt.Errorf("api note create identity: invalid owner or note")
 	}
@@ -58,13 +67,12 @@ func newAPINoteCreateOperationWithContent(ownerID, noteID domain.ObjectID, reque
 		if !input.Files[index].HasBody {
 			continue
 		}
-		data, ok := content[index]
+		digest, ok := digests[index]
 		if !ok {
 			input.Files[index].ContentDigest = "missing"
 			continue
 		}
-		digest := sha256.Sum256(data)
-		input.Files[index].ContentDigest = hex.EncodeToString(digest[:])
+		input.Files[index].ContentDigest = digest
 	}
 	assets := make([]applicationnotes.OperationAsset, 0, len(request.Files))
 	operationID, digest, _, err := applicationnotes.NewResourceOperationIdentity("note_create", ownerID, noteID, input)
@@ -72,12 +80,23 @@ func newAPINoteCreateOperationWithContent(ownerID, noteID domain.ObjectID, reque
 		return "", "", nil, err
 	}
 	for index, file := range input.Files {
-		if !file.HasBody || file.LocalFileID == "" {
+		assetID := file.FileID
+		if file.HasBody {
+			if file.LocalFileID == "" {
+				continue
+			}
+			assetID = stableAPIAssetID(operationID, file.LocalFileID, index, file.IsAttach)
+		} else if assetID != "" {
+			if _, err := domain.ParseObjectID(assetID); err != nil {
+				return "", "", nil, fmt.Errorf("api note create identity: invalid existing asset: %w", err)
+			}
+		}
+		if assetID == "" {
 			continue
 		}
 		assets = append(assets, applicationnotes.OperationAsset{
-			AssetID:     stableAPIAssetID(operationID, file.LocalFileID, index, file.IsAttach),
-			LocalFileID: file.LocalFileID, Index: index, IsAttach: file.IsAttach,
+			AssetID:     assetID,
+			LocalFileID: file.LocalFileID, ContentSHA256: file.ContentDigest, Index: index, IsAttach: file.IsAttach,
 		})
 	}
 	return operationID, digest, assets, nil
@@ -95,7 +114,7 @@ func apiNoteCreateIdentityInputFromRequest(noteID domain.ObjectID, request info.
 	}
 	for index, file := range request.Files {
 		input.Files[index] = apiNoteCreateFileIdentity{
-			LocalFileID: file.LocalFileId, Type: file.Type, Title: file.Title,
+			FileID: file.FileId, LocalFileID: file.LocalFileId, Type: file.Type, Title: file.Title,
 			HasBody: file.HasBody, IsAttach: file.IsAttach,
 		}
 	}
@@ -107,18 +126,25 @@ func stableAPIUpdateAssetSeed(ownerID, noteID domain.ObjectID, expectedUSN int, 
 }
 
 func stableAPIUpdateAssetSeedWithContent(ownerID, noteID domain.ObjectID, expectedUSN int, request info.ApiNote, content map[int][]byte) string {
+	digests := make(map[int]string, len(content))
+	for index, data := range content {
+		digests[index] = apiAssetContentDigest(data)
+	}
+	return stableAPIUpdateAssetSeedWithDigests(ownerID, noteID, expectedUSN, request, digests)
+}
+
+func stableAPIUpdateAssetSeedWithDigests(ownerID, noteID domain.ObjectID, expectedUSN int, request info.ApiNote, digests map[int]string) string {
 	identityRequest := apiNoteCreateIdentityInputFromRequest(noteID, request)
 	for index := range identityRequest.Files {
 		if !identityRequest.Files[index].HasBody {
 			continue
 		}
-		data, ok := content[index]
+		digest, ok := digests[index]
 		if !ok {
 			identityRequest.Files[index].ContentDigest = "missing"
 			continue
 		}
-		digest := sha256.Sum256(data)
-		identityRequest.Files[index].ContentDigest = hex.EncodeToString(digest[:])
+		identityRequest.Files[index].ContentDigest = digest
 	}
 	input := struct {
 		ExpectedUSN int
@@ -129,6 +155,11 @@ func stableAPIUpdateAssetSeedWithContent(ownerID, noteID domain.ObjectID, expect
 		return ""
 	}
 	return operationID
+}
+
+func apiAssetContentDigest(data []byte) string {
+	digest := sha256.Sum256(data)
+	return hex.EncodeToString(digest[:])
 }
 
 func stableAPIAssetID(operationID, localFileID string, index int, isAttach bool) string {

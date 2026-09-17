@@ -1,4 +1,5 @@
 {"file":".trellis/tasks/09-08-application-content/prd.md","reason":"逐项核对 R-C1 至 R-C12 与 AC-C1 至 AC-C14"}
+{"file":".trellis/tasks/09-08-application-content/research/spec-audit-2026-09-17.md","reason":"复核 current baseline、规格漂移修复、已确认 D-C2 和规划收敛状态"}
 {"file":".trellis/tasks/09-08-application-content/research/action-inventory.md","reason":"确认 callable、integration、provider 和 dormant surface 全覆盖"}
 {"file":".trellis/tasks/09-08-application-content/acceptance/evidence-matrix.md","reason":"禁止把 planned/delegated-unrun 误记为通过"}
 {"file":".trellis/tasks/archive/2026-09/09-08-application-notes/acceptance/evidence-matrix.md","reason":"核对 notes receipt 与 content provider 交接边界"}
@@ -9,4 +10,4 @@
 {"file":".trellis/tasks/09-08-application-admin/design.md","reason":"复核 admin 不再拥有 PDF process seam"}
 {"file":".trellis/tasks/09-08-application-admin/implement.md","reason":"复核 admin 执行计划只交付 PDF descriptor"}
 {"file":".trellis/tasks/09-08-application-content/design.md","reason":"核对单一 roots、publish/Verify、多写恢复和 PDF 执行边界"}
-{"file":".trellis/tasks/09-08-application-content/implement.md","reason":"核对激活门、阶段顺序与验证命令完整"}
+{"file":".trellis/tasks/09-08-application-content/implement.md","reason":"核对 in_progress continuation gate、阶段顺序与验证命令完整"}

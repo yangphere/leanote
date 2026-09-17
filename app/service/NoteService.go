@@ -454,10 +454,10 @@ func (this *NoteService) AddNoteAndContent(note info.Note, noteContent info.Note
 }
 
 func (this *NoteService) addNoteAndContentResult(note info.Note, noteContent info.NoteContent, myUserId ObjectID, fromApi, strict bool) (info.Note, bool, string) {
-	return this.addNoteAndContentResultWithIdentity(note, noteContent, myUserId, fromApi, strict, "", "", nil)
+	return this.addNoteAndContentResultWithIdentity(note, noteContent, myUserId, fromApi, strict, "", "", nil, false)
 }
 
-func (this *NoteService) addNoteAndContentResultWithIdentity(note info.Note, noteContent info.NoteContent, myUserId ObjectID, fromApi, strict bool, forcedOperationID, forcedInputDigest string, assets []applicationnotes.OperationAsset) (info.Note, bool, string) {
+func (this *NoteService) addNoteAndContentResultWithIdentity(note info.Note, noteContent info.NoteContent, myUserId ObjectID, fromApi, strict bool, forcedOperationID, forcedInputDigest string, assets []applicationnotes.OperationAsset, reconcileAssets bool) (info.Note, bool, string) {
 	if note.NoteId.IsZero() {
 		note.NoteId = db.NewObjectID()
 	}
@@ -528,7 +528,7 @@ func (this *NoteService) addNoteAndContentResultWithIdentity(note info.Note, not
 				return info.Note{}, false, string(WorkspacePartialWrite)
 			}
 			existingContent := this.GetNoteContent(note.NoteId.Hex(), note.UserId.Hex())
-			if !this.repairNoteCreationProjections(operationID, inputDigest, desiredState, existing, existingContent) {
+			if !this.repairNoteCreationProjections(operationID, inputDigest, desiredState, existing, existingContent, reconcileAssets) {
 				return existing, false, string(WorkspaceSideEffect)
 			}
 			return existing, true, ""
@@ -537,7 +537,7 @@ func (this *NoteService) addNoteAndContentResultWithIdentity(note info.Note, not
 	if existing := this.GetNote(note.NoteId.Hex(), note.UserId.Hex()); !existing.NoteId.IsZero() && !hasReceipt {
 		existingContent := this.GetNoteContent(note.NoteId.Hex(), note.UserId.Hex())
 		if !existing.IsDeleted && sameNoteCreation(existing, existingContent, note, noteContent) {
-			if this.repairNoteCreationProjections(operationID, inputDigest, desiredState, existing, existingContent) {
+			if this.repairNoteCreationProjections(operationID, inputDigest, desiredState, existing, existingContent, reconcileAssets) {
 				return existing, true, ""
 			}
 			return existing, false, string(WorkspaceSideEffect)
@@ -640,13 +640,13 @@ func (this *NoteService) addNoteAndContentResultWithIdentity(note info.Note, not
 	// These are repairable projections outside the required note/content/USN
 	// commit. A failure remains observable and is never reported as a clean
 	// creation success.
-	if !this.repairNoteCreationProjections(operationID, inputDigest, desiredState, note, noteContent) {
+	if !this.repairNoteCreationProjections(operationID, inputDigest, desiredState, note, noteContent, reconcileAssets) {
 		return note, false, string(WorkspaceSideEffect)
 	}
 	return note, true, ""
 }
 
-func (this *NoteService) repairNoteCreationProjections(operationID, inputDigest string, desiredState []byte, note info.Note, noteContent info.NoteContent) bool {
+func (this *NoteService) repairNoteCreationProjections(operationID, inputDigest string, desiredState []byte, note info.Note, noteContent info.NoteContent, reconcileAssets bool) bool {
 	if receipt, err := db.GetWorkspaceOperation(context.Background(), note.UserId, operationID+":projections"); err == nil {
 		if receipt.InputDigest != inputDigest {
 			return false
@@ -662,9 +662,14 @@ func (this *NoteService) repairNoteCreationProjections(operationID, inputDigest 
 	} else if !errors.Is(err, mongo.ErrNoDocuments) && !errors.Is(err, db.ErrMongoClientNotInitialized) {
 		return false
 	}
+	rootReceipt, err := db.GetWorkspaceOperation(context.Background(), note.UserId, operationID)
+	if err != nil {
+		return false
+	}
 	plan := db.WorkspaceMutationPlan{
 		OperationID: operationID + ":projections", OwnerID: note.UserId, ResourceID: note.NoteId,
 		Kind: "note_create_projections", InputDigest: inputDigest, DesiredState: desiredState,
+		Assets:        append([]applicationnotes.OperationAsset(nil), rootReceipt.Assets...),
 		FailurePolicy: applicationnotes.FailurePending,
 		Steps: []db.WorkspaceMutationStep{
 			{Name: "tags", ReplaySafe: true,
@@ -688,6 +693,16 @@ func (this *NoteService) repairNoteCreationProjections(operationID, inputDigest 
 				},
 			},
 		},
+	}
+	if reconcileAssets && len(rootReceipt.Assets) > 0 {
+		command := applicationnotes.ReconcileNoteAssetsCommand{
+			OperationID: operationID, ActorID: note.UpdatedUserId, OwnerID: note.UserId, NoteID: note.NoteId, Generation: rootReceipt.AssignedUSN,
+		}
+		plan.Steps = append(plan.Steps, db.WorkspaceMutationStep{
+			Name: "assets", ReplaySafe: true,
+			Apply:  func(ctx context.Context) error { return ContentAssets.ReconcileNote(ctx, command) },
+			Verify: func(ctx context.Context) (bool, error) { return ContentAssets.VerifyReconcileNote(ctx, command) },
+		})
 	}
 	result, err := db.RunWorkspaceRepair(context.Background(), plan)
 	return err == nil && result.Committed
@@ -739,11 +754,15 @@ func (this *NoteService) AddNoteAndContentApiResult(note info.Note, noteContent 
 	return this.addNoteAndContentResult(note, noteContent, myUserId, true, true)
 }
 
+func (this *NoteService) AddNoteAndContentApiResultWithAssets(note info.Note, noteContent info.NoteContent, myUserId ObjectID, assets []applicationnotes.OperationAsset) (info.Note, bool, string) {
+	return this.addNoteAndContentResultWithIdentity(note, noteContent, myUserId, true, true, "", "", assets, true)
+}
+
 // AddNoteAndContentApiResultWithIdentity lets the API adapter pre-create a
 // durable operation before uploading assets. The identity is optional for
 // legacy callers; when supplied, it must be reused for the whole create flow.
 func (this *NoteService) AddNoteAndContentApiResultWithIdentity(note info.Note, noteContent info.NoteContent, myUserId ObjectID, operationID, inputDigest string, assets []applicationnotes.OperationAsset) (info.Note, bool, string) {
-	return this.addNoteAndContentResultWithIdentity(note, noteContent, myUserId, true, true, operationID, inputDigest, assets)
+	return this.addNoteAndContentResultWithIdentity(note, noteContent, myUserId, true, true, operationID, inputDigest, assets, true)
 }
 
 // 当设置/取消了笔记为博客
@@ -1064,6 +1083,8 @@ func (this *NoteService) CopyNoteWithOperation(noteId, notebookId, userId, opera
 	if notebookService.IsMyNotebook(notebookId, userId) {
 		note := this.GetNote(noteId, userId)
 		noteContent := this.GetNoteContent(noteId, userId)
+		sourceContent := noteContent
+		var frozenAssets []applicationnotes.OperationAsset
 
 		// A client operation generation freezes the destination identity before
 		// the create side effects. Legacy calls retain the random destination and
@@ -1081,9 +1102,18 @@ func (this *NoteService) CopyNoteWithOperation(noteId, notebookId, userId, opera
 				if !copyReceiptCanResume(receipt, receiptErr, digest) {
 					return info.Note{}
 				}
+				frozenAssets = append(frozenAssets, receipt.Assets...)
+				note = existing
+				noteContent = this.GetNoteContent(note.NoteId.Hex(), userId)
+				sourceContent = noteContent
 				// Always re-enter the durable create path. A committed primary
 				// receipt may still have a missing projection receipt that must be
 				// repaired before this retry can report success.
+			} else {
+				frozenAssets, err = stableSharedCopyAssetManifest(noteId, userId, userId, operationID, sourceContent.Content)
+				if err != nil {
+					return info.Note{}
+				}
 			}
 		}
 		note.NotebookId = db.MustObjectIDFromHex(notebookId)
@@ -1097,8 +1127,40 @@ func (this *NoteService) CopyNoteWithOperation(noteId, notebookId, userId, opera
 				return info.Note{}
 			}
 			var ok bool
-			note, ok, _ = this.addNoteAndContentResultWithIdentity(note, noteContent, note.UserId, false, true, copyID, digest, nil)
+			note, ok, _ = this.addNoteAndContentResultWithIdentity(note, noteContent, note.UserId, false, true, copyID, digest, frozenAssets, false)
 			if !ok {
+				return info.Note{}
+			}
+			receipt, receiptErr := db.GetWorkspaceOperation(context.Background(), note.UserId, copyID)
+			if !copyReceiptCanResume(receipt, receiptErr, digest) {
+				return info.Note{}
+			}
+			frozenAssets = append([]applicationnotes.OperationAsset(nil), receipt.Assets...)
+			noteContent = this.GetNoteContent(note.NoteId.Hex(), userId)
+			copyCommand := applicationnotes.CopyNoteAssetsCommand{
+				OperationID: copyID, AssetOperationID: operationID, ActorID: note.UserId,
+				SourceOwnerID: note.UserId, DestinationOwnerID: note.UserId,
+				SourceNoteID: db.MustObjectIDFromHex(noteId), DestinationNoteID: note.NoteId,
+				Generation: receipt.AssignedUSN, Content: sourceContent.Content,
+			}
+			copied, copyErr := ContentAssets.CopyNote(context.Background(), copyCommand)
+			if copyErr != nil {
+				return info.Note{}
+			}
+			if copied.Content != noteContent.Content {
+				expected := note.Usn
+				content := copied.Content
+				abstract := noteContent.Abstract
+				updated := this.SaveNote(applicationnotes.SaveNoteCommand{
+					ActorUserID: userId, NoteID: note.NoteId.Hex(), OperationID: operationID + ":copied-content",
+					ExpectedUSN: &expected, Content: &content, Abstract: &abstract, UpdatedTime: time.Now(),
+				})
+				if !updated.OK() {
+					return info.Note{}
+				}
+				note = this.GetNote(note.NoteId.Hex(), userId)
+			}
+			if verified, verifyErr := ContentAssets.VerifyCopyNote(context.Background(), copyCommand); verifyErr != nil || !verified {
 				return info.Note{}
 			}
 		}
@@ -1137,6 +1199,7 @@ func (this *NoteService) CopySharedNoteWithOperation(noteId, notebookId, fromUse
 		noteContent := this.GetNoteContent(noteId, fromUserId)
 		sourceContent := noteContent
 		destinationExists := false
+		copyGeneration := 0
 		var frozenAssets []applicationnotes.OperationAsset
 
 		if operationID == "" {
@@ -1153,10 +1216,11 @@ func (this *NoteService) CopySharedNoteWithOperation(noteId, notebookId, fromUse
 					return info.Note{}
 				}
 				frozenAssets = append([]applicationnotes.OperationAsset(nil), receipt.Assets...)
+				copyGeneration = receipt.AssignedUSN
 			} else if !errors.Is(receiptErr, mongo.ErrNoDocuments) {
 				return info.Note{}
 			} else {
-				frozenAssets, err = stableSharedCopyAssetManifest(noteId, myUserId, operationID, sourceContent.Content)
+				frozenAssets, err = stableSharedCopyAssetManifest(noteId, fromUserId, myUserId, operationID, sourceContent.Content)
 				if err != nil {
 					return info.Note{}
 				}
@@ -1210,7 +1274,7 @@ func (this *NoteService) CopySharedNoteWithOperation(noteId, notebookId, fromUse
 				return info.Note{}
 			}
 			var ok bool
-			note, ok, _ = this.addNoteAndContentResultWithIdentity(note, noteContent, note.UserId, false, true, copyID, digest, frozenAssets)
+			note, ok, _ = this.addNoteAndContentResultWithIdentity(note, noteContent, note.UserId, false, true, copyID, digest, frozenAssets, false)
 			if !ok {
 				return info.Note{}
 			}
@@ -1219,6 +1283,7 @@ func (this *NoteService) CopySharedNoteWithOperation(noteId, notebookId, fromUse
 				return info.Note{}
 			}
 			frozenAssets = append([]applicationnotes.OperationAsset(nil), receipt.Assets...)
+			copyGeneration = receipt.AssignedUSN
 			noteContent = this.GetNoteContent(note.NoteId.Hex(), myUserId)
 			sourceContent = noteContent
 		}
@@ -1229,10 +1294,21 @@ func (this *NoteService) CopySharedNoteWithOperation(noteId, notebookId, fromUse
 		// Asset copies start only after the destination note/create receipt is
 		// durable. Retries reuse the destination and can safely finish the
 		// projection instead of returning the partially copied note early.
-		copiedContent, copyErr := noteImageService.CopyNoteImagesWithManifest(noteId, fromUserId, note.NoteId.Hex(), sourceContent.Content, myUserId, operationID, frozenAssets)
+		copyID, _, copyIdentityErr := copyNoteOperationIdentity("note_shared_copy", note.UserId, note.NoteId, noteId, notebookId, fromUserId, operationID)
+		if copyIdentityErr != nil {
+			return info.Note{}
+		}
+		copyAssetsCommand := applicationnotes.CopyNoteAssetsCommand{
+			OperationID: copyID, AssetOperationID: operationID, ActorID: db.MustObjectIDFromHex(myUserId),
+			SourceOwnerID: db.MustObjectIDFromHex(fromUserId), DestinationOwnerID: note.UserId,
+			SourceNoteID: db.MustObjectIDFromHex(noteId), DestinationNoteID: note.NoteId,
+			Generation: copyGeneration, Content: sourceContent.Content,
+		}
+		copied, copyErr := ContentAssets.CopyNote(context.Background(), copyAssetsCommand)
 		if copyErr != nil {
 			return info.Note{}
 		}
+		copiedContent := copied.Content
 		if copiedContent != noteContent.Content {
 			expected := note.Usn
 			content := copiedContent
@@ -1248,10 +1324,9 @@ func (this *NoteService) CopySharedNoteWithOperation(noteId, notebookId, fromUse
 			note = this.GetNote(note.NoteId.Hex(), myUserId)
 			noteContent = this.GetNoteContent(note.NoteId.Hex(), myUserId)
 		}
-		if !attachService.CopyAttachsWithManifest(noteId, note.NoteId.Hex(), myUserId, operationID, frozenAssets) {
+		if verified, verifyErr := ContentAssets.VerifyCopyNote(context.Background(), copyAssetsCommand); verifyErr != nil || !verified {
 			return info.Note{}
 		}
-
 		// 更新blog状态
 		isBlog := this.updateToNotebookBlog(note.NoteId.Hex(), notebookId, myUserId)
 
@@ -1276,14 +1351,31 @@ func copyNoteOperationIdentity(kind string, ownerID, destinationID domain.Object
 	return operationID, digest, err
 }
 
-func stableSharedCopyAssetManifest(sourceNoteID, destinationOwnerID, operationID, content string) ([]applicationnotes.OperationAsset, error) {
+func stableSharedCopyAssetManifest(sourceNoteID, sourceOwnerID, destinationOwnerID, operationID, content string) ([]applicationnotes.OperationAsset, error) {
+	if contentStore == nil || !db.IsValidObjectIDHex(sourceNoteID) || !db.IsValidObjectIDHex(sourceOwnerID) || !db.IsValidObjectIDHex(destinationOwnerID) {
+		return nil, fmt.Errorf("copy asset manifest: invalid runtime or identity")
+	}
+	destinationOwner := db.MustObjectIDFromHex(destinationOwnerID)
+	destinationNote := stableCopyNoteIDForOwner(operationID, sourceNoteID, destinationOwnerID)
 	assets := make([]applicationnotes.OperationAsset, 0)
 	for _, sourceImageID := range noteImageSourceFileIDs(content) {
 		imageOperationID := operationID + ":image:" + sourceImageID
+		var source info.File
+		if err := db.Files.FindContext(context.Background(), bson.M{
+			"_id": db.MustObjectIDFromHex(sourceImageID), "UserId": db.MustObjectIDFromHex(sourceOwnerID), "Type": "",
+		}).One(&source); err != nil {
+			return nil, err
+		}
+		data, err := readImageSource(context.Background(), source)
+		if err != nil || int64(len(data)) != source.Size {
+			return nil, errors.Join(err, fmt.Errorf("copy image source size mismatch"))
+		}
+		contentDigest := sha256.Sum256(data)
+		destination := copiedImageDestination(source, destinationOwner, imageOperationID)
+		recordDigest := contentCreateImageRecordDigest(destination)
 		assets = append(assets, applicationnotes.OperationAsset{
-			AssetID:     stableCopiedImageID(imageOperationID, sourceImageID, destinationOwnerID).Hex(),
-			LocalFileID: sourceImageID,
-			Index:       len(assets),
+			AssetID: destination.FileId.Hex(), LocalFileID: sourceImageID,
+			ContentSHA256: hex.EncodeToString(contentDigest[:]), RecordSHA256: hex.EncodeToString(recordDigest[:]), Index: len(assets),
 		})
 	}
 	var attachments []info.Attach
@@ -1295,11 +1387,20 @@ func stableSharedCopyAssetManifest(sourceNoteID, destinationOwnerID, operationID
 	})
 	for _, attach := range attachments {
 		sourceAttachID := attach.AttachId.Hex()
+		data, err := readAttachmentSource(context.Background(), attach)
+		if err != nil || int64(len(data)) != attach.Size {
+			return nil, errors.Join(err, fmt.Errorf("copy attachment source size mismatch"))
+		}
+		contentDigest := sha256.Sum256(data)
+		destination, err := copiedAttachmentDestination(attach, destinationOwner, destinationNote, operationID)
+		if err != nil {
+			return nil, err
+		}
+		recordDigest := contentCreateAttachmentRecordDigest(destination)
 		assets = append(assets, applicationnotes.OperationAsset{
-			AssetID:     stableCopiedAttachID(operationID, sourceAttachID, destinationOwnerID).Hex(),
-			LocalFileID: sourceAttachID,
-			Index:       len(assets),
-			IsAttach:    true,
+			AssetID: destination.AttachId.Hex(), LocalFileID: sourceAttachID,
+			ContentSHA256: hex.EncodeToString(contentDigest[:]), RecordSHA256: hex.EncodeToString(recordDigest[:]),
+			Index: len(assets), IsAttach: true,
 		})
 	}
 	return assets, nil

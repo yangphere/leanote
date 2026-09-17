@@ -2,13 +2,58 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	applicationcontent "github.com/yangphere/leanote/app/application/content"
 	applicationnotes "github.com/yangphere/leanote/app/application/notes"
 	"github.com/yangphere/leanote/app/domain"
+	"github.com/yangphere/leanote/app/info"
 )
+
+type countingAttachmentReader struct {
+	data     []byte
+	read     int
+	closeErr error
+	closed   bool
+}
+
+func (reader *countingAttachmentReader) Read(buffer []byte) (int, error) {
+	if reader.read >= len(reader.data) {
+		return 0, io.EOF
+	}
+	n := copy(buffer, reader.data[reader.read:])
+	reader.read += n
+	return n, nil
+}
+
+func (reader *countingAttachmentReader) Close() error {
+	reader.closed = true
+	return reader.closeErr
+}
+
+func TestReadWebAttachmentPayloadStopsAtLimitPlusOne(t *testing.T) {
+	reader := &countingAttachmentReader{data: []byte("123456789")}
+	if _, err := readWebAttachmentPayload(reader, 4); err == nil {
+		t.Fatal("oversized attachment unexpectedly accepted")
+	}
+	if reader.read != 5 {
+		t.Fatalf("attachment reader consumed %d bytes, want 5", reader.read)
+	}
+}
+
+func TestReadAndCloseWebAttachmentPayloadRejectsCloseFailure(t *testing.T) {
+	want := errors.New("close failed")
+	reader := &countingAttachmentReader{data: []byte("data"), closeErr: want}
+	data, err := readAndCloseWebAttachmentPayload(reader, 4)
+	if data != nil || !errors.Is(err, want) {
+		t.Fatalf("readAndCloseWebAttachmentPayload() = %q, %v, want close failure", data, err)
+	}
+}
 
 func TestAttachNumUpdateRequiresCommittedNoteGenerationForAPIReconcile(t *testing.T) {
 	noteID, err := domain.ParseObjectID("507f1f77bcf86cd799439011")
@@ -110,6 +155,78 @@ func TestWebAttachDeleteIdentitySurvivesMissingAttachmentRow(t *testing.T) {
 	}
 }
 
+func TestAttachmentDeleteCommandBindsContentLifecycleIdentity(t *testing.T) {
+	owner, _ := domain.ParseObjectID("507f1f77bcf86cd799439011")
+	attachment, _ := domain.ParseObjectID("507f1f77bcf86cd799439012")
+	command := attachmentDeleteCommand("web_attachment_delete", owner, attachment, "note-save-1")
+	if command.Action != "web_attachment_delete" || command.OwnerID != owner || command.AssetID != attachment || command.OperationID != "note-save-1" {
+		t.Fatalf("attachment delete command=%+v", command)
+	}
+	if command.Kind != "attachment" {
+		t.Fatalf("attachment delete kind=%q", command.Kind)
+	}
+}
+
+func TestPrepareAPINoteAssetRejectsMalformedIdentityBeforeReading(t *testing.T) {
+	reader := &countingAttachmentReader{data: []byte("must remain unread")}
+	_, message := (&AttachService{}).PrepareAPINoteAsset(APINoteAssetPrepareInput{
+		ActorID: "invalid", NoteID: "507f1f77bcf86cd799439012", Reader: reader,
+	})
+	if message != "fileRequired" || reader.read != 0 || !reader.closed {
+		t.Fatalf("message=%q read=%d closed=%t", message, reader.read, reader.closed)
+	}
+}
+
+func TestAPINotePreNoteIdentityScopesBothAssetKindsToTheUncommittedNote(t *testing.T) {
+	owner, _ := domain.ParseObjectID("507f1f77bcf86cd799439011")
+	note, _ := domain.ParseObjectID("507f1f77bcf86cd799439012")
+	asset, _ := domain.ParseObjectID("507f1f77bcf86cd799439013")
+	for _, file := range []info.NoteFile{{FileId: asset.Hex()}, {FileId: asset.Hex(), IsAttach: true}} {
+		identity, err := apiPreNoteAssetIdentity(owner, note, file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if identity.Action != apiNoteAssetUploadAction || identity.OwnerID != owner || identity.RecordOwnerID != owner || identity.ParentID != note || identity.AssetID != asset.Hex() {
+			t.Fatalf("identity=%+v", identity)
+		}
+		wantKind := applicationcontent.AssetImage
+		if file.IsAttach {
+			wantKind = applicationcontent.AssetAttachment
+		}
+		if identity.Kind != wantKind {
+			t.Fatalf("kind=%q want=%q", identity.Kind, wantKind)
+		}
+	}
+}
+
+func TestUploadWebAttachmentRejectsMalformedIdentityBeforeDependencies(t *testing.T) {
+	reader := &countingAttachmentReader{data: []byte("data")}
+	attachment, ok, message := (&AttachService{}).UploadWebAttachment(WebAttachmentUploadInput{
+		ActorID: "507f1f77bcf86cd799439011", NoteID: "not-an-object-id", OriginalFilename: "report.txt",
+		Reader: reader, Limit: 4,
+	})
+	if ok || !attachment.AttachId.IsZero() || message != "No Perm" {
+		t.Fatalf("UploadWebAttachment() = %+v, %t, %q", attachment, ok, message)
+	}
+	if !reader.closed {
+		t.Fatal("UploadWebAttachment() did not close rejected multipart input")
+	}
+}
+
+func TestWebAttachmentStorageUsesNoteOwnerNamespace(t *testing.T) {
+	owner, _ := domain.ParseObjectID("507f1f77bcf86cd799439011")
+	uploader, _ := domain.ParseObjectID("507f1f77bcf86cd799439012")
+	asset, _ := domain.ParseObjectID("507f1f77bcf86cd799439013")
+
+	name, path := webAttachmentStorage(owner, asset, ".txt")
+	if name != asset.Hex()+".txt" || !strings.Contains(path, "/"+owner.Hex()+"/") || !strings.HasSuffix(path, "/attachs/"+name) {
+		t.Fatalf("webAttachmentStorage() = %q, %q, want owner namespace", name, path)
+	}
+	if strings.Contains(path, "/"+uploader.Hex()+"/") {
+		t.Fatalf("webAttachmentStorage() used uploader namespace: %q", path)
+	}
+}
+
 func TestStableCopiedImageIdentityBindsOperationSourceAndOwner(t *testing.T) {
 	one := stableCopiedImageID("copy-op", "507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012")
 	retry := stableCopiedImageID("copy-op", "507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012")
@@ -140,5 +257,23 @@ func TestStableWebAttachIDReusesClientOperationAndScopesNote(t *testing.T) {
 	three := StableWebAttachID(owner, otherNote, "upload-1")
 	if one.IsZero() || one != two || one == three {
 		t.Fatal("web attachment identity is not stable and note-scoped")
+	}
+}
+
+func TestSameAttachmentWriteBindsPersistedMetadata(t *testing.T) {
+	owner, _ := domain.ParseObjectID("507f1f77bcf86cd799439011")
+	note, _ := domain.ParseObjectID("507f1f77bcf86cd799439012")
+	attachment, _ := domain.ParseObjectID("507f1f77bcf86cd799439013")
+	expected := info.Attach{
+		AttachId: attachment, NoteId: note, UploadUserId: owner,
+		Name: "stored.txt", Title: "report.txt", Path: "files/owner/stored.txt", Type: "txt", Size: 3,
+	}
+	if !sameAttachmentWrite(expected, expected) {
+		t.Fatal("identical attachment metadata did not match")
+	}
+	changed := expected
+	changed.Title = "other.txt"
+	if sameAttachmentWrite(changed, expected) {
+		t.Fatal("changed attachment metadata matched stable write")
 	}
 }

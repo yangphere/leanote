@@ -1,6 +1,7 @@
 package contentfs
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,6 +15,37 @@ func TestValidateContentRootsAcceptsDisjointSameVolumeRoots(t *testing.T) {
 	}
 	if roots.privateFiles.data == "" || roots.privateFiles.quarantine == "" || roots.temporary == "" {
 		t.Fatalf("roots were not canonicalized: %+v", roots)
+	}
+	for _, root := range []string{config.PrivateFiles.Data, config.PrivateFiles.Quarantine, config.PublicUpload.Data, config.PublicUpload.Quarantine, config.Temporary} {
+		entries, readErr := os.ReadDir(root)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		if len(entries) != 0 {
+			t.Fatalf("root probe leaked files in %q: %v", root, entries)
+		}
+	}
+}
+
+func TestVerifyWritableDirectoryWritesReadsAndRemovesProbe(t *testing.T) {
+	root := t.TempDir()
+	if err := verifyWritableDirectory(root); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("temporary root probe leaked files: %v", entries)
+	}
+}
+
+func TestCleanupRootProbeReportsRemovalFailure(t *testing.T) {
+	want := errors.New("remove denied")
+	err := cleanupRootProbe("source", "destination", func(string) error { return want })
+	if !errors.Is(err, want) {
+		t.Fatalf("cleanupRootProbe() error = %v, want removal failure", err)
 	}
 }
 

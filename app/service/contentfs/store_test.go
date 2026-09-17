@@ -5,8 +5,10 @@ import (
 	"crypto/sha256"
 	"errors"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -131,15 +133,21 @@ func TestFileStoreOpenReturnsOpaqueReaderAfterPathValidation(t *testing.T) {
 	}
 }
 
-func TestFileStoreDirectorySyncFailureReturnsUnknownAndCanBeVerified(t *testing.T) {
+func TestFileStorePublicationBarrierFailureReturnsUnknownAndCanBeVerified(t *testing.T) {
 	store, _ := newTestStore(t)
-	store.directorySync = func(*os.Root, string) error { return errors.New("directory sync unavailable") }
+	if runtime.GOOS == "windows" {
+		store.finalSync = func(*os.File) error { return errors.New("final sync unavailable") }
+	} else {
+		store.directorySync = func(*os.Root, string) error { return errors.New("directory sync unavailable") }
+	}
 	destination := application.LogicalPath{Kind: application.RootPrivateFiles, Value: "asset.bin"}
 	request := publishRequest(t, destination, "possibly durable")
 	_, err := store.Publish(context.Background(), request)
 	if errorCategory(err) != application.ErrorUnknownResult {
 		t.Fatalf("publish error=%v category=%q", err, errorCategory(err))
 	}
+	store.finalSync = nil
+	store.directorySync = func(*os.Root, string) error { return nil }
 	result, verifyErr := store.Verify(context.Background(), application.VerifyRequest{
 		Identity: request.Identity, Destination: destination, ExpectedDigest: request.Identity.Digest,
 	})
@@ -162,6 +170,58 @@ func TestFileStoreRejectsSymlinkInDestinationPath(t *testing.T) {
 	}
 	if _, statErr := os.Stat(filepath.Join(outside, "asset.bin")); !errors.Is(statErr, os.ErrNotExist) {
 		t.Fatalf("outside destination was touched: %v", statErr)
+	}
+}
+
+func TestFileStoreTemporaryArtifactSealsAndReopensBeforeResponse(t *testing.T) {
+	store, config := newTestStore(t)
+	artifact, err := store.CreateTemporary(context.Background(), ".archive-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(config.Temporary)
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("temporary entries = %v, %v", entries, err)
+	}
+	info, err := entries[0].Info()
+	if err != nil || (runtime.GOOS != "windows" && info.Mode().Perm() != 0o600) {
+		t.Fatalf("temporary mode = %v, %v", info.Mode().Perm(), err)
+	}
+	if _, err := artifact.Write([]byte("sealed")); err != nil {
+		t.Fatal(err)
+	}
+	reader, size, err := artifact.Seal(context.Background())
+	if err != nil || size != 6 {
+		t.Fatalf("Seal() size=%d err=%v", size, err)
+	}
+	if _, err := artifact.Write([]byte("late")); !errors.Is(err, fs.ErrClosed) {
+		t.Fatalf("write after Seal() error = %v", err)
+	}
+	data, err := io.ReadAll(reader)
+	if err != nil || string(data) != "sealed" {
+		t.Fatalf("sealed data=%q err=%v", data, err)
+	}
+	if err := reader.Close(); err != nil {
+		t.Fatal(err)
+	}
+	entries, err = os.ReadDir(config.Temporary)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("temporary artifact was not removed: %v, %v", entries, err)
+	}
+}
+
+func TestFileStoreTemporaryArtifactAbortRemovesWriter(t *testing.T) {
+	store, config := newTestStore(t)
+	artifact, err := store.CreateTemporary(context.Background(), ".archive-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := artifact.Abort(); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(config.Temporary)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("temporary artifact was not removed: %v, %v", entries, err)
 	}
 }
 

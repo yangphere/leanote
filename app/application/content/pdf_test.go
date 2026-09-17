@@ -2,6 +2,7 @@ package content
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"strings"
 	"testing"
@@ -33,6 +34,34 @@ func TestSerializeSelfContainedPDFRemovesActiveContentAndExternalResources(t *te
 	}
 	if err := ValidateSelfContainedPDFDocument(document); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSerializeSelfContainedPDFOnlyInlinesCountedImageReferences(t *testing.T) {
+	imageData := encodePNG(t, 1, 1)
+	document, err := SerializeSelfContainedPDF(PDFDocumentRequest{
+		HTML: `<img src="/authorized.png"><div src="/authorized.png">not an image</div>`,
+		Resources: map[string]PDFResource{
+			"/authorized.png": {MIME: "image/png", Data: imageData},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count := strings.Count(string(document), "data:image/png;base64,"); count != 1 {
+		t.Fatalf("inlined resource count=%d, want only the counted img reference: %s", count, document)
+	}
+	if strings.Contains(string(document), `<div src=`) {
+		t.Fatalf("non-image src survived sanitization: %s", document)
+	}
+}
+
+func TestSerializeSelfContainedPDFObservesCanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := serializeSelfContainedPDF(ctx, PDFDocumentRequest{HTML: "safe"})
+	if errorCategoryOf(err) != ErrorTimeout {
+		t.Fatalf("serialize cancellation error=%v category=%q", err, errorCategoryOf(err))
 	}
 }
 
@@ -73,6 +102,7 @@ func TestValidateSelfContainedPDFDocumentRejectsNavigableURLsAndActiveNodes(t *t
 		`<html><body><img src="//example.test/x"></body></html>`,
 		`<html><body background="https://example.test/x"></body></html>`,
 		`<html><body><svg><image xlink:href="https://example.test/x"></image></svg></body></html>`,
+		`<html><body><div src="data:image/png;base64,AA=="></div></body></html>`,
 		`<html><body><script>1</script></body></html>`,
 		`<html><head><meta http-equiv="refresh" content="0;url=https://example.test"></head></html>`,
 	} {

@@ -3,7 +3,10 @@
 package contentfs
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -38,6 +41,13 @@ type ContentRoots struct {
 	privateFiles durableRoot
 	publicUpload durableRoot
 	temporary    string
+}
+
+// CanonicalTemporaryPath returns the validated adapter path used to wire
+// process backends that cannot consume the opaque TemporaryStore capability.
+// It must not be exposed through application or controller contracts.
+func (roots *ContentRoots) CanonicalTemporaryPath() (string, error) {
+	return roots.dataPath(application.RootTemporary)
 }
 
 func ValidateContentRoots(config ContentRootsConfig) (*ContentRoots, error) {
@@ -93,6 +103,9 @@ func ValidateContentRoots(config ContentRootsConfig) (*ContentRoots, error) {
 	}
 	if err := verifyAtomicRename(publicData, publicQuarantine); err != nil {
 		return nil, fmt.Errorf("content roots: public upload pair is not on one filesystem: %w", err)
+	}
+	if err := verifyWritableDirectory(temporary); err != nil {
+		return nil, fmt.Errorf("content roots: temporary root is not writable: %w", err)
 	}
 
 	return &ContentRoots{
@@ -186,6 +199,8 @@ func containsPath(parent, child string) bool {
 	return relative == "." || (relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)))
 }
 
+var rootProbePayload = []byte("leanote-content-root-probe")
+
 func verifyAtomicRename(dataRoot, quarantineRoot string) (err error) {
 	probe, err := os.CreateTemp(dataRoot, ".leanote-content-volume-probe-")
 	if err != nil {
@@ -193,19 +208,97 @@ func verifyAtomicRename(dataRoot, quarantineRoot string) (err error) {
 	}
 	source := probe.Name()
 	destination := filepath.Join(quarantineRoot, filepath.Base(source))
+	probeOpen := true
 	defer func() {
-		_ = probe.Close()
-		_ = os.Remove(source)
-		_ = os.Remove(destination)
+		if probeOpen {
+			err = errors.Join(err, probe.Close())
+		}
+		err = errors.Join(err, cleanupRootProbe(source, destination, os.Remove))
 	}()
 	if err := probe.Chmod(0o600); err != nil {
 		return err
 	}
-	if err := probe.Close(); err != nil {
+	if _, err := probe.Write(rootProbePayload); err != nil {
 		return err
+	}
+	if err := probe.Sync(); err != nil {
+		return err
+	}
+	closeErr := probe.Close()
+	probeOpen = false
+	if closeErr != nil {
+		return closeErr
 	}
 	if err := os.Rename(source, destination); err != nil {
 		return err
 	}
+	if err := verifyRootProbeContents(destination); err != nil {
+		return err
+	}
+	if err := os.Remove(destination); err != nil {
+		return err
+	}
 	return nil
+}
+
+func verifyWritableDirectory(root string) (err error) {
+	probe, err := os.CreateTemp(root, ".leanote-content-write-probe-")
+	if err != nil {
+		return err
+	}
+	name := probe.Name()
+	probeOpen := true
+	defer func() {
+		if probeOpen {
+			err = errors.Join(err, probe.Close())
+		}
+		err = errors.Join(err, cleanupRootProbe(name, "", os.Remove))
+	}()
+	if err := probe.Chmod(0o600); err != nil {
+		return err
+	}
+	if _, err := probe.Write(rootProbePayload); err != nil {
+		return err
+	}
+	if err := probe.Sync(); err != nil {
+		return err
+	}
+	closeErr := probe.Close()
+	probeOpen = false
+	if closeErr != nil {
+		return closeErr
+	}
+	if err := verifyRootProbeContents(name); err != nil {
+		return err
+	}
+	return os.Remove(name)
+}
+
+func verifyRootProbeContents(name string) error {
+	file, err := os.Open(name)
+	if err != nil {
+		return err
+	}
+	data, readErr := io.ReadAll(io.LimitReader(file, int64(len(rootProbePayload)+1)))
+	closeErr := file.Close()
+	if readErr != nil || closeErr != nil {
+		return errors.Join(readErr, closeErr)
+	}
+	if !bytes.Equal(data, rootProbePayload) {
+		return fmt.Errorf("content root probe read-back mismatch")
+	}
+	return nil
+}
+
+func cleanupRootProbe(source, destination string, remove func(string) error) error {
+	var result error
+	for _, name := range []string{source, destination} {
+		if name == "" {
+			continue
+		}
+		if err := remove(name); err != nil && !errors.Is(err, os.ErrNotExist) {
+			result = errors.Join(result, fmt.Errorf("remove content root probe: %w", err))
+		}
+	}
+	return result
 }

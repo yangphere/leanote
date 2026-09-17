@@ -17,11 +17,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-const (
-	filesPresenceAttachID         = "650000000000000000000003"
-	filesPresenceObsoleteAttachID = "650000000000000000000004"
-)
-
 func TestFilesPresenceFixtureDirectoryIsUniqueAndBounded(t *testing.T) {
 	repoRoot := t.TempDir()
 	filesRoot := filepath.Join(repoRoot, "files")
@@ -212,8 +207,8 @@ func TestAPIUpdateNoteFilesPresenceContract(t *testing.T) {
 	database := fixtureDatabase(t)
 	noteID := db.MustObjectIDFromHex(fixtureActiveNoteID)
 	ownerID := db.MustObjectIDFromHex(fixtureAdminID)
-	attachID := db.MustObjectIDFromHex(filesPresenceAttachID)
-	obsoleteAttachID := db.MustObjectIDFromHex(filesPresenceObsoleteAttachID)
+	attachID := db.NewObjectID()
+	obsoleteAttachID := db.NewObjectID()
 	attachDir := newFilesPresenceFixtureDirectory(t, repoRoot)
 	attachPath := filepath.Join(attachDir, "attach.txt")
 	obsoleteAttachPath := filepath.Join(attachDir, "obsolete.txt")
@@ -291,7 +286,7 @@ func TestAPIUpdateNoteFilesPresenceContract(t *testing.T) {
 	assertFixtureAttachmentSet(t, database, noteID, ownerID, attachID, obsoleteAttachID)
 
 	usn = updateAPIFileSet(t, client, usn, "non-empty files replace the complete set", map[string][]string{
-		"Files[0][FileId]":   {filesPresenceAttachID},
+		"Files[0][FileId]":   {attachID.Hex()},
 		"Files[0][IsAttach]": {"true"},
 		"Files[0][HasBody]":  {"false"},
 		"Files[0][Title]":    {"attach.txt"},

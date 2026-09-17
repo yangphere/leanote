@@ -328,6 +328,9 @@ func (this *NoteService) SaveNote(command SaveNoteCommand) WorkspaceCommandResul
 			return nil
 		},
 	}
+	if command.AssetWork != nil {
+		plan.Assets = append([]applicationnotes.OperationAsset(nil), command.AssetWork.Assets...)
+	}
 	plan.Steps = append(plan.Steps, db.WorkspaceMutationStep{
 		Name: "allocate_usn",
 		Apply: func(ctx context.Context) error {
@@ -497,6 +500,7 @@ func (this *NoteService) SaveNote(command SaveNoteCommand) WorkspaceCommandResul
 		Kind: "note_save_projections", InputDigest: inputDigest, DesiredState: desiredState,
 		FailurePolicy: applicationnotes.FailurePending,
 	}
+	var assetProjectionStep *db.WorkspaceMutationStep
 	if command.AssetWork != nil {
 		repairPlan.Assets = append([]applicationnotes.OperationAsset(nil), command.AssetWork.Assets...)
 		expectedAssetUSN := assignedUSN
@@ -510,7 +514,7 @@ func (this *NoteService) SaveNote(command SaveNoteCommand) WorkspaceCommandResul
 			}
 			return err == nil, err
 		}
-		repairPlan.Steps = append(repairPlan.Steps, db.WorkspaceMutationStep{
+		step := db.WorkspaceMutationStep{
 			Name: "assets", ReplaySafe: true,
 			Apply: func(ctx context.Context) error {
 				// A repair may resume in a new process after the required note
@@ -551,7 +555,8 @@ func (this *NoteService) SaveNote(command SaveNoteCommand) WorkspaceCommandResul
 				}
 				return command.AssetWork.Verify(ctx)
 			},
-		})
+		}
+		assetProjectionStep = &step
 	}
 	recountsSourceNotebook := false
 	if contentChanged {
@@ -564,6 +569,12 @@ func (this *NoteService) SaveNote(command SaveNoteCommand) WorkspaceCommandResul
 				return noteImageService.verifyNoteImages(ctx, note.UserId, note.NoteId, note.ImgSrc, *command.Content)
 			},
 		})
+	}
+	// Files is the API's complete requested asset set. Run its provider after
+	// the content-derived image index so a combined update cannot commit a
+	// projection that no longer matches the receipt-frozen Files manifest.
+	if assetProjectionStep != nil {
+		repairPlan.Steps = append(repairPlan.Steps, *assetProjectionStep)
 	}
 	if target, ok := metadata["NotebookId"].(domain.ObjectID); ok && target != note.NotebookId {
 		recountsSourceNotebook = true

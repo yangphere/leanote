@@ -1,20 +1,11 @@
 package api
 
 import (
-	"github.com/revel/revel"
-	//	"encoding/json"
-	//	. "github.com/yangphere/leanote/app/lea"
-	//	"go.mongodb.org/mongo-driver/v2/bson"
-	//	"github.com/yangphere/leanote/app/lea/netutil"
-	//	"github.com/yangphere/leanote/app/info"
-	//	"io/ioutil"
-	"os"
-	//	"strconv"
-	"archive/tar"
-	"compress/gzip"
-	"io"
 	"strings"
 	"time"
+
+	"github.com/revel/revel"
+	applicationcontent "github.com/yangphere/leanote/app/application/content"
 )
 
 // 文件操作, 图片, 头像上传, 输出
@@ -23,141 +14,41 @@ type ApiFile struct {
 	ApiBaseContrller
 }
 
-/*
-// 协作时复制图片到owner
-func (c ApiFile) CopyImage(userId, fileId, toUserId string) revel.Result {
-	re := info.NewRe()
-
-	re.Ok, re.Id = fileService.CopyImage(userId, fileId, toUserId)
-
-	return c.RenderJSON(re)
-}
-
-// get all images by userId with page
-func (c ApiFile) GetImages(albumId, key string, page int) revel.Result {
-	imagesPage := fileService.ListImagesWithPage(c.getUserId(), albumId, key, page, 12)
-	re := info.NewRe()
-	re.Ok = true
-	re.Item = imagesPage
-	return c.RenderJSON(re)
-}
-
-func (c ApiFile) UpdateImageTitle(fileId, title string) revel.Result {
-	re := info.NewRe()
-	re.Ok = fileService.UpdateImageTitle(c.getUserId(), fileId, title)
-	return c.RenderJSON(re)
-}
-
-func (c ApiFile) DeleteImage(fileId string) revel.Result {
-	re := info.NewRe()
-	re.Ok, re.Msg = fileService.DeleteImage(c.getUserId(), fileId)
-	return c.RenderJSON(re)
-}
-
-*/
-
-//-----------
-
 // 输出image
 // [OK]
 func (c ApiFile) GetImage(fileId string) revel.Result {
-	path := fileService.GetFile(c.getUserId(), fileId) // 得到路径
-	if path == "" {
+	download, err := fileService.OpenReadableImage(c.RequestContext(), c.getUserId(), fileId)
+	if err != nil {
 		return c.RenderText("")
 	}
-	fn := revel.BasePath + "/" + strings.TrimLeft(path, "/")
-	file, _ := os.Open(fn)
-	return c.RenderFile(file, revel.Inline) // revel.Attachment
+	filename := applicationcontent.AttachmentDownloadFilename(download.Name)
+	return c.RenderBinary(download.Reader, filename, revel.Inline, time.Now())
 }
 
 // 下载附件
 // [OK]
 func (c ApiFile) GetAttach(fileId string) revel.Result {
-	attach := attachService.GetAttach(fileId, c.getUserId()) // 得到路径
-	path := attach.Path
-	if path == "" {
+	download, err := attachService.OpenReadable(c.RequestContext(), c.getUserId(), fileId)
+	if err != nil {
 		return c.RenderText("No Such File")
 	}
-	fn := revel.BasePath + "/" + strings.TrimLeft(path, "/")
-	file, _ := os.Open(fn)
-	return c.RenderBinary(file, attach.Title, revel.Attachment, time.Now()) // revel.Attachment
+	filename := applicationcontent.AttachmentDownloadFilename(download.DisplayName)
+	return c.RenderBinary(download.Reader, filename, revel.Attachment, time.Now())
 }
 
 // 下载所有附件
 // [OK]
 func (c ApiFile) GetAllAttachs(noteId string) revel.Result {
-	note := noteService.GetNoteById(noteId)
-	if note.NoteId.IsZero() {
+	// Preserve the published API's no-token empty response. Anonymous public
+	// note reads are supported by the content service for Web publishing, but
+	// the token API has never exposed that capability.
+	if strings.TrimSpace(c.getUserId()) == "" {
 		return c.RenderText("")
 	}
-	// 得到文件列表
-	attachs := attachService.ListAttachs(noteId, c.getUserId())
-	if attachs == nil || len(attachs) == 0 {
-		return c.RenderText("")
-	}
-
-	/*
-		dir := revel.BasePath + "/files/tmp"
-		err := os.MkdirAll(dir, 0755)
-		if err != nil {
-			return c.RenderText("")
-		}
-	*/
-
-	filename := note.Title + ".tar.gz"
-	if note.Title == "" {
-		filename = "all.tar.gz"
-	}
-
-	// file write
-	fw, err := os.Create(revel.BasePath + "/files/" + filename)
+	archive, title, err := attachService.OpenReadableArchive(c.RequestContext(), c.getUserId(), noteId)
 	if err != nil {
 		return c.RenderText("")
 	}
-	// defer fw.Close() // 不需要关闭, 还要读取给用户下载
-
-	// gzip write
-	gw := gzip.NewWriter(fw)
-	defer gw.Close()
-
-	// tar write
-	tw := tar.NewWriter(gw)
-	defer tw.Close()
-
-	// 遍历文件列表
-	for _, attach := range attachs {
-		fn := revel.BasePath + "/" + strings.TrimLeft(attach.Path, "/")
-		fr, err := os.Open(fn)
-		fileInfo, _ := fr.Stat()
-		if err != nil {
-			return c.RenderText("")
-		}
-		defer fr.Close()
-
-		// 信息头
-		h := new(tar.Header)
-		h.Name = attach.Title
-		h.Size = fileInfo.Size()
-		h.Mode = int64(fileInfo.Mode())
-		h.ModTime = fileInfo.ModTime()
-
-		// 写信息头
-		err = tw.WriteHeader(h)
-		if err != nil {
-			panic(err)
-		}
-
-		// 写文件
-		_, err = io.Copy(tw, fr)
-		if err != nil {
-			panic(err)
-		}
-	} // for
-
-	//    tw.Close()
-	//    gw.Close()
-	//    fw.Close()
-	//    file, _ := os.Open(dir + "/" + filename)
-	// fw.Seek(0, 0)
-	return c.RenderBinary(fw, filename, revel.Attachment, time.Now()) // revel.Attachment
+	filename := applicationcontent.ArchiveDownloadFilename(title)
+	return c.RenderBinary(archive, filename, revel.Attachment, time.Now())
 }

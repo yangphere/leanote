@@ -1,13 +1,27 @@
 package api
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
-	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/yangphere/leanote/app/domain"
 	"github.com/yangphere/leanote/app/info"
 )
+
+func TestAPIBaseControllerHasNoStorageOrMongoDependencies(t *testing.T) {
+	data, err := os.ReadFile("ApiBaseController.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, forbidden := range []string{"\"os\"", "\"path/filepath\"", "\"io/ioutil\"", "app/db", "mongo-driver", "revel.BasePath", "os.", "filepath."} {
+		if strings.Contains(string(data), forbidden) {
+			t.Fatalf("ApiBaseController retains forbidden dependency %q", forbidden)
+		}
+	}
+}
 
 func TestAPINoteCreateOperationDigestIncludesUploadedBytes(t *testing.T) {
 	owner, _ := domain.ParseObjectID("507f1f77bcf86cd799439011")
@@ -78,6 +92,29 @@ func TestAPINoteCreateOperationFreezesStableAssetIdentity(t *testing.T) {
 	}
 }
 
+func TestAPINoteCreateOperationFreezesExistingAssetReference(t *testing.T) {
+	owner, _ := domain.ParseObjectID("507f1f77bcf86cd799439011")
+	noteID, _ := domain.ParseObjectID("507f1f77bcf86cd799439012")
+	const existingID = "507f1f77bcf86cd799439013"
+	request := info.ApiNote{NoteId: noteID.Hex(), Files: []info.NoteFile{{FileId: existingID, HasBody: false, IsAttach: true}}}
+	_, _, assets, err := newAPINoteCreateOperationWithContent(owner, noteID, request, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(assets) != 1 || assets[0].AssetID != existingID || assets[0].Index != 0 || !assets[0].IsAttach {
+		t.Fatalf("assets=%+v, want frozen existing attachment", assets)
+	}
+}
+
+func TestAPINoteCreateOperationRejectsInvalidExistingAssetReference(t *testing.T) {
+	owner, _ := domain.ParseObjectID("507f1f77bcf86cd799439011")
+	noteID, _ := domain.ParseObjectID("507f1f77bcf86cd799439012")
+	request := info.ApiNote{NoteId: noteID.Hex(), Files: []info.NoteFile{{FileId: "not-an-object-id"}}}
+	if _, _, _, err := newAPINoteCreateOperationWithContent(owner, noteID, request, nil); err == nil {
+		t.Fatal("invalid existing asset reference was accepted")
+	}
+}
+
 func TestStableAPIOploadPathIsScopedByOwnerAndAssetKind(t *testing.T) {
 	assetID := "507f1f77bcf86cd799439014"
 	attachPath := stableAPIUploadPath("507f1f77bcf86cd799439011", assetID, true)
@@ -113,63 +150,10 @@ func TestStableAPIUpdateAssetSeedIncludesUploadedBytes(t *testing.T) {
 	}
 }
 
-func TestRemoveAPIUploadFilesIsIdempotent(t *testing.T) {
-	base := t.TempDir()
-	relative := filepath.Join("files", "owner", "asset", "images", "asset.png")
-	path := filepath.Join(base, relative)
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte("asset"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if err := removeAPIUploadFiles(base, relative); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatalf("uploaded file still exists: %v", err)
-	}
-	if err := removeAPIUploadFiles(base, relative); err != nil {
-		t.Fatalf("second cleanup was not idempotent: %v", err)
-	}
-}
-
-func TestRemoveAPIUploadFilesRejectsPathOutsideBase(t *testing.T) {
-	base := t.TempDir()
-	outside := base + "-outside.txt"
-	if err := os.WriteFile(outside, []byte("keep"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Remove(outside) })
-	if err := removeAPIUploadFiles(base, outside); err == nil {
-		t.Fatal("outside upload path was accepted")
-	}
-	if _, err := os.Stat(outside); err != nil {
-		t.Fatalf("outside file was removed: %v", err)
-	}
-}
-
-func TestDurableAPIAssetFileRequiresContainedRegularFile(t *testing.T) {
-	base := t.TempDir()
-	outside := base + "-outside.txt"
-	if err := os.WriteFile(outside, []byte("outside"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Remove(outside) })
-	if durableAPIAssetFile(base, "") || durableAPIAssetFile(base, ".") {
-		t.Fatal("empty path or directory was accepted as a durable asset")
-	}
-	path := filepath.Join(base, "files", "asset.bin")
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte("asset"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if !durableAPIAssetFile(base, filepath.Join("files", "asset.bin")) {
-		t.Fatal("contained regular asset was rejected")
-	}
-	if durableAPIAssetFile(base, outside) {
-		t.Fatal("outside asset path was accepted")
+func TestAPIAssetContentDigestIsSHA256(t *testing.T) {
+	data := []byte("uploaded asset bytes")
+	want := sha256.Sum256(data)
+	if got := apiAssetContentDigest(data); got != hex.EncodeToString(want[:]) {
+		t.Fatalf("digest=%q want=%q", got, hex.EncodeToString(want[:]))
 	}
 }

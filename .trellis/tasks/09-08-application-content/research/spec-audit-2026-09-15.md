@@ -1,5 +1,7 @@
 # `09-08-application-content` 需求规格审核（2026-09-15）
 
+> 历史快照：本文记录激活前审核，状态字段不得作为当前事实。2026-09-17 当前态与剩余门禁见 `spec-audit-2026-09-17.md`。
+
 ## 结论
 
 该 leaf 的依赖与轨道条件已满足，但原规格不足以直接开发：缺少 action/input/output/error inventory、统一路径与多写恢复算法、远程抓取安全策略、真实 `tar.gz` 契约、PDF owner 划分和 evidence matrix。本次已在任务目录内补齐，未修改业务代码。

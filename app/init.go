@@ -17,6 +17,7 @@ import (
 	"html/template"
 	"math"
 	"net/url"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -440,7 +441,12 @@ func init() {
 		admin.InitService()
 		member.InitService()
 		service.ConfigS.InitGlobalConfigs()
-		if err := service.InitContentRuntime(revel.BasePath); err != nil {
+		if err := service.InitContentRuntime(service.ContentRoots{
+			PrivateFiles: service.ContentRootPair{Data: filepath.Join(revel.BasePath, "files"), Quarantine: filepath.Join(revel.BasePath, ".content-private-quarantine")},
+			PublicUpload: service.ContentRootPair{Data: filepath.Join(revel.BasePath, "public", "upload"), Quarantine: filepath.Join(revel.BasePath, ".content-public-quarantine")},
+			Temporary:    filepath.Join(revel.BasePath, ".content-temporary"),
+			ServedRoots:  []string{filepath.Join(revel.BasePath, "public")},
+		}); err != nil {
 			panic(fmt.Sprintf("initialize content runtime: %v", err))
 		}
 		api.InitService()

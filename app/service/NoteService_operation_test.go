@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"os"
 	"path/filepath"
@@ -14,6 +16,41 @@ import (
 	"github.com/yangphere/leanote/app/domain"
 	"github.com/yangphere/leanote/app/info"
 )
+
+type recordingContentAssetPort struct {
+	copyCommand applicationnotes.CopyNoteAssetsCommand
+	copyAssets  []applicationnotes.OperationAsset
+}
+
+func (*recordingContentAssetPort) ReconcileNote(context.Context, applicationnotes.ReconcileNoteAssetsCommand) error {
+	return nil
+}
+
+func (*recordingContentAssetPort) VerifyReconcileNote(context.Context, applicationnotes.ReconcileNoteAssetsCommand) (bool, error) {
+	return true, nil
+}
+
+func (port *recordingContentAssetPort) CopyNote(ctx context.Context, command applicationnotes.CopyNoteAssetsCommand) (applicationnotes.CopyNoteAssetsResult, error) {
+	port.copyCommand = command
+	receipt, err := db.GetWorkspaceOperation(ctx, command.DestinationOwnerID, command.OperationID)
+	if err != nil {
+		return applicationnotes.CopyNoteAssetsResult{}, err
+	}
+	port.copyAssets = append([]applicationnotes.OperationAsset(nil), receipt.Assets...)
+	return applicationnotes.CopyNoteAssetsResult{Content: command.Content}, nil
+}
+
+func (*recordingContentAssetPort) VerifyCopyNote(context.Context, applicationnotes.CopyNoteAssetsCommand) (bool, error) {
+	return true, nil
+}
+
+func (*recordingContentAssetPort) DeleteNote(context.Context, applicationnotes.DeleteNoteAssetsCommand) error {
+	return nil
+}
+
+func (*recordingContentAssetPort) VerifyDeleteNote(context.Context, applicationnotes.DeleteNoteAssetsCommand) (bool, error) {
+	return true, nil
+}
 
 func useNoteOperationTestDatabase(t *testing.T) {
 	t.Helper()
@@ -288,6 +325,12 @@ func TestCopySharedNoteRetryUsesFrozenAttachmentManifest(t *testing.T) {
 	oldBasePath := revel.BasePath
 	revel.BasePath = t.TempDir()
 	t.Cleanup(func() { revel.BasePath = oldBasePath })
+	previousStore := contentStore
+	testStore := archiveStore{}
+	contentStore = testStore
+	t.Cleanup(func() {
+		contentStore = previousStore
+	})
 	writeSourceAttach := func(id domain.ObjectID, name, body string) info.Attach {
 		relativePath := filepath.ToSlash(filepath.Join("files", sourceOwner.Hex(), "attachs", name))
 		path := filepath.Join(revel.BasePath, filepath.FromSlash(relativePath))
@@ -331,6 +374,12 @@ func TestCopySharedNoteRetryUsesFrozenAttachmentManifest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	frozenDestination, err := copiedAttachmentDestination(frozenAttach, destinationOwner, destinationID, clientOperationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	frozenContentDigest := sha256.Sum256([]byte("frozen"))
+	frozenRecordDigest := contentCreateAttachmentRecordDigest(frozenDestination)
 	commitOperationReceipt(t, applicationnotes.OperationReceipt{
 		OperationID: operationID,
 		OwnerID:     destinationOwner,
@@ -339,23 +388,75 @@ func TestCopySharedNoteRetryUsesFrozenAttachmentManifest(t *testing.T) {
 		InputDigest: digest,
 		AssignedUSN: 15,
 		Assets: []applicationnotes.OperationAsset{{
-			AssetID:     stableCopiedAttachID(clientOperationID, frozenAttachID.Hex(), destinationOwner.Hex()).Hex(),
-			LocalFileID: frozenAttachID.Hex(),
-			Index:       0,
-			IsAttach:    true,
+			AssetID: frozenDestination.AttachId.Hex(), LocalFileID: frozenAttachID.Hex(),
+			ContentSHA256: hex.EncodeToString(frozenContentDigest[:]), RecordSHA256: hex.EncodeToString(frozenRecordDigest[:]),
+			Index: 0, IsAttach: true,
 		}},
 	})
+	recorder := &recordingContentAssetPort{}
+	previousAssets := ContentAssets
+	ContentAssets = recorder
+	t.Cleanup(func() { ContentAssets = previousAssets })
 
 	got := (&NoteService{}).CopySharedNoteWithOperation(sourceID.Hex(), notebookID.Hex(), sourceOwner.Hex(), destinationOwner.Hex(), clientOperationID)
 	if got.NoteId != destinationID {
 		t.Fatalf("shared-copy retry=%+v, want destination %s", got, destinationID.Hex())
 	}
-	var copied []info.Attach
-	if err := db.Attachs.Find(map[string]any{"NoteId": destinationID}).All(&copied); err != nil {
+	if len(recorder.copyAssets) != 1 || recorder.copyAssets[0].AssetID != frozenDestination.AttachId.Hex() || recorder.copyAssets[0].LocalFileID != frozenAttachID.Hex() {
+		t.Fatalf("copied assets=%+v, want only the frozen source attachment", recorder.copyAssets)
+	}
+}
+
+func TestCopySharedNoteRetryUsesRootReceiptGeneration(t *testing.T) {
+	useNoteOperationTestDatabase(t)
+	sourceOwner := mustOperationTestID(t, "507f1f77bcf86cd799439071")
+	destinationOwner := mustOperationTestID(t, "507f1f77bcf86cd799439072")
+	sourceID := mustOperationTestID(t, "507f1f77bcf86cd799439073")
+	notebookID := mustOperationTestID(t, "507f1f77bcf86cd799439074")
+	const clientOperationID = "shared-copy-frozen-generation"
+	destinationID := stableCopyNoteIDForOwner(clientOperationID, sourceID.Hex(), destinationOwner.Hex())
+
+	if err := db.Users.Insert(info.User{UserId: sourceOwner}, info.User{UserId: destinationOwner, Usn: 16}); err != nil {
 		t.Fatal(err)
 	}
-	if len(copied) != 1 || copied[0].AttachId != stableCopiedAttachID(clientOperationID, frozenAttachID.Hex(), destinationOwner.Hex()) {
-		t.Fatalf("copied attachments=%+v, want only frozen source attachment", copied)
+	if err := db.Notebooks.Insert(info.Notebook{NotebookId: notebookID, UserId: destinationOwner}); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Notes.Insert(
+		info.Note{NoteId: sourceID, UserId: sourceOwner, NotebookId: notebookID, Title: "source"},
+		info.Note{NoteId: destinationID, UserId: destinationOwner, NotebookId: notebookID, Title: "source", Usn: 16},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.NoteContents.Insert(
+		info.NoteContent{NoteId: sourceID, UserId: sourceOwner, Content: "body"},
+		info.NoteContent{NoteId: destinationID, UserId: destinationOwner, Content: "body"},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.ShareNotes.Insert(info.ShareNote{NoteId: sourceID, UserId: sourceOwner, ToUserId: destinationOwner}); err != nil {
+		t.Fatal(err)
+	}
+	operationID, digest, err := copyNoteOperationIdentity("note_shared_copy", destinationOwner, destinationID, sourceID.Hex(), notebookID.Hex(), sourceOwner.Hex(), clientOperationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	commitOperationReceipt(t, applicationnotes.OperationReceipt{
+		OperationID: operationID, OwnerID: destinationOwner, ResourceID: destinationID,
+		Kind: "note_create", InputDigest: digest, AssignedUSN: 15,
+	})
+
+	recorder := &recordingContentAssetPort{}
+	previous := ContentAssets
+	ContentAssets = recorder
+	t.Cleanup(func() { ContentAssets = previous })
+
+	got := (&NoteService{}).CopySharedNoteWithOperation(sourceID.Hex(), notebookID.Hex(), sourceOwner.Hex(), destinationOwner.Hex(), clientOperationID)
+	if got.NoteId != destinationID {
+		t.Fatalf("shared-copy retry=%+v, want destination %s", got, destinationID.Hex())
+	}
+	if recorder.copyCommand.Generation != 15 {
+		t.Fatalf("copy generation=%d, want root receipt generation 15 instead of current note generation 16", recorder.copyCommand.Generation)
 	}
 }
 

@@ -4,6 +4,7 @@
 package contentpdf
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -38,6 +39,15 @@ type ProcessBackend struct {
 	executableID  string
 	executableRef fs.FileInfo
 	run           processRunner
+	openRoot      func(string) (*os.Root, error)
+	openOutput    func(*os.Root, string) (*os.File, error)
+	syncOutput    func(*os.File) error
+	seekOutput    func(*os.File, int64, int) (int64, error)
+	readOutput    func(io.Reader, int64) ([]byte, error)
+	closeOutput   func(*os.File) error
+	closeRoot     func(*os.Root) error
+	removeAll     func(string) error
+	sameFile      func(fs.FileInfo, fs.FileInfo) bool
 }
 
 // ConfiguredBackend resolves the administrator-owned executable setting for
@@ -109,24 +119,49 @@ func NewProcessBackend(config ProcessConfig) (*ProcessBackend, error) {
 		executableID: hex.EncodeToString(digest[:16]), executableRef: info,
 	}
 	backend.run = backend.runProcess
+	backend.openRoot = os.OpenRoot
+	backend.openOutput = func(root *os.Root, name string) (*os.File, error) {
+		return root.OpenFile(name, os.O_RDWR, 0)
+	}
+	backend.syncOutput = func(file *os.File) error { return file.Sync() }
+	backend.seekOutput = func(file *os.File, offset int64, whence int) (int64, error) { return file.Seek(offset, whence) }
+	backend.readOutput = func(reader io.Reader, limit int64) ([]byte, error) {
+		return io.ReadAll(io.LimitReader(reader, limit+1))
+	}
+	backend.closeOutput = func(file *os.File) error { return file.Close() }
+	backend.closeRoot = func(root *os.Root) error { return root.Close() }
+	backend.removeAll = os.RemoveAll
+	backend.sameFile = os.SameFile
 	return backend, nil
 }
 
-func (backend *ProcessBackend) Descriptor(context.Context) (application.RendererDescriptor, error) {
+func (backend *ProcessBackend) Descriptor(ctx context.Context) (application.RendererDescriptor, error) {
+	if err := processContextError(ctx, "renderer_descriptor_canceled"); err != nil {
+		return application.RendererDescriptor{}, err
+	}
 	if err := backend.revalidateExecutable(); err != nil {
+		return application.RendererDescriptor{}, err
+	}
+	if err := processContextError(ctx, "renderer_descriptor_canceled"); err != nil {
 		return application.RendererDescriptor{}, err
 	}
 	return application.RendererDescriptor{PolicyID: backend.policyID, ExecutableID: backend.executableID}, nil
 }
 
 func (backend *ProcessBackend) Render(ctx context.Context, descriptor application.RendererDescriptor, document []byte, maxOutputBytes int64) (pdf []byte, resultErr error) {
+	if err := processContextError(ctx, "renderer_process_timeout"); err != nil {
+		return nil, err
+	}
 	if descriptor.PolicyID != backend.policyID || descriptor.ExecutableID != backend.executableID {
 		return nil, application.NewError(application.ErrorConflict, "renderer_descriptor_changed", nil)
 	}
 	if maxOutputBytes <= 0 {
 		return nil, application.NewError(application.ErrorValidation, "renderer_output_limit", nil)
 	}
-	if err := application.ValidateSelfContainedPDFDocument(document); err != nil {
+	if err := application.ValidateSelfContainedPDFDocumentContext(ctx, document); err != nil {
+		return nil, err
+	}
+	if err := processContextError(ctx, "renderer_process_timeout"); err != nil {
 		return nil, err
 	}
 	if err := backend.revalidateExecutable(); err != nil {
@@ -136,16 +171,18 @@ func (backend *ProcessBackend) Render(ctx context.Context, descriptor applicatio
 	if err != nil {
 		return nil, application.NewError(application.ErrorStorageUnavailable, "renderer_temp_create", err)
 	}
-	if err := os.Chmod(requestDir, 0o700); err != nil {
-		_ = os.RemoveAll(requestDir)
-		return nil, application.NewError(application.ErrorStorageUnavailable, "renderer_temp_mode", err)
-	}
 	defer func() {
-		if cleanupErr := os.RemoveAll(requestDir); cleanupErr != nil {
+		if cleanupErr := backend.removeAll(requestDir); cleanupErr != nil {
 			pdf = nil
 			resultErr = application.NewError(application.ErrorUnknownResult, "renderer_temp_cleanup", errors.Join(resultErr, cleanupErr))
 		}
 	}()
+	if err := os.Chmod(requestDir, 0o700); err != nil {
+		return nil, application.NewError(application.ErrorStorageUnavailable, "renderer_temp_mode", err)
+	}
+	if err := processContextError(ctx, "renderer_process_timeout"); err != nil {
+		return nil, err
+	}
 
 	outputPath := filepath.Join(requestDir, "artifact.pdf")
 	args := []string{
@@ -154,22 +191,32 @@ func (backend *ProcessBackend) Render(ctx context.Context, descriptor applicatio
 	}
 	stdout := &boundedDiagnostic{limit: maxRendererDiagnosticBytes}
 	stderr := &boundedDiagnostic{limit: maxRendererDiagnosticBytes}
-	if err := backend.run(ctx, backend.executable, args, strings.NewReader(string(document)), stdout, stderr); err != nil {
-		if errors.Is(err, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
+	if err := backend.run(ctx, backend.executable, args, bytes.NewReader(document), stdout, stderr); err != nil {
+		if ctx.Err() != nil || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil, application.NewError(application.ErrorTimeout, "renderer_process_timeout", errors.Join(err, ctx.Err()))
 		}
 		return nil, application.NewError(application.ErrorRendererFailed, "renderer_process_failed", err)
 	}
-	root, err := os.OpenRoot(requestDir)
+	if err := processContextError(ctx, "renderer_process_timeout"); err != nil {
+		return nil, err
+	}
+	root, err := backend.openRoot(requestDir)
 	if err != nil {
 		return nil, application.NewError(application.ErrorStorageUnavailable, "renderer_output_root", err)
 	}
 	defer func() {
-		if closeErr := root.Close(); closeErr != nil && resultErr == nil {
+		if closeErr := backend.closeRoot(root); closeErr != nil {
 			pdf = nil
-			resultErr = application.NewError(application.ErrorStorageUnavailable, "renderer_output_root_close", closeErr)
+			category := application.ErrorStorageUnavailable
+			if resultErr != nil {
+				category = application.ErrorUnknownResult
+			}
+			resultErr = application.NewError(category, "renderer_output_root_close", errors.Join(resultErr, closeErr))
 		}
 	}()
+	if err := processContextError(ctx, "renderer_process_timeout"); err != nil {
+		return nil, err
+	}
 	info, err := root.Lstat("artifact.pdf")
 	if err != nil {
 		return nil, application.NewError(application.ErrorRendererFailed, "renderer_output_missing", err)
@@ -180,12 +227,31 @@ func (backend *ProcessBackend) Render(ctx context.Context, descriptor applicatio
 	if info.Size() <= 0 || info.Size() > maxOutputBytes {
 		return nil, application.NewError(application.ErrorTooLarge, "renderer_output_limit", nil)
 	}
-	file, err := root.Open("artifact.pdf")
+	file, err := backend.openOutput(root, "artifact.pdf")
 	if err != nil {
 		return nil, application.NewError(application.ErrorStorageUnavailable, "renderer_output_open", err)
 	}
-	pdf, readErr := io.ReadAll(io.LimitReader(file, maxOutputBytes+1))
-	closeErr := file.Close()
+	if err := processContextError(ctx, "renderer_process_timeout"); err != nil {
+		return nil, application.NewError(application.ErrorTimeout, "renderer_process_timeout", errors.Join(err, backend.closeOutput(file)))
+	}
+	if syncErr := backend.syncOutput(file); syncErr != nil {
+		return nil, application.NewError(application.ErrorStorageUnavailable, "renderer_output_sync", errors.Join(syncErr, backend.closeOutput(file)))
+	}
+	openedInfo, statErr := file.Stat()
+	if statErr != nil || !openedInfo.Mode().IsRegular() || !backend.sameFile(info, openedInfo) {
+		return nil, application.NewError(application.ErrorRendererFailed, "renderer_output_identity", errors.Join(statErr, backend.closeOutput(file)))
+	}
+	if _, seekErr := backend.seekOutput(file, 0, io.SeekStart); seekErr != nil {
+		return nil, application.NewError(application.ErrorStorageUnavailable, "renderer_output_seek", errors.Join(seekErr, backend.closeOutput(file)))
+	}
+	if err := processContextError(ctx, "renderer_process_timeout"); err != nil {
+		return nil, application.NewError(application.ErrorTimeout, "renderer_process_timeout", errors.Join(err, backend.closeOutput(file)))
+	}
+	pdf, readErr := backend.readOutput(file, maxOutputBytes)
+	closeErr := backend.closeOutput(file)
+	if contextErr := ctx.Err(); contextErr != nil {
+		return nil, application.NewError(application.ErrorTimeout, "renderer_process_timeout", errors.Join(contextErr, readErr, closeErr))
+	}
 	if readErr != nil || closeErr != nil {
 		return nil, application.NewError(application.ErrorStorageUnavailable, "renderer_output_read", errors.Join(readErr, closeErr))
 	}
@@ -193,6 +259,13 @@ func (backend *ProcessBackend) Render(ctx context.Context, descriptor applicatio
 		return nil, application.NewError(application.ErrorTooLarge, "renderer_output_limit", nil)
 	}
 	return pdf, nil
+}
+
+func processContextError(ctx context.Context, code string) error {
+	if err := ctx.Err(); err != nil {
+		return application.NewError(application.ErrorTimeout, code, err)
+	}
+	return nil
 }
 
 func (backend *ProcessBackend) revalidateExecutable() error {

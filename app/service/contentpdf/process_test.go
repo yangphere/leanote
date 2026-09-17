@@ -106,10 +106,130 @@ func TestConfiguredBackendRejectsDescriptorAfterAdminPathChanges(t *testing.T) {
 	}
 }
 
+func TestProcessBackendClassifiesCallerCancellationAndCleansArtifacts(t *testing.T) {
+	backend, descriptor, temporaryRoot := newProcessTestBackend(t)
+	backend.run = func(ctx context.Context, _ string, _ []string, _ io.Reader, _, _ io.Writer) error {
+		<-ctx.Done()
+		return ctx.Err()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := backend.Render(ctx, descriptor, []byte("safe"), 1024); errorCategory(err) != application.ErrorTimeout || !errors.Is(err, context.Canceled) {
+		t.Fatalf("Render() cancellation error=%v category=%q", err, errorCategory(err))
+	}
+	entries, err := os.ReadDir(temporaryRoot)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("temporary entries=%v err=%v", entries, err)
+	}
+}
+
+func TestProcessBackendReportsOutputLifecycleAndCleanupFailures(t *testing.T) {
+	tests := []struct {
+		name     string
+		inject   func(*ProcessBackend)
+		category application.ErrorCategory
+		code     string
+	}{
+		{name: "root open", category: application.ErrorStorageUnavailable, code: "renderer_output_root", inject: func(backend *ProcessBackend) {
+			backend.openRoot = func(string) (*os.Root, error) { return nil, errors.New("open root") }
+		}},
+		{name: "output open", category: application.ErrorStorageUnavailable, code: "renderer_output_open", inject: func(backend *ProcessBackend) {
+			backend.openOutput = func(*os.Root, string) (*os.File, error) { return nil, errors.New("open output") }
+		}},
+		{name: "output sync", category: application.ErrorStorageUnavailable, code: "renderer_output_sync", inject: func(backend *ProcessBackend) {
+			backend.syncOutput = func(*os.File) error { return errors.New("sync output") }
+		}},
+		{name: "output seek", category: application.ErrorStorageUnavailable, code: "renderer_output_seek", inject: func(backend *ProcessBackend) {
+			backend.seekOutput = func(*os.File, int64, int) (int64, error) { return 0, errors.New("seek output") }
+		}},
+		{name: "output identity", category: application.ErrorRendererFailed, code: "renderer_output_identity", inject: func(backend *ProcessBackend) {
+			backend.sameFile = func(os.FileInfo, os.FileInfo) bool { return false }
+		}},
+		{name: "output read", category: application.ErrorStorageUnavailable, code: "renderer_output_read", inject: func(backend *ProcessBackend) {
+			backend.readOutput = func(io.Reader, int64) ([]byte, error) { return nil, errors.New("read output") }
+		}},
+		{name: "output close", category: application.ErrorStorageUnavailable, code: "renderer_output_read", inject: func(backend *ProcessBackend) {
+			backend.closeOutput = func(file *os.File) error { return errors.Join(file.Close(), errors.New("close output")) }
+		}},
+		{name: "root close", category: application.ErrorStorageUnavailable, code: "renderer_output_root_close", inject: func(backend *ProcessBackend) {
+			backend.closeRoot = func(root *os.Root) error { return errors.Join(root.Close(), errors.New("close root")) }
+		}},
+		{name: "cleanup", category: application.ErrorUnknownResult, code: "renderer_temp_cleanup", inject: func(backend *ProcessBackend) {
+			backend.removeAll = func(path string) error { return errors.Join(os.RemoveAll(path), errors.New("remove temp")) }
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			backend, descriptor, _ := newProcessTestBackend(t)
+			backend.run = func(_ context.Context, _ string, args []string, _ io.Reader, _, _ io.Writer) error {
+				return os.WriteFile(args[len(args)-1], []byte("pdf output"), 0o600)
+			}
+			test.inject(backend)
+			_, err := backend.Render(context.Background(), descriptor, []byte("safe"), 1024)
+			if errorCategory(err) != test.category || applicationErrorCode(err) != test.code {
+				t.Fatalf("Render() error=%v category=%q code=%q", err, errorCategory(err), applicationErrorCode(err))
+			}
+		})
+	}
+}
+
+func TestProcessBackendObservesCancellationAfterSuccessfulProcessAndCleansArtifacts(t *testing.T) {
+	backend, descriptor, temporaryRoot := newProcessTestBackend(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	backend.run = func(_ context.Context, _ string, args []string, _ io.Reader, _, _ io.Writer) error {
+		if err := os.WriteFile(args[len(args)-1], []byte("partial"), 0o600); err != nil {
+			return err
+		}
+		cancel()
+		return nil
+	}
+	if _, err := backend.Render(ctx, descriptor, []byte("safe"), 1024); errorCategory(err) != application.ErrorTimeout || !errors.Is(err, context.Canceled) {
+		t.Fatalf("Render() cancellation error=%v category=%q", err, errorCategory(err))
+	}
+	entries, err := os.ReadDir(temporaryRoot)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("temporary entries=%v err=%v", entries, err)
+	}
+}
+
+func TestBoundedDiagnosticConsumesInputAndRetainsOnlyLimit(t *testing.T) {
+	writer := &boundedDiagnostic{limit: 4}
+	written, err := writer.Write([]byte("secret diagnostic"))
+	if err != nil || written != len("secret diagnostic") || writer.buffer.String() != "secr" || !writer.cut {
+		t.Fatalf("Write() written=%d err=%v buffer=%q cut=%v", written, err, writer.buffer.String(), writer.cut)
+	}
+}
+
+func newProcessTestBackend(t *testing.T) (*ProcessBackend, application.RendererDescriptor, string) {
+	t.Helper()
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	temporaryRoot := t.TempDir()
+	backend, err := NewProcessBackend(ProcessConfig{Executable: executable, TemporaryRoot: temporaryRoot, PolicyID: "p"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	descriptor, err := backend.Descriptor(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return backend, descriptor, temporaryRoot
+}
+
 func errorCategory(err error) application.ErrorCategory {
 	var contentErr *application.Error
 	if errors.As(err, &contentErr) {
 		return contentErr.Category
+	}
+	return ""
+}
+
+func applicationErrorCode(err error) string {
+	var contentErr *application.Error
+	if errors.As(err, &contentErr) {
+		return contentErr.Code
 	}
 	return ""
 }

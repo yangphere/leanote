@@ -2,6 +2,7 @@ package content
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"net/url"
 	"strings"
@@ -10,7 +11,11 @@ import (
 	"golang.org/x/net/html"
 )
 
-const maxPDFResourceBytes = 128 * 1024 * 1024
+const (
+	maxPDFInputBytes    = 32 * 1024 * 1024
+	maxPDFDocumentBytes = 64 * 1024 * 1024
+	maxPDFResourceBytes = maxPDFDocumentBytes
+)
 
 const builtinPDFCSS = `
 body { margin: 30px; color: #111; font-family: Georgia, "Times New Roman", serif; }
@@ -39,11 +44,21 @@ type PDFDocumentRequest struct {
 }
 
 func SerializeSelfContainedPDF(request PDFDocumentRequest) ([]byte, error) {
-	if len(request.HTML) > 32*1024*1024 {
+	return serializeSelfContainedPDF(context.Background(), request)
+}
+
+func serializeSelfContainedPDF(ctx context.Context, request PDFDocumentRequest) ([]byte, error) {
+	if err := pdfContextError(ctx, "pdf_serialize_canceled"); err != nil {
+		return nil, err
+	}
+	if len(request.HTML) > maxPDFInputBytes {
 		return nil, contentError(ErrorTooLarge, "pdf_html_limit", nil)
 	}
 	contentHTML, err := renderPDFContent(request.HTML, request.Markdown)
 	if err != nil {
+		return nil, err
+	}
+	if err := pdfContextError(ctx, "pdf_serialize_canceled"); err != nil {
 		return nil, err
 	}
 	parsedFragment, err := html.Parse(strings.NewReader("<body>" + contentHTML + "</body>"))
@@ -75,7 +90,7 @@ func SerializeSelfContainedPDF(request PDFDocumentRequest) ([]byte, error) {
 		body.AppendChild(child)
 		child = next
 	}
-	if err := sanitizePDFTree(body, request.Resources); err != nil {
+	if err := sanitizePDFTree(ctx, body, request.Resources); err != nil {
 		return nil, err
 	}
 
@@ -100,7 +115,7 @@ func SerializeSelfContainedPDF(request PDFDocumentRequest) ([]byte, error) {
 		return nil, contentError(ErrorStorageUnavailable, "pdf_html_render", err)
 	}
 	result := output.Bytes()
-	if err := ValidateSelfContainedPDFDocument(result); err != nil {
+	if err := ValidateSelfContainedPDFDocumentContext(ctx, result); err != nil {
 		return nil, err
 	}
 	return result, nil
@@ -117,7 +132,10 @@ func renderPDFContent(value string, markdown bool) (string, error) {
 	return rendered.String(), nil
 }
 
-func sanitizePDFTree(node *html.Node, resources map[string]PDFResource) error {
+func sanitizePDFTree(ctx context.Context, node *html.Node, resources map[string]PDFResource) error {
+	if err := pdfContextError(ctx, "pdf_serialize_canceled"); err != nil {
+		return err
+	}
 	for child := node.FirstChild; child != nil; {
 		next := child.NextSibling
 		if child.Type == html.ElementNode {
@@ -141,6 +159,9 @@ func sanitizePDFTree(node *html.Node, resources map[string]PDFResource) error {
 					continue
 				}
 				if key == "src" {
+					if tag != "img" {
+						continue
+					}
 					resource, ok := resources[attr.Val]
 					if !ok {
 						continue
@@ -161,7 +182,7 @@ func sanitizePDFTree(node *html.Node, resources map[string]PDFResource) error {
 			}
 			child.Attr = attrs
 		}
-		if err := sanitizePDFTree(child, resources); err != nil {
+		if err := sanitizePDFTree(ctx, child, resources); err != nil {
 			return err
 		}
 		child = next
@@ -188,7 +209,14 @@ func inlinePDFResource(resource PDFResource) (string, error) {
 }
 
 func ValidateSelfContainedPDFDocument(document []byte) error {
-	if len(document) == 0 || len(document) > 64*1024*1024 {
+	return ValidateSelfContainedPDFDocumentContext(context.Background(), document)
+}
+
+func ValidateSelfContainedPDFDocumentContext(ctx context.Context, document []byte) error {
+	if err := pdfContextError(ctx, "pdf_validate_canceled"); err != nil {
+		return err
+	}
+	if len(document) == 0 || len(document) > maxPDFDocumentBytes {
 		return contentError(ErrorTooLarge, "pdf_document_limit", nil)
 	}
 	parsed, err := html.Parse(bytes.NewReader(document))
@@ -197,6 +225,9 @@ func ValidateSelfContainedPDFDocument(document []byte) error {
 	}
 	var walk func(*html.Node) error
 	walk = func(node *html.Node) error {
+		if err := pdfContextError(ctx, "pdf_validate_canceled"); err != nil {
+			return err
+		}
 		if node.Type == html.ElementNode {
 			tag := strings.ToLower(node.Data)
 			if tag == "script" {
@@ -224,7 +255,7 @@ func ValidateSelfContainedPDFDocument(document []byte) error {
 					if strings.HasPrefix(attr.Val, "#") && key == "href" {
 						continue
 					}
-					if key != "src" || !strings.HasPrefix(strings.ToLower(attr.Val), "data:image/") {
+					if key != "src" || tag != "img" || !strings.HasPrefix(strings.ToLower(attr.Val), "data:image/") {
 						return unsafePathError("pdf_external_resource", nil)
 					}
 					if _, err := url.Parse(attr.Val); err != nil {
@@ -242,6 +273,13 @@ func ValidateSelfContainedPDFDocument(document []byte) error {
 	}
 	if err := walk(parsed); err != nil {
 		return err
+	}
+	return nil
+}
+
+func pdfContextError(ctx context.Context, code string) error {
+	if err := ctx.Err(); err != nil {
+		return contentError(ErrorTimeout, code, err)
 	}
 	return nil
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/yangphere/leanote/app/httpserver"
 	i18n "github.com/yangphere/leanote/app/lea/i18n"
+	"github.com/yangphere/leanote/app/service"
 )
 
 func TestLogOutboxDeliveryErrorDoesNotExposeTransportDetails(t *testing.T) {
@@ -100,21 +101,23 @@ func TestApplicationBaseUsesConfigParentUnlessItIsConfDirectory(t *testing.T) {
 	}
 }
 
-func TestInitializeContentRuntimeForwardsApplicationBase(t *testing.T) {
+func TestInitializeContentRuntimeForwardsTypedRoots(t *testing.T) {
 	savedInitializer := initContentRuntime
 	t.Cleanup(func() { initContentRuntime = savedInitializer })
 
-	var gotBase string
-	initContentRuntime = func(base string) error {
-		gotBase = base
+	var gotRoots service.ContentRoots
+	initContentRuntime = func(roots service.ContentRoots) error {
+		gotRoots = roots
 		return nil
 	}
 
 	if err := initializeContentRuntime("release-root"); err != nil {
 		t.Fatalf("initializeContentRuntime() error = %v", err)
 	}
-	if gotBase != "release-root" {
-		t.Fatalf("initializer base = %q, want release-root", gotBase)
+	if gotRoots.PrivateFiles.Data != filepath.Join("release-root", "files") ||
+		gotRoots.PublicUpload.Quarantine != filepath.Join("release-root", ".content-public-quarantine") ||
+		gotRoots.Temporary != filepath.Join("release-root", ".content-temporary") {
+		t.Fatalf("initializer roots = %+v", gotRoots)
 	}
 }
 
@@ -123,7 +126,7 @@ func TestInitializeContentRuntimePropagatesStartupFailure(t *testing.T) {
 	t.Cleanup(func() { initContentRuntime = savedInitializer })
 
 	want := errors.New("content roots invalid")
-	initContentRuntime = func(string) error { return want }
+	initContentRuntime = func(service.ContentRoots) error { return want }
 
 	err := initializeContentRuntime("release-root")
 	if !errors.Is(err, want) {

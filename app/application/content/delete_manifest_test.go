@@ -10,7 +10,7 @@ import (
 
 func TestDeleteManifestIdentityKeepsLegacyLookupStableAcrossRestartInputs(t *testing.T) {
 	owner := mustDeleteObjectID(t, "507f1f77bcf86cd799439011")
-	first := DeleteIdentity{Action: "delete_image", OwnerID: owner, Kind: AssetImage, AssetID: "507f1f77bcf86cd799439012", Generation: 3, ContentDigest: sha256.Sum256([]byte("first"))}
+	first := DeleteIdentity{Action: "delete_image", OwnerID: owner, Kind: AssetImage, AssetID: "507f1f77bcf86cd799439012", Generation: 3, ContentDigest: sha256.Sum256([]byte("first")), ContentSize: 5}
 	second := first
 	second.Generation = 4
 	second.ContentDigest = sha256.Sum256([]byte("second"))
@@ -45,7 +45,7 @@ func TestDeleteManifestTerminalMarkerClearsRecoverableContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	identity := DeleteIdentity{Action: "delete_image", OwnerID: owner, Kind: AssetImage, AssetID: "507f1f77bcf86cd799439012", Generation: 3, ContentDigest: sha256.Sum256([]byte("image"))}
+	identity := DeleteIdentity{Action: "delete_image", OwnerID: owner, Kind: AssetImage, AssetID: "507f1f77bcf86cd799439012", Generation: 3, ContentDigest: sha256.Sum256([]byte("image")), ContentSize: 5}
 	manifest, err := NewDeleteManifest(identity, path, time.Unix(1_700_000_000, 0).UTC())
 	if err != nil {
 		t.Fatal(err)

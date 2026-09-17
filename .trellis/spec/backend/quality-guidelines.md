@@ -27,6 +27,7 @@ Go 1.26 monolith, standard `testing`, no linter beyond `gofmt`/`go vet` — the 
 
 - Every fix ships a focused regression case (AGENTS.md). Real server boundary for HTTP work — never call a controller directly.
 - Mongo-backed tests run under the three-mode harness; `LEANOTE_GOLDEN=replay go test -p 1 ./app/tests/... -count=1 -timeout 30m` stays read-only; only `LEANOTE_GOLDEN=record` writes.
+- A test that needs an uninitialized global Mongo collection saves it, assigns `nil`, and restores it with `t.Cleanup`; it must not infer that earlier same-package tests did not initialize `db.Notes` or another collection. Tests that mutate package-global collections must not call `t.Parallel`.
 - Node contract suite `npm test` covers build closure, i18n scanner, release/summary/browser-evidence contracts — extend it when touching `scripts/` tooling.
 
 ---
@@ -206,7 +207,8 @@ roots, err := contentfs.ValidateContentRoots(contentfs.ContentRootsConfig{ /* pa
 manifest, err := content.NewDeleteManifest(identity, source, now)
 err = store.CompareAndSwap(ctx, lookupKey, version, digest, next)
 document, err := content.SerializeSelfContainedPDF(content.PDFDocumentRequest{ /* authorized resources */ })
-err = service.InitContentRuntime(basePath)
+err = service.InitContentRuntime(service.ContentRoots{ /* explicit pairs + temporary + served roots */ })
+result, err := repair.FinalizePreNote(ctx, identity)
 ```
 
 - `ContentRootsConfig` supplies private and public `DurableRootConfig` pairs,
@@ -216,6 +218,10 @@ err = service.InitContentRuntime(basePath)
   its `OperationKey`.
 - `PDFDocumentRequest.Resources` is an already-authorized map of bounded image
   bytes. It has no URL fetcher, callback URL, or credential field.
+- `PreNoteAssetIdentity` is the action/owner/record-owner/parent-note/kind/asset
+  lookup for an API multipart asset before the parent note has a committed
+  generation. Its generated `CreateIdentity` uses `Generation: 0` and
+  `PreNote: true`.
 
 ### 3. Contracts
 
@@ -236,6 +242,12 @@ err = service.InitContentRuntime(basePath)
   attributes, and unapproved external references. It may emit only the pinned
   completion script and `data:image/...` values created from validated,
   authorized resources; validate again immediately before process execution.
+- A pre-note manifest remains active after exact row and byte verification.
+  A parent-note lookup under the same owner decides it: an existing parent may
+  call `FinalizePreNote`; an absent parent must use the ordinary owner-scoped
+  delete manifest/quarantine/metadata-delete/purge flow before
+  `DiscardPreNote`. Generic create recovery scans non-pre-notes only; the API
+  action scans `api_note_asset_upload` pre-notes with its own bounded budget.
 
 ### 4. Validation & Error Matrix
 
@@ -248,18 +260,26 @@ err = service.InitContentRuntime(basePath)
 | Unsupported no-replace/replace/sync filesystem primitive | typed `ErrorUnsupportedFS` or `ErrorUnknownResult`; caller verifies before retry |
 | Empty/oversized/invalid PDF resource or invalid image bytes | typed resource/media error; no renderer start |
 | User HTML containing script, SVG, refresh, external URL, or active attribute | remove untrusted content or reject the final document; never fetch it |
+| Pre-note manifest whose parent exists but row/file digest does not verify | conflict/dependency; do not terminalize or delete |
+| Pre-note manifest whose parent is absent | delete lifecycle then discarded terminal; row/projection reference blocks cleanup |
+| Unknown pre-note action in startup scan | leave untouched; it must not consume the API action scan budget |
 
 ### 5. Good / Base / Bad Cases
 
 - Good: initialize both durable pairs before HTTP registration; create and CAS
   a manifest around quarantine/metadata repair; render only a validated,
   self-contained document through direct argv and stdin.
+- Good: publish an API asset as pre-note, verify it only after the matching
+  parent note exists, and run a separate action-filtered startup repair for an
+  abandoned parent.
 - Base: a terminal manifest contains recovery identity and timestamp but no
   path or content digest; a note with no approved embedded resource still
   exports after sanitization.
 - Bad: call `os.Remove` from a controller or service before durable recovery
   state exists; recover from a corrupt manifest by deleting a guessed path; let
   `wkhtmltopdf` resolve `http`, `file`, CSS, SVG, or callback resources.
+- Bad: let generic create recovery terminalize every exact pre-note row, or
+  let a pre-note-only backlog consume the ordinary create-repair scan budget.
 
 ### 6. Tests Required
 
@@ -273,6 +293,8 @@ err = service.InitContentRuntime(basePath)
   validation, direct-argv timeout/cancel, stderr/output bounds, PDF magic, and
   cleanup. Linux delivery additionally proves local-file denial and zero
   outbound traffic with real `wkhtmltopdf`.
+- Pre-note tests cover committed-parent finalization, absent-parent delete then
+  discard, row/file conflict refusal, and independent generic/API scan limits.
 
 ### 7. Wrong vs Correct
 
@@ -286,4 +308,12 @@ manifest, err := content.NewDeleteManifest(identity, source, now)
 if err == nil {
     err = manifestStore.Create(ctx, manifest)
 }
+```
+
+```go
+// Wrong: generic recovery cannot know whether the parent note later committed.
+_ = repair.RecoverAbandoned(ctx, limit) // includes pre-notes
+
+// Correct: parent decision and action-scoped budget remain explicit.
+result, err := recoverAPINotePreNotes(ctx, scanner, workflow, limit)
 ```

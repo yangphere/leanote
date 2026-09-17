@@ -5,7 +5,7 @@
 {"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查单一事实来源、测试与清理策略"}
 {"file":".trellis/tasks/archive/2026-09/09-08-application-notes/prd.md","reason":"消费 notes receipt、Files presence 和跨域 ownership 契约"}
 {"file":".trellis/tasks/archive/2026-09/09-08-application-notes/design.md","reason":"对齐 AssetMutation Apply/Verify 和 unknown-result recovery"}
-{"file":".trellis/tasks/09-08-application-content/research/spec-audit-2026-09-15.md","reason":"读取已识别缺陷、D-C1 决策和最终规划批准门"}
+{"file":".trellis/tasks/09-08-application-content/research/spec-audit-2026-09-17.md","reason":"读取 current implementation baseline、剩余缺口、已确认 D-C2 与继续开发门禁"}
 {"file":".trellis/tasks/09-08-application-content/research/action-inventory.md","reason":"按 callable/integration/provider/dormant 清单实施"}
 {"file":".trellis/tasks/09-08-application-content/acceptance/evidence-matrix.md","reason":"逐项记录 focused 与 delegated evidence 状态"}
 {"file":".trellis/tasks/09-08-interface-http/prd.md","reason":"对齐 HTTP mapper、route、method 和 Content-Type ownership"}

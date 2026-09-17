@@ -109,10 +109,47 @@ type SharePermissionPort interface {
 	CanUpdateNote(context.Context, domain.ObjectID, domain.ObjectID, domain.ObjectID) (bool, error)
 }
 
+type ReconcileNoteAssetsCommand struct {
+	OperationID string
+	ActorID     domain.ObjectID
+	OwnerID     domain.ObjectID
+	NoteID      domain.ObjectID
+	Generation  int
+}
+
+type CopyNoteAssetsCommand struct {
+	OperationID        string
+	AssetOperationID   string
+	ActorID            domain.ObjectID
+	SourceOwnerID      domain.ObjectID
+	DestinationOwnerID domain.ObjectID
+	SourceNoteID       domain.ObjectID
+	DestinationNoteID  domain.ObjectID
+	Generation         int
+	Content            string
+}
+
+type CopyNoteAssetsResult struct {
+	Content string
+}
+
+type DeleteNoteAssetsCommand struct {
+	OperationID string
+	ActorID     domain.ObjectID
+	OwnerID     domain.ObjectID
+	NoteID      domain.ObjectID
+}
+
+// ContentAssetPort consumes the asset manifest frozen in the existing notes
+// receipt identified by OperationID. Implementations must not allocate a
+// competing receipt or rediscover assets while resuming an operation.
 type ContentAssetPort interface {
-	ReconcileNote(context.Context, string, domain.ObjectID, domain.ObjectID) error
-	CopyNote(context.Context, string, domain.ObjectID, domain.ObjectID, domain.ObjectID) error
-	DeleteNote(context.Context, string, domain.ObjectID, domain.ObjectID) error
+	ReconcileNote(context.Context, ReconcileNoteAssetsCommand) error
+	VerifyReconcileNote(context.Context, ReconcileNoteAssetsCommand) (bool, error)
+	CopyNote(context.Context, CopyNoteAssetsCommand) (CopyNoteAssetsResult, error)
+	VerifyCopyNote(context.Context, CopyNoteAssetsCommand) (bool, error)
+	DeleteNote(context.Context, DeleteNoteAssetsCommand) error
+	VerifyDeleteNote(context.Context, DeleteNoteAssetsCommand) (bool, error)
 }
 
 type PublishingProjectionPort interface {
@@ -191,6 +228,7 @@ type OperationAsset struct {
 	AssetID       string
 	LocalFileID   string
 	ContentSHA256 string
+	RecordSHA256  string
 	Index         int
 	IsAttach      bool
 }

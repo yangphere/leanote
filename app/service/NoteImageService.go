@@ -157,7 +157,7 @@ func (this *NoteImageService) CopyNoteImagesWithOperation(fromNoteId, fromUserId
 // image identities frozen in the root create receipt. Images added to the
 // source after the first attempt are not silently adopted by that operation.
 func (this *NoteImageService) CopyNoteImagesWithManifest(fromNoteId, fromUserId, newNoteId, content, toUserId, operationID string, assets []applicationnotes.OperationAsset) (string, error) {
-	allowed := make(map[string]string)
+	allowed := make(map[string]applicationnotes.OperationAsset)
 	for _, asset := range assets {
 		if asset.IsAttach {
 			continue
@@ -169,12 +169,12 @@ func (this *NoteImageService) CopyNoteImagesWithManifest(fromNoteId, fromUserId,
 		if _, duplicate := allowed[asset.LocalFileID]; duplicate {
 			return content, fmt.Errorf("copy note image: duplicate frozen asset identity")
 		}
-		allowed[asset.LocalFileID] = asset.AssetID
+		allowed[asset.LocalFileID] = asset
 	}
 	return this.copyNoteImages(fromNoteId, fromUserId, newNoteId, content, toUserId, operationID, allowed, true)
 }
 
-func (this *NoteImageService) copyNoteImages(fromNoteId, fromUserId, newNoteId, content, toUserId, operationID string, allowed map[string]string, enforceManifest bool) (string, error) {
+func (this *NoteImageService) copyNoteImages(fromNoteId, fromUserId, newNoteId, content, toUserId, operationID string, allowed map[string]applicationnotes.OperationAsset, enforceManifest bool) (string, error) {
 	/* 弃用之
 	// 得到fromNoteId的noteImages, 如果为空, 则直接返回content
 	noteImages := []info.NoteImage{}
@@ -215,9 +215,15 @@ func (this *NoteImageService) copyNoteImages(fromNoteId, fromUserId, newNoteId, 
 				if operationID != "" {
 					imageOperationID = operationID + ":image:" + fileId
 				}
-				ok2, newImageId := fileService.CopyImageWithOperation(fromUserId, fileId, toUserId, imageOperationID)
+				var ok2 bool
+				var newImageId string
+				if enforceManifest {
+					ok2, newImageId = fileService.CopyImageWithFrozenAsset(fromUserId, toUserId, imageOperationID, allowed[fileId])
+				} else {
+					ok2, newImageId = fileService.CopyImageWithOperation(fromUserId, fileId, toUserId, imageOperationID)
+				}
 				if ok2 {
-					if enforceManifest && allowed[fileId] != newImageId {
+					if enforceManifest && allowed[fileId].AssetID != newImageId {
 						copyFailed = true
 						return each
 					}

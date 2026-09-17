@@ -1,18 +1,17 @@
 package controllers
 
 import (
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
 	"github.com/revel/revel"
 	//	"encoding/json"
-	"fmt"
 	applicationcontent "github.com/yangphere/leanote/app/application/content"
-	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
-	. "github.com/yangphere/leanote/app/lea"
-	"github.com/yangphere/leanote/app/lea/netutil"
-	"io/ioutil"
-	"os"
+	"github.com/yangphere/leanote/app/service"
 	//	"strconv"
-	"strings"
 )
 
 // 首页
@@ -39,19 +38,8 @@ func (c File) PasteImage(noteId string) revel.Result {
 
 	if noteId != "" {
 		userId := c.GetUserId()
-		note := noteService.GetNoteById(noteId)
-		if !note.UserId.IsZero() {
-			noteUserId := note.UserId.Hex()
-			if noteUserId != userId {
-				// 是否是有权限协作的
-				if shareService.HasUpdatePerm(noteUserId, userId, noteId) {
-					// 复制图片之, 图片复制给noteUserId
-					_, re.Id = fileService.CopyImage(userId, re.Id, noteUserId)
-				} else {
-					// 怎么可能在这个笔记下paste图片呢?
-					// 正常情况下不会
-				}
-			}
+		if copied, copiedID := fileService.CopyImageForNote(c.RequestContext(), userId, re.Id, noteId); copied {
+			re.Id = copiedID
 		}
 	}
 
@@ -92,149 +80,78 @@ func (c File) UploadImageLeaui(albumId string) revel.Result {
 // 上传图片, 公用方法
 // upload image common func
 func (c File) uploadImage(from, albumId string) (re info.Re) {
-	var fileUrlPath = ""
-	var fileId = ""
-	var resultCode = 0      // 1表示正常
-	var resultMsg = "error" // 错误信息
-	var Ok = false
-
-	defer func() {
-		re.Id = fileId // 只是id, 没有其它信息
-		re.Code = resultCode
-		re.Msg = resultMsg
-		re.Ok = Ok
-	}()
-
-	// file, handel, err := c.Request.FormFile("file")
-	// if err != nil {
-	// 	return re
-	// }
-	// defer file.Close()
-
-	var data []byte
-	c.Params.Bind(&data, "file")
 	files := c.Params.Files["file"]
 	if len(files) != 1 {
+		re.Msg = "error"
 		return re
 	}
-	handel := files[0]
-	if data == nil || len(data) == 0 {
+	handle := files[0]
+	reader, err := handle.Open()
+	if err != nil {
+		re.Msg = "error"
 		return re
 	}
-
-	// file, handel, err := c.Request.FormFile("file")
-	// if err != nil {
-	// 	return re
-	// }
-	// defer file.Close()
-
-	// data, err := ioutil.ReadAll(file)
-
-	// 生成上传路径
-	newGuid := NewGuid()
-
-	userId := c.GetUserId()
-
-	if from == "logo" || from == "blogLogo" {
-		fileUrlPath = "public/upload/" + Digest3(userId) + "/" + userId + "/images/logo"
-	} else {
-		// fileUrlPath = "files/" + Digest3(userId) + "/" + userId + "/" + Digest2(newGuid) + "/images"
-		fileUrlPath = "files/" + GetRandomFilePath(userId, newGuid) + "/images"
-	}
-
-	dir := revel.BasePath + "/" + fileUrlPath
-	// 生成新的文件名
-	filename := handel.Filename
-
-	var ext string
-	if from == "pasteImage" {
-		handel.Filename = c.Message("unTitled")
-	} else {
-		_, ext = SplitFilename(filename)
-		ext = strings.ToLower(ext)
-	}
+	defer reader.Close()
 
 	configKey := "uploadImageSize"
+	kind := service.ImageUploadPrivate
 	if from == "logo" {
 		configKey = "uploadAvatarSize"
+		kind = service.ImageUploadAvatar
 	} else if from == "blogLogo" {
 		configKey = "uploadBlogLogoSize"
+		kind = service.ImageUploadBlogLogo
 	}
 	maxFileSize, err := configService.GetUploadLimitBytes(configKey)
 	if err != nil {
-		resultMsg = "upload config error"
+		re.Msg = "upload config error"
 		return re
 	}
-	if int64(len(data)) > maxFileSize {
-		resultCode = 0
-		resultMsg = fmt.Sprintf("The file Size is bigger than %vM", float64(maxFileSize)/(1024*1024))
-		return re
+	displayName := ""
+	if from == "pasteImage" {
+		displayName = c.Message("unTitled")
 	}
-	media, err := applicationcontent.ValidateImage(data, ext, applicationcontent.HardImageBudget())
+	result, err := fileService.UploadImage(c.RequestContext(), service.ImageUploadInput{
+		ActorID: c.GetUserId(), AlbumID: albumId, Kind: kind, Reader: reader, Limit: maxFileSize,
+		OriginalName: handle.Filename, DisplayName: displayName, Budget: applicationcontent.HardImageBudget(),
+	})
 	if err != nil {
-		resultMsg = "Please upload image"
+		var contentErr *applicationcontent.Error
+		if errors.As(err, &contentErr) && contentErr.Category == applicationcontent.ErrorTooLarge {
+			re.Msg = fmt.Sprintf("The file Size is bigger than %vM", float64(maxFileSize)/(1024*1024))
+		} else if errors.As(err, &contentErr) && contentErr.Category == applicationcontent.ErrorUnsupportedMedia {
+			re.Msg = "Please upload image"
+		} else if errors.As(err, &contentErr) && contentErr.Category == applicationcontent.ErrorPartialWrite {
+			re.Id = result.ExternalID
+			re.Msg = "partial_write"
+		} else {
+			re.Msg = "error"
+		}
 		return re
 	}
-	if ext == "" {
-		ext = media.Extension
-	}
-	filename = newGuid + ext
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return re
-	}
-
-	toPath := dir + "/" + filename
-	err = ioutil.WriteFile(toPath, data, 0600)
-	if err != nil {
-		LogJ(err)
-		return re
-	}
-	// 改变成gif图片
-	_, toPathGif := TransToGif(toPath, 0, true)
-	filename = GetFilename(toPathGif)
-	filesize := GetFilesize(toPathGif)
-	fileUrlPath += "/" + filename
-	resultCode = 1
-	resultMsg = "Upload Success!"
-
-	// File
-	fileInfo := info.File{Name: filename,
-		Title: handel.Filename,
-		Path:  fileUrlPath,
-		Size:  filesize}
-
-	id := db.NewObjectID()
-	fileInfo.FileId = id
-	fileId = id.Hex()
-
-	if from == "logo" || from == "blogLogo" {
-		fileId = fileUrlPath
-	}
-
-	Ok, resultMsg = fileService.AddImage(fileInfo, albumId, c.GetUserId(), from == "" || from == "pasteImage")
-	resultMsg = c.Message(resultMsg)
-
-	fileInfo.Path = "" // 不要返回
-	re.Item = fileInfo
-
+	result.File.Path = ""
+	re.Ok, re.Code, re.Msg, re.Id, re.Item = true, 1, c.Message("Upload Success!"), result.ExternalID, result.File
 	return re
 }
 
 // get all images by userId with page
 func (c File) GetImages(albumId, key string, page int) revel.Result {
-	re := fileService.ListImagesWithPage(c.GetUserId(), albumId, key, page, 12)
+	re, err := fileService.ListImagesReadable(c.RequestContext(), c.GetUserId(), albumId, key, page, 12)
+	if err != nil {
+		re = info.Page{List: []info.File{}}
+	}
 	return c.RenderJSON(re)
 }
 
 func (c File) UpdateImageTitle(fileId, title string) revel.Result {
 	re := info.NewRe()
-	re.Ok = fileService.UpdateImageTitle(c.GetUserId(), fileId, title)
+	re.Ok = fileService.UpdateImageTitleResult(c.RequestContext(), c.GetUserId(), fileId, title) == nil
 	return c.RenderJSON(re)
 }
 
 func (c File) DeleteImage(fileId string) revel.Result {
 	re := info.NewRe()
-	re.Ok, re.Msg = fileService.DeleteImage(c.GetUserId(), fileId)
+	re.Ok, re.Msg = fileService.DeleteImageWithOperation(c.RequestContext(), c.GetUserId(), fileId, strings.TrimSpace(c.Params.Get("OperationId")))
 	return c.RenderJSON(re)
 }
 
@@ -243,20 +160,21 @@ func (c File) DeleteImage(fileId string) revel.Result {
 // 输出image
 // 权限判断
 func (c File) OutputImage(noteId, fileId string) revel.Result {
-	path := fileService.GetFile(c.GetUserId(), fileId) // 得到路径
-	if path == "" {
+	download, err := fileService.OpenReadableImage(c.RequestContext(), c.GetUserId(), fileId)
+	if err != nil {
 		return c.RenderText("")
 	}
-	fn := revel.BasePath + "/" + strings.TrimLeft(path, "/")
-	file, _ := os.Open(fn)
-	return c.RenderFile(file, revel.Inline) // revel.Attachment
+	return c.RenderBinary(download.Reader, applicationcontent.AttachmentDownloadFilename(download.Name), revel.Inline, time.Now())
 }
 
 // 协作时复制图片到owner
 // 需要计算对方大小
 func (c File) CopyImage(userId, fileId, toUserId string) revel.Result {
 	re := info.NewRe()
-	re.Ok, re.Id = fileService.CopyImage(userId, fileId, toUserId)
+	actorID := c.GetUserId()
+	if userId == actorID && toUserId == actorID {
+		re.Ok, re.Id = fileService.CopyImage(actorID, fileId, actorID)
+	}
 	return c.RenderJSON(re)
 }
 
@@ -264,36 +182,12 @@ func (c File) CopyImage(userId, fileId, toUserId string) revel.Result {
 // 都要好好的计算大小
 func (c File) CopyHttpImage(src string) revel.Result {
 	re := info.NewRe()
-
-	// 生成上传路径
-	newGuid := NewGuid()
-	userId := c.GetUserId()
-	// fileUrlPath := "files/" + Digest3(userId) + "/" + userId + "/" + Digest2(newGuid) + "/images"
-	fileUrlPath := "files/" + GetRandomFilePath(userId, newGuid) + "/images"
-	dir := revel.BasePath + "/" + fileUrlPath
-	err := os.MkdirAll(dir, 0755)
+	maxFileSize, err := configService.GetUploadLimitBytes("uploadImageSize")
 	if err != nil {
+		re.Msg = "upload config error"
 		return c.RenderJSON(re)
 	}
-	filesize, filename, _, ok := netutil.WriteUrl(src, dir)
-
-	if !ok {
-		re.Msg = "copy error"
-		return c.RenderJSON(re)
-	}
-
-	// File
-	fileInfo := info.File{Name: filename,
-		Title: filename,
-		Path:  fileUrlPath + "/" + filename,
-		Size:  filesize}
-
-	id := db.NewObjectID()
-	fileInfo.FileId = id
-
-	re.Id = id.Hex()
-	//	re.Item = fileInfo.Path
-	re.Ok, re.Msg = fileService.AddImage(fileInfo, "", c.GetUserId(), true)
+	re.Ok, re.Id, re.Msg = fileService.CopyHTTPImage(c.RequestContext(), c.GetUserId(), src, maxFileSize)
 
 	return c.RenderJSON(re)
 }

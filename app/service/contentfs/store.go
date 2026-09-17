@@ -19,6 +19,9 @@ import (
 type FileStore struct {
 	handles       map[application.RootKind]*os.Root
 	directorySync func(*os.Root, string) error
+	finalOpen     func(*os.Root, string) (*os.File, error)
+	finalSync     func(*os.File) error
+	finalClose    func(*os.File) error
 }
 
 func NewFileStore(roots *ContentRoots) (*FileStore, error) {
@@ -121,6 +124,9 @@ func (store *FileStore) Publish(ctx context.Context, request application.Publish
 		if existing.digest != request.Identity.Digest {
 			return result, application.NewError(application.ErrorConflict, "destination_digest_mismatch", nil)
 		}
+		if err := store.publicationBarrier(root, destination); err != nil {
+			return result, application.NewError(application.ErrorUnknownResult, "publish_final_sync", err)
+		}
 		return existingPublishResult(request.Destination, existing), nil
 	}
 
@@ -138,7 +144,7 @@ func (store *FileStore) Publish(ctx context.Context, request application.Publish
 		if err := root.Remove(stageName); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			cleanupErr = errors.Join(cleanupErr, err)
 		}
-		if err := store.directorySync(root, parent); err != nil {
+		if err := store.removalBarrier(root, stageName); err != nil {
 			cleanupErr = errors.Join(cleanupErr, err)
 		}
 		return cleanupErr
@@ -182,11 +188,17 @@ func (store *FileStore) Publish(ctx context.Context, request application.Publish
 				if existing.digest != request.Identity.Digest {
 					return result, application.NewError(application.ErrorConflict, "destination_digest_mismatch", nil)
 				}
+				if err := store.publicationBarrier(root, destination); err != nil {
+					return result, application.NewError(application.ErrorUnknownResult, "publish_final_sync", err)
+				}
 				return existingPublishResult(request.Destination, existing), nil
 			}
 			return result, application.NewError(application.ErrorUnknownResult, "publish_race", err)
 		}
 		return failWithCleanup(application.NewError(application.ErrorUnsupportedFS, "no_replace_publish", err))
+	}
+	if err := store.publicationBarrier(root, destination); err != nil {
+		return failWithCleanup(application.NewError(application.ErrorUnknownResult, "publish_final_sync", err))
 	}
 	if err := cleanupStage(); err != nil {
 		return result, application.NewError(application.ErrorUnknownResult, "publish_cleanup_or_sync", err)
@@ -223,6 +235,9 @@ func (store *FileStore) Verify(ctx context.Context, request application.VerifyRe
 	if verified.digest != expected {
 		result.Status = application.VerificationConflict
 		return result, nil
+	}
+	if err := store.publicationBarrier(root, destination); err != nil {
+		return result, application.NewError(application.ErrorUnknownResult, "verify_final_sync", err)
 	}
 	for _, dependency := range []func(context.Context) (bool, error){request.VerifyMetadata, request.VerifyProjection} {
 		if dependency == nil {
@@ -276,7 +291,7 @@ func (store *FileStore) ensureParent(root *os.Root, parent string) error {
 			if err := root.Mkdir(current, 0o700); err != nil && !errors.Is(err, fs.ErrExist) {
 				return application.NewError(application.ErrorStorageUnavailable, "create_parent", err)
 			}
-			if err := store.directorySync(root, before); err != nil {
+			if err := platformParentBarrier(root, before, store.durabilityOps()); err != nil {
 				return application.NewError(application.ErrorUnsupportedFS, "sync_parent", err)
 			}
 			info, err = root.Lstat(current)
@@ -289,6 +304,18 @@ func (store *FileStore) ensureParent(root *os.Root, parent string) error {
 		}
 	}
 	return store.walkExisting(root, parent, true)
+}
+
+func (store *FileStore) durabilityOps() durabilityOps {
+	return newDurabilityOps(store.directorySync, store.finalOpen, store.finalSync, store.finalClose)
+}
+
+func (store *FileStore) publicationBarrier(root *os.Root, name string) error {
+	return platformPublicationBarrier(root, name, store.durabilityOps())
+}
+
+func (store *FileStore) removalBarrier(root *os.Root, name string) error {
+	return platformRemovalBarrier(root, name, store.durabilityOps())
 }
 
 func (store *FileStore) walkExisting(root *os.Root, name string, finalMustBeDirectory bool) error {
