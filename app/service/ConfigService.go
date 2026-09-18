@@ -41,17 +41,26 @@ type DemoAccount struct {
 
 // appStart时 将全局的配置从数据库中得到作为全局
 func (this *ConfigService) InitGlobalConfigs() bool {
+	adminUsername, _ := revel.Config.String("adminUsername")
+	siteURL, _ := revel.Config.String("site.url")
+	return this.InitGlobalConfigsWith(adminUsername, siteURL)
+}
+
+// InitGlobalConfigsWith initializes global settings from explicit startup
+// values. Native entrypoints must use this method instead of relying on the
+// legacy Revel global configuration singleton.
+func (this *ConfigService) InitGlobalConfigsWith(adminUsername, siteURL string) bool {
 	this.GlobalAllConfigs = map[string]interface{}{}
 	this.GlobalStringConfigs = map[string]string{}
 	this.GlobalArrayConfigs = map[string][]string{}
 	this.GlobalMapConfigs = map[string]map[string]string{}
 	this.GlobalArrMapConfigs = map[string][]map[string]string{}
 
-	this.adminUsername, _ = revel.Config.String("adminUsername")
+	this.adminUsername = adminUsername
 	if this.adminUsername == "" {
 		this.adminUsername = "admin"
 	}
-	this.siteUrl, _ = revel.Config.String("site.url")
+	this.siteUrl = siteURL
 
 	userInfo := userService.GetUserInfoByAny(this.adminUsername)
 	if userInfo.UserId.IsZero() {
