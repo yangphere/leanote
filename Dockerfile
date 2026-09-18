@@ -30,7 +30,7 @@ RUN apt-get update \
     && ln -s /usr/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf \
     && groupadd --gid 10001 leanote \
     && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin leanote \
-    && mkdir -p /app/bin /app/app /app/messages /app/public /app/files /app/public/upload /etc/leanote \
+    && mkdir -p /app/bin /app/app /app/messages /app/public /data /etc/leanote \
     && chown -R 10001:10001 /app /etc/leanote
 WORKDIR /app
 COPY --from=backend /out/leanote /app/bin/leanote
@@ -39,7 +39,15 @@ COPY --from=frontend /src/messages /app/messages
 COPY --from=frontend /src/public /app/public
 COPY conf/app.conf-default /app/conf/app.conf-default
 COPY conf/routes /app/conf/routes
-RUN chmod 0755 /app/bin/leanote && chown -R 10001:10001 /app
-VOLUME ["/app/files", "/app/public/upload"]
+RUN mkdir -p /data/files /data/public-upload /data/private-quarantine /data/public-quarantine /data/temporary \
+    && rm -rf /app/files /app/public/upload /app/.content-private-quarantine /app/.content-public-quarantine /app/.content-temporary \
+    && ln -s /data/files /app/files \
+    && ln -s /data/public-upload /app/public/upload \
+    && ln -s /data/private-quarantine /app/.content-private-quarantine \
+    && ln -s /data/public-quarantine /app/.content-public-quarantine \
+    && ln -s /data/temporary /app/.content-temporary \
+    && chmod 0755 /app/bin/leanote \
+    && chown -R 10001:10001 /app /data
+VOLUME ["/data"]
 USER 10001:10001
 ENTRYPOINT ["/app/bin/leanote", "-conf", "/etc/leanote/app.conf", "-runMode", "prod"]

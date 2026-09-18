@@ -46,6 +46,25 @@ func TestEnsureTestPortAvailableRejectsOccupiedFixedPort(t *testing.T) {
 	}
 }
 
+func TestEnsureRuntimeContentRootsCreatesAllRequiredDirectories(t *testing.T) {
+	root := t.TempDir()
+	if err := ensureRuntimeContentRoots(root); err != nil {
+		t.Fatalf("ensureRuntimeContentRoots() error = %v", err)
+	}
+	for _, relative := range []string{
+		"files",
+		filepath.Join("public", "upload"),
+		".content-private-quarantine",
+		".content-public-quarantine",
+		".content-temporary",
+	} {
+		info, err := os.Stat(filepath.Join(root, relative))
+		if err != nil || !info.IsDir() {
+			t.Fatalf("content root %s: info=%v err=%v", relative, info, err)
+		}
+	}
+}
+
 // TestGoBinaryHonorsExplicitOverride locks the pass-through contract: an
 // explicitly provided LEANOTE_TEST_GO is used verbatim and never version-checked.
 func TestGoBinaryHonorsExplicitOverride(t *testing.T) {

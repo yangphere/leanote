@@ -42,6 +42,15 @@ test ! -e "$TMP/mongodb_backup"
 test ! -e "$TMP/files"
 test ! -e "$TMP/public/upload"
 
+# User data is intentionally excluded from the archive. Provision the empty
+# runtime roots in the extracted release workspace before starting the app.
+mkdir -p \
+  "$TMP/files" \
+  "$TMP/public/upload" \
+  "$TMP/.content-private-quarantine" \
+  "$TMP/.content-public-quarantine" \
+  "$TMP/.content-temporary"
+
 # Rebuild twice with the same commit timestamp and compare the complete
 # archive bytes. The caller may provide the tag timestamp explicitly when the
 # checkout is detached from its local Git metadata.

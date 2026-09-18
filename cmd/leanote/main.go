@@ -81,7 +81,10 @@ func main() {
 		log.Fatalf("parse routes: %v", err)
 	}
 	service.InitService()
-	if databaseReady && !service.ConfigS.InitGlobalConfigs() {
+	if databaseReady && !service.ConfigS.InitGlobalConfigsWith(
+		cfg.StringDefault("adminUsername", "admin"),
+		cfg.StringDefault("site.url", ""),
+	) {
 		log.Printf("global configuration unavailable; email delivery will retry through outbox")
 	}
 	if err := initializeContentRuntime(appBase); err != nil {
