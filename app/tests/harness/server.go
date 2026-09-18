@@ -102,6 +102,9 @@ func startServer(repoRoot string, register func(*Server)) (*Server, error) {
 	if err := ensureTestPortAvailable(); err != nil {
 		return nil, err
 	}
+	if err := ensureRuntimeContentRoots(repoRoot); err != nil {
+		return nil, err
+	}
 	binary, cleanup, err := buildServerBinary(repoRoot)
 	if err != nil {
 		return nil, err
@@ -161,6 +164,25 @@ func startServer(repoRoot string, register func(*Server)) (*Server, error) {
 		return nil, err
 	}
 	return server, nil
+}
+
+// ensureRuntimeContentRoots provisions the empty, non-user-owned directories
+// required by the fail-closed content runtime before the generated test server
+// starts. The roots are ignored by git and are intentionally kept separate
+// from fixture data created by individual tests.
+func ensureRuntimeContentRoots(repoRoot string) error {
+	for _, relative := range []string{
+		"files",
+		filepath.Join("public", "upload"),
+		".content-private-quarantine",
+		".content-public-quarantine",
+		".content-temporary",
+	} {
+		if err := os.MkdirAll(filepath.Join(repoRoot, relative), 0o700); err != nil {
+			return fmt.Errorf("create content runtime root %s: %w", relative, err)
+		}
+	}
+	return nil
 }
 
 func (s *Server) waitForReady(logPath string) error {
