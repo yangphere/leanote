@@ -116,6 +116,8 @@
 - 保留 `users`、`sessions`、`tokens` 集合名、BSON 字段和 `info` DTO；不要求数据迁移。
 - 保留 API Golden 中登录、注册、登出、用户信息/资料和 invalid/none token 的 envelope；U-05 已决定按 action 固化允许方法，未列方法返回 405；`userId` 只能与 principal 一致。任何 Golden 变化必须先更新兼容说明和 replay fixture。
 - 本任务验收只覆盖 service、adapter contract、静态敏感信息扫描和可运行的 focused tests。真实 Mongo 7/8、完整 HTTP 路由、浏览器、邮件、文件系统和发布证据分别由 infrastructure/interface/delivery 任务承担；缺失证据标记 `partial`/`unknown`，不视为通过。
+- 本任务执行期间，AI 助手不得启动 Leanote 应用、开发服务器或其他应用进程，也不得调用 computer-use；允许的自动验证仅限不启动应用的测试、构建、静态检查和任务校验。
+- 任何需要运行中应用、浏览器、真实客户端或人工交互的验证，必须先向用户提供 Markdown checklist。每项至少写明待验证功能、前置条件、操作步骤、预期结果和建议留存的证据；在用户回传结果前保持未勾选，并将对应证据记为 `partial`/`unknown`，不得推断通过。
 
 ## 6. 已决策事项与责任
 
@@ -170,6 +172,7 @@ P-01～P-08 的书面决策已闭合；实现仍须按对应责任方的 fixture
 - [ ] 密码、token、Cookie secret 和上传路径不出现在日志、错误响应或任务 artifact；service 不直接写 HTTP response、不依赖 Revel controller/session。
 - [ ] §6.1 P-01～P-08 的书面决策已确认，并按 §6.2 建立对应 fixture；P-08 的 persistence contract 已支持摘要查询、旧 24 位 token 过渡和 logout/resolver 一致性；P-02～P-04 的保持现状及风险责任已记录。
 - [ ] 运行 service/httpserver/adapter 聚焦 Go 测试、`go vet`、manifest/任务校验和 `git diff --check`；不把未运行的真实 Mongo/HTTP/browser/release 证据标为通过。
+- [ ] 执行过程未启动应用、未调用 computer-use；所有需要运行中应用或真实交互的验证均已向用户交付人工验证 checklist，且只按用户回传结果更新证据状态。
 
 ## Out of scope
 

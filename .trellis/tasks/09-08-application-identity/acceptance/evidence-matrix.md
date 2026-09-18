@@ -26,6 +26,8 @@
 - HTTP 200 只表示 transport 成功，业务结果必须检查 `Ok`；无证据不能标记通过。
 - Golden replay 只读；缺失或不匹配必须失败，不自动录制。
 - 真实 Mongo/HTTP/browser/mail/release 未运行时记录 `partial` 或 `unknown`，不以 controller 直调或 mock 成功替代。
+- AI 助手不得启动 Leanote 应用、开发服务器或其他应用进程，也不得调用 computer-use。需要运行中应用、浏览器、真实客户端或人工交互时，必须把待验证功能、前置条件、步骤、预期结果和建议证据整理为 Markdown checklist 交给用户手动验证。
+- 人工验证项在用户回传结果前保持未勾选和 `partial`/`unknown`；回传后必须记录环境、日期、实际结果及可用证据，不能凭 checklist 已发出或用户未反馈推断通过。
 - 找回密码不存在/outbox 入队成功必须得到相同公开文案；存储/入队失败也不得通过错误文案枚举账号存在性；注册 outbox 入队成功与邮件传输失败必须分开验收；注册自动登录失败必须要求重新登录。
 - Token 过期使用 `now >= expiry`；action token 类型 mismatch 不适用于 API `sessions` resolver；显式 invalid API token 绝不 fallback。
 - 任何唯一索引、token schema、outbox、Cookie、公开字段、方法、权限或副作用语义变化，必须先更新领域目录、Golden/fixture、兼容说明和本矩阵。

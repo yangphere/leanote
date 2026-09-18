@@ -31,10 +31,12 @@
 
 ## 阶段 3：测试和证据
 
+- [ ] 执行期间不启动 Leanote 应用、开发服务器或其他应用进程，不调用 computer-use；自动验证只使用不启动应用的测试、构建、静态检查和任务校验。
 - [ ] 运行 service/httpserver/adapter contract、Golden normalization 和敏感信息扫描；覆盖 anonymous/source=none、有效、过期边界、action-token 类型错误、数据库错误、权限失败、跨用户、demo 配置错误和 SessionWriter 写失败。
 - [ ] 按已确认的 P-02～P-04 记录 CSRF（现状无机制）、API token 传输（当前 query/form）和通用限流（当前仅 Captcha）的风险；按 P-08 验证 32 字节 CSPRNG、base64url、摘要存储、旧 token 过渡及 resolver/logout 一致性。若未来扩大能力，先更新对应责任任务和验收范围。
 - [x] 运行 `go test ./app/service ./app/httpserver ./app/controllers/api ./app/controllers -count=1`、`go vet ./app/service`，必要时运行受支持的 Mongo fixture 测试；真实 HTTP/browser/release 证据不得在本任务伪造。
 - [x] 更新本任务 acceptance evidence matrix，记录命令、结果、fixture 路径和仍未闭合的下游证据。
+- [ ] 每次需要运行中应用、浏览器、真实客户端或人工交互验证时，先把待验证功能按 checklist 发给用户；每项写明前置条件、操作步骤、预期结果和建议证据，收到用户反馈后再更新验收矩阵。
 
 ## 2026-09-10 当前收口状态
 
@@ -60,6 +62,17 @@ go vet ./app/service
 ```
 
 Mongo、真实 HTTP、浏览器、邮件和发布验证必须使用各自任务规定的 harness/环境；环境不可用时记录 `partial`/`unknown`，不启用随机配置或静默 fallback。
+
+## 人工验证 checklist（环境可用时交由用户执行）
+
+以下项目在用户回传结果前均保持未勾选，不能作为已通过证据。执行时应同时记录环境、日期、实际结果，以及可用的截图、响应或日志片段。
+
+- [ ] **Web 登录与退出**：使用有效账号登录，确认进入受保护页面且身份信息正确；退出后再次访问受保护页面应回到未登录状态，旧登录状态不得继续生效。
+- [ ] **Session 标识轮换**：记录登录前后的匿名 `_ID`/Cookie，确认登录成功后标识发生轮换；旧 Cookie 不能恢复身份，登录失败次数和 Captcha 状态按规格清理。
+- [ ] **API token 登录与退出**：分别验证既有 GET/POST 登录兼容路径、受保护用户接口和退出；无效或已退出 token 必须被拒绝，显式无效 token 不得回退到 Web session。
+- [ ] **找回密码与邮件 token**：已存在和不存在邮箱的公开响应不得泄露账号存在性；真实邮件中的 token 仅可成功使用一次，过期、重复使用或用途不匹配时必须失败。
+- [ ] **匿名/member/admin/demo 权限**：匿名访问受保护页面被拒绝或重定向，普通用户只能进入 member 范围，非管理员不能进入 admin，demo 配置缺失或不一致时保持 fail-closed。
+- [ ] **头像更新**：缺失文件、空文件和无效上传不得显示成功；有效头像更新后页面与后续读取结果一致，存储失败不得返回成功 Logo。
 
 ## 回滚点与危险边界
 
