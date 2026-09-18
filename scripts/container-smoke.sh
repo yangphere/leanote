@@ -8,9 +8,9 @@ APP=leanote-container-smoke-app
 NETWORK=leanote-container-smoke
 TMP_HEALTH=$(mktemp)
 TMP_CONFIG=$(mktemp)
-FILES_DIR=$(mktemp -d)
-UPLOAD_DIR=$(mktemp -d)
-chmod 0777 "$FILES_DIR" "$UPLOAD_DIR"
+CONTENT_DIR=$(mktemp -d)
+mkdir -p "$CONTENT_DIR/files" "$CONTENT_DIR/public-upload" "$CONTENT_DIR/private-quarantine" "$CONTENT_DIR/public-quarantine" "$CONTENT_DIR/temporary"
+chmod -R 0777 "$CONTENT_DIR"
 cleanup() {
   status=$?
   set +e
@@ -19,7 +19,7 @@ cleanup() {
   if docker inspect "$MONGO" >/dev/null 2>&1; then docker rm -f "$MONGO" >/dev/null || cleanup_error=1; fi
   if docker network inspect "$NETWORK" >/dev/null 2>&1; then docker network rm "$NETWORK" >/dev/null || cleanup_error=1; fi
   rm -f "$TMP_HEALTH" "$TMP_HEALTH.headers" "$TMP_HEALTH.pdf.headers" "$TMP_HEALTH.pdf.html" "$TMP_CONFIG"
-  rm -rf "$FILES_DIR" "$UPLOAD_DIR"
+  rm -rf "$CONTENT_DIR"
   test ! -e "$TMP_HEALTH" && test ! -e "$TMP_CONFIG" || cleanup_error=1
   if [ "$status" -eq 0 ] && [ "$cleanup_error" -ne 0 ]; then status=1; fi
   exit "$status"
@@ -41,7 +41,7 @@ docker exec "$MONGO" mongorestore --db leanote --dir /leanote_install_data --dro
 printf '%s\n' '[prod]' 'db.urlEnv=${MONGODB_URL}' 'db.dbname=leanote' 'app.secret=${LEANOTE_APP_SECRET}' 'http.addr=0.0.0.0' 'http.port=9000' > "$TMP_CONFIG"
 chmod 0440 "$TMP_CONFIG"
 docker run -d --name "$APP" --user 10001:10001 --group-add "$(id -g)" --network "$NETWORK" -p 9000:9000 \
-  -v "$TMP_CONFIG:/etc/leanote/app.conf:ro" -v "$FILES_DIR:/app/files" -v "$UPLOAD_DIR:/app/public/upload" \
+  -v "$TMP_CONFIG:/etc/leanote/app.conf:ro" -v "$CONTENT_DIR:/data" \
   -e MONGODB_URL="mongodb://$MONGO:27017/leanote" \
   -e LEANOTE_APP_SECRET='container-smoke-secret-012345678901234567890' "$IMAGE" >/dev/null
 deadline=$(($(date +%s) + 180))
@@ -67,11 +67,11 @@ curl -fsS -D "$TMP_HEALTH.pdf.headers" -o "$TMP_HEALTH.pdf.html" "$CONTAINER_SMO
 grep -Eiq '^Content-Type: text/html(;|$)' "$TMP_HEALTH.pdf.headers"
 test -s "$TMP_HEALTH.pdf.html"
 docker exec "$APP" env "CONTAINER_SMOKE_PDF_URL=$CONTAINER_SMOKE_PDF_URL" sh -c 'printf persisted > /app/files/smoke-marker && test -x /usr/local/bin/wkhtmltopdf && wkhtmltopdf --quiet "$CONTAINER_SMOKE_PDF_URL" /app/files/smoke.pdf'
-test -s "$FILES_DIR/smoke.pdf"
-test "$(dd if="$FILES_DIR/smoke.pdf" bs=1 count=5 2>/dev/null)" = '%PDF-'
-printf persisted-upload > "$UPLOAD_DIR/smoke-upload"
+test -s "$CONTENT_DIR/files/smoke.pdf"
+test "$(dd if="$CONTENT_DIR/files/smoke.pdf" bs=1 count=5 2>/dev/null)" = '%PDF-'
+printf persisted-upload > "$CONTENT_DIR/public-upload/smoke-upload"
 docker restart "$APP" >/dev/null
-test -f "$FILES_DIR/smoke-marker"
+test -f "$CONTENT_DIR/files/smoke-marker"
 test "$(docker exec "$APP" cat /app/files/smoke-marker)" = persisted
 test "$(docker exec "$APP" cat /app/public/upload/smoke-upload)" = persisted-upload
 deadline=$(($(date +%s) + 180))
