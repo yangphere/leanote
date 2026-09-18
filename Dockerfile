@@ -30,7 +30,8 @@ RUN apt-get update \
     && ln -s /usr/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf \
     && groupadd --gid 10001 leanote \
     && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin leanote \
-    && mkdir -p /app/bin /app/app /app/messages /app/public /app/files /app/public/upload /etc/leanote \
+    && mkdir -p /app/bin /app/app /app/messages /app/public /app/files /app/public/upload \
+          /app/.content-private-quarantine /app/.content-public-quarantine /app/.content-temporary /etc/leanote \
     && chown -R 10001:10001 /app /etc/leanote
 WORKDIR /app
 COPY --from=backend /out/leanote /app/bin/leanote
