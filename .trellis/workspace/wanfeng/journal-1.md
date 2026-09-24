@@ -476,3 +476,25 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Next Steps
 
 - 在交付验证任务中补齐真实 Mongo、浏览器、Linux/container PDF 与 HTTP 错误契约证据
+
+
+## Session 19: 身份会话边界修复与归档
+<!-- trellis-session: v=2 fp=f4b3d4fe2ceb97fc -->
+
+**Date**: 2026-09-24
+**Task**: 身份会话边界修复与归档
+**Branch**: `dev`
+
+### Summary
+
+修复 SessionReader/Writer 错误传播和 commit 失败覆盖，统一 admin/member/demo principal 并注入生产 HTTP 入口；完成 focused tests、vet、任务校验后归档身份任务。真实 Mongo、HTTP、浏览器、邮件证据保持下游未闭合。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7a6156d7` | fix(identity): 修复会话提交与身份策略边界 |
+
+### Status
+
+[OK] **Completed**
