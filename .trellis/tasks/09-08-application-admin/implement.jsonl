@@ -2,3 +2,8 @@
 {"file": "docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md", "reason": "核对无自动部署边界"}
 {"file": ".trellis/tasks/09-08-application-content/prd.md", "reason": "消费 content PDF renderer contract，admin 只实现 descriptor provider"}
 {"file": ".trellis/tasks/09-08-application-content/design.md", "reason": "避免在 admin 重复 process/argv/sandbox/cleanup seam"}
+{"file": ".trellis/tasks/09-08-application-publishing/prd.md", "reason": "接收评论通知、receipt 与删除取消验收合同"}
+{"file": ".trellis/tasks/09-08-application-publishing/design.md", "reason": "复用共享 outbox 状态机与 handoff CAS"}
+{"file": ".trellis/tasks/09-08-application-publishing/implement.md", "reason": "同步 publishing/admin 联验批次"}
+{"file": ".trellis/tasks/09-08-application-publishing/research/implementation-decision-brief.md", "reason": "读取最小决策摘要而非长篇审核历史"}
+{"file": ".trellis/tasks/09-08-application-publishing/acceptance/evidence-matrix.md", "reason": "对照通知/删除运行证据与 owner"}

@@ -1,2 +1,8 @@
 {"file": "CONTEXT.md", "reason": "读取公开页面和所有权术语"}
 {"file": "docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md", "reason": "核对 HTTP/Session 兼容取舍"}
+{"file": ".trellis/tasks/09-08-application-publishing/research/implementation-decision-brief.md", "reason": "注入已确认合同与真实证据门禁摘要"}
+{"file": ".trellis/tasks/09-08-application-publishing/research/action-contract-inventory.md", "reason": "逐 action 实施输入输出与错误合同"}
+{"file": ".trellis/tasks/09-08-application-publishing/acceptance/evidence-matrix.md", "reason": "逐能力核对负例和跨层未运行证据"}
+{"file": ".trellis/tasks/09-08-application-admin/prd.md", "reason": "核对评论通知和删除取消的 admin 接收范围"}
+{"file": ".trellis/tasks/09-08-application-admin/design.md", "reason": "联审 outbox CAS 与 transport 交接状态"}
+{"file": ".trellis/tasks/09-08-application-admin/implement.md", "reason": "确保 admin worker 和联验批次承接 publishing"}

@@ -2,3 +2,8 @@
 {"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "检查敏感数据和质量约束"}
 {"file": ".trellis/tasks/09-08-application-content/prd.md", "reason": "核对 PDF descriptor provider 与 renderer execution ownership handoff"}
 {"file": ".trellis/tasks/09-08-application-content/design.md", "reason": "确认 PDF process/sandbox/cleanup 仅由 content 拥有"}
+{"file": ".trellis/tasks/09-08-application-publishing/prd.md", "reason": "核对评论通知和取消验收结果"}
+{"file": ".trellis/tasks/09-08-application-publishing/design.md", "reason": "检查状态迁移、CAS 和未知交接合同"}
+{"file": ".trellis/tasks/09-08-application-publishing/implement.md", "reason": "检查 publishing/admin 联验完成状态"}
+{"file": ".trellis/tasks/09-08-application-publishing/research/implementation-decision-brief.md", "reason": "校对已决规则及不可替代的真实证据"}
+{"file": ".trellis/tasks/09-08-application-publishing/acceptance/evidence-matrix.md", "reason": "检查 AC-PB4-NOTIFY/DELETE/HANDOFF 的移交证据"}

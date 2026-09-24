@@ -3,7 +3,7 @@
   "name": "application-publishing",
   "title": "应用层：分享、博客与主题",
   "description": "收敛分享、博客、评论、群组、主题和预览业务，保持公开页面与用户主题行为。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": "application layer / sharing publishing and themes",
   "package": null,
@@ -12,7 +12,7 @@
   "assignee": "wanfeng",
   "createdAt": "2026-09-08",
   "completedAt": null,
-  "branch": null,
+  "branch": "dev",
   "base_branch": "dev",
   "worktree_path": null,
   "commit": null,
@@ -22,5 +22,10 @@
   "parent": "09-08-business-layer-architecture",
   "relatedFiles": [],
   "notes": "",
-  "meta": {"layer": "application", "depends_on": ["09-08-domain-contracts"]}
+  "meta": {
+    "layer": "application",
+    "depends_on": [
+      "09-08-domain-contracts"
+    ]
+  }
 }

@@ -1,2 +1,8 @@
 {"file": ".trellis/spec/backend/error-handling.md", "reason": "检查分享/主题失败语义"}
 {"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "检查服务到模板跨层流"}
+{"file": ".trellis/tasks/09-08-application-publishing/research/implementation-decision-brief.md", "reason": "复核四项合同和真实证据边界"}
+{"file": ".trellis/tasks/09-08-application-publishing/research/action-contract-inventory.md", "reason": "逐 action 检查错误和兼容负例"}
+{"file": ".trellis/tasks/09-08-application-publishing/acceptance/evidence-matrix.md", "reason": "检查未运行/移交证据不被标成通过"}
+{"file": ".trellis/tasks/09-08-application-admin/prd.md", "reason": "核对 admin 已接收评论 outbox 责任"}
+{"file": ".trellis/tasks/09-08-application-admin/design.md", "reason": "核对取消与发送闸门共享状态合同"}
+{"file": ".trellis/tasks/09-08-application-admin/implement.md", "reason": "检查 admin 跨 worker 测试及联验门禁"}
