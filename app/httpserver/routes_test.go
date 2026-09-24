@@ -1,6 +1,8 @@
 package httpserver
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -223,6 +225,13 @@ func TestLoginRequiredHook(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("whitelisted Index.Index status = %d", rec.Code)
 	}
+	rec, ctx := runHook("Index", "Index", false, map[string]string{"UserId": "u1"})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("authenticated whitelisted Index.Index status = %d", rec.Code)
+	}
+	if principal := ctx.GetPrincipal(); principal.UserID != "u1" || principal.Source != PrincipalSourceWebSession || principal.Role != PrincipalRoleMember {
+		t.Fatalf("authenticated whitelisted principal = %+v", principal)
+	}
 	rec, _ = runHook("Note", "ToPdf", false, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("whitelisted Note.ToPdf status = %d", rec.Code)
@@ -238,9 +247,59 @@ func TestLoginRequiredHook(t *testing.T) {
 		t.Fatalf("anonymous redirect status = %d", rec.Code)
 	}
 	// Logged in: pass.
-	rec, _ = runHook("Note", "Index", false, map[string]string{"UserId": "u1"})
+	rec, ctx = runHook("Note", "Index", false, map[string]string{"UserId": "u1"})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("logged-in status = %d", rec.Code)
+	}
+	if principal := ctx.GetPrincipal(); principal.UserID != "u1" || principal.Source != PrincipalSourceWebSession || principal.Role != PrincipalRoleMember {
+		t.Fatalf("logged-in principal = %+v", principal)
+	}
+}
+
+func TestLoginRequiredUsesPrincipalPolicyAndFailsClosed(t *testing.T) {
+	whitelist := map[string]map[string]bool{}
+	hook := LoginRequired(whitelist, func(c *Context) Result {
+		return c.RenderJSON(struct {
+			Ok  bool
+			Msg string
+		}{Ok: false, Msg: "NOTLOGIN"})
+	})
+
+	request := httptest.NewRequest(http.MethodGet, "/probe", nil)
+	recorder := httptest.NewRecorder()
+	ctx := &Context{
+		Request: request,
+		Writer:  newStatusWriter(recorder),
+		Session: map[string]string{"UserId": "admin-id"},
+		PrincipalPolicy: func(userID string) (PrincipalRole, bool, error) {
+			if userID != "admin-id" {
+				t.Fatalf("policy userID = %q", userID)
+			}
+			return PrincipalRoleAdmin, true, nil
+		},
+	}
+	if result := hook(ctx); result != nil {
+		result.Apply(ctx.Writer, ctx.Request)
+	}
+	principal := ctx.GetPrincipal()
+	if principal.Role != PrincipalRoleAdmin || !principal.IsDemo {
+		t.Fatalf("configured principal = %+v", principal)
+	}
+
+	recorder = httptest.NewRecorder()
+	ctx = &Context{
+		Request: request,
+		Writer:  newStatusWriter(recorder),
+		Session: map[string]string{"UserId": "user-id"},
+		PrincipalPolicy: func(string) (PrincipalRole, bool, error) {
+			return "", false, errors.New("demo configuration is invalid")
+		},
+	}
+	if result := hook(ctx); result != nil {
+		result.Apply(ctx.Writer, ctx.Request)
+	}
+	if ctx.GetPrincipal().Role != PrincipalRoleAnonymous || !strings.Contains(recorder.Body.String(), "NOTLOGIN") {
+		t.Fatalf("policy failure did not fail closed: principal=%+v body=%q", ctx.GetPrincipal(), recorder.Body.String())
 	}
 }
 
@@ -272,6 +331,104 @@ func TestAppWritesSessionCookieBeforeActionResponse(t *testing.T) {
 	decoded, err := app.Sessions.Decode(cookies[0].Value)
 	if err != nil || decoded["UserId"] != "u1" {
 		t.Fatalf("session cookie = %#v, decode error = %v", decoded, err)
+	}
+}
+
+func TestAppRejectsSessionCommitFailure(t *testing.T) {
+	wantErr := errors.New("encode failed")
+	cfg, err := ParseConfig([]byte("app.secret=session-test-secret\n"), "")
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
+	codec := NewSessionCodec(cfg)
+	codec.EncodeFunc = func(map[string]string) (*http.Cookie, error) { return nil, wantErr }
+	app := &App{
+		Routes:   CompileRoutes(mustParse(t, "GET /login Auth.Login")),
+		Registry: NewRegistry(),
+		Sessions: codec,
+	}
+	app.Registry.Register("Auth", "Login", nil, func(c *Context) Result {
+		c.SetSession("UserId", "u1")
+		return c.RenderText("must not be returned")
+	})
+
+	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/login", nil))
+	var response struct {
+		OK  bool   `json:"Ok"`
+		Msg string `json:"Msg"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil || rec.Code != http.StatusOK || response.OK || response.Msg != "session_commit" {
+		t.Fatalf("commit failure response = status %d body %q", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAppPreservesActionFailureWhenSessionCommitAlsoFails(t *testing.T) {
+	cfg, err := ParseConfig([]byte("app.secret=session-test-secret\n"), "")
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
+	codec := NewSessionCodec(cfg)
+	codec.EncodeFunc = func(map[string]string) (*http.Cookie, error) {
+		return nil, errors.New("encode failed")
+	}
+	app := &App{
+		Routes:   CompileRoutes(mustParse(t, "GET /logout Auth.Logout")),
+		Registry: NewRegistry(),
+		Sessions: codec,
+	}
+	app.Registry.Register("Auth", "Logout", nil, func(c *Context) Result {
+		if err := c.Delete("_token"); err != nil {
+			t.Fatalf("Delete: %v", err)
+		}
+		return c.RenderJSON(struct {
+			Ok  bool
+			Msg string
+		}{Ok: false, Msg: "logout_cleanup_failed"})
+	})
+
+	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/logout", nil))
+	var response struct {
+		OK  bool   `json:"Ok"`
+		Msg string `json:"Msg"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil || rec.Code != http.StatusOK || response.OK || response.Msg != "logout_cleanup_failed" {
+		t.Fatalf("action failure response = status %d body %q", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAppUsesInjectedSessionWriter(t *testing.T) {
+	writerErr := errors.New("session write failed")
+	writer := &testSessionWriter{err: writerErr}
+	app := &App{
+		Routes:   CompileRoutes(mustParse(t, "GET /login Auth.Login")),
+		Registry: NewRegistry(),
+		SessionWriterFactory: func(*Context) SessionWriter {
+			return writer
+		},
+	}
+	app.Registry.Register("Auth", "Login", nil, func(c *Context) Result {
+		if err := c.Set("UserId", "u1"); err != nil {
+			return c.RenderJSON(struct {
+				Ok  bool
+				Msg string
+			}{Ok: false, Msg: "storage"})
+		}
+		return c.RenderText("must not be returned")
+	})
+
+	recorder := httptest.NewRecorder()
+	app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/login", nil))
+	if writer.setKey != "UserId" || writer.setValue != "u1" {
+		t.Fatalf("injected writer Set = (%q, %q)", writer.setKey, writer.setValue)
+	}
+	var response struct {
+		OK  bool   `json:"Ok"`
+		Msg string `json:"Msg"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil || response.OK || response.Msg != "storage" {
+		t.Fatalf("injected writer response = status %d body %q", recorder.Code, recorder.Body.String())
 	}
 }
 

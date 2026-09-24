@@ -94,9 +94,10 @@ func main() {
 	api.RegisterHTTP(registry, *runMode)
 
 	app := &httpserver.App{
-		Routes:   httpserver.CompileRoutes(routes),
-		Registry: registry,
-		Sessions: httpserver.NewSessionCodec(cfg),
+		Routes:          httpserver.CompileRoutes(routes),
+		Registry:        registry,
+		Sessions:        httpserver.NewSessionCodec(cfg),
+		PrincipalPolicy: api.PrincipalPolicyFromConfig(),
 		StaticHandler: func(base string) http.Handler {
 			return staticHandler(appBase, base)
 		},

@@ -71,10 +71,26 @@ func Gzip(next http.Handler) http.Handler {
 // NOTLOGIN JSON envelope, plain requests redirect to /login.
 func LoginRequired(whitelist map[string]map[string]bool, anonymous func(c *Context) Result) BeforeFunc {
 	return func(c *Context) Result {
+		userID, present, err := c.Get("UserId")
+		if err != nil {
+			c.SetPrincipal(AnonymousPrincipal())
+			if needValidateWhitelist(whitelist, c.Controller, c.Action) {
+				return anonymous(c)
+			}
+			return nil
+		}
+		if !present || userID == "" {
+			c.SetPrincipal(AnonymousPrincipal())
+		} else if err := c.SetAuthenticatedPrincipal(userID, PrincipalSourceWebSession, TokenStateAbsent); err != nil {
+			if needValidateWhitelist(whitelist, c.Controller, c.Action) {
+				return anonymous(c)
+			}
+			return nil
+		}
 		if !needValidateWhitelist(whitelist, c.Controller, c.Action) {
 			return nil
 		}
-		if userId, ok := c.Session["UserId"]; ok && userId != "" {
+		if userID != "" {
 			return nil
 		}
 		return anonymous(c)

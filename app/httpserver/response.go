@@ -6,6 +6,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 )
 
@@ -69,6 +70,10 @@ type jsonLineResult struct {
 	value  interface{}
 }
 
+func (r jsonLineResult) failed() bool {
+	return resultEnvelopeFailed(r.value)
+}
+
 func (r jsonLineResult) Apply(w http.ResponseWriter, req *http.Request) {
 	body, err := json.Marshal(r.value)
 	if err != nil {
@@ -85,6 +90,60 @@ func (r jsonLineResult) Apply(w http.ResponseWriter, req *http.Request) {
 type jsonResult struct {
 	status int
 	value  interface{}
+}
+
+func (r jsonResult) failed() bool {
+	return resultEnvelopeFailed(r.value)
+}
+
+func resultFailed(result Result) bool {
+	failed, ok := result.(interface{ failed() bool })
+	return ok && failed.failed()
+}
+
+func resultEnvelopeFailed(value interface{}) bool {
+	reflected := reflect.ValueOf(value)
+	for reflected.IsValid() && (reflected.Kind() == reflect.Pointer || reflected.Kind() == reflect.Interface) {
+		if reflected.IsNil() {
+			return false
+		}
+		reflected = reflected.Elem()
+	}
+	if !reflected.IsValid() {
+		return false
+	}
+
+	switch reflected.Kind() {
+	case reflect.Struct:
+		field := reflected.FieldByName("Ok")
+		if ok, present := reflectedBool(field); present {
+			return !ok
+		}
+	case reflect.Map:
+		if reflected.Type().Key().Kind() != reflect.String {
+			return false
+		}
+		for _, key := range []string{"Ok", "ok"} {
+			field := reflected.MapIndex(reflect.ValueOf(key).Convert(reflected.Type().Key()))
+			if ok, present := reflectedBool(field); present {
+				return !ok
+			}
+		}
+	}
+	return false
+}
+
+func reflectedBool(value reflect.Value) (bool, bool) {
+	for value.IsValid() && (value.Kind() == reflect.Pointer || value.Kind() == reflect.Interface) {
+		if value.IsNil() {
+			return false, false
+		}
+		value = value.Elem()
+	}
+	if !value.IsValid() || value.Kind() != reflect.Bool {
+		return false, false
+	}
+	return value.Bool(), true
 }
 
 func (r jsonResult) Apply(w http.ResponseWriter, req *http.Request) {

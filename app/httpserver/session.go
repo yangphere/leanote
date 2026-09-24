@@ -24,6 +24,9 @@ type SessionCodec struct {
 	Secure  bool          // cookie.secure
 	TTL     time.Duration // session.expires
 	NowFunc func() time.Time
+	// EncodeFunc is an optional seam for adapter tests; production codecs use
+	// the built-in authenticated encoding below.
+	EncodeFunc func(map[string]string) (*http.Cookie, error)
 }
 
 type sessionPayload struct {
@@ -49,6 +52,9 @@ func (c *SessionCodec) now() time.Time {
 
 // Encode signs the session keys and returns the cookie to set on a response.
 func (c *SessionCodec) Encode(keys map[string]string) (*http.Cookie, error) {
+	if c.EncodeFunc != nil {
+		return c.EncodeFunc(keys)
+	}
 	now := c.now()
 	payload := sessionPayload{Keys: keys, Exp: now.Add(c.TTL).Unix()}
 	raw, err := json.Marshal(payload)

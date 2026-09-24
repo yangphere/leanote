@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,9 +11,35 @@ import (
 	"github.com/revel/revel"
 	"github.com/revel/revel/session"
 	"github.com/yangphere/leanote/app/controllers"
+	"github.com/yangphere/leanote/app/httpserver"
 	"github.com/yangphere/leanote/app/info"
 	"github.com/yangphere/leanote/app/service"
 )
+
+func TestPrincipalPolicyFromConfigLeavesUnconfiguredDemoAnonymous(t *testing.T) {
+	saved := configService
+	configService = &service.ConfigService{GlobalStringConfigs: map[string]string{}}
+	defer func() { configService = saved }()
+
+	role, isDemo, err := PrincipalPolicyFromConfig()("507f1f77bcf86cd799439012")
+	if err != nil || role != httpserver.PrincipalRoleMember || isDemo {
+		t.Fatalf("unconfigured principal = role %q demo=%t err=%v", role, isDemo, err)
+	}
+}
+
+func TestPrincipalPolicyFromConfigFailsClosedOnInvalidDemoConfiguration(t *testing.T) {
+	saved := configService
+	configService = &service.ConfigService{GlobalStringConfigs: map[string]string{
+		"demoUserId":   "not-an-object-id",
+		"demoUsername": "demo@example.test",
+	}}
+	defer func() { configService = saved }()
+
+	_, _, err := PrincipalPolicyFromConfig()("507f1f77bcf86cd799439012")
+	if !errors.Is(err, service.ErrDemoConfiguration) {
+		t.Fatalf("invalid demo configuration error = %v", err)
+	}
+}
 
 func TestApiUserMutationFailsClosedWhenDemoIdentityConfigurationIsMissing(t *testing.T) {
 	saved := configService

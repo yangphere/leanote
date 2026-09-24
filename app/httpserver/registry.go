@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"fmt"
 	"net/http"
 	"sort"
 	"strings"
@@ -154,34 +155,103 @@ type Context struct {
 	SessionID string
 	Locale    string
 	// Controller/Action are the canonical dispatched names.
-	Controller string
-	Action     string
+	Controller      string
+	Action          string
+	Principal       Principal
+	SessionReader   SessionReader
+	SessionWriter   SessionWriter
+	PrincipalPolicy PrincipalPolicy
 
 	// sessionDirty collects SetSession/DeleteSession calls; the dispatcher
 	// persists them into the session cookie after the action.
 	sessionDirty map[string]*string
 
-	result Result
+	result        Result
+	sessionCommit func() error
 }
 
-// SetSession writes a session key; the cookie is refreshed after the action.
-func (c *Context) SetSession(key, value string) {
+type sessionCommitFailure struct {
+	OK  bool   `json:"Ok"`
+	Msg string `json:"Msg"`
+}
+
+func (c *Context) Get(key string) (string, bool, error) {
+	if c.SessionReader != nil && c.SessionReader != c {
+		return c.SessionReader.Get(key)
+	}
+	value, ok := c.Session[key]
+	return value, ok, nil
+}
+
+func (c *Context) Set(key, value string) error {
+	if c.SessionWriter != nil && c.SessionWriter != c {
+		return c.SessionWriter.Set(key, value)
+	}
+	if c.Session == nil {
+		c.Session = map[string]string{}
+	}
 	if c.sessionDirty == nil {
 		c.sessionDirty = map[string]*string{}
 	}
 	c.Session[key] = value
-	v := value
-	c.sessionDirty[key] = &v
+	valueCopy := value
+	c.sessionDirty[key] = &valueCopy
+	return nil
 }
 
-// DeleteSession removes a session key; the cookie is refreshed after the
-// action.
-func (c *Context) DeleteSession(key string) {
+func (c *Context) Delete(key string) error {
+	if c.SessionWriter != nil && c.SessionWriter != c {
+		return c.SessionWriter.Delete(key)
+	}
+	if c.Session == nil {
+		c.Session = map[string]string{}
+	}
 	if c.sessionDirty == nil {
 		c.sessionDirty = map[string]*string{}
 	}
 	delete(c.Session, key)
 	c.sessionDirty[key] = nil
+	return nil
+}
+
+func (c *Context) Commit() error {
+	if c.SessionWriter != nil && c.SessionWriter != c {
+		return c.SessionWriter.Commit()
+	}
+	if c.sessionCommit == nil {
+		return nil
+	}
+	return c.sessionCommit()
+}
+
+func (c *Context) SetPrincipal(principal Principal) { c.Principal = principal }
+
+func (c *Context) SetAuthenticatedPrincipal(userID string, source PrincipalSource, tokenState TokenState) error {
+	principal, err := AuthenticatedPrincipalWithPolicy(userID, source, tokenState, c.PrincipalPolicy)
+	if err != nil {
+		c.SetPrincipal(AnonymousPrincipal())
+		return err
+	}
+	c.SetPrincipal(principal)
+	return nil
+}
+
+func (c *Context) GetPrincipal() Principal {
+	if c.Principal.Role == "" {
+		return AnonymousPrincipal()
+	}
+	return c.Principal
+}
+
+// SetSession writes a session key; the cookie is refreshed after the action.
+func (c *Context) SetSession(key, value string) error {
+	return c.Set(key, value)
+}
+
+// DeleteSession removes a session key; the cookie is refreshed after the
+// action.
+func (c *Context) DeleteSession(key string) error {
+	return c.Delete(key)
 }
 
 // Render helpers return Results that the dispatcher applies.
@@ -213,11 +283,14 @@ func (c *Context) NotFound(msg string) Result {
 // recover → route/rewrite → session → i18n/locale → interceptors → action,
 // with gzip around the response (CompressFilter).
 type App struct {
-	Routes         *RouteTable
-	Registry       *Registry
-	Sessions       *SessionCodec // optional; nil = every request anonymous
-	LocaleResolver func(r *http.Request) string
-	OnRequest      func() // pre-dispatch hook, e.g. db.CheckMongoSessionLost
+	Routes               *RouteTable
+	Registry             *Registry
+	Sessions             *SessionCodec // optional; nil = every request anonymous
+	SessionReaderFactory func(map[string]string) SessionReader
+	SessionWriterFactory func(*Context) SessionWriter
+	PrincipalPolicy      PrincipalPolicy
+	LocaleResolver       func(r *http.Request) string
+	OnRequest            func() // pre-dispatch hook, e.g. db.CheckMongoSessionLost
 	// HealthCheck is an optional unauthenticated readiness probe. When set,
 	// GET /healthz is handled before route matching and returns the fixed JSON
 	// contract without exposing application state.
@@ -323,10 +396,21 @@ func (a *App) dispatch(w http.ResponseWriter, r *http.Request) {
 		Session: session, SessionID: sessionID,
 		Locale:     locale,
 		Controller: titleFirst(controller), Action: titleFirst(action),
+		PrincipalPolicy: a.PrincipalPolicy,
 	}
+	if a.SessionReaderFactory != nil {
+		ctx.SessionReader = a.SessionReaderFactory(session)
+	}
+	if a.SessionWriterFactory != nil {
+		ctx.SessionWriter = a.SessionWriterFactory(ctx)
+	}
+	ctx.sessionCommit = func() error { return a.applySessionCookie(ctx) }
 	for _, before := range entry.Befores {
 		if result := before(ctx); result != nil {
-			a.applySessionCookie(ctx)
+			if err := ctx.Commit(); err != nil {
+				applySessionCommitFailure(ctx, result)
+				return
+			}
 			ApplyResult(ctx, result)
 			return
 		}
@@ -335,15 +419,26 @@ func (a *App) dispatch(w http.ResponseWriter, r *http.Request) {
 	// writes response headers. Applying it afterward loses Set-Cookie because
 	// net/http has already committed the response.
 	result := entry.Handler(ctx)
-	a.applySessionCookie(ctx)
+	if err := ctx.Commit(); err != nil {
+		applySessionCommitFailure(ctx, result)
+		return
+	}
 	ApplyResult(ctx, result)
+}
+
+func applySessionCommitFailure(ctx *Context, result Result) {
+	if result != nil && resultFailed(result) {
+		ApplyResult(ctx, result)
+		return
+	}
+	ApplyResult(ctx, ctx.RenderJSON(sessionCommitFailure{Msg: "session_commit"}))
 }
 
 // applySessionCookie refreshes the session cookie when the action wrote
 // session keys (revel SessionFilter behaviour).
-func (a *App) applySessionCookie(ctx *Context) {
+func (a *App) applySessionCookie(ctx *Context) error {
 	if a.Sessions == nil || len(ctx.sessionDirty) == 0 {
-		return
+		return nil
 	}
 	for key, value := range ctx.sessionDirty {
 		if value == nil {
@@ -352,9 +447,12 @@ func (a *App) applySessionCookie(ctx *Context) {
 			ctx.Session[key] = *value
 		}
 	}
-	if cookie, err := a.Sessions.Encode(ctx.Session); err == nil {
-		ctx.Writer.Header().Add("Set-Cookie", cookie.String())
+	cookie, err := a.Sessions.Encode(ctx.Session)
+	if err != nil {
+		return fmt.Errorf("commit session cookie: %w", err)
 	}
+	ctx.Writer.Header().Add("Set-Cookie", cookie.String())
+	return nil
 }
 
 // ApplyResult funnels every response through the status writer so the

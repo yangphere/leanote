@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/httpserver"
@@ -20,8 +21,14 @@ var apiCommonUrl = map[string]map[string]bool{
 // RegisterHTTP wires the first-party api actions. Callers must have run the
 // InitService chain (service → controllers → api) first: the actions use
 // the package service singletons.
-func RegisterHTTP(rs *httpserver.Registry, runMode string) {
-	before := apiAuthBefore(apiCommonUrl)
+func RegisterHTTP(rs *httpserver.Registry, runMode string, policies ...httpserver.PrincipalPolicy) {
+	var policy httpserver.PrincipalPolicy
+	if len(policies) > 0 {
+		policy = policies[0]
+	} else if configService != nil {
+		policy = PrincipalPolicyFromConfig()
+	}
+	before := apiAuthBefore(apiCommonUrl, policy)
 
 	auth := &ApiAuthServer{}
 	rs.Register("ApiAuth", "Login", []httpserver.BeforeFunc{before}, auth.Login)
@@ -37,26 +44,35 @@ func RegisterHTTP(rs *httpserver.Registry, runMode string) {
 // apiUserId returns the bound userId the api interceptor stored in the
 // session (_userId).
 func apiUserId(c *httpserver.Context) string {
-	return c.Session["_userId"]
+	return c.GetPrincipal().UserID
 }
 
 // apiAuthBefore ports the api AuthInterceptor: token param (or web-session
 // fallback) resolves the userId via sessionService; _token/_userId are
 // written back into the session cookie; unmet auth renders the NOTLOGIN
 // envelope. Whitelisted actions pass through.
-func apiAuthBefore(whitelist map[string]map[string]bool) httpserver.BeforeFunc {
+func apiAuthBefore(whitelist map[string]map[string]bool, policy httpserver.PrincipalPolicy) httpserver.BeforeFunc {
 	return func(c *httpserver.Context) httpserver.Result {
+		if policy != nil {
+			c.PrincipalPolicy = policy
+		}
 		token, supplied := c.Params.Get("token")
 		if !supplied {
 			var ok bool
-			token, ok = c.Session["_ID"]
+			var err error
+			token, ok, err = c.Get("_ID")
+			if err != nil {
+				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+			}
 			if !ok || token == "" {
 				var err error
 				token, err = db.NewAnonymousSessionID()
 				if err != nil {
 					return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
 				}
-				c.SetSession("_ID", token)
+				if err := c.Set("_ID", token); err != nil {
+					return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+				}
 			}
 		}
 
@@ -64,14 +80,30 @@ func apiAuthBefore(whitelist map[string]map[string]bool) httpserver.BeforeFunc {
 		// same rule applies to an unmapped anonymous _ID: lookup is read-only.
 		userId, err := sessionService.ResolveUserID(token)
 		if err == nil && userId != "" {
-			c.SetSession("_token", token)
-			c.SetSession("_userId", userId)
+			source := httpserver.PrincipalSourceAPIToken
+			if !supplied {
+				source = httpserver.PrincipalSourceWebSession
+			}
+			if err := c.SetAuthenticatedPrincipal(userId, source, tokenState(source)); err != nil {
+				return c.RenderJSON(info.ApiRe{Ok: false, Msg: apiDemoPolicyErrorMessage(err)})
+			}
+			if err := c.Set("_token", token); err != nil {
+				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+			}
+			if err := c.Set("_userId", userId); err != nil {
+				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+			}
 		} else {
 			if err != nil && !errors.Is(err, db.ErrSessionNotFound) {
 				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
 			}
-			c.DeleteSession("_token")
-			c.DeleteSession("_userId")
+			if err := c.Delete("_token"); err != nil {
+				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+			}
+			if err := c.Delete("_userId"); err != nil {
+				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+			}
+			c.SetPrincipal(httpserver.AnonymousPrincipal())
 		}
 
 		if !needValidateAPI(whitelist, c.Controller, c.Action) {
@@ -84,6 +116,35 @@ func apiAuthBefore(whitelist map[string]map[string]bool) httpserver.BeforeFunc {
 		re.Msg = "NOTLOGIN"
 		return c.RenderJSON(re)
 	}
+}
+
+func PrincipalPolicyFromConfig() httpserver.PrincipalPolicy {
+	return func(userID string) (httpserver.PrincipalRole, bool, error) {
+		if configService == nil {
+			return "", false, errors.New("identity configuration is not initialized")
+		}
+		role := httpserver.PrincipalRoleMember
+		if adminID := strings.TrimSpace(configService.GetAdminUserId()); adminID != "" && userID == adminID {
+			role = httpserver.PrincipalRoleAdmin
+		}
+		demoID := strings.TrimSpace(configService.GetGlobalStringConfig("demoUserId"))
+		demoLogin := strings.TrimSpace(configService.GetGlobalStringConfig("demoUsername"))
+		if demoID == "" && demoLogin == "" {
+			return role, false, nil
+		}
+		isDemo, err := configService.IsDemoUser(userID)
+		if err != nil {
+			return "", false, err
+		}
+		return role, isDemo, nil
+	}
+}
+
+func tokenState(source httpserver.PrincipalSource) httpserver.TokenState {
+	if source == httpserver.PrincipalSourceAPIToken {
+		return httpserver.TokenStateValid
+	}
+	return httpserver.TokenStateAbsent
 }
 
 func needValidateAPI(whitelist map[string]map[string]bool, controller, method string) bool {

@@ -37,3 +37,9 @@ The controller must inspect every `UpdateNote` and `UpdateNoteContent` result be
 - Ignoring one service result when the request updates both metadata and content, which masks a partial write.
 - Treating transport status 200 as the business success signal.
 - Table-driven tests must keep covering the 404/503 matrix, including the exact future-skew boundary and the smallest representable value beyond it.
+
+## HTTP Session and Principal Boundaries
+
+- `httpserver.Context` is the application-facing `SessionReader` and `SessionWriter`; `Get`, `Set`, `Delete`, and `Commit` must delegate to injected boundaries when present and return their errors. First-party adapters must not read `Context.Session` directly.
+- Session mutations commit before the action result writes response headers. A commit failure returns the stable `session_commit` envelope only when the action did not already return an `Ok:false` envelope; action-specific failures such as `logout_cleanup_failed` and `registered_relogin_required` remain authoritative.
+- `PrincipalPolicy` derives `member`/`admin` and the demo flag from canonical configuration. An absent demo configuration means no principal is classified as demo; a partial, inconsistent, or storage-failing configured demo identity fails closed and preserves the `configuration` versus `storage` error classification.
