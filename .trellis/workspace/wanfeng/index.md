@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 19
-- **Last Active**: 2026-09-24
+- **Total Sessions**: 20
+- **Last Active**: 2026-09-25
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~500 | Active |
+| `journal-1.md` | ~522 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 20 | 2026-09-25 | 完成应用发布链路 | `0b2bd184` | `dev` |
 | 19 | 2026-09-24 | 身份会话边界修复与归档 | `7a6156d7` | `dev` |
 | 18 | 2026-09-18 | 收敛内容、文件与媒体业务边界 | `c50b14c9` | `dev` |
 | 17 | 2026-09-15 | 完成笔记工作区持久化与安全重试 | `58eb8929` | `dev` |

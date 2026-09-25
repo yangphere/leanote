@@ -498,3 +498,25 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 20: 完成应用发布链路
+<!-- trellis-session: v=2 fp=7aed515c6f9a4c3e -->
+
+**Date**: 2026-09-25
+**Task**: 完成应用发布链路
+**Branch**: `dev`
+
+### Summary
+
+完成应用发布跨控制器、服务、数据库、文件归档与前端链路改造，补充回归测试与验收材料；Go 针对性测试全部通过。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0b2bd184` | feat: 完成应用发布链路 |
+
+### Status
+
+[OK] **Completed**
