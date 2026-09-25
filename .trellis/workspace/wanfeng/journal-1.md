@@ -520,3 +520,25 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 21: 完成应用管理端修复并归档
+<!-- trellis-session: v=2 fp=54e6a33201a7cd5b -->
+
+**Date**: 2026-09-25
+**Task**: 完成应用管理端修复并归档
+**Branch**: `dev`
+
+### Summary
+
+完成 09-08-application-admin 的管理权限、配置校验、备份恢复、升级 checkpoint、feedback/outbox、邮件脱敏及审查回归修复；go test ./...、go vet、go build、git diff --check 与 Trellis validate 通过。真实 Mongo、SMTP、HTTP、浏览器、故障注入和跨进程租约验证仍保持未运行。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `65f1b5ee` | feat(admin): 管理端配置备份升级与反馈边界 |
+
+### Status
+
+[OK] **Completed**
