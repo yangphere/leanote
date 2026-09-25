@@ -22,8 +22,15 @@ const maxPDFImageBytes = 128 * 1024 * 1024
 type PDFRepository interface {
 	FindNote(context.Context, domain.ObjectID) (info.Note, error)
 	FindNoteContent(context.Context, domain.ObjectID, domain.ObjectID) (info.NoteContent, error)
-	CanReadNote(context.Context, info.Note, domain.ObjectID) (bool, error)
 	FindFile(context.Context, domain.ObjectID, domain.ObjectID) (info.File, error)
+}
+
+type NotePermissionPort interface {
+	ResolveNotePermission(context.Context, domain.ObjectID, domain.ObjectID, domain.ObjectID) (int, bool, error)
+}
+
+type legacyNotePermissionPort interface {
+	CanReadNote(context.Context, info.Note, domain.ObjectID) (bool, error)
 }
 
 // MongoPDFRepository is the production persistence adapter. Every lookup is
@@ -36,7 +43,7 @@ func (MongoPDFRepository) FindNote(ctx context.Context, noteID domain.ObjectID) 
 		return info.Note{}, db.ErrMongoClientNotInitialized
 	}
 	var note info.Note
-	err := db.Notes.FindContext(ctx, bson.M{"_id": noteID, "IsDeleted": false}).One(&note)
+	err := db.Notes.FindContext(ctx, bson.M{"_id": noteID, "IsTrash": false, "IsDeleted": false}).One(&note)
 	return note, err
 }
 
@@ -58,64 +65,9 @@ func (MongoPDFRepository) FindFile(ctx context.Context, ownerID, fileID domain.O
 	return file, err
 }
 
-func (MongoPDFRepository) CanReadNote(ctx context.Context, note info.Note, actorID domain.ObjectID) (bool, error) {
-	if db.ShareNotes == nil || db.ShareNotebooks == nil || db.GroupUsers == nil || db.Groups == nil {
-		return false, db.ErrMongoClientNotInitialized
-	}
-	groupIDs, err := pdfActorGroupIDs(ctx, actorID)
-	if err != nil {
-		return false, err
-	}
-	recipient := bson.M{"ToUserId": actorID}
-	if len(groupIDs) != 0 {
-		recipient = bson.M{"$or": []bson.M{
-			bson.M{"ToUserId": actorID},
-			bson.M{"ToGroupId": bson.M{"$in": groupIDs}},
-		}}
-	}
-	recipient["UserId"] = note.UserId
-	recipient["NoteId"] = note.NoteId
-	count, err := db.ShareNotes.FindContext(ctx, recipient).Count()
-	if err != nil || count != 0 {
-		return count != 0, err
-	}
-	if note.NotebookId.IsZero() {
-		return false, nil
-	}
-	delete(recipient, "NoteId")
-	recipient["NotebookId"] = note.NotebookId
-	count, err = db.ShareNotebooks.FindContext(ctx, recipient).Count()
-	return count != 0, err
-}
-
-func pdfActorGroupIDs(ctx context.Context, actorID domain.ObjectID) ([]domain.ObjectID, error) {
-	var memberships []info.GroupUser
-	if err := db.GroupUsers.FindContext(ctx, bson.M{"UserId": actorID}).All(&memberships); err != nil {
-		return nil, err
-	}
-	var owned []info.Group
-	if err := db.Groups.FindContext(ctx, bson.M{"UserId": actorID}).All(&owned); err != nil {
-		return nil, err
-	}
-	seen := make(map[domain.ObjectID]struct{}, len(memberships)+len(owned))
-	groupIDs := make([]domain.ObjectID, 0, len(memberships)+len(owned))
-	for _, membership := range memberships {
-		if _, ok := seen[membership.GroupId]; !ok {
-			seen[membership.GroupId] = struct{}{}
-			groupIDs = append(groupIDs, membership.GroupId)
-		}
-	}
-	for _, group := range owned {
-		if _, ok := seen[group.GroupId]; !ok {
-			seen[group.GroupId] = struct{}{}
-			groupIDs = append(groupIDs, group.GroupId)
-		}
-	}
-	return groupIDs, nil
-}
-
 type NotePort struct {
 	Repository PDFRepository
+	Permission NotePermissionPort
 }
 
 func (port NotePort) LoadAuthorized(ctx context.Context, actorID, noteID domain.ObjectID) (application.PDFNoteSnapshot, error) {
@@ -132,11 +84,18 @@ func (port NotePort) LoadAuthorized(ctx context.Context, actorID, noteID domain.
 	if err := pdfAdapterContextError(ctx, "pdf_note_canceled"); err != nil {
 		return application.PDFNoteSnapshot{}, err
 	}
-	if note.NoteId != noteID || note.UserId.IsZero() || note.IsDeleted {
+	if note.NoteId != noteID || note.UserId.IsZero() || note.IsTrash || note.IsDeleted {
 		return application.PDFNoteSnapshot{}, application.NewError(application.ErrorNotFound, "pdf_note_missing", nil)
 	}
 	if actorID != note.UserId && !note.IsBlog {
-		allowed, err := port.Repository.CanReadNote(ctx, note, actorID)
+		var allowed bool
+		if port.Permission != nil {
+			_, allowed, err = port.Permission.ResolveNotePermission(ctx, note.UserId, actorID, noteID)
+		} else if legacy, ok := port.Repository.(legacyNotePermissionPort); ok {
+			allowed, err = legacy.CanReadNote(ctx, note, actorID)
+		} else {
+			return application.PDFNoteSnapshot{}, application.NewError(application.ErrorDependency, "pdf_note_permission_port_missing", nil)
+		}
 		if err != nil {
 			return application.PDFNoteSnapshot{}, repositoryError("pdf_note_permission", err)
 		}

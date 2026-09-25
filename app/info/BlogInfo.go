@@ -111,6 +111,26 @@ type BlogComment struct {
 	CreatedTime time.Time `bson:"CreatedTime"`
 }
 
+const (
+	BlogCommentReceiptPending   = "pending"
+	BlogCommentReceiptConfirmed = "confirmed"
+	BlogCommentReceiptDeleted   = "deleted"
+)
+
+type BlogCommentSubmissionReceipt struct {
+	ReceiptId     domain.ObjectID `bson:"_id,omitempty"`
+	ActorId       domain.ObjectID `bson:"ActorId"`
+	SubmissionId  string          `bson:"SubmissionId"`
+	NoteId        domain.ObjectID `bson:"NoteId"`
+	ToCommentId   domain.ObjectID `bson:"ToCommentId,omitempty"`
+	ToUserId      domain.ObjectID `bson:"ToUserId,omitempty"`
+	ContentSHA256 string          `bson:"ContentSHA256"`
+	CommentId     domain.ObjectID `bson:"CommentId"`
+	Status        string          `bson:"Status"`
+	CreatedTime   time.Time       `bson:"CreatedTime"`
+	UpdatedTime   time.Time       `bson:"UpdatedTime"`
+}
+
 type BlogCommentPublic struct {
 	BlogComment
 	IsILikeIt bool

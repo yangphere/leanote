@@ -273,6 +273,49 @@ func (MongoWorkspaceOperationStore) Get(ctx context.Context, ownerID domain.Obje
 	return operationReceipt(document), nil
 }
 
+func UnfinishedWorkspaceOperation(ctx context.Context, ownerID, resourceID domain.ObjectID, kind string) (applicationnotes.OperationReceipt, bool, error) {
+	if WorkspaceOperations == nil {
+		return applicationnotes.OperationReceipt{}, false, ErrMongoClientNotInitialized
+	}
+	filter := bson.M{"OwnerId": ownerID, "Kind": kind, "Status": bson.M{"$nin": terminalWorkspaceOperationStatuses()}}
+	if !resourceID.IsZero() {
+		filter["ResourceId"] = resourceID
+	}
+	var documents []workspaceOperationDocument
+	if err := WorkspaceOperations.FindContext(ctx, filter).Limit(2).All(&documents); err != nil {
+		return applicationnotes.OperationReceipt{}, false, fmt.Errorf("find unfinished workspace operation: %w", err)
+	}
+	if len(documents) > 1 {
+		return applicationnotes.OperationReceipt{}, false, fmt.Errorf("multiple unfinished %s operations for owner %s", kind, ownerID.Hex())
+	}
+	if len(documents) == 0 {
+		return applicationnotes.OperationReceipt{}, false, nil
+	}
+	return operationReceipt(documents[0]), true, nil
+}
+
+func LatestCommittedWorkspaceOperation(ctx context.Context, ownerID, resourceID domain.ObjectID, kind string, assignedUSN int) (applicationnotes.OperationReceipt, bool, error) {
+	if WorkspaceOperations == nil {
+		return applicationnotes.OperationReceipt{}, false, ErrMongoClientNotInitialized
+	}
+	filter := bson.M{"OwnerId": ownerID, "Kind": kind, "Status": applicationnotes.OperationCommitted}
+	if !resourceID.IsZero() {
+		filter["ResourceId"] = resourceID
+	}
+	if assignedUSN > 0 {
+		filter["AssignedUsn"] = assignedUSN
+	}
+	var document workspaceOperationDocument
+	err := WorkspaceOperations.FindContext(ctx, filter).Sort("-CreatedAt", "-_id").One(&document)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return applicationnotes.OperationReceipt{}, false, nil
+	}
+	if err != nil {
+		return applicationnotes.OperationReceipt{}, false, fmt.Errorf("find committed workspace operation: %w", err)
+	}
+	return operationReceipt(document), true, nil
+}
+
 func newWorkspaceLeaseID() (string, error) {
 	value := make([]byte, 16)
 	if _, err := rand.Read(value); err != nil {

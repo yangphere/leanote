@@ -187,6 +187,41 @@ func TestNotePortFailsClosedForUnauthorizedAndRepositoryErrors(t *testing.T) {
 	}
 }
 
+type fakeNotePermission struct {
+	perm    int
+	allowed bool
+	err     error
+}
+
+func (permission fakeNotePermission) ResolveNotePermission(context.Context, domain.ObjectID, domain.ObjectID, domain.ObjectID) (int, bool, error) {
+	return permission.perm, permission.allowed, permission.err
+}
+
+func TestNotePortUsesInjectedPermissionSeam(t *testing.T) {
+	owner := mustPDFObjectID(t, "507f1f77bcf86cd799439011")
+	actor := mustPDFObjectID(t, "507f1f77bcf86cd799439012")
+	noteID := mustPDFObjectID(t, "507f1f77bcf86cd799439013")
+	repository := &fakePDFRepository{
+		note:    info.Note{NoteId: noteID, UserId: owner},
+		content: info.NoteContent{NoteId: noteID, UserId: owner, Content: "body"},
+		canRead: false,
+	}
+	snapshot, err := (NotePort{Repository: repository, Permission: fakeNotePermission{perm: 0, allowed: true}}).LoadAuthorized(context.Background(), actor, noteID)
+	if err != nil || snapshot.NoteID != noteID {
+		t.Fatalf("LoadAuthorized() snapshot=%+v error=%v", snapshot, err)
+	}
+}
+
+func TestNotePortRejectsTrashBeforePublicRead(t *testing.T) {
+	owner := mustPDFObjectID(t, "507f1f77bcf86cd799439011")
+	actor := mustPDFObjectID(t, "507f1f77bcf86cd799439012")
+	noteID := mustPDFObjectID(t, "507f1f77bcf86cd799439013")
+	repository := &fakePDFRepository{note: info.Note{NoteId: noteID, UserId: owner, IsBlog: true, IsTrash: true}}
+	if _, err := (NotePort{Repository: repository, Permission: fakeNotePermission{allowed: true}}).LoadAuthorized(context.Background(), actor, noteID); pdfErrorCategory(err) != application.ErrorNotFound {
+		t.Fatalf("trash note error=%v category=%q", err, pdfErrorCategory(err))
+	}
+}
+
 func TestResourcePortUsesOwnerScopedLookupAndSafeContentStore(t *testing.T) {
 	owner := mustPDFObjectID(t, "507f1f77bcf86cd799439011")
 	fileID := mustPDFObjectID(t, "507f1f77bcf86cd799439014")
@@ -235,14 +270,9 @@ func TestRemoteResourcePortUsesSharedFetcherAndFailClosedUploadLimit(t *testing.
 
 func TestMongoPDFRepositoryFailsClosedWhenDatabaseIsUninitialized(t *testing.T) {
 	savedNotes, savedContents, savedFiles := db.Notes, db.NoteContents, db.Files
-	savedShareNotes, savedShareNotebooks := db.ShareNotes, db.ShareNotebooks
-	savedGroupUsers, savedGroups := db.GroupUsers, db.Groups
 	db.Notes, db.NoteContents, db.Files = nil, nil, nil
-	db.ShareNotes, db.ShareNotebooks, db.GroupUsers, db.Groups = nil, nil, nil, nil
 	t.Cleanup(func() {
 		db.Notes, db.NoteContents, db.Files = savedNotes, savedContents, savedFiles
-		db.ShareNotes, db.ShareNotebooks = savedShareNotes, savedShareNotebooks
-		db.GroupUsers, db.Groups = savedGroupUsers, savedGroups
 	})
 	id := mustPDFObjectID(t, "507f1f77bcf86cd799439011")
 	repository := MongoPDFRepository{}
@@ -254,9 +284,6 @@ func TestMongoPDFRepositoryFailsClosedWhenDatabaseIsUninitialized(t *testing.T) 
 	}
 	if _, err := repository.FindFile(context.Background(), id, id); !errors.Is(err, db.ErrMongoClientNotInitialized) {
 		t.Fatalf("FindFile() error = %v", err)
-	}
-	if _, err := repository.CanReadNote(context.Background(), info.Note{NoteId: id, UserId: id}, id); !errors.Is(err, db.ErrMongoClientNotInitialized) {
-		t.Fatalf("CanReadNote() error = %v", err)
 	}
 }
 

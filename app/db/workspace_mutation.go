@@ -150,6 +150,7 @@ func RunWorkspaceMutation(ctx context.Context, plan WorkspaceMutationPlan) (Work
 		return WorkspaceMutationResult{
 			Mode: "transaction", Committed: transactionResult.Committed, PartialWrite: transactionResult.PartialWrite,
 			AppliedSteps: transactionResult.AppliedSteps, FailedStep: transactionResult.FailedStep,
+			Operation: transactionResult.Operation,
 		}, nil
 	}
 	if !transactionUnsupported(err) {

@@ -10,9 +10,11 @@ import (
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"html"
 	"html/template"
 	"net"
 	"net/smtp"
+	"net/textproto"
 	"strconv"
 	"strings"
 	"sync"
@@ -180,16 +182,16 @@ func (this *EmailService) SendEmailContext(ctx context.Context, to, subject, bod
 		ctx = context.Background()
 	}
 	if strings.ContainsAny(to, "\r\n") || strings.ContainsAny(subject, "\r\n") {
-		return errors.New("email header contains a line break")
+		return fmt.Errorf("%w: email header contains a line break", db.ErrOutboxTransportRejected)
 	}
 	config, err := currentSMTPDeliveryConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", db.ErrOutboxTransportRejected, err)
 	}
 	recipients := strings.Split(to, ";")
 	for _, recipient := range recipients {
 		if !IsEmail(strings.TrimSpace(recipient)) {
-			return errors.New("email recipient is invalid")
+			return fmt.Errorf("%w: email recipient is invalid", db.ErrOutboxTransportRejected)
 		}
 	}
 	contentType := "Content-Type: text/html; charset=UTF-8"
@@ -208,12 +210,12 @@ func sendSMTPContext(ctx context.Context, config smtpDeliveryConfig, recipients 
 		conn, err = dialer.DialContext(ctx, "tcp", address)
 	}
 	if err != nil {
-		return fmt.Errorf("dial SMTP: %w", err)
+		return fmt.Errorf("%w: dial SMTP: %w", db.ErrOutboxTransportRejected, err)
 	}
 	defer conn.Close()
 	if deadline, ok := ctx.Deadline(); ok {
 		if err := conn.SetDeadline(deadline); err != nil {
-			return fmt.Errorf("set SMTP deadline: %w", err)
+			return fmt.Errorf("%w: set SMTP deadline: %w", db.ErrOutboxTransportRejected, err)
 		}
 	}
 	stopCancellation := context.AfterFunc(ctx, func() { _ = conn.SetDeadline(time.Now()) })
@@ -221,44 +223,46 @@ func sendSMTPContext(ctx context.Context, config smtpDeliveryConfig, recipients 
 
 	client, err := smtp.NewClient(conn, config.host)
 	if err != nil {
-		return fmt.Errorf("create SMTP client: %w", err)
+		return fmt.Errorf("%w: create SMTP client: %w", db.ErrOutboxTransportRejected, err)
 	}
 	defer client.Close()
 	if !config.ssl {
 		if ok, _ := client.Extension("STARTTLS"); ok {
 			if err := client.StartTLS(&tls.Config{ServerName: config.host}); err != nil {
-				return fmt.Errorf("start SMTP TLS: %w", err)
+				return fmt.Errorf("%w: start SMTP TLS: %w", db.ErrOutboxTransportRejected, err)
 			}
 		}
 	}
 	auth := smtp.PlainAuth("", config.username, config.password, config.host)
 	if ok, _ := client.Extension("AUTH"); ok {
 		if err := client.Auth(auth); err != nil {
-			return fmt.Errorf("authenticate SMTP: %w", err)
+			return fmt.Errorf("%w: authenticate SMTP: %w", db.ErrOutboxTransportRejected, err)
 		}
 	}
 	if err := client.Mail(config.username); err != nil {
-		return fmt.Errorf("set SMTP sender: %w", err)
+		return fmt.Errorf("%w: set SMTP sender: %w", db.ErrOutboxTransportRejected, err)
 	}
 	for _, recipient := range recipients {
 		if err := client.Rcpt(strings.TrimSpace(recipient)); err != nil {
-			return fmt.Errorf("set SMTP recipient: %w", err)
+			return fmt.Errorf("%w: set SMTP recipient: %w", db.ErrOutboxTransportRejected, err)
 		}
 	}
 	writer, err := client.Data()
 	if err != nil {
-		return fmt.Errorf("open SMTP body: %w", err)
+		return fmt.Errorf("%w: open SMTP body: %w", db.ErrOutboxTransportRejected, err)
 	}
 	if _, err := writer.Write(message); err != nil {
 		_ = writer.Close()
 		return fmt.Errorf("write SMTP body: %w", err)
 	}
 	if err := writer.Close(); err != nil {
+		var response *textproto.Error
+		if errors.As(err, &response) {
+			return fmt.Errorf("%w: close SMTP body: %w", db.ErrOutboxTransportRejected, err)
+		}
 		return fmt.Errorf("close SMTP body: %w", err)
 	}
-	if err := client.Quit(); err != nil {
-		return fmt.Errorf("quit SMTP: %w", err)
-	}
+	_ = client.Quit()
 	return nil
 }
 
@@ -267,27 +271,46 @@ func sendSMTPContext(ctx context.Context, config smtpDeliveryConfig, recipients 
 // token while delivering a side effect.
 func (this *EmailService) DeliverOutbox(ctx context.Context, event db.OutboxEvent) error {
 	if this == nil {
+		if event.Kind == "comment" {
+			return fmt.Errorf("%w: email service is not initialized", db.ErrOutboxTransportRejected)
+		}
 		return errors.New("email service is not initialized")
 	}
 	if configService == nil {
+		if event.Kind == "comment" {
+			return fmt.Errorf("%w: email configuration service is not initialized", db.ErrOutboxTransportRejected)
+		}
 		return errors.New("email configuration service is not initialized")
 	}
 	email, err := outboxPayloadString(event.Payload, "email")
 	if err != nil || !IsEmail(email) {
+		if event.Kind == "comment" {
+			return fmt.Errorf("%w: outbox email payload is invalid", db.ErrOutboxTransportRejected)
+		}
 		return errors.New("outbox email payload is invalid")
-	}
-	token, err := outboxPayloadString(event.Payload, "token")
-	if err != nil {
-		return err
-	}
-	tokenType, err := outboxPayloadInt(event.Payload, "tokenType")
-	if err != nil {
-		return err
 	}
 	var subject, body string
 	var values map[string]interface{}
+	plainTextBody := false
 	switch event.Kind {
+	case "comment":
+		comment, commentOK := event.Payload["content"].(string)
+		if !commentOK || strings.TrimSpace(comment) == "" {
+			return fmt.Errorf("%w: comment outbox content is invalid", db.ErrOutboxTransportRejected)
+		}
+		subject = "New blog comment"
+		body = "A new comment was posted on your blog:\n\n" + html.EscapeString(comment)
+		values = map[string]interface{}{}
+		plainTextBody = true
 	case "activate-email":
+		token, err := outboxPayloadString(event.Payload, "token")
+		if err != nil {
+			return err
+		}
+		tokenType, err := outboxPayloadInt(event.Payload, "tokenType")
+		if err != nil {
+			return err
+		}
 		if tokenType != info.TokenActiveEmail {
 			return errors.New("activation outbox token purpose is invalid")
 		}
@@ -310,6 +333,14 @@ func (this *EmailService) DeliverOutbox(ctx context.Context, event db.OutboxEven
 			},
 		}
 	case "reset-password":
+		token, err := outboxPayloadString(event.Payload, "token")
+		if err != nil {
+			return err
+		}
+		tokenType, err := outboxPayloadInt(event.Payload, "tokenType")
+		if err != nil {
+			return err
+		}
 		if tokenType != info.TokenPwd {
 			return errors.New("password-reset outbox token purpose is invalid")
 		}
@@ -329,6 +360,16 @@ func (this *EmailService) DeliverOutbox(ctx context.Context, event db.OutboxEven
 	}
 	if strings.TrimSpace(body) == "" {
 		return errors.New("outbox email template is empty")
+	}
+	if plainTextBody {
+		send := this.send
+		if send == nil {
+			send = this.SendEmailContext
+		}
+		if err := send(ctx, email, subject, body); err != nil {
+			return fmt.Errorf("send outbox email: %w", err)
+		}
+		return nil
 	}
 	ok, message, renderedSubject, renderedBody := this.renderEmail(subject, body, values)
 	if !ok {

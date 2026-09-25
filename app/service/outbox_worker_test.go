@@ -1,8 +1,10 @@
 package service
 
 import (
+	"bufio"
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"strings"
 	"testing"
@@ -57,6 +59,21 @@ func TestEmailOutboxTransportUsesPersistedActivationToken(t *testing.T) {
 	}
 }
 
+func TestCommentOutboxInvalidPayloadIsDefiniteRejection(t *testing.T) {
+	savedConfig := configService
+	configService = &ConfigService{GlobalStringConfigs: map[string]string{}}
+	defer func() { configService = savedConfig }()
+	mailer := NewEmailService()
+	mailer.send = func(context.Context, string, string, string) error {
+		t.Fatal("invalid comment reached SMTP")
+		return nil
+	}
+	event := db.OutboxEvent{Kind: "comment", Payload: map[string]any{"email": "user@example.test"}}
+	if err := mailer.DeliverOutbox(context.Background(), event); !errors.Is(err, db.ErrOutboxTransportRejected) {
+		t.Fatalf("invalid comment payload error = %v", err)
+	}
+}
+
 func TestEmailOutboxSMTPStopsWhenContextIsCancelled(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -102,6 +119,106 @@ func TestEmailOutboxSMTPStopsWhenContextIsCancelled(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("SMTP delivery did not stop after cancellation")
+	}
+}
+
+func TestCommentSMTPDataRejectionIsSafeToRetry(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	serverDone := make(chan error, 1)
+	go func() {
+		conn, acceptErr := listener.Accept()
+		if acceptErr != nil {
+			serverDone <- acceptErr
+			return
+		}
+		defer conn.Close()
+		_ = conn.SetDeadline(time.Now().Add(3 * time.Second))
+		reader := bufio.NewReader(conn)
+		_, _ = fmt.Fprint(conn, "220 smtp.example.test ready\r\n")
+		for {
+			line, readErr := reader.ReadString('\n')
+			if readErr != nil {
+				serverDone <- readErr
+				return
+			}
+			switch {
+			case strings.HasPrefix(line, "EHLO "):
+				_, _ = fmt.Fprint(conn, "250 smtp.example.test\r\n")
+			case strings.HasPrefix(line, "MAIL FROM:"), strings.HasPrefix(line, "RCPT TO:"):
+				_, _ = fmt.Fprint(conn, "250 ok\r\n")
+			case strings.HasPrefix(line, "DATA"):
+				_, _ = fmt.Fprint(conn, "554 rejected before body\r\n")
+				serverDone <- nil
+				return
+			default:
+				serverDone <- fmt.Errorf("unexpected SMTP command: %q", line)
+				return
+			}
+		}
+	}()
+	host, port, _ := net.SplitHostPort(listener.Addr().String())
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err = sendSMTPContext(ctx, smtpDeliveryConfig{host: host, port: port, username: "sender@example.test"}, []string{"user@example.test"}, []byte("body"))
+	if !errors.Is(err, db.ErrOutboxTransportRejected) {
+		t.Fatalf("DATA rejection = %v, want definite rejection", err)
+	}
+	if serverErr := <-serverDone; serverErr != nil {
+		t.Fatal(serverErr)
+	}
+}
+
+func TestCommentSMTPAcceptedBodyIgnoresQuitFailure(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	serverDone := make(chan error, 1)
+	go func() {
+		conn, acceptErr := listener.Accept()
+		if acceptErr != nil {
+			serverDone <- acceptErr
+			return
+		}
+		defer conn.Close()
+		_ = conn.SetDeadline(time.Now().Add(3 * time.Second))
+		reader := bufio.NewReader(conn)
+		_, _ = fmt.Fprint(conn, "220 smtp.example.test ready\r\n")
+		for {
+			line, readErr := reader.ReadString('\n')
+			if readErr != nil {
+				serverDone <- readErr
+				return
+			}
+			switch {
+			case strings.HasPrefix(line, "EHLO "):
+				_, _ = fmt.Fprint(conn, "250 smtp.example.test\r\n")
+			case strings.HasPrefix(line, "MAIL FROM:"), strings.HasPrefix(line, "RCPT TO:"):
+				_, _ = fmt.Fprint(conn, "250 ok\r\n")
+			case strings.HasPrefix(line, "DATA"):
+				_, _ = fmt.Fprint(conn, "354 send body\r\n")
+			case line == ".\r\n":
+				_, _ = fmt.Fprint(conn, "250 accepted\r\n")
+			case strings.HasPrefix(line, "QUIT"):
+				serverDone <- nil
+				return
+			}
+		}
+	}()
+	host, port, _ := net.SplitHostPort(listener.Addr().String())
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err = sendSMTPContext(ctx, smtpDeliveryConfig{host: host, port: port, username: "sender@example.test"}, []string{"user@example.test"}, []byte("body"))
+	if err != nil {
+		t.Fatalf("accepted SMTP body = %v", err)
+	}
+	if serverErr := <-serverDone; serverErr != nil {
+		t.Fatal(serverErr)
 	}
 }
 

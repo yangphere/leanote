@@ -50,8 +50,9 @@ type Note struct {
 
 	// Mutation leases fence multi-step workspace writes.  They are internal
 	// persistence fields and must never become part of the public JSON model.
-	MutationLeaseID    string    `bson:"MutationLeaseId,omitempty" json:"-"`
-	MutationLeaseUntil time.Time `bson:"MutationLeaseUntil,omitempty" json:"-"`
+	MutationLeaseID         string    `bson:"MutationLeaseId,omitempty" json:"-"`
+	MutationLeaseUntil      time.Time `bson:"MutationLeaseUntil,omitempty" json:"-"`
+	CommentCountMutationIDs []string  `bson:"CommentCountMutationIds,omitempty" json:"-"`
 }
 
 // 内容

@@ -46,7 +46,7 @@
 
 - 本轮只进行代码/文档静态审查，未运行 Mongo、浏览器、真实 HTTP、ZIP 导入或新服务测试，也未修改实现。`task.py validate` 验证的是 context manifest 格式，不是 PRD 决策或功能合格。
 - `acceptance/evidence-matrix.md` 中 AC-PB1～PB7 的功能证据仍为 `unrun`/`delegated-unrun`；新增 AC-PB4-RETRY 的 Q-P9 已决、但未运行。本叶不能将 interface/delivery 的 HTML/静态/跨环境证据记为已通过。
-- 当前结论：**依赖条件 ready，Q-P1～Q-P9 产品规则均已决，规格可提交最终规划摘要供审核**。Q-P1 已采用严格秒级 RFC3339 `expiresAt`、更新时独立 `clearExpiresAt=true`、首次创建无限期/重复 Add 保留原期限（见 §26、§28）；admin 评论投递/取消已写入其任务规格而非只在本叶宣称交接（见 §28）；Q-P9 强制评论/回复提交身份并显式不兼容旧无身份客户端（见 §29）。旧主题同源脚本风险显式记录，不将兼容性记为隔离安全通过。当前不运行 `task.py start`，不编辑 `app/`、`conf/`、`public/` 或业务测试；最终摘要仍须由用户在**之后新消息**明确批准才能激活。
+- 当前结论（历史记录，Q-P10 后续由 §33 补入）：**依赖条件 ready，Q-P1～Q-P9 产品规则均已决，规格可提交最终规划摘要供审核**。Q-P1 已采用严格秒级 RFC3339 `expiresAt`、更新时独立 `clearExpiresAt=true`、首次创建无限期/重复 Add 保留原期限（见 §26、§28）；admin 评论投递/取消已写入其任务规格而非只在本叶宣称交接（见 §28）；Q-P9 强制评论/回复提交身份并显式不兼容旧无身份客户端（见 §29）。旧主题同源脚本风险显式记录，不将兼容性记为隔离安全通过。当前不运行 `task.py start`，不编辑 `app/`、`conf/`、`public/` 或业务测试；最终摘要仍须由用户在**之后新消息**明确批准才能激活。
 
 ## 6. 用户补充及本轮落实（2026-09-23）
 
@@ -225,7 +225,7 @@ publishing 须以稳定 comment ID 关联 outbox 意图及删除结果；admin �
 
 ### 30.3 审核结论
 
-规格已完成一轮全面审核并同步到 PRD、设计、执行计划、实施摘要和验收矩阵。用户于 2026-09-24 采纳四项推荐，上述 4 项合同已冻结，规格阻断解除，可以进入后续功能编码；本轮仍未修改 `app/`、`conf/`、`public/`、业务测试或路由，也未运行真实 Mongo/HTTP/浏览器/邮件/ZIP 验证。
+（历史结论，已被本文件 §33 覆盖）规格已完成一轮全面审核并同步到 PRD、设计、执行计划、实施摘要和验收矩阵。用户于 2026-09-24 采纳四项推荐，上述 4 项合同已冻结；当时据此认为规格阻断解除、可以进入后续功能编码。本轮仍未修改 `app/`、`conf/`、`public/`、业务测试或路由，也未运行真实 Mongo/HTTP/浏览器/邮件/ZIP 验证。
 
 ## 31. diff-review 修复：索引、GC、交接与上下文（2026-09-24）
 
@@ -237,3 +237,49 @@ publishing 须以稳定 comment ID 关联 outbox 意图及删除结果；admin �
 4. publishing 的 implement/check manifest 纳入 admin 三份交接材料和 publishing 决策摘要、动作清单、验收矩阵；admin 的 implement/check manifest 反向纳入 publishing 三份合同及摘要/验收。admin 既有归档 `application-content` 旧路径缺失是独立存量问题，不因本次同步默默删除或修复。`task.py validate` 只证明引用结构，不证明 Mongo/SMTP/HTTP 行为。
 
 MongoDB 官方 Partial Indexes 文档仅列 `$exists:true`（不含 `$exists:false`）和 `$type` 等过滤操作，JSON Schema 文档支持 `oneOf`/`not`/`required`/`bsonType`，`collMod` 支持 strict/error validator。故初版草案的互斥 partial filter 已在本轮修正为 `$type` partial index + strict/error JSON Schema 互斥验证；脏旧记录先 preflight/人工修复，不能用索引遗漏当作兼容。此处是可实施合同与文档依据，仍需真实 Mongo 7/8 建索引/validator 及回滚测试。
+
+## 32. 2026-09-24 全面复核补充：发布传播、投影、查询与 Host（历史阻断记录）
+
+本节记录在 §31 之后对目标、范围、输入输出、交互流程、边界、异常、数据约束、兼容性、依赖和验收证据的再次逐项复核。只改任务规格、研究和验收材料；没有修改 `app/`、`conf/`、`public/`、路由或业务测试。
+
+### 32.1 现场证据与规格修正
+
+1. **发布动作覆盖**：`conf/routes:143-145` 的通配路由暴露 `app/controllers/NotebookController.go:82-85` 的 `/notebook/setNotebook2Blog`，实现清单原先只显式列出 `/note/setNote2Blog`。现已将 notebook 发布纳入动作清单、PRD/设计执行边界和 AC-PB3；notebook 传播必须对父 notebook 及每个 child note 保存独立 mutation/USN/receipt 结果，父级一次成功不能替代子项确认。
+2. **投影确认与修复**：`app/service/NoteService.go:914-948` 的标签、`NoteContent.IsBlog` 和公开投影不能通过请求路径无结果 `go func` 伪装成成功。现已冻结为同一确认提交，或带稳定 identity、可重试、可对账的持久 repair receipt；失败/未知状态不得以 raw boolean、父记录或旧投影值放行公共读取。
+3. **共享列表与读取失败**：共享 note 列表必须在查询层同时绑定 owner、note/notebook 资源及 `IsTrash=false`、`IsDeleted=false`；DB 错误必须保留为可判定 storage error，不能返回空列表掩盖越权或故障。统计、列表、点赞等公共读取同样不得把 DB error 转换为空数据或 `Ok:true`。
+4. **预览 session 副作用**：`app/controllers/PreviewController.go:24-101` 的主题 ID 无效、非当前 principal owner、DB/文件读取失败时必须 fail closed；不得先写入或覆盖 session `themeId`，不得改变 active/public 状态，也不得借 Blog fallback 渲染另一主题。只有 owner-scoped 主题成功读回后才建立预览上下文。
+5. **Q-P10 当时新增阻断**：`app/service/NoteService.go:1438-1490`、`app/service/common.go:8` 和 `app/controllers/BlogController.go:79-100` 表明现有搜索、分页/排序和 Host 解析存在不能由静态实现可靠推出的产品选择：关键词直接进入 Mongo 正则，分页/排序缺公共 allowlist，Host 使用字符串包含/拆分。现已在 PRD、design、动作清单、implement、实施摘要和证据矩阵列为 Q-P10；该阻断随后由 §33 的用户采纳记录解除。
+
+### 32.2 复核维度结论
+
+| 维度 | 当前结论 |
+| --- | --- |
+| 目标与功能范围 | 分享授权、博客发布/互动、notebook 传播、主题生命周期和预览边界已覆盖；不新增隔离域、旧链接跳转或举报入口。 |
+| 业务规则与数据约束 | owner/resource/public 谓词、逐项 USN/receipt、投影 repair、session fail-closed、评论 receipt/outbox 和已有 Q-P1～Q-P9 合同已写明；本表记录时 Q-P10 的搜索/Host 语义仍未决，已由 §33 冻结。 |
+| 输入输出与交互 | 既有 JSON/JSONP、raw boolean、逐 email map、主题导入/预览和 HTTP 交接责任已映射；本表记录时 Q-P10 的非法输入 status/body、搜索匹配和 Host 来源尚待确认，已由 §33 冻结。 |
+| 边界与异常 | 失败、未知提交、部分写入、DB error、越权、撤销发布、回收站/删除、主题读取失败和跨 owner 情形均要求 fail closed 或可对账；真实运行证据尚未执行。 |
+| 兼容性与上下游依赖 | `/note/*`、`/notebook/*`、notes USN/receipt、content public image、admin comment outbox、interface Host/HTTP、presentation 主题/评论身份和 delivery 真实环境责任已列明；归档状态不替代交接证据。 |
+| 验收可实施性 | AC-PB3-NOTEBOOK、AC-PB3-QUERY、AC-PB5-PREVIEW-SESSION 和 AC-PB7 已补齐；本表记录时查询/Host 为 `blocked-by-decision`，已由 §33 转为合同已确认，功能证据仍为 `unrun`/`delegated-unrun`。 |
+
+### 32.3 当前门禁结论
+
+（历史结论，已由 §33 覆盖）`09-08-application-publishing` 仍是已激活的 `in_progress` ready 叶，未创建新任务。四项既有实现合同已冻结，但 Q-P10 尚未确认；当时因此禁止博客/预览查询、列表、分类、归档、分页、排序或域名交接编码，也不以当前静态实现替代目标合同。Mongo、HTTP、浏览器、邮件、ZIP 及跨进程证据仍须实际运行后才能改变矩阵状态。
+
+## 33. Q-P10 用户采纳推荐方案（2026-09-24，历史快照）
+
+用户确认 Q-P10 的全部推荐方案；以下保留当时的决策记录。其简写边界已由 §34 更正，当前实现合同以 §34 及同步后的 PRD/design/implement/动作清单/验收矩阵为准：
+
+1. **搜索**：大小写不敏感的字面子串；首尾 Unicode 空白去除、内部空白保留、空词不加过滤；`keywords` 最多 128 个 Unicode 码点且不超过 512 字节，`tag` 最多 64 个 Unicode 码点且不超过 256 字节；非法 UTF-8 拒绝；Mongo `$regex` 只能使用 `regexp.QuoteMeta` 后的用户词，不开放正则语义。
+2. **分页与排序**：`page` 缺省为 1，显式范围 1..10000；`pageSize` 范围 1..100，缺省沿用 owner `PerPageSize`，缺省配置为 10；越界、非法格式和整数溢出返回 400，不截断、不静默改默认值、不执行查询。sort 只允许 `PublicTime`、`CreatedTime`、`UpdatedTime`、`Title`；博客缺省 `PublicTime`。公共 query 不提供 `isAsc`，排序方向只来自当前 owner 的 `UserBlog.IsAsc`；旧字段缺失按 `false` 为降序，主字段与 `_id` tie-breaker 同方向。
+3. **Host**：只信任规范化 `Request.Host`；`X-Forwarded-Host`/`Forwarded` 默认不可信，只有显式可信代理 allowlist 才可使用。Host 严格解析、转小写、移除合法端口、去一个尾点、IDN 转 ASCII/Punycode；默认域名精确匹配，custom domain 按完整规范化 Host 精确匹配，只允许单标签子域，多级子域拒绝；重复 custom domain 由唯一约束/preflight 阻断，Host owner 与 URL owner 冲突返回 404。
+4. **错误与复用**：非法查询参数返回 400，未识别或冲突 owner 返回 404，DB error 使用既有 500/服务错误 envelope；不得返回空列表、空统计或 `Ok:true`。博客与预览共享同一 query/Host seam，owner 绑定、已发布谓词、有界输入、sort allowlist 和 fail closed 仍是不变量。
+
+Q-P10 的产品规格阻断已解除，`task.json.status=in_progress` 保持不变；本次仍未修改业务实现，也未将任何真实运行证据标记为通过。后续可以按执行计划进入功能编码，但实现和 HTTP/浏览器/跨环境证据必须分别完成。
+
+## 34. Q-P10 规划材料更正（2026-09-24，当前合同）
+
+上一节是用户采纳推荐方案的历史记录；其中将 pageSize 简写为“沿用 owner 配置”且将 Host 简写为“规范化 Request.Host”，不足以表达实现边界，不能单独作为当前合同。经本轮 diff-review 修正，当前合同为：
+
+1. `pageSize` 与 `sort` 是公共 query 参数，`BlogController`/HTTP adapter 做 presence-aware 绑定，`BlogService` 只接收验证后的结构化值。仅 query 缺省 pageSize 时读取 owner `PerPageSize`；旧配置缺失、零值或超范围回退 10 并记录配置问题。旧 `SortField` 缺失/空值/未知值回退 `PublicTime`，新设置拒绝未知值。
+2. Host 仅在 `Request.RemoteAddr` 命中显式可信代理 CIDR/IP allowlist 时采信 `Forwarded`/`X-Forwarded-Host`。不可信来源忽略两者；可信来源的多值、逗号链、重复 `host=` 或两头 canonicalize 后冲突均 400。canonicalizer 同时处理 request/forwarded Host、配置默认域名和存储 custom domain；malformed Host 400，未知 Host 或 owner 冲突 404，DB error（数据库错误）为既有 500/service envelope，且 400/404/500 拒绝路径不执行查询。
+3. AC-PB3-QUERY 必须以 query counter 或等价证据覆盖 trim 后长度、空搜索、非法 UTF-8/溢出、Host 信任矩阵和上述所有拒绝不查询场景；本节仍是规划合同，真实证据保持 `unrun`/`delegated-unrun`。

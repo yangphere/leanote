@@ -277,11 +277,23 @@ func (this *UserService) MapUserInfoAndBlogInfosByUserIds(userIds []ObjectID) ma
 
 // 返回info.UserAndBlog
 func (this *UserService) MapUserAndBlogByUserIds(userIds []ObjectID) map[string]info.UserAndBlog {
+	userAndBlogMap, _ := this.MapUserAndBlogByUserIdsChecked(userIds)
+	return userAndBlogMap
+}
+
+func (this *UserService) MapUserAndBlogByUserIdsChecked(userIds []ObjectID) (map[string]info.UserAndBlog, error) {
+	if db.Users == nil || db.UserBlogs == nil {
+		return nil, db.ErrMongoClientNotInitialized
+	}
 	users := []info.User{}
-	db.ListByQ(db.Users, bson.M{"_id": bson.M{"$in": userIds}}, &users)
+	if err := db.Users.Find(bson.M{"_id": bson.M{"$in": userIds}}).All(&users); err != nil {
+		return nil, fmt.Errorf("list users for blog: %w", err)
+	}
 
 	userBlogs := []info.UserBlog{}
-	db.ListByQ(db.UserBlogs, bson.M{"_id": bson.M{"$in": userIds}}, &userBlogs)
+	if err := db.UserBlogs.Find(bson.M{"_id": bson.M{"$in": userIds}}).All(&userBlogs); err != nil {
+		return nil, fmt.Errorf("list user blogs: %w", err)
+	}
 
 	userBlogMap := make(map[ObjectID]info.UserBlog, len(userBlogs))
 	for _, user := range userBlogs {
@@ -308,7 +320,7 @@ func (this *UserService) MapUserAndBlogByUserIds(userIds []ObjectID) map[string]
 			BlogUrl:   blogService.GetUserBlogUrl(&userBlog, user.Username),
 		}
 	}
-	return userAndBlogMap
+	return userAndBlogMap, nil
 }
 
 // 得到用户信息+博客主页

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -457,6 +458,203 @@ func TestMemoryOutboxReclaimsExpiredSendingLease(t *testing.T) {
 	got, _ := store.Get(event.ID)
 	if got.Status != OutboxStatusSent || got.Attempts != 1 {
 		t.Fatalf("reclaimed event = %+v, want sent with one attempt", got)
+	}
+}
+
+func TestMemoryCommentOutboxRequiresConfirmationAndDoesNotRetryUnknownHandoff(t *testing.T) {
+	store := NewMemoryOutboxStore()
+	now := time.Unix(100, 0)
+	event := OutboxEvent{ID: NewObjectID(), Kind: "comment", AggregateID: NewObjectID(), Status: OutboxStatusUnconfirmed, NextAttemptAt: now}
+	if err := store.Enqueue(context.Background(), event); err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	calls := 0
+	if err := store.Deliver(context.Background(), event.ID, now, func(context.Context, OutboxEvent) error { calls++; return nil }); err == nil || calls != 0 {
+		t.Fatalf("unconfirmed delivery = %v calls=%d", err, calls)
+	}
+	if err := store.ConfirmComment(event.ID, now); err != nil {
+		t.Fatalf("confirm: %v", err)
+	}
+	if err := store.Deliver(context.Background(), event.ID, now, func(context.Context, OutboxEvent) error { calls++; return errors.New("private SMTP result unknown") }); !errors.Is(err, ErrOutboxHandoffUnknown) || strings.Contains(err.Error(), "private SMTP") {
+		t.Fatalf("unknown delivery leaked transport details: %v", err)
+	}
+	got, _ := store.Get(event.ID)
+	if got.Status != OutboxStatusHandoffUnknown || got.TransportHandedOffAt.IsZero() || got.LastError != "transport_handoff_unknown" || calls != 1 {
+		t.Fatalf("unknown state = %+v calls=%d", got, calls)
+	}
+	if err := store.Deliver(context.Background(), event.ID, now, func(context.Context, OutboxEvent) error { calls++; return nil }); err == nil || calls != 1 {
+		t.Fatalf("handoff unknown was redelivered: %v calls=%d", err, calls)
+	}
+}
+
+func TestMemoryCommentOutboxRetriesDefiniteRejectionWithoutLeakingDetails(t *testing.T) {
+	store := NewMemoryOutboxStore()
+	now := time.Unix(100, 0)
+	event := OutboxEvent{ID: NewObjectID(), Kind: "comment", AggregateID: NewObjectID(), NextAttemptAt: now}
+	if err := store.Enqueue(context.Background(), event); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.ConfirmComment(event.ID, now); err != nil {
+		t.Fatal(err)
+	}
+	secret := "private SMTP recipient@example.test"
+	err := store.Deliver(context.Background(), event.ID, now, func(context.Context, OutboxEvent) error {
+		return fmt.Errorf("%w: %s", ErrOutboxTransportRejected, secret)
+	})
+	if !errors.Is(err, ErrSideEffect) || strings.Contains(err.Error(), secret) {
+		t.Fatalf("definite rejection error = %v", err)
+	}
+	got, _ := store.Get(event.ID)
+	if got.Status != OutboxStatusRetry || got.Attempts != 1 || got.NextAttemptAt.Before(now) || got.LastError != "transport_rejected" || !got.TransportHandedOffAt.IsZero() {
+		t.Fatalf("definite rejection state = %+v", got)
+	}
+	if err := store.CancelComment(event.ID, "comment deleted", now); err != nil {
+		t.Fatalf("rejected notification should remain cancellable: %v", err)
+	}
+	if err := store.Deliver(context.Background(), event.ID, got.NextAttemptAt, func(context.Context, OutboxEvent) error {
+		t.Fatal("cancelled comment reached transport")
+		return nil
+	}); err == nil {
+		t.Fatal("cancelled comment was delivered")
+	}
+}
+
+func TestMemoryCommentOutboxDeadNeverRedelivers(t *testing.T) {
+	store := NewMemoryOutboxStore()
+	now := time.Unix(100, 0)
+	event := OutboxEvent{ID: NewObjectID(), Kind: "comment", AggregateID: NewObjectID(), NextAttemptAt: now}
+	if err := store.Enqueue(context.Background(), event); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.ConfirmComment(event.ID, now); err != nil {
+		t.Fatal(err)
+	}
+	store.mu.Lock()
+	current := store.events[event.ID]
+	current.Attempts = OutboxMaxAttempts - 1
+	store.events[event.ID] = current
+	store.mu.Unlock()
+	if err := store.Deliver(context.Background(), event.ID, now, func(context.Context, OutboxEvent) error {
+		return ErrOutboxTransportRejected
+	}); !errors.Is(err, ErrSideEffect) {
+		t.Fatalf("last rejected attempt = %v", err)
+	}
+	got, _ := store.Get(event.ID)
+	if got.Status != OutboxStatusDead || got.Attempts != OutboxMaxAttempts {
+		t.Fatalf("dead state = %+v", got)
+	}
+	calls := 0
+	if err := store.Deliver(context.Background(), event.ID, now.Add(time.Hour), func(context.Context, OutboxEvent) error {
+		calls++
+		return nil
+	}); err == nil || calls != 0 {
+		t.Fatalf("dead event redelivered: error=%v calls=%d", err, calls)
+	}
+}
+
+func TestMemoryCommentOutboxReclaimsExpiredPreHandoffLease(t *testing.T) {
+	store := NewMemoryOutboxStore()
+	now := time.Unix(100, 0)
+	event := OutboxEvent{ID: NewObjectID(), Kind: "comment", AggregateID: NewObjectID(), NextAttemptAt: now}
+	if err := store.Enqueue(context.Background(), event); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.ConfirmComment(event.ID, now); err != nil {
+		t.Fatal(err)
+	}
+	store.mu.Lock()
+	current := store.events[event.ID]
+	current.Status = OutboxStatusHandoffPending
+	current.LeaseID = NewObjectID().Hex()
+	current.LeaseUntil = now.Add(time.Minute)
+	store.events[event.ID] = current
+	store.mu.Unlock()
+	calls := 0
+	if err := store.Deliver(context.Background(), event.ID, now, func(context.Context, OutboxEvent) error {
+		calls++
+		return nil
+	}); err == nil || calls != 0 {
+		t.Fatalf("active pre-handoff lease was reclaimed: error=%v calls=%d", err, calls)
+	}
+	store.mu.Lock()
+	current = store.events[event.ID]
+	current.LeaseUntil = now.Add(-time.Second)
+	store.events[event.ID] = current
+	store.mu.Unlock()
+	if err := store.Deliver(context.Background(), event.ID, now, func(context.Context, OutboxEvent) error {
+		calls++
+		return nil
+	}); err != nil || calls != 1 {
+		t.Fatalf("expired pre-handoff lease: error=%v calls=%d", err, calls)
+	}
+}
+
+func TestCommentOutboxConfirmationSurvivesWorkerTransitions(t *testing.T) {
+	store := NewMemoryOutboxStore()
+	now := time.Unix(100, 0)
+	event := OutboxEvent{ID: NewObjectID(), Kind: "comment", AggregateID: NewObjectID(), NextAttemptAt: now}
+	if err := store.Enqueue(context.Background(), event); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.ConfirmComment(event.ID, now); err != nil {
+		t.Fatal(err)
+	}
+	for _, status := range []string{OutboxStatusPending, OutboxStatusRetry, OutboxStatusClaimed, OutboxStatusHandoffPending, OutboxStatusHandedOff, OutboxStatusHandoffUnknown, OutboxStatusSent, OutboxStatusDead} {
+		store.mu.Lock()
+		current := store.events[event.ID]
+		current.Status = status
+		store.events[event.ID] = current
+		store.mu.Unlock()
+		if err := store.ConfirmComment(event.ID, now); err != nil {
+			t.Errorf("confirm after %s: %v", status, err)
+		}
+		got, _ := store.Get(event.ID)
+		if !got.IsConfirmedCommentNotification() {
+			t.Errorf("worker state %s lost confirmed intent", status)
+		}
+	}
+	store.mu.Lock()
+	current := store.events[event.ID]
+	current.Status = OutboxStatusCancelled
+	store.events[event.ID] = current
+	store.mu.Unlock()
+	if err := store.ConfirmComment(event.ID, now); err == nil {
+		t.Fatal("cancelled notification must not be confirmed")
+	}
+}
+
+func TestMemoryCommentOutboxCancellationWinsBeforeHandoff(t *testing.T) {
+	store := NewMemoryOutboxStore()
+	now := time.Unix(100, 0)
+	event := OutboxEvent{ID: NewObjectID(), Kind: "comment", AggregateID: NewObjectID(), NextAttemptAt: now}
+	if err := store.Enqueue(context.Background(), event); err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	if err := store.CancelComment(event.ID, "comment deleted", now); err != nil {
+		t.Fatalf("cancel: %v", err)
+	}
+	calls := 0
+	if err := store.Deliver(context.Background(), event.ID, now, func(context.Context, OutboxEvent) error { calls++; return nil }); err == nil || calls != 0 {
+		t.Fatalf("cancelled delivery = %v calls=%d", err, calls)
+	}
+	got, _ := store.Get(event.ID)
+	if got.Status != OutboxStatusCancelled || !got.CancelRequested {
+		t.Fatalf("cancelled state = %+v", got)
+	}
+}
+
+func TestMemoryCommentOutboxDoesNotClaimLegacyEventKinds(t *testing.T) {
+	store := NewMemoryOutboxStore()
+	event := OutboxEvent{ID: NewObjectID(), Kind: "activate-email", AggregateID: NewObjectID(), NextAttemptAt: time.Unix(100, 0)}
+	if err := store.Enqueue(context.Background(), event); err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	if err := store.Deliver(context.Background(), event.ID, time.Unix(100, 0), func(context.Context, OutboxEvent) error { return errors.New("old transport failure") }); !errors.Is(err, ErrSideEffect) {
+		t.Fatalf("legacy delivery = %v", err)
+	}
+	got, _ := store.Get(event.ID)
+	if got.Status != OutboxStatusRetry || got.Version != 1 {
+		t.Fatalf("legacy state = %+v", got)
 	}
 }
 

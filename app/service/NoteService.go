@@ -223,6 +223,9 @@ func (this *NoteService) getFiles(noteIds []ObjectID) map[string][]info.NoteFile
 func (this *NoteService) ListNotes(userId, notebookId string,
 	isTrash bool, pageNumber, pageSize int, sortField string, isAsc bool, isBlog bool) (count int, notes []info.Note) {
 	notes = []info.Note{}
+	if isBlog {
+		sortField = NormalizeBlogSortField(sortField)
+	}
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 
 	// 不是trash的
@@ -239,10 +242,17 @@ func (this *NoteService) ListNotes(userId, notebookId string,
 	// 总记录数
 	count, _ = q.Count()
 
-	q.Sort(sortFieldR).
-		Skip(skipNum).
-		Limit(pageSize).
-		All(&notes)
+	if isBlog {
+		q.Sort(BlogSortFields(sortField, isAsc)...).
+			Skip(skipNum).
+			Limit(pageSize).
+			All(&notes)
+	} else {
+		q.Sort(sortFieldR).
+			Skip(skipNum).
+			Limit(pageSize).
+			All(&notes)
+	}
 	return
 }
 
@@ -250,16 +260,20 @@ func (this *NoteService) ListNotes(userId, notebookId string,
 // ShareService调用
 func (this *NoteService) ListNotesByNoteIdsWithPageSort(noteIds []ObjectID, userId string,
 	pageNumber, pageSize int, sortField string, isAsc bool, isBlog bool) (notes []info.Note) {
+	if isBlog {
+		sortField = NormalizeBlogSortField(sortField)
+	}
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 	notes = []info.Note{}
 
 	// 不是trash
-	db.Notes.
-		Find(bson.M{"_id": bson.M{"$in": noteIds}, "IsTrash": false}).
-		Sort(sortFieldR).
-		Skip(skipNum).
-		Limit(pageSize).
-		All(&notes)
+	q := db.Notes.Find(bson.M{"_id": bson.M{"$in": noteIds}, "IsTrash": false})
+	if isBlog {
+		q.Sort(BlogSortFields(sortField, isAsc)...)
+	} else {
+		q.Sort(sortFieldR)
+	}
+	q.Skip(skipNum).Limit(pageSize).All(&notes)
 	return
 }
 
@@ -766,8 +780,11 @@ func (this *NoteService) AddNoteAndContentApiResultWithIdentity(note info.Note, 
 }
 
 // 当设置/取消了笔记为博客
-func (this *NoteService) UpdateNoteContentIsBlog(noteId, userId string, isBlog bool) {
-	db.UpdateByIdAndUserIdMap(db.NoteContents, noteId, userId, bson.M{"IsBlog": isBlog})
+func (this *NoteService) UpdateNoteContentIsBlog(noteId, userId string, isBlog bool) bool {
+	if db.NoteContents == nil {
+		return false
+	}
+	return db.UpdateByIdAndUserIdMap(db.NoteContents, noteId, userId, bson.M{"IsBlog": isBlog})
 }
 
 // 附件修改, 增加noteIncr
@@ -912,40 +929,7 @@ func (this *NoteService) UpdateTags(noteId string, userId string, tags []string)
 }
 
 func (this *NoteService) ToBlog(userId, noteId string, isBlog, isTop bool) bool {
-	note := this.GetNote(noteId, userId)
-	if note.NoteId.IsZero() || note.IsDeleted {
-		return false
-	}
-	noteUpdate := bson.M{}
-	if isTop {
-		isBlog = true
-	}
-	if !isBlog {
-		isTop = false
-	}
-	noteUpdate["IsBlog"] = isBlog
-	noteUpdate["IsTop"] = isTop
-	if isBlog {
-		noteUpdate["PublicTime"] = time.Now()
-	} else {
-		noteUpdate["HasSelfDefined"] = false
-	}
-	usn, err := userService.AllocateUsn(context.Background(), userId)
-	if err != nil {
-		return false
-	}
-	noteUpdate["Usn"] = usn
-
-	filter := bson.M{"_id": note.NoteId, "UserId": note.UserId, "Usn": note.Usn, "IsDeleted": false}
-	db.AddWorkspaceNoteMutationLeaseFilter(filter, "", time.Now())
-	ok := db.Notes.UpdateOneMatchedContext(context.Background(), filter, bson.M{"$set": noteUpdate}) == nil
-	// 重新计算tags
-	go (func() {
-		this.UpdateNoteContentIsBlog(noteId, userId, isBlog)
-
-		blogService.ReCountBlogTags(userId)
-	})()
-	return ok
+	return this.toBlogWithReceipt(userId, noteId, isBlog, isTop)
 }
 
 // 移动note
@@ -1437,12 +1421,20 @@ func (this *NoteService) GetNotebookId(noteId string) ObjectID {
 // 搜索Note, 博客使用了
 func (this *NoteService) SearchNote(key, userId string, pageNumber, pageSize int, sortField string, isAsc, isBlog bool) (count int, notes []info.Note) {
 	notes = []info.Note{}
+	if isBlog {
+		var err error
+		key, err = NormalizeBlogText(key, MaxBlogKeywordsRunes, MaxBlogKeywordsBytes)
+		if err != nil {
+			return 0, nil
+		}
+		sortField = NormalizeBlogSortField(sortField)
+	}
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 
 	// 利用标题和desc, 不用content
 	orQ := []bson.M{
-		bson.M{"Title": bson.M{"$regex": bson.Regex{Pattern: ".*?" + key + ".*", Options: "i"}}},
-		bson.M{"Desc": bson.M{"$regex": bson.Regex{Pattern: ".*?" + key + ".*", Options: "i"}}},
+		bson.M{"Title": bson.M{"$regex": bson.Regex{Pattern: ".*?" + regexp.QuoteMeta(key) + ".*", Options: "i"}}},
+		bson.M{"Desc": bson.M{"$regex": bson.Regex{Pattern: ".*?" + regexp.QuoteMeta(key) + ".*", Options: "i"}}},
 	}
 	// 不是trash的
 	query := bson.M{"UserId": db.MustObjectIDFromHex(userId),
@@ -1458,10 +1450,17 @@ func (this *NoteService) SearchNote(key, userId string, pageNumber, pageSize int
 	// 总记录数
 	count, _ = q.Count()
 
-	q.Sort(sortFieldR).
-		Skip(skipNum).
-		Limit(pageSize).
-		All(&notes)
+	if isBlog {
+		q.Sort(BlogSortFields(sortField, isAsc)...).
+			Skip(skipNum).
+			Limit(pageSize).
+			All(&notes)
+	} else {
+		q.Sort(sortFieldR).
+			Skip(skipNum).
+			Limit(pageSize).
+			All(&notes)
+	}
 
 	// 如果 < pageSize 那么搜索content, 且id不在这些id之间的
 	if len(notes) < pageSize {
@@ -1481,7 +1480,7 @@ func (this *NoteService) searchNoteFromContent(notes []info.Note, userId, key st
 	query := bson.M{
 		"_id":     bson.M{"$nin": noteIds},
 		"UserId":  db.MustObjectIDFromHex(userId),
-		"Content": bson.M{"$regex": bson.Regex{Pattern: ".*?" + key + ".*", Options: "i"}},
+		"Content": bson.M{"$regex": bson.Regex{Pattern: ".*?" + regexp.QuoteMeta(key) + ".*", Options: "i"}},
 	}
 	if isBlog {
 		query["IsBlog"] = true

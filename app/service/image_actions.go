@@ -15,7 +15,6 @@ import (
 	"github.com/yangphere/leanote/app/domain"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"github.com/yangphere/leanote/app/service/contentpdf"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -140,7 +139,7 @@ func (mongoImageRepository) ReferencingNotes(ctx context.Context, imageID domain
 		return nil, nil
 	}
 	var notes []info.Note
-	if err := db.Notes.FindContext(ctx, bson.M{"_id": bson.M{"$in": noteIDs}, "IsDeleted": false}).All(&notes); err != nil {
+	if err := db.Notes.FindContext(ctx, bson.M{"_id": bson.M{"$in": noteIDs}, "IsTrash": false, "IsDeleted": false}).All(&notes); err != nil {
 		return nil, imageRepositoryError("image_note_list", err)
 	}
 	result := make([]applicationcontent.ImageNote, 0, len(notes))
@@ -199,7 +198,8 @@ func (mongoImageRepository) ImageAbsent(ctx context.Context, ownerID, imageID do
 type mongoImagePermission struct{}
 
 func (mongoImagePermission) CanReadNote(ctx context.Context, note applicationcontent.ImageNote, actorID domain.ObjectID) (bool, error) {
-	return (contentpdf.MongoPDFRepository{}).CanReadNote(ctx, info.Note{NoteId: note.NoteID, UserId: note.OwnerID, NotebookId: note.NotebookID}, actorID)
+	_, allowed, err := (sharePermissionAdapter{}).ResolveNotePermission(ctx, note.OwnerID, actorID, note.NoteID)
+	return allowed, err
 }
 
 func imageAccess() applicationcontent.ImageAccessService {

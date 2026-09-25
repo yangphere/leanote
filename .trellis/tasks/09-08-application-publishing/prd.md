@@ -13,9 +13,19 @@
 
 ## 当前规格审核状态（2026-09-24）
 
-本叶是按轨道优先顺序选出的 ready 叶 `09-08-application-publishing`，已在不创建新任务的前提下激活，`task.json.status=in_progress`。四项实现合同已于 2026-09-24 经用户确认，规格审核门禁已解除；这不表示功能已实现、测试已运行或验收已通过，本轮仍只完成规格收口，不进入业务编码。
+本叶是按轨道优先顺序选出的 ready 叶 `09-08-application-publishing`，已在不创建新任务的前提下激活，`task.json.status=in_progress`。四项实现合同及 Q-P10 公共查询/Host 合同均已于 2026-09-24 经用户确认；规格阻断已解除。这不表示功能已实现、测试已运行或验收已通过。
 
-本次补充已将能够从现有代码和上下游合同确定的行为冻结。用户于 2026-09-24 采纳四项推荐，以下数据与跨层合同现已冻结；这只解除规格合同阻断，不表示业务实现或真实环境证据已完成。
+本次补充已将能够从现有代码和上下游合同确定的行为冻结。用户于 2026-09-24 采纳四项实现合同及 Q-P10 全部推荐，以下数据与跨层合同现已冻结；这只解除规格合同阻断，不表示业务实现或真实环境证据已完成。
+
+## 本轮全面复核与已确认补充（2026-09-24）
+
+- **已修正的规格遗漏**：`/notebook/setNotebook2Blog` 通过通配路由 `/:controller/:action` 暴露，原动作清单只列了 `/note/setNote2Blog`。两者现在都纳入发布验收；笔记本传播必须逐笔消费 notes 的 USN/receipt，不能以父笔记本一次成功或后台无结果 goroutine 代替子笔记结果。
+- **已修正的失败边界**：共享笔记列表必须在数据库查询中同时绑定 owner、notebook/note 资源、`IsTrash=false`、`IsDeleted=false`，DB 查询失败返回可判定错误，不能返回空列表掩盖越权或存储故障；预览主题 ID 无效、非 owner 或主题读取失败时不得写入 session 的 `themeId`。
+- **已修正的投影边界**：发布后的标签/摘要/公开投影不能由 `go func` 尽力修复。必须属于同一确认提交，或进入持久、可重试、可对账的 repair receipt；修复未确认时不能把 raw boolean 报为成功。
+- **Q-P10（已确认）公共列表与 Host 合同**：搜索采用大小写不敏感的字面子串匹配，不保留正则语义；实现可使用 Mongo `$regex`，但必须对用户词做 `regexp.QuoteMeta`。首尾 Unicode 空白去除，内部空白保留，全部为空视为无搜索条件；`keywords` 限制为最多 128 个 Unicode 码点且不超过 512 字节，`tag` 限制为最多 64 个 Unicode 码点且不超过 256 字节，非法 UTF-8 拒绝。`page` 缺省为 1，显式范围为 1..10000；`pageSize` 范围为 1..100，缺省沿用 owner 的 `PerPageSize`，缺省配置为 10；越界、非法格式或整数溢出返回 400，不截断、不静默改默认值、不执行查询。
+- Q-P10 的 `pageSize` 与 `sort` 是公共 query 参数，不是 owner 可配置的请求合同：`BlogController`/HTTP adapter 负责 presence-aware 解析，`BlogService` 只接收已验证的结构化值。缺省 `pageSize` 才读取当前 owner 的 `PerPageSize`；该配置缺失、零值或超出 1..100 时按安全默认 10，并记录可观测配置问题，不把旧配置错误变成查询 400。显式 `pageSize` 的非法格式、零值、越界和整数溢出均 400 且不查询。`sort` 只允许 `PublicTime`、`CreatedTime`、`UpdatedTime`、`Title`；缺省及旧 `SortField` 空值均为博客默认 `PublicTime`，旧数据中的未知 `SortField` 也回退 `PublicTime`，设置写入拒绝未知值，任意未知字段不得进入 Mongo sort。排序方向不由公共 query 改写：`isAsc` 只来自当前 owner 的 `UserBlog.IsAsc`，缺失的旧值按 Go 零值 `false` 解释为降序；主字段与 `_id` tie-breaker 使用同一方向。博客结果追加同方向 `_id` 作为稳定 tie-breaker。
+- Q-P10 Host 先依据部署配置的可信代理 CIDR/IP allowlist 对 `Request.RemoteAddr` 做 IP 判断；无法解析、未命中 allowlist 或未配置 allowlist 均视为不可信，忽略 `Forwarded`/`X-Forwarded-Host`，只使用严格解析的 `Request.Host`。仅命中 allowlist 时才可使用转发头：`Forwarded` 的 `host=` 与 `X-Forwarded-Host` 各自必须只有一个有效值；两者同时存在时 canonicalize 后必须相等，多值、逗号链、缺失/重复 `host=` 或冲突一律 400，不按位置猜测来源。Host canonicalizer 同时应用于 `Request.Host`、接受的转发 Host、配置默认域名和持久化 custom domain：严格解析、转小写、移除合法端口、去除一个尾点、IDN 转 ASCII/Punycode；非法 Host、IP 作为 custom domain、空标签和非法字符拒绝。默认域名精确匹配根域名，custom domain 按规范化完整 Host 精确匹配；只允许一个标签的默认子域名，多级子域名拒绝；重复域名映射由唯一约束/preflight 阻断，不按数据库顺序选 owner。Host owner 与 URL owner 冲突返回 404。
+- Q-P10 错误外形固定为：malformed Host/非法查询参数 400，未知 Host/owner 或 owner 冲突 404，存储错误返回既有 500/服务错误 envelope；400/404/500 路径均不得执行查询，也不得把错误转换为空列表、空统计或 `Ok:true`。博客和预览共享同一 query/Host seam，以上合同解除 `blocked-by-decision`，后续只需补实现与运行证据。
 
 ## 范围与责任
 
@@ -91,7 +101,7 @@
 - [ ] AC-PB1-DATE：个人/组 × note/notebook 创建/更新分别覆盖 `expiresAt` 秒级 RFC3339 `Z` 与 `±HH:MM`、跨时区换算及原值读回；拒绝无偏移、空白、小数秒、越界/不存在日期、无效偏移、不晚于服务端当前时刻、`expiresAt` 与 `clearExpiresAt=true` 同传、创建时清除或非法清除标志，且不新增/改变任何授权。省略字段时创建无限期、更新保留原期限；明确 `clearExpiresAt=true` 仅更新并在确认写入后生效；旧版改权、组授权旧 action、多人 email 逐条结果外形兼容。界面按用户时区显示当前值及其时区，输入夏令时跳过/重复时间不得悄悄改期；显式清除与仅留空有区别，旧客户端不带字段行为不变。
 - [ ] AC-PB1-SCHEMA：四个集合/收件人类型 partial unique、四个 recipient-leading 索引与 `HasShareNote` 独立唯一投影索引在真实 Mongo 建立并读回 keys/选项；个人/组同资源各一条合法，重复/并发同键不可多条；双收件人、无收件人、零/非法/`null` 值、旧同名索引选项不匹配及历史重复的 preflight 报集合/索引/脱敏键摘要与数量并阻止就绪，不自动修复、忽略或授予权限。
 - [ ] AC-PB2：notes/content/image/PDF 从同一 permission port 获取授权结论；未发布、回收站、删除、退组与 DB 失败矩阵一致，且无第二套 grant 判定。
-- [ ] AC-PB3：博客发布/取消、批量部分失败、slug/ID、单页/搜索/分类/标签/归档/域名、统计与私有状态都有成功/拒绝测试；USN/receipt 消费 notes 合同。
+- [ ] AC-PB3：博客发布/取消、批量部分失败、slug/ID、单页/搜索/分类/标签/归档/域名、统计与私有状态都有成功/拒绝测试；USN/receipt 消费 notes 合同。AC-PB3-QUERY 另须覆盖 trim 后 `keywords`/`tag` 的码点/字节上限、空搜索、非法 UTF-8/整数溢出、默认 page/pageSize、无效 PerPageSize 回退 10、未知旧 SortField 回退 PublicTime、四项 sort allowlist、非法 Host、可信代理 RemoteAddr/Forwarded/X-Forwarded-Host 单值与多值冲突矩阵，并以 query counter 证明所有 400（含非法 Host/参数）拒绝且不执行查询；未知/冲突 owner 为 404，DB error 为既有 500/service envelope。
 - [ ] AC-PB4：评论开关、未登录、跨 note 回复、各类删除角色、并发点赞/计数，以及评论与必要通知意图的联合提交、无需通知时仅评论与计数的提交，均有成功/失败/未知提交回归。通知入队失败不留下可见评论或计数、不发信，发送失败保留评论并重试且失败可观测，不误报投递成功；重复/并发及重试不产生重复意图；扩充现有 outbox 的评论事件类型并与 admin 联验，不把仅支持账号事件的现有 `DeliverOutbox` 当作已支持评论。新旧评论中的 `<tag>`、引号和脚本文本在博客/预览/通知邮件中按纯文本显示、不执行；JSON/JSONP 的 `Content` 保持原文本值并按输出上下文转义，不双重编码。评论和回复的纯空白、非法 UTF-8、2001 码点及超过 8192 字节输入均拒绝、不截断、不写入/改变计数/发送通知；2000 码点及合法边界输入可通过，旧评论不被追溯裁剪。对于合法 UTF-8，2000 码点最多 8000 字节，字节上限为附加防护而非可独立触发的边界。
 - [ ] AC-PB4-DELETE：评论有权删除与无权/错误删除分别覆盖：取消先赢持久交接闸门，则 pending、retry 及已领取但未交接的事件不得送出；闸门先赢或已发送的消息不承诺撤回，旧 bool 不能把未停用通知误报为已取消；重复删除、删除/领取/交接并发、停用失败及未知提交均不得宣称已成功取消仍可投递的事件。旧评论无需补发通知，删除不泄露已删除正文；确认成功的评论/计数删除沿旧外形，部分/未知保留诊断；admin outbox 终态/取消可观测，内容和错误日志脱敏。
 - [ ] AC-PB4-RETRY：评论/回复缺失、空值、非 32 位小写十六进制 `submissionId` 的请求均在业务写入前失败（旧客户端亦然）；浏览器每次有意提交生成新的 128-bit 随机身份，断网/响应丢失后的同次重试保持原身份。相同 actor+身份+note/reply/正文重复提交仅有一条评论、一笔计数和至多一条应通知对象的 outbox 意图，返回同一已确认评论；有意连续两次同文使用不同身份须各自产生独立评论。相同身份但 note、reply 或正文不同须冲突且零副作用；不同 actor 使用同值互不串线、不能读取他人评论凭据。确认成功但响应丢失、并发同键、未知提交/读回错误、无需通知对象、已删除评论后重试（不重建/不发信）均须有服务/DB/真实 HTTP 负例；内部 comment ID 的 outbox 去重不可代替跨请求保证。publishing 的提交凭据、admin 的事件去重及 interface/presentation/delivery 的真实重试证据均未运行前不得标为通过。
@@ -100,7 +110,7 @@
 - [ ] AC-PB5：三个内置主题、至少一款管理员上传主题及一款普通用户自有 HTML/JS 主题覆盖创建、编辑、图片、ZIP 导入/导出、激活、删除与预览；两类用户上传成功后均可主动激活，持久化 active/ThemeId 一致且各自博客实际渲染。当前登录用户可用未激活的自有主题预览已发布内容，列表/搜索/详情/单页与正式博客共享发布谓词；草稿、撤销发布、回收站或已删除内容在预览中不可见，匿名、他人主题/URL owner 混淆必须拒绝或不泄露，不改变 active/公开状态。导入/激活不自动列入可安装主题，未公开及伪造 themeId 不可被他人安装；管理员可沿既有公开操作将自有主题公开/取消公开，其他已认证用户从公开列表主动安装，复制到自己账户并自动启用，安装后其博客使用独立副本；普通用户不能公开自己的主题。非管理员公开、越权安装、下架后新增安装失败且不破坏旧 active；下架前已安装副本继续可用。恶意路径/链接/容量/模板错误失败无孤儿 active 或公开半包；不为公开当前 active 主题强增旧 UI 没有的入口。
 - [ ] AC-PB5-ZIP：ZIP 上传压缩包 10 MiB、常规文件数 100、单文件实际展开 5 MiB、全部常规文件展开合计 20 MiB、目录加文件条目 200、规范化相对路径深度 8 层（扣除允许的单个主题顶层文件夹），各项等于上限允许、超过上限失败。管理员与普通用户导入均覆盖内置主题兼容样本、合法高压缩比文本、边界值及各自的超限/伪造 ZIP header 声称大小、过量空目录、路径嵌套、链接与路径越界；压缩与展开预算在读/解包时执行，不依赖成功解完后才统计。任一步越限显式拒绝，暂存清理且原 active、主题元数据及已公开/可安装列表均不改变。不另设压缩比上限。
 - [ ] AC-PB6：旧 `/blog`、`/preview` 页面及主题静态资源保持原 URL/Host 渲染，无强制跨域跳转；原模板 key、i18n、合法 callback 的 JSON/JSONP、已登录互动和资源形状保持。所有公开 JSONP 入口（含读、评论/点赞及其他写操作）仅接收 1～128 字节的 ASCII 标识符/点式路径，拒绝空值、表达式、注入、无效点段及超长值，不产生业务副作用或可执行 JSONP 响应；`GetComments` 未提供 callback 仍返回旧 JSON，显式空 callback 须拒绝。合法回调保持旧 envelope/Content-Type/Item，不修改 renderer primitive 的原样测试；需核对非法 callback 的 HTTP 错误形状及状态、分类/文章/单页及无 owner 的 `/blog` 归属。本叶提供服务和 adapter contract，真实 HTTP/浏览器/文件/发布证据由 interface/presentation/delivery 另行验收，缺失记 `delegated-unrun`。
-- [ ] AC-PB7：Q-P1～Q-P9 及四项数据/跨层合同均同步到设计、执行计划、研究、动作清单与验收矩阵；任务已激活且规格合同已确认，但不以 `in_progress` 作为实现或运行证据。所有真实 Mongo/HTTP/浏览器/邮件/ZIP 证据仍为 `unrun`/`delegated-unrun`。
+- [ ] AC-PB7：Q-P1～Q-P10 及四项数据/跨层合同均同步到设计、执行计划、研究、动作清单与验收矩阵；任务已激活且规格合同已确认，但不以 `in_progress` 作为实现或运行证据。所有真实 Mongo/HTTP/浏览器/邮件/ZIP 证据仍为 `unrun`/`delegated-unrun`。
 
 ## 已确认合同（2026-09-24）
 

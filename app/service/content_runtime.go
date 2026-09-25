@@ -115,7 +115,7 @@ func InitContentRuntime(config ContentRoots) error {
 	repository := contentpdf.MongoPDFRepository{}
 	remoteFetcher := contentremote.New(nil, nil)
 	exporter := &applicationcontent.PDFExportService{
-		Notes:     contentpdf.NotePort{Repository: repository},
+		Notes:     contentpdf.NotePort{Repository: repository, Permission: sharePermissionAdapter{}},
 		Resources: contentpdf.ResourcePort{Repository: repository, Store: store},
 		RemoteResources: contentpdf.RemoteResourcePort{
 			Fetcher: remoteFetcher,

@@ -25,6 +25,18 @@ type Note struct {
 	BaseController
 }
 
+func allBlogResultsSucceeded(results []bool) bool {
+	if len(results) == 0 {
+		return false
+	}
+	for _, result := range results {
+		if !result {
+			return false
+		}
+	}
+	return true
+}
+
 // 笔记首页, 判断是否已登录
 // 已登录, 得到用户基本信息(notebook, shareNotebook), 跳转到index.html中
 // 否则, 转向登录页面
@@ -43,7 +55,11 @@ func (c Note) Index(noteId, online string) revel.Result {
 
 	// 已登录了, 那么得到所有信息
 	notebooks := notebookService.GetNotebooks(userId)
-	shareNotebooks, sharedUserInfos := shareService.GetShareNotebooks(userId)
+	shareNotebooks, sharedUserInfos, shareErr := shareService.GetShareNotebooksChecked(userId)
+	if shareErr != nil {
+		c.Response.Status = 500
+		return c.RenderText("internal server error")
+	}
 
 	// 还需要按时间排序(DESC)得到notes
 	notes := []info.Note{}
@@ -369,8 +385,9 @@ func (c Note) ExportPdf(noteId string) revel.Result {
 
 // 设置/取消Blog; 置顶
 func (c Note) SetNote2Blog(noteIds []string, isBlog, isTop bool) revel.Result {
+	results := make([]bool, 0, len(noteIds))
 	for _, noteId := range noteIds {
-		noteService.ToBlog(c.GetUserId(), noteId, isBlog, isTop)
+		results = append(results, noteService.ToBlog(c.GetUserId(), noteId, isBlog, isTop))
 	}
-	return c.RenderJSON(true)
+	return c.RenderJSON(allBlogResultsSucceeded(results))
 }

@@ -351,61 +351,7 @@ func (this *NotebookService) UpdateNotebookTitle(notebookId, userId, title strin
 
 // ToBlog or Not
 func (this *NotebookService) ToBlog(userId, notebookId string, isBlog bool) bool {
-	notebook := this.GetNotebook(notebookId, userId)
-	if notebook.NotebookId.IsZero() || notebook.IsDeleted {
-		return false
-	}
-	usn, err := userService.AllocateUsn(context.Background(), userId)
-	if err != nil {
-		return false
-	}
-	updates := bson.M{"IsBlog": isBlog, "Usn": usn}
-	// 笔记本
-	if err := db.Notebooks.UpdateOneMatchedContext(context.Background(), bson.M{"_id": notebook.NotebookId, "UserId": notebook.UserId, "Usn": notebook.Usn, "IsDeleted": false}, bson.M{"$set": updates}); err != nil {
-		return false
-	}
-
-	// 更新笔记
-	q := bson.M{"UserId": db.MustObjectIDFromHex(userId),
-		"NotebookId": db.MustObjectIDFromHex(notebookId)}
-	data := bson.M{"IsBlog": isBlog}
-	if isBlog {
-		data["PublicTime"] = time.Now()
-	} else {
-		data["HasSelfDefined"] = false
-	}
-	// Each note has its own generation and sync entry; never batch-write after
-	// allocating one shared USN.
-	notes := []info.Note{}
-	if err := db.Notes.Find(q).All(&notes); err != nil {
-		return false
-	}
-	for _, note := range notes {
-		noteUSN, allocErr := userService.AllocateUsn(context.Background(), userId)
-		if allocErr != nil {
-			return false
-		}
-		patch := bson.M{}
-		for key, value := range data {
-			patch[key] = value
-		}
-		patch["Usn"] = noteUSN
-		filter := bson.M{"_id": note.NoteId, "UserId": notebook.UserId, "Usn": note.Usn, "IsDeleted": false}
-		db.AddWorkspaceNoteMutationLeaseFilter(filter, "", time.Now())
-		if err := db.Notes.UpdateOneMatchedContext(context.Background(), filter, bson.M{"$set": patch}); err != nil {
-			return false
-		}
-		if err := db.NoteContents.UpdateOneMatchedContext(context.Background(), bson.M{"_id": note.NoteId, "UserId": notebook.UserId}, bson.M{"$set": bson.M{"IsBlog": isBlog}}); err != nil {
-			return false
-		}
-	}
-
-	// 重新计算tags
-	go (func() {
-		blogService.ReCountBlogTags(userId)
-	})()
-
-	return true
+	return this.toBlogWithReceipt(userId, notebookId, isBlog)
 }
 
 // 查看是否有子notebook

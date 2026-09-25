@@ -391,9 +391,27 @@ function getComments(noteId, page, callback) {
 function likePost(noteId, callback) {
 	ajaxPostP(getLeanoteUrl() + "/blog/likePost", {noteId: noteId}, callback)
 }
+function createCommentSubmissionId() {
+	var bytes = new Uint8Array(16);
+	if(!window.crypto || typeof window.crypto.getRandomValues !== "function") {
+		return null;
+	}
+	try {
+		window.crypto.getRandomValues(bytes);
+	} catch (error) {
+		return null;
+	}
+	return Array.prototype.map.call(bytes, function(byte) {
+		return byte.toString(16).padStart(2, "0");
+	}).join("");
+}
 // 提交评论
-function commentPost(noteId, commentId, content, callback, failureCallback) {
-	var data = {noteId: self.noteId, toCommentId: commentId, content: content};
+function commentPost(noteId, commentId, content, submissionId, callback, failureCallback) {
+	if(!/^[0-9a-f]{32}$/.test(submissionId || "")) {
+		if(failureCallback) failureCallback();
+		return;
+	}
+	var data = {noteId: noteId, toCommentId: commentId, content: content, submissionId: submissionId};
 	ajaxPostP(getLeanoteUrl() + "/blog/commentPost", data, callback, failureCallback);
 }
 // 删除评论

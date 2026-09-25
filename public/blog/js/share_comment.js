@@ -265,10 +265,19 @@ self.commentsMoreO.find("a").on('click', function(){
 				return;
 			}
 			var t = $(this);
+			var submissionId = $form.data("comment-submission-id");
+			if(!submissionId) {
+				submissionId = createCommentSubmissionId();
+				if(!submissionId) {
+					alert("Secure comment submission is unavailable.");
+					return;
+				}
+				$form.data("comment-submission-id", submissionId);
+			}
 			setButtonLoading(t, true);
-			var data = {noteId: self.noteId, toCommentId: commentId, content: content};
-			commentPost(self.noteId, commentId, content, function(ret) {
+			commentPost(self.noteId, commentId, content, submissionId, function(ret) {
 				setButtonLoading(t, false);
+				$form.removeData("comment-submission-id");
 				$content.val("");
 				self.bindCommentNum(1);
 				if(commentId) {

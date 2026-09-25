@@ -254,6 +254,21 @@ func (c *Collection) RemoveContext(parent context.Context, query interface{}) er
 	return err
 }
 
+func (c *Collection) RemoveOneMatchedContext(parent context.Context, query interface{}) error {
+	ctx, cancel := boundedOperationContext(parent)
+	defer cancel()
+	result, err := c.coll.DeleteOne(ctx, query)
+	if err != nil {
+		c.logFailure("remove", err)
+		return err
+	}
+	if result.DeletedCount == 0 {
+		c.logNotFound("remove")
+		return ErrDocumentNotFound
+	}
+	return nil
+}
+
 // RemoveAll deletes every matching document and returns the removed count.
 func (c *Collection) RemoveAll(query interface{}) (int, error) {
 	return c.RemoveAllContext(context.Background(), query)

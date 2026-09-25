@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -84,6 +85,91 @@ func TestPersistenceIndexesRejectHistoricalDuplicatesBeforeCreate(t *testing.T) 
 	}
 	if conflict.Collection != "users" || conflict.Index != "users_Email_unique" || conflict.Count != 1 {
 		t.Fatalf("index conflict=%+v, want users email one duplicate group", conflict)
+	}
+}
+
+func TestSharePreflightRejectsDocumentsOutsideInstalledValidator(t *testing.T) {
+	databaseRef := persistenceTestDatabase(t)
+	saved := database
+	database = databaseRef
+	t.Cleanup(func() { database = saved })
+	for _, name := range []string{"share_notes", "share_notebooks"} {
+		if err := databaseRef.Collection(name).Drop(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	collection := databaseRef.Collection("share_notes")
+	valid := func() bson.M {
+		return bson.M{
+			"_id": bson.NewObjectID(), "UserId": bson.NewObjectID(),
+			"NoteId": bson.NewObjectID(), "ToUserId": bson.NewObjectID(), "Perm": int32(1),
+		}
+	}
+	tests := []struct {
+		name   string
+		change func(bson.M)
+	}{
+		{"missing owner", func(doc bson.M) { delete(doc, "UserId") }},
+		{"zero owner", func(doc bson.M) { doc["UserId"] = bson.ObjectID{} }},
+		{"wrong owner type", func(doc bson.M) { doc["UserId"] = "owner" }},
+		{"missing resource", func(doc bson.M) { delete(doc, "NoteId") }},
+		{"zero resource", func(doc bson.M) { doc["NoteId"] = bson.ObjectID{} }},
+		{"wrong resource type", func(doc bson.M) { doc["NoteId"] = "note" }},
+		{"missing permission", func(doc bson.M) { delete(doc, "Perm") }},
+		{"wrong permission value", func(doc bson.M) { doc["Perm"] = int32(2) }},
+		{"wrong permission type", func(doc bson.M) { doc["Perm"] = "write" }},
+		{"two recipients", func(doc bson.M) { doc["ToGroupId"] = bson.NewObjectID() }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := collection.Drop(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			doc := valid()
+			test.change(doc)
+			if _, err := collection.InsertOne(context.Background(), doc); err != nil {
+				t.Fatal(err)
+			}
+			var conflict *ShareSchemaConflictError
+			if err := preflightShareDocuments(context.Background()); !errors.As(err, &conflict) || conflict.Collection != "share_notes" || conflict.Count != 1 {
+				t.Fatalf("preflight conflict=%+v err=%v", conflict, err)
+			}
+		})
+	}
+}
+
+func TestCustomDomainPreflightRejectsCanonicalCollisions(t *testing.T) {
+	databaseRef := persistenceTestDatabase(t)
+	saved := database
+	database = databaseRef
+	t.Cleanup(func() { database = saved })
+	collection := databaseRef.Collection("user_blogs")
+	for _, test := range []struct {
+		name    string
+		domains []any
+	}{
+		{name: "case and trailing dot", domains: []any{"Example.com.", "example.com"}},
+		{name: "unicode and punycode", domains: []any{"bücher.de", "xn--bcher-kva.de"}},
+		{name: "nonstring", domains: []any{int32(42)}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if err := collection.Drop(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			for _, value := range test.domains {
+				if _, err := collection.InsertOne(context.Background(), bson.M{"_id": bson.NewObjectID(), "Domain": value}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			var conflict *CustomDomainPreflightError
+			wantDuplicateGroups := int64(1)
+			if test.name == "nonstring" {
+				wantDuplicateGroups = 0
+			}
+			if err := preflightCustomDomains(context.Background()); !errors.As(err, &conflict) || conflict.InvalidCount != 1 || conflict.DuplicateGroups != wantDuplicateGroups || len(conflict.KeyDigests) == 0 {
+				t.Fatalf("custom domain preflight conflict=%+v err=%v", conflict, err)
+			}
+		})
 	}
 }
 
@@ -383,6 +469,64 @@ func TestOutboxMongoRetryAndSuccess(t *testing.T) {
 	}
 	if retry.Status != OutboxStatusSent || retry.Attempts != 2 {
 		t.Fatalf("sent state = %+v", retry)
+	}
+}
+
+func TestCommentOutboxMongoUsesHandoffGate(t *testing.T) {
+	databaseRef := persistenceTestDatabase(t)
+	collection := databaseRef.Collection("persistence_comment_outbox_handoff")
+	if err := collection.Drop(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	saved := Outbox
+	Outbox = wrapCollection(collection)
+	defer func() { Outbox = saved }()
+
+	now := time.Now().UTC().Truncate(time.Second)
+	event := OutboxEvent{ID: NewObjectID(), Kind: "comment", AggregateID: NewObjectID(), NextAttemptAt: now}
+	if _, err := EnqueueOutboxEvent(context.Background(), event); err != nil {
+		t.Fatal(err)
+	}
+	if err := ConfirmCommentOutbox(context.Background(), event.ID, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := DeliverOutbox(context.Background(), event.ID, now, func(_ context.Context, claimed OutboxEvent) error {
+		if claimed.Status != OutboxStatusHandedOff || claimed.TransportHandedOffAt.IsZero() {
+			return fmt.Errorf("comment reached transport without handoff gate: %+v", claimed)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var stored OutboxEvent
+	if err := Outbox.FindId(event.ID).One(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored.Status != OutboxStatusSent || stored.TransportHandedOffAt.IsZero() {
+		t.Fatalf("comment handoff state = %+v", stored)
+	}
+	rejected := OutboxEvent{ID: NewObjectID(), Kind: "comment", AggregateID: NewObjectID(), NextAttemptAt: now}
+	if _, err := EnqueueOutboxEvent(context.Background(), rejected); err != nil {
+		t.Fatal(err)
+	}
+	if err := ConfirmCommentOutbox(context.Background(), rejected.ID, now); err != nil {
+		t.Fatal(err)
+	}
+	secret := "private SMTP recipient@example.test"
+	err := DeliverOutbox(context.Background(), rejected.ID, now, func(context.Context, OutboxEvent) error {
+		return fmt.Errorf("%w: %s", ErrOutboxTransportRejected, secret)
+	})
+	if !errors.Is(err, ErrSideEffect) || strings.Contains(err.Error(), secret) {
+		t.Fatalf("definite rejection error = %v", err)
+	}
+	if err := Outbox.FindId(rejected.ID).One(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored.Status != OutboxStatusRetry || stored.LastError != "transport_rejected" || !stored.TransportHandedOffAt.IsZero() || stored.Attempts != 1 {
+		t.Fatalf("definite rejection state = %+v", stored)
+	}
+	if err := CancelOutboxForAggregate(context.Background(), rejected.AggregateID, "comment deleted"); err != nil {
+		t.Fatalf("rejected notification was not cancellable: %v", err)
 	}
 }
 

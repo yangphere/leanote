@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"io"
+	"time"
 
 	applicationcontent "github.com/yangphere/leanote/app/application/content"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/domain"
 	"github.com/yangphere/leanote/app/info"
-	"github.com/yangphere/leanote/app/service/contentpdf"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -21,7 +21,7 @@ func (mongoAttachmentRepository) LoadNote(ctx context.Context, noteID domain.Obj
 		return applicationcontent.AttachmentNote{}, db.ErrMongoClientNotInitialized
 	}
 	var note info.Note
-	err := db.Notes.FindContext(ctx, bson.M{"_id": noteID, "IsDeleted": false}).One(&note)
+	err := db.Notes.FindContext(ctx, bson.M{"_id": noteID, "IsTrash": false, "IsDeleted": false}).One(&note)
 	if err != nil {
 		return applicationcontent.AttachmentNote{}, attachmentRepositoryError("attachment_note_lookup", err)
 	}
@@ -58,14 +58,14 @@ func (mongoAttachmentRepository) ListAttachments(ctx context.Context, noteID dom
 type mongoAttachmentPermission struct{}
 
 func (mongoAttachmentPermission) CanReadNote(ctx context.Context, noteID, ownerID, actorID domain.ObjectID) (bool, error) {
-	if db.Notes == nil {
-		return false, db.ErrMongoClientNotInitialized
-	}
-	var note info.Note
-	if err := db.Notes.FindContext(ctx, bson.M{"_id": noteID, "UserId": ownerID, "IsDeleted": false}).One(&note); err != nil {
-		return false, attachmentRepositoryError("attachment_permission_note", err)
-	}
-	return (contentpdf.MongoPDFRepository{}).CanReadNote(ctx, note, actorID)
+	_, allowed, err := (sharePermissionAdapter{}).ResolveNotePermission(ctx, ownerID, actorID, noteID)
+	return allowed, err
+}
+
+type sharePermissionAdapter struct{}
+
+func (sharePermissionAdapter) ResolveNotePermission(ctx context.Context, ownerID, actorID, noteID domain.ObjectID) (int, bool, error) {
+	return (&ShareService{}).ResolveNotePermission(ctx, ownerID, actorID, noteID, time.Now().UTC())
 }
 
 func attachmentAccess() applicationcontent.AttachmentAccessService {

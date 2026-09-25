@@ -1,6 +1,7 @@
 package lea
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -70,6 +71,7 @@ func ListDir(dir string) []string {
 	if err != nil {
 		return nil
 	}
+	defer f.Close()
 	names, _ := f.Readdirnames(0)
 	return names
 }
@@ -80,7 +82,7 @@ func CopyFile(srcName, dstName string) (written int64, err error) {
 		return
 	}
 	defer src.Close()
-	dst, err := os.OpenFile(dstName, os.O_WRONLY|os.O_CREATE, 0644)
+	dst, err := os.OpenFile(dstName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return
 	}
@@ -90,9 +92,12 @@ func CopyFile(srcName, dstName string) (written int64, err error) {
 
 func CopyDir(source string, dest string) (err error) {
 	// get properties of source dir
-	sourceinfo, err := os.Stat(source)
+	sourceinfo, err := os.Lstat(source)
 	if err != nil {
 		return err
+	}
+	if !sourceinfo.IsDir() || sourceinfo.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("source is not a directory: %s", source)
 	}
 
 	// create dest dir
@@ -102,9 +107,16 @@ func CopyDir(source string, dest string) (err error) {
 		return err
 	}
 
-	directory, _ := os.Open(source)
+	directory, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer directory.Close()
 
 	objects, err := directory.Readdir(-1)
+	if err != nil {
+		return err
+	}
 
 	for _, obj := range objects {
 
@@ -112,17 +124,20 @@ func CopyDir(source string, dest string) (err error) {
 
 		destinationfilepointer := dest + "/" + obj.Name()
 
+		if obj.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("symbolic links are not supported: %s", sourcefilepointer)
+		}
 		if obj.IsDir() {
 			// create sub-directories - recursively
 			err = CopyDir(sourcefilepointer, destinationfilepointer)
 			if err != nil {
-				//				fmt.Println(err)
+				return err
 			}
 		} else {
 			// perform copy
 			_, err = CopyFile(sourcefilepointer, destinationfilepointer)
 			if err != nil {
-				//				fmt.Println(err)
+				return err
 			}
 		}
 	}
@@ -173,6 +188,9 @@ func PutFileStrContent(path, content string) bool {
 		}
 	})()
 	f, err1 = os.OpenFile(path, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666) //打开文件
+	if err1 != nil {
+		return false
+	}
 	//	Log(err1)
 	//	var n int
 	_, err1 = io.WriteString(f, content) //写入文件(字符串)

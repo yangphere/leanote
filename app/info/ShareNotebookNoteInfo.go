@@ -83,6 +83,7 @@ type ShareNotebook struct {
 	Seq             int             `bson:"Seq"`  // 排序
 	Perm            int             `bson:"Perm"` // 权限, 其下所有notes 0只读, 1可修改
 	CreatedTime     time.Time       `bson:"CreatedTime,omitempty"`
+	ExpiresAt       time.Time       `bson:"ExpiresAt,omitempty" json:"-"`
 	//	IsDefault       bool          `IsDefault` // 是否是默认共享notebook, perm seq=-9999999, NotebookId=null
 }
 
@@ -144,6 +145,7 @@ type ShareNote struct {
 	NoteId      domain.ObjectID `bson:"NoteId"`
 	Perm        int             `bson:"Perm"` // 权限, 0只读, 1可修改
 	CreatedTime time.Time       `bson:"CreatedTime"`
+	ExpiresAt   time.Time       `bson:"ExpiresAt,omitempty" json:"-"`
 }
 
 // 谁共享给了谁note

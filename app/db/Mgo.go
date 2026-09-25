@@ -52,6 +52,7 @@ var EmailLogs *Collection
 // blog
 var BlogLikes *Collection
 var BlogComments *Collection
+var BlogCommentReceipts *Collection
 var Reports *Collection
 var BlogSingles *Collection
 var Themes *Collection
@@ -168,6 +169,7 @@ func InitWithError(url, dbname string) error {
 	// 社交
 	BlogLikes = wrapCollection(database.Collection("blog_likes"))
 	BlogComments = wrapCollection(database.Collection("blog_comments"))
+	BlogCommentReceipts = wrapCollection(database.Collection("comment_submission_receipts"))
 
 	// 举报
 	Reports = wrapCollection(database.Collection("reports"))
@@ -218,6 +220,7 @@ func resetCollections() {
 	EmailLogs = nil
 	BlogLikes = nil
 	BlogComments = nil
+	BlogCommentReceipts = nil
 	Reports = nil
 	BlogSingles = nil
 	Themes = nil

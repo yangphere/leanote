@@ -5,8 +5,8 @@ import (
 	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
-	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 	//	"github.com/yangphere/leanote/app/lea/blog"
@@ -234,7 +234,11 @@ func (c MemberBlog) Theme() revel.Result {
 	c.ViewArgs["activeTheme"] = activeTheme
 	c.ViewArgs["otherThemes"] = otherThemes
 
-	c.ViewArgs["optionThemes"] = themeService.GetDefaultThemes()
+	optionThemes, err := themeService.GetDefaultThemesChecked()
+	if err != nil {
+		return c.RenderError(err)
+	}
+	c.ViewArgs["optionThemes"] = optionThemes
 
 	c.ViewArgs["title"] = c.Message("Theme")
 	return c.RenderTemplate("member/blog/theme.html")
@@ -268,7 +272,10 @@ func (c MemberBlog) UpdateTheme(themeId string, isNew int) revel.Result {
 	}
 	c.ViewArgs["theme"] = theme
 
-	path := revel.BasePath + "/" + theme.Path
+	path := themeService.GetThemeAbsolutePath(userId, themeId)
+	if path == "" {
+		return c.E404()
+	}
 
 	tpls := ListDir(path)
 	myTpls := make([]string, len(baseTpls))
@@ -295,8 +302,7 @@ func (c MemberBlog) UpdateTheme(themeId string, isNew int) revel.Result {
 // 得到文件内容
 func (c MemberBlog) GetTplContent(themeId string, filename string) revel.Result {
 	re := info.NewRe()
-	re.Ok = true
-	re.Item = themeService.GetTplContent(c.GetUserId(), themeId, filename)
+	re.Item, re.Ok = themeService.ReadTplContent(c.GetUserId(), themeId, filename)
 
 	return c.RenderJSON(re)
 }
@@ -314,19 +320,15 @@ func (c MemberBlog) DeleteTpl(themeId, filename string) revel.Result {
 
 func (c MemberBlog) ListThemeImages(themeId string) revel.Result {
 	re := info.NewRe()
-	userId := c.GetUserId()
-	path := themeService.GetThemeAbsolutePath(userId, themeId) + "/images"
-	os.MkdirAll(path, 0755)
-	images := ListDir(path)
+	images, ok := themeService.ListThemeImages(c.GetUserId(), themeId)
 	re.List = images
-	re.Ok = true
+	re.Ok = ok
 	return c.RenderJSON(re)
 }
 
 func (c MemberBlog) DeleteThemeImage(themeId, filename string) revel.Result {
 	re := info.NewRe()
-	path := themeService.GetThemeAbsolutePath(c.GetUserId(), themeId) + "/images/" + filename
-	re.Ok = DeleteFile(path)
+	re.Ok = themeService.DeleteThemeImage(c.GetUserId(), themeId, filename)
 	return c.RenderJSON(re)
 }
 
@@ -351,55 +353,24 @@ func (c MemberBlog) uploadImage(themeId string) (re info.Re) {
 		re.Ok = Ok
 	}()
 
+	files := c.Params.Files["file"]
+	if len(files) != 1 || files[0] == nil {
+		resultMsg = "未选择图片"
+		return re
+	}
 	var data []byte
 	c.Params.Bind(&data, "file")
-	handel := c.Params.Files["file"][0]
+	handel := files[0]
 	if data == nil || len(data) == 0 {
 		return re
 	}
-
-	// file, handel, err := c.Request.FormFile("file")
-	// if err != nil {
-	// 	return re
-	// }
-	// defer file.Close()
-	// 生成上传路径
-	dir := themeService.GetThemeAbsolutePath(c.GetUserId(), themeId) + "/images"
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		return re
-	}
-	// 生成新的文件名
 	filename := handel.Filename
-
-	var ext string
-
-	_, ext = SplitFilename(filename)
-	if ext != ".gif" && ext != ".jpg" && ext != ".png" && ext != ".bmp" && ext != ".jpeg" {
-		resultMsg = "不是图片"
+	ok, message := themeService.SaveThemeImage(c.GetUserId(), themeId, filename, data)
+	if !ok {
+		resultMsg = message
 		return re
 	}
-
-	// data, err := ioutil.ReadAll(file)
-	// if err != nil {
-	// 	LogJ(err)
-	// 	return re
-	// }
-
-	// > 2M?
-	if len(data) > 5*1024*1024 {
-		resultCode = 0
-		resultMsg = "图片大于2M"
-		return re
-	}
-
-	toPath := dir + "/" + filename
-	err = ioutil.WriteFile(toPath, data, 0777)
-	if err != nil {
-		LogJ(err)
-		return re
-	}
-	TransToGif(toPath, 0, true)
+	fileId = filename
 	resultCode = 1
 	resultMsg = "上传成功!"
 
@@ -446,9 +417,14 @@ func (c MemberBlog) ExportTheme(themeId string) revel.Result {
 func (c MemberBlog) ImportTheme() revel.Result {
 	re := info.NewRe()
 
+	files := c.Params.Files["file"]
+	if len(files) != 1 || files[0] == nil {
+		re.Msg = "Please upload zip file"
+		return c.RenderJSON(re)
+	}
 	var data []byte
 	c.Params.Bind(&data, "file")
-	handel := c.Params.Files["file"][0]
+	handel := files[0]
 	if data == nil || len(data) == 0 {
 		return c.RenderJSON(re)
 	}
@@ -462,14 +438,22 @@ func (c MemberBlog) ImportTheme() revel.Result {
 	// defer file.Close()
 	// 生成上传路径
 	userId := c.GetUserId()
-	dir := revel.BasePath + "/public/upload/" + userId + "/tmp"
+	dir := themeService.GetThemeUploadTempPath(userId)
+	if dir == "" {
+		re.Msg = "error"
+		return c.RenderJSON(re)
+	}
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
 		re.Msg = fmt.Sprintf("%v", err)
 		return c.RenderJSON(re)
 	}
 	// 生成新的文件名
-	filename := handel.Filename
+	filename := filepath.Base(filepath.FromSlash(strings.ReplaceAll(handel.Filename, "\\", "/")))
+	if filename == "." || filename == ".." || filename == "" {
+		re.Msg = "Please upload zip file"
+		return c.RenderJSON(re)
+	}
 
 	var ext string
 	_, ext = SplitFilename(filename)
@@ -489,9 +473,19 @@ func (c MemberBlog) ImportTheme() revel.Result {
 		return c.RenderJSON(re)
 	}
 
-	toPath := dir + "/" + filename
-	err = ioutil.WriteFile(toPath, data, 0777)
+	tempFile, err := os.CreateTemp(dir, "theme-upload-*.zip")
 	if err != nil {
+		re.Msg = fmt.Sprintf("%v", err)
+		return c.RenderJSON(re)
+	}
+	toPath := tempFile.Name()
+	defer os.Remove(toPath)
+	if _, err = tempFile.Write(data); err != nil {
+		_ = tempFile.Close()
+		re.Msg = fmt.Sprintf("%v", err)
+		return c.RenderJSON(re)
+	}
+	if err = tempFile.Close(); err != nil {
 		re.Msg = fmt.Sprintf("%v", err)
 		return c.RenderJSON(re)
 	}
