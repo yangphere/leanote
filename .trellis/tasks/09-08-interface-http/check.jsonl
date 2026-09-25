@@ -1,9 +1,12 @@
 {"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查 HTTP 边界质量、Golden/replay 和真实请求约束"}
-{"file":"docs/modernization-backlog.md","reason":"登记延期项而不隐藏 fallback"}
 {"file":".trellis/spec/backend/error-handling.md","reason":"维护 production-config 错误码、fail-closed 和 bind/dial/healthz 时序"}
-{"file":"docs/modernization/cicd-delivery.md","reason":"核对生产配置来源、secret/Mongo 约束和 healthz 契约"}
-{"file":".trellis/tasks/09-08-application-identity/prd.md","reason":"消费 identity principal、方法矩阵、userId 和 SessionWriter 契约"}
-{"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"承接 identity service/adapter 和下游 replay 证据"}
+{"file":"docs/modernization-backlog.md","reason":"登记延期项而不隐藏 fallback"}
+{"file":"docs/modernization/cicd-delivery.md","reason":"核对生产配置来源、secret/Mongo 约束、卷布局和 healthz 契约"}
+{"file":".trellis/tasks/09-08-interface-http/research/spec-audit-2026-09-25.md","reason":"核对 D-H 决策是否已确认并回写"}
+{"file":".trellis/tasks/09-08-interface-http/acceptance/evidence-matrix.md","reason":"逐 AC 核对证据与 blocked/unrun 标注"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-identity/prd.md","reason":"消费 identity principal、方法矩阵、userId 和 SessionWriter 契约"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-identity/acceptance/evidence-matrix.md","reason":"承接 identity service/adapter 和下游 replay 证据"}
 {"file":".trellis/tasks/archive/2026-09/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"承接 TTL/index、token/session/outbox 持久化证据"}
-{"file":".trellis/tasks/09-08-application-content/prd.md","reason":"复核 ContentRoots 配置门禁与 content ownership"}
-{"file":".trellis/tasks/09-08-application-content/design.md","reason":"确认 HTTP 只绑定 typed roots，不复制 resolver/state machine"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-content/prd.md","reason":"复核 ContentRoots 配置门禁与 content ownership"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-content/design.md","reason":"确认 HTTP 只绑定 typed roots，不复制 resolver/state machine"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-admin/prd.md","reason":"确认 admin 只消费 ProductionConfig，无重复解析"}

@@ -1,8 +1,16 @@
 {"file":"CONTEXT.md","reason":"读取 API/URL/Session 不变量"}
 {"file":"docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md","reason":"核对 Revel 迁出设计"}
-{"file":".trellis/tasks/09-08-application-identity/prd.md","reason":"实现 identity action methods、principal userId、_ID fallback 和 SessionWriter seam"}
-{"file":".trellis/tasks/09-08-application-identity/design.md","reason":"实现 principal、token/session resolver 和错误映射边界"}
-{"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"执行 identity API/Session/Golden replay 交接"}
+{"file":".trellis/tasks/09-08-interface-http/research/spec-audit-2026-09-25.md","reason":"现状基线、发现与 D-H1~D-H7 待确认事项"}
+{"file":".trellis/tasks/archive/2026-08/08-25-revel-migration/implement.md","reason":"继承 Params/Session/ViewArgs/commonUrl/TemplateFuncs 余量清单"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-identity/prd.md","reason":"实现 identity action methods、principal userId、_ID fallback、P-01~P-08 与 U-04/U-05"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-identity/design.md","reason":"实现 principal、token/session resolver 和错误映射边界"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-identity/acceptance/evidence-matrix.md","reason":"执行 identity API/Session/Golden replay 交接"}
 {"file":".trellis/tasks/archive/2026-09/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"读取 TTL/index、token、outbox 和 transaction 已通过证据"}
-{"file":".trellis/tasks/09-08-application-content/prd.md","reason":"消费 typed ContentRoots 与 paired quarantine startup contract"}
-{"file":".trellis/tasks/09-08-application-content/design.md","reason":"只实现配置绑定，不复制 content path resolver/quarantine state machine"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-content/prd.md","reason":"消费 typed ContentRoots 与 paired quarantine startup contract"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-content/design.md","reason":"只实现配置绑定，不复制 content path resolver/quarantine state machine"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-content/research/action-inventory.md","reason":"content 26 actions 的 wire、GetImages/GetAlbums 与 CopyHttpImage 委托"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-notes/research/action-inventory.md","reason":"notes action wire、OperationId/ExpectedUsn、deleteTrash alias"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-publishing/research/action-contract-inventory.md","reason":"publishing action wire、submissionId 必填与 JSONP callback"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-admin/research/action-contract-inventory.md","reason":"admin action wire"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-admin/design.md","reason":"ProductionConfig consumer、ConfiguredDatabaseIdentity、CredentialProviderRef 与 backup root"}
+{"file":".trellis/tasks/archive/2026-09/09-08-domain-contracts/research/input-contracts.json","reason":"binder 字段级 schema 与非法输入失败语义"}
