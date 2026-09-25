@@ -26,6 +26,7 @@ Go 1.26 monolith, standard `testing`, no linter beyond `gofmt`/`go vet` — the 
 ## Testing Requirements
 
 - Every fix ships a focused regression case (AGENTS.md). Real server boundary for HTTP work — never call a controller directly.
+- Route parser tests must check segment length before indexing extracted segments; static file routes bypass controller BEFORE hooks and need separate assertions.
 - Mongo-backed tests run under the three-mode harness; `LEANOTE_GOLDEN=replay go test -p 1 ./app/tests/... -count=1 -timeout 30m` stays read-only; only `LEANOTE_GOLDEN=record` writes.
 - A test that needs an uninitialized global Mongo collection saves it, assigns `nil`, and restores it with `t.Cleanup`; it must not infer that earlier same-package tests did not initialize `db.Notes` or another collection. Tests that mutate package-global collections must not call `t.Parallel`.
 - Node contract suite `npm test` covers build closure, i18n scanner, release/summary/browser-evidence contracts — extend it when touching `scripts/` tooling.

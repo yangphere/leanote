@@ -6,7 +6,7 @@
 
 | AC | 内容 | 证据类型 | 前置 | 状态 |
 |----|------|----------|------|------|
-| AC-H1 | 全部公开 action/静态前缀可达；registry ↔ inventory 对账 | route-table + 对账测试 | B0 inventory | unrun |
+| AC-H1 | 全部公开 action/静态前缀可达；registry ↔ inventory 对账 | route-table + 对账测试 | B0 inventory | partial |
 | AC-H2 | 未注册 404、导出未注册不可达、identity 405、其他方法策略 | route negative | B1 | unrun |
 | AC-H3 | 响应/状态/Golden；binder 负例 | contract + Golden replay（Mongo 8 standalone） | B2–B6 | unrun |
 | AC-H4 | API token 保持、旧 Web cookie 匿名、cookie 安全属性 | session contract + replay | B1 | unrun |
@@ -18,6 +18,13 @@
 | AC-H10 | harness 在 `cmd/leanote -runMode test` 全量运行；run mode 互斥；SIGTERM | harness 全量 + 负例 | B8 | unrun |
 | AC-H11 | Revel 零命中、go.mod 无 revel、`app/cmd` 删除 | rg + `go mod tidy` diff | B8 通过 | unrun |
 | AC-H12 | build/vet/test/npm/diff-check/validate | 质量门 | 全部批次 | unrun |
+
+## B0 evidence (2026-09-25)
+
+- `research/action-inventory.md` records the code-derived baseline: 95 routes (83 action, 9 static, 3 catch-all) and 242 exported controller methods returning `revel.Result`; each row includes routability, owner, method, current BEFORE/commonUrl facts, response shape, and Golden status.
+- `go test ./app/httpserver -count=1`: passed, including route parsing and the negative that an exported `BaseController` helper is not reachable through the catch-all.
+- `go vet ./app/httpserver`: passed.
+- `go test ./app/controllers -run '^TestRegistryMatchesB0Inventory$' -count=1`: expected failure, `missing=241, extra=0`; the marker covers the 240 routable exported methods plus nine route aliases, while the current registry has 8 entries. This is the explicit migration gap until B1-B6 registrations land, so AC-H1 remains partial. No real HTTP/Mongo replay was run.
 
 ## 下游移交（本任务不关闭）
 

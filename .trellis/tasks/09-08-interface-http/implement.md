@@ -4,9 +4,9 @@
 
 ## B0 盘点与对账骨架
 
-- [ ] 生成 `research/action-inventory.md`：`conf/routes` 95 条（显式/Static/catch-all）× 约 247 个 controller 方法，逐项标注 routable/非路由辅助、owner application 任务、当前 method、BEFORE/`commonUrl`、响应类型、Golden 覆盖。
-- [ ] 读取已归档交接矩阵：identity `acceptance/evidence-matrix.md`、persistence、notes `research/action-inventory.md`、content `research/action-inventory.md`、publishing/admin `research/action-contract-inventory.md`、domain `research/input-contracts.json`。
-- [ ] 增加 registry ↔ inventory 对账测试（先失败，随批次转绿）；增加“导出未注册方法不可达”负例。
+- [x] 生成 `research/action-inventory.md`：`conf/routes` 95 条（显式/Static/catch-all）与当前代码导出的 242 个 `revel.Result` controller 方法，逐项标注 routable/非路由辅助、owner application 任务、当前 method、BEFORE/`commonUrl`、响应类型、Golden 覆盖。
+- [x] 读取已归档交接矩阵：identity `acceptance/evidence-matrix.md`、persistence、notes `research/action-inventory.md`、content `research/action-inventory.md`、publishing/admin `research/action-contract-inventory.md`、domain `research/input-contracts.json`。
+- [x] 增加 registry ↔ inventory 对账测试（当前迁移缺口按设计先失败，随批次转绿）；增加“导出未注册方法不可达”负例。
 
 ## B1 runtime 与 production-config
 

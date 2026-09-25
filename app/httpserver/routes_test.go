@@ -61,7 +61,7 @@ func TestParseRealRoutesFile(t *testing.T) {
 		if r.Path == "/findPassword/:token" && (len(r.segments) != 2 || r.segments[1].kind != segParam || r.segments[1].text != "token") {
 			t.Fatalf(":param segment not compiled: %+v", r)
 		}
-		if r.Path == "/public/*filepath" && (len(r.segments) == 0 || r.segments[0].kind != segLiteral || r.segments[1].kind != segRest) {
+		if r.Path == "/public/*filepath" && (len(r.segments) < 2 || r.segments[0].kind != segLiteral || r.segments[1].kind != segRest) {
 			t.Fatalf("*filepath segment not compiled: %+v", r)
 		}
 		if r.Action == "Blog.E()" {
@@ -151,9 +151,10 @@ func TestRouteTableNegatives(t *testing.T) {
 	// /note/:noteId legitimately routes to Note.Index for any id.
 	// The negatives are the catch-all names with nothing registered.
 	for _, path := range []string{
-		"/notebook/index", // Notebook controller not registered
-		"/user/other",     // User controller not registered
-		"/noSuch/method",  // no such controller at all
+		"/notebook/index",      // Notebook controller not registered
+		"/user/other",          // User controller not registered
+		"/noSuch/method",       // no such controller at all
+		"/base/requestContext", // exported BaseController helper is not an action
 	} {
 		req := httptest.NewRequest("GET", path, nil)
 		rec := httptest.NewRecorder()
