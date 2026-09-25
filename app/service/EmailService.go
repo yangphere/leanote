@@ -282,17 +282,70 @@ func (this *EmailService) DeliverOutbox(ctx context.Context, event db.OutboxEven
 		}
 		return errors.New("email configuration service is not initialized")
 	}
-	email, err := outboxPayloadString(event.Payload, "email")
-	if err != nil || !IsEmail(email) {
-		if event.Kind == "comment" {
-			return fmt.Errorf("%w: outbox email payload is invalid", db.ErrOutboxTransportRejected)
+	email := ""
+	if event.Kind != "feedback" {
+		var err error
+		email, err = outboxPayloadString(event.Payload, "email")
+		if err != nil || !IsEmail(email) {
+			if event.Kind == "comment" {
+				return fmt.Errorf("%w: outbox email payload is invalid", db.ErrOutboxTransportRejected)
+			}
+			return errors.New("outbox email payload is invalid")
 		}
-		return errors.New("outbox email payload is invalid")
 	}
 	var subject, body string
 	var values map[string]interface{}
 	plainTextBody := false
 	switch event.Kind {
+	case "feedback":
+		recipients, ok := outboxPayloadStrings(event.Payload, "recipients")
+		if !ok || len(recipients) == 0 || len(recipients) > 20 {
+			return fmt.Errorf("%w: feedback recipients are invalid", db.ErrOutboxTransportRejected)
+		}
+		for _, recipient := range recipients {
+			if !IsEmail(recipient) || strings.ContainsAny(recipient, "\r\n") {
+				return fmt.Errorf("%w: feedback recipient is invalid", db.ErrOutboxTransportRejected)
+			}
+		}
+		subject, _ = event.Payload["subject"].(string)
+		if strings.TrimSpace(subject) == "" || strings.ContainsAny(subject, "\r\n") {
+			return fmt.Errorf("%w: feedback subject is invalid", db.ErrOutboxTransportRejected)
+		}
+		feedbackBody, _ := event.Payload["body"].(string)
+		if strings.TrimSpace(feedbackBody) == "" {
+			return fmt.Errorf("%w: feedback body is invalid", db.ErrOutboxTransportRejected)
+		}
+		addr, _ := event.Payload["addr"].(string)
+		body = "<p>Suggestion:</p><pre>" + html.EscapeString(feedbackBody) + "</pre>"
+		if addr != "" {
+			body += "<p>Contact: " + html.EscapeString(addr) + "</p>"
+		}
+		send := this.send
+		if send == nil {
+			send = this.SendEmailContext
+		}
+		if err := send(ctx, strings.Join(recipients, ";"), subject, body); err != nil {
+			return fmt.Errorf("send feedback email: %w", err)
+		}
+		return nil
+	case "broadcast":
+		var ok bool
+		subject, ok = event.Payload["subject"].(string)
+		if !ok || strings.TrimSpace(subject) == "" || strings.ContainsAny(subject, "\r\n") {
+			return fmt.Errorf("%w: broadcast subject is invalid", db.ErrOutboxTransportRejected)
+		}
+		body, ok = event.Payload["body"].(string)
+		if !ok || strings.TrimSpace(body) == "" {
+			return fmt.Errorf("%w: broadcast body is invalid", db.ErrOutboxTransportRejected)
+		}
+		send := this.send
+		if send == nil {
+			send = this.SendEmailContext
+		}
+		if err := send(ctx, email, subject, body); err != nil {
+			return fmt.Errorf("send broadcast email: %w", err)
+		}
+		return nil
 	case "comment":
 		comment, commentOK := event.Payload["content"].(string)
 		if !commentOK || strings.TrimSpace(comment) == "" {
@@ -392,6 +445,29 @@ func outboxPayloadString(payload map[string]any, key string) (string, error) {
 		return "", fmt.Errorf("outbox payload %s is invalid", key)
 	}
 	return value, nil
+}
+
+func outboxPayloadStrings(payload map[string]any, key string) ([]string, bool) {
+	value, ok := payload[key]
+	if !ok {
+		return nil, false
+	}
+	result := make([]string, 0)
+	switch values := value.(type) {
+	case []string:
+		result = append(result, values...)
+	case []any:
+		for _, item := range values {
+			text, ok := item.(string)
+			if !ok {
+				return nil, false
+			}
+			result = append(result, strings.TrimSpace(text))
+		}
+	default:
+		return nil, false
+	}
+	return result, true
 }
 
 func outboxPayloadInt(payload map[string]any, key string) (int, error) {
@@ -719,30 +795,28 @@ func (this *EmailService) SendEmailToUsers(users []info.User, subject, body stri
 		return
 	}
 
-	go func() {
-		for _, user := range users {
-			LogJ(user)
-			m := map[string]interface{}{}
-			m["userId"] = user.UserId.Hex()
-			m["username"] = user.Username
-			m["email"] = user.Email
-			ok2, msg2, subject2, body2 := this.renderEmail(subject, body, m)
-			ok = ok2
-			msg = msg2
-			if ok2 {
-				sendOk, msg := this.SendEmail(user.Email, subject2, body2)
-				this.AddEmailLog(user.Email, subject, body, sendOk, msg) // 把模板记录下
-				// 记录到Email Log
-				if sendOk {
-					// Log("ok " + user.Email)
-				} else {
-					// Log("no " + user.Email)
-				}
+	for _, user := range users {
+		LogJ(user)
+		m := map[string]interface{}{}
+		m["userId"] = user.UserId.Hex()
+		m["username"] = user.Username
+		m["email"] = user.Email
+		ok2, msg2, subject2, body2 := this.renderEmail(subject, body, m)
+		ok = ok2
+		msg = msg2
+		if ok2 {
+			sendOk, msg := this.SendEmail(user.Email, subject2, body2)
+			this.AddEmailLog(user.Email, subject, body, sendOk, msg) // 把模板记录下
+			// 记录到Email Log
+			if sendOk {
+				// Log("ok " + user.Email)
 			} else {
-				// Log(msg);
+				// Log("no " + user.Email)
 			}
+		} else {
+			// Log(msg);
 		}
-	}()
+	}
 
 	return
 }
@@ -788,8 +862,22 @@ func (this *EmailService) SendEmailToEmails(emails []string, subject, body strin
 
 // 添加邮件日志
 func (this *EmailService) AddEmailLog(email, subject, body string, ok bool, msg string) {
-	log := info.EmailLog{LogId: db.NewObjectID(), Email: email, Subject: subject, Body: body, Ok: ok, Msg: msg, CreatedTime: time.Now()}
+	log := info.EmailLog{LogId: db.NewObjectID(), Email: email, Subject: redactEmailSubject(subject), Body: "", Ok: ok, Msg: classifyEmailLogMessage(msg), CreatedTime: time.Now()}
 	db.Insert(db.EmailLogs, log)
+}
+
+func redactEmailSubject(subject string) string {
+	if len(subject) > 128 {
+		return subject[:128]
+	}
+	return subject
+}
+
+func classifyEmailLogMessage(msg string) string {
+	if msg == "" {
+		return ""
+	}
+	return "delivery_error"
 }
 
 // 展示邮件日志

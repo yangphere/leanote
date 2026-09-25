@@ -2,8 +2,25 @@
 {"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "检查敏感数据和质量约束"}
 {"file": ".trellis/tasks/archive/2026-09/09-08-application-content/prd.md", "reason": "核对 PDF descriptor provider 与 renderer execution ownership handoff"}
 {"file": ".trellis/tasks/archive/2026-09/09-08-application-content/design.md", "reason": "确认 PDF process/sandbox/cleanup 仅由 content 拥有"}
-{"file": ".trellis/tasks/09-08-application-publishing/prd.md", "reason": "核对评论通知和取消验收结果"}
-{"file": ".trellis/tasks/09-08-application-publishing/design.md", "reason": "检查状态迁移、CAS 和未知交接合同"}
-{"file": ".trellis/tasks/09-08-application-publishing/implement.md", "reason": "检查 publishing/admin 联验完成状态"}
-{"file": ".trellis/tasks/09-08-application-publishing/research/implementation-decision-brief.md", "reason": "校对已决规则及不可替代的真实证据"}
-{"file": ".trellis/tasks/09-08-application-publishing/acceptance/evidence-matrix.md", "reason": "检查 AC-PB4-NOTIFY/DELETE/HANDOFF 的移交证据"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-application-publishing/research/implementation-decision-brief.md", "reason": "校对已决规则及不可替代的真实证据"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-application-publishing/acceptance/evidence-matrix.md", "reason": "检查 AC-PB4-NOTIFY/DELETE/HANDOFF 的移交证据"}
+{"file": ".trellis/tasks/09-08-application-admin/research/spec-audit-2026-09-25.md", "reason": "复核规格发现、依赖证据和已确认产品合同"}
+{"file": ".trellis/tasks/09-08-application-admin/research/action-contract-inventory.md", "reason": "复核逐 action 输入输出与责任边界"}
+{"file": ".trellis/tasks/09-08-application-admin/acceptance/evidence-matrix.md", "reason": "复核 AC 状态、证据完整性和未运行门禁"}
+{"file": ".trellis/tasks/09-08-application-admin/prd.md", "reason": "复核冻结输入、identity、批次、备份和升级合同"}
+{"file": ".trellis/tasks/09-08-application-admin/design.md", "reason": "复核 schema/index/CAS、credential seam 和 retention 细节"}
+{"file": ".trellis/tasks/09-08-application-admin/implement.md", "reason": "复核执行顺序、迁移与回滚门禁"}
+{"file": ".trellis/tasks/09-08-application-admin/task.json", "reason": "复核任务状态、依赖和元数据范围"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-application-identity/prd.md", "reason": "复核 principal、demo 和账号邮件交接"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-application-identity/design.md", "reason": "复核 identity outbox 与敏感字段边界"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-application-identity/acceptance/evidence-matrix.md", "reason": "复核 identity 真实证据状态"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-application-notes/prd.md", "reason": "复核 notes/feedback handoff 与 USN 合同"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-application-notes/design.md", "reason": "复核 notes 持久化和升级边界"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-application-notes/acceptance/evidence-matrix.md", "reason": "复核 notes 运行证据"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-infrastructure-persistence/prd.md", "reason": "复核 Mongo/index/transaction 持久边界"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-infrastructure-persistence/design.md", "reason": "复核 BSON/index/CAS 与 receipt 能力"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-infrastructure-persistence/acceptance/evidence-matrix.md", "reason": "复核 persistence 证据"}
+{"file": ".trellis/tasks/09-08-interface-http/prd.md", "reason": "复核 production-config 权威输入合同"}
+{"file": ".trellis/tasks/09-08-interface-http/design.md", "reason": "复核 production-config producer 与 HTTP 边界"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "复核数据库索引与一致性规范"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "复核脱敏日志规范"}

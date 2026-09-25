@@ -1,30 +1,66 @@
 package service
 
 import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"time"
 )
 
 type UpgradeService struct {
 }
 
+func upgradeInputDigest(kind, target string) string {
+	digest := sha256.Sum256([]byte(kind + "\x00" + target))
+	return hex.EncodeToString(digest[:])
+}
+
+type dbUpgradeCheckpoint struct{ value info.UpgradeCheckpoint }
+
+func (this *UpgradeService) acquireStep(kind, step, target string) (dbUpgradeCheckpoint, bool, error) {
+	checkpoint, done, err := db.AcquireUpgradeCheckpoint(context.Background(), db.UpgradeOperationID(kind, target), step, upgradeInputDigest(kind, target), target, time.Now().UTC())
+	if err != nil {
+		return dbUpgradeCheckpoint{}, false, err
+	}
+	return dbUpgradeCheckpoint{value: checkpoint}, done, nil
+}
+
 // 添加了PublicTime, RecommendTime
-func (this *UpgradeService) UpgradeBlog() bool {
+func (this *UpgradeService) UpgradeBlog() (bool, string) {
+	cp, done, err := this.acquireStep("upgrade-blog", "public-times", "all")
+	if err != nil {
+		return false, fmt.Sprintf("upgrade checkpoint: %v", err)
+	}
+	if done {
+		return true, "already applied"
+	}
 	notes := []info.Note{}
-	db.ListByQ(db.Notes, bson.M{"IsBlog": true}, &notes)
+	if err := db.Notes.FindContext(context.Background(), bson.M{"IsBlog": true}).All(&notes); err != nil {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, fmt.Sprintf("list blog notes: %v", err)
+	}
 
 	// PublicTime, RecommendTime = UpdatedTime
 	for _, note := range notes {
 		if note.IsBlog && note.PublicTime.Year() < 100 {
-			db.UpdateByIdAndUserIdMap2(db.Notes, note.NoteId, note.UserId, bson.M{"PublicTime": note.UpdatedTime, "RecommendTime": note.UpdatedTime})
+			if err := db.Notes.UpdateOneMatchedContext(context.Background(), bson.M{"_id": note.NoteId, "UserId": note.UserId}, bson.M{"$set": bson.M{"PublicTime": note.UpdatedTime, "RecommendTime": note.UpdatedTime}}); err != nil {
+				_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+				return false, fmt.Sprintf("update blog note %s: %v", note.NoteId.Hex(), err)
+			}
 			Log(note.NoteId.Hex())
 		}
 	}
-
-	return true
+	if _, err := db.CompleteUpgradeCheckpoint(context.Background(), cp.value, upgradeInputDigest("upgrade-blog-result", fmt.Sprintf("%d", len(notes))), time.Now().UTC()); err != nil {
+		return false, fmt.Sprintf("complete upgrade checkpoint: %v", err)
+	}
+	return true, "success"
 }
 
 // 11-5自定义博客升级, 将aboutMe移至pages
@@ -36,26 +72,48 @@ func (this *UpgradeService) UpgradeBlog() bool {
 <li>Generate "UrlTitle" for all singles</li>
 */
 func (this *UpgradeService) UpgradeBetaToBeta2(userId string) (ok bool, msg string) {
+	cp, done, checkpointErr := this.acquireStep("upgrade-beta2", "migration", "all")
+	if checkpointErr != nil {
+		return false, fmt.Sprintf("upgrade checkpoint: %v", checkpointErr)
+	}
+	if done {
+		return true, "already applied"
+	}
 	if configService.GetGlobalStringConfig("UpgradeBetaToBeta2") != "" {
-		return false, "Leanote have been upgraded"
+		if _, err := db.CompleteUpgradeCheckpoint(context.Background(), cp.value, upgradeInputDigest("upgrade-beta2-result", "already-configured"), time.Now().UTC()); err != nil {
+			return false, fmt.Sprintf("complete upgrade checkpoint: %v", err)
+		}
+		return true, "already applied"
 	}
 
 	// 1. aboutMe -> page
 	userBlogs := []info.UserBlog{}
-	db.ListByQ(db.UserBlogs, bson.M{}, &userBlogs)
+	if err := db.UserBlogs.FindContext(context.Background(), bson.M{}).All(&userBlogs); err != nil {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, fmt.Sprintf("list user blogs: %v", err)
+	}
 
 	for _, userBlog := range userBlogs {
-		blogService.AddOrUpdateSingle(userBlog.UserId.Hex(), "", "About Me", userBlog.AboutMe)
+		if !blogService.AddOrUpdateSingle(userBlog.UserId.Hex(), "", "About Me", userBlog.AboutMe) {
+			_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+			return false, fmt.Sprintf("migrate about me for user %s", userBlog.UserId.Hex())
+		}
 	}
 
 	// 2. 默认主题, 给admin用户
-	themeService.UpgradeThemeBeta2()
+	if !themeService.UpgradeThemeBeta2() {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, "migrate default themes failed"
+	}
 
 	// 3. UrlTitles
 
 	// 3.1 note
 	notes := []info.Note{}
-	db.ListByQ(db.Notes, bson.M{}, &notes)
+	if err := db.Notes.FindContext(context.Background(), bson.M{}).All(&notes); err != nil {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, fmt.Sprintf("list notes: %v", err)
+	}
 	for _, note := range notes {
 		data := bson.M{}
 		noteId := note.NoteId.Hex()
@@ -66,19 +124,28 @@ func (this *UpgradeService) UpgradeBetaToBeta2(userId string) (ok bool, msg stri
 			Log("Time " + noteId)
 		}
 		data["UrlTitle"] = GetUrTitle(note.UserId.Hex(), note.Title, "note", noteId)
-		db.UpdateByIdAndUserIdMap2(db.Notes, note.NoteId, note.UserId, data)
+		if err := db.Notes.UpdateOneMatchedContext(context.Background(), bson.M{"_id": note.NoteId, "UserId": note.UserId}, bson.M{"$set": data}); err != nil {
+			_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+			return false, fmt.Sprintf("update note %s: %v", noteId, err)
+		}
 		Log(noteId)
 	}
 
 	// 3.2
 	Log("notebook")
 	notebooks := []info.Notebook{}
-	db.ListByQ(db.Notebooks, bson.M{}, &notebooks)
+	if err := db.Notebooks.FindContext(context.Background(), bson.M{}).All(&notebooks); err != nil {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, fmt.Sprintf("list notebooks: %v", err)
+	}
 	for _, notebook := range notebooks {
 		notebookId := notebook.NotebookId.Hex()
 		data := bson.M{}
 		data["UrlTitle"] = GetUrTitle(notebook.UserId.Hex(), notebook.Title, "notebook", notebookId)
-		db.UpdateByIdAndUserIdMap2(db.Notebooks, notebook.NotebookId, notebook.UserId, data)
+		if err := db.Notebooks.UpdateOneMatchedContext(context.Background(), bson.M{"_id": notebook.NotebookId, "UserId": notebook.UserId}, bson.M{"$set": data}); err != nil {
+			_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+			return false, fmt.Sprintf("update notebook %s: %v", notebookId, err)
+		}
 		Log(notebookId)
 	}
 
@@ -94,10 +161,19 @@ func (this *UpgradeService) UpgradeBetaToBeta2(userId string) (ok bool, msg stri
 	*/
 
 	// 删除索引
-	db.ShareNotes.DropIndex("UserId", "ToUserId", "NoteId")
+	if err := db.ShareNotes.DropIndex("UserId", "ToUserId", "NoteId"); err != nil {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, fmt.Sprintf("drop obsolete share index: %v", err)
+	}
 	ok = true
 	msg = "success"
-	configService.UpdateGlobalStringConfig(userId, "UpgradeBetaToBeta2", "1")
+	if !configService.UpdateGlobalStringConfig(userId, "UpgradeBetaToBeta2", "1") {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, "persist upgrade marker failed"
+	}
+	if _, err := db.CompleteUpgradeCheckpoint(context.Background(), cp.value, upgradeInputDigest("upgrade-beta2-result", "completed"), time.Now().UTC()); err != nil {
+		return false, fmt.Sprintf("complete upgrade checkpoint: %v", err)
+	}
 
 	return
 }
@@ -105,17 +181,22 @@ func (this *UpgradeService) UpgradeBetaToBeta2(userId string) (ok bool, msg stri
 // Usn设置
 // 客户端 api
 
-func (this *UpgradeService) moveTag() {
-	usnI := 1
+func (this *UpgradeService) moveTag() error {
+	usnI, err := nextCollectionUSN(db.NoteTags)
+	if err != nil {
+		return err
+	}
 	tags := []info.Tag{}
-	db.ListByQ(db.Tags, bson.M{}, &tags)
+	if err := db.Tags.FindContext(context.Background(), bson.M{}).All(&tags); err != nil {
+		return err
+	}
 	for _, eachTag := range tags {
 		tagTitles := eachTag.Tags
 		now := time.Now()
 		if tagTitles != nil && len(tagTitles) > 0 {
 			for _, tagTitle := range tagTitles {
 				noteTag := info.NoteTag{}
-				noteTag.TagId = db.NewObjectID()
+				noteTag.TagId = db.OutboxEventIDForKey("upgrade-beta4-tag:" + eachTag.UserId.Hex() + ":" + tagTitle)
 				noteTag.Count = 1
 				noteTag.Tag = tagTitle
 				noteTag.UserId = eachTag.UserId
@@ -123,59 +204,160 @@ func (this *UpgradeService) moveTag() {
 				noteTag.UpdatedTime = now
 				noteTag.Usn = usnI
 				noteTag.IsDeleted = false
-				db.Insert(db.NoteTags, noteTag)
+				var existing info.NoteTag
+				if err := db.NoteTags.FindIdContext(context.Background(), noteTag.TagId).One(&existing); err == nil {
+					if existing.UserId != noteTag.UserId || existing.Tag != noteTag.Tag {
+						return errors.New("upgrade tag identity conflict")
+					}
+					// A prior attempt already materialized this deterministic tag;
+					// preserve its USN on replay.
+					continue
+				} else if errors.Is(err, mongo.ErrNoDocuments) {
+					if err := db.NoteTags.InsertContext(context.Background(), noteTag); err != nil {
+						return err
+					}
+				} else {
+					return err
+				}
 				usnI++
 			}
 		}
 	}
+	return nil
 }
 
-func (this *UpgradeService) setNotebookUsn() {
-	usnI := 1
+func (this *UpgradeService) setNotebookUsn() error {
+	usnI, err := nextCollectionUSN(db.Notebooks)
+	if err != nil {
+		return err
+	}
 	notebooks := []info.Notebook{}
-	db.ListByQWithFields(db.Notebooks, bson.M{}, []string{"UserId"}, &notebooks)
+	if err := db.Notebooks.FindContext(context.Background(), bson.M{}).All(&notebooks); err != nil {
+		return err
+	}
 
 	for _, notebook := range notebooks {
-		db.UpdateByQField(db.Notebooks, bson.M{"_id": notebook.NotebookId}, "Usn", usnI)
+		if notebook.Usn > 0 {
+			continue
+		}
+		if err := db.Notebooks.UpdateOneMatchedContext(context.Background(), bson.M{"_id": notebook.NotebookId}, bson.M{"$set": bson.M{"Usn": usnI}}); err != nil {
+			return err
+		}
 		usnI++
 	}
+	return nil
 }
 
-func (this *UpgradeService) setNoteUsn() {
-	usnI := 1
+func (this *UpgradeService) setNoteUsn() error {
+	usnI, err := nextCollectionUSN(db.Notes)
+	if err != nil {
+		return err
+	}
 	notes := []info.Note{}
-	db.ListByQWithFields(db.Notes, bson.M{}, []string{"UserId"}, &notes)
+	if err := db.Notes.FindContext(context.Background(), bson.M{}).All(&notes); err != nil {
+		return err
+	}
 
 	for _, note := range notes {
-		db.UpdateByQField(db.Notes, bson.M{"_id": note.NoteId}, "Usn", usnI)
+		if note.Usn > 0 {
+			continue
+		}
+		if err := db.Notes.UpdateOneMatchedContext(context.Background(), bson.M{"_id": note.NoteId}, bson.M{"$set": bson.M{"Usn": usnI}}); err != nil {
+			return err
+		}
 		usnI++
 	}
+	return nil
+}
+
+// nextCollectionUSN preserves the monotonic USN contract when an upgrade is
+// resumed after a partial write. It deliberately queries the same collection
+// being rewritten, so a retry cannot reuse values already assigned by an
+// earlier attempt or by another migration step.
+func nextCollectionUSN(collection *db.Collection) (int, error) {
+	if collection == nil {
+		return 0, db.ErrMongoClientNotInitialized
+	}
+	var max struct {
+		Usn int `bson:"Usn"`
+	}
+	if err := collection.FindContext(context.Background(), bson.M{}).Sort("-Usn").Limit(1).One(&max); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return 1, nil
+		}
+		return 0, err
+	}
+	if max.Usn < 0 {
+		return 1, nil
+	}
+	return max.Usn + 1, nil
 }
 
 // 升级为Api, beta.4
 func (this *UpgradeService) Api(userId string) (ok bool, msg string) {
+	cp, done, checkpointErr := this.acquireStep("upgrade-beta4", "migration", "all")
+	if checkpointErr != nil {
+		return false, fmt.Sprintf("upgrade checkpoint: %v", checkpointErr)
+	}
+	if done {
+		return true, "already applied"
+	}
 	if configService.GetGlobalStringConfig("UpgradeBetaToBeta4") != "" {
-		return false, "Leanote have been upgraded"
+		if _, err := db.CompleteUpgradeCheckpoint(context.Background(), cp.value, upgradeInputDigest("upgrade-beta4-result", "already-configured"), time.Now().UTC()); err != nil {
+			return false, fmt.Sprintf("complete upgrade checkpoint: %v", err)
+		}
+		return true, "already applied"
 	}
 
 	// user
-	db.UpdateByQField(db.Users, bson.M{}, "Usn", 200000)
+	if _, err := db.Users.UpdateAllContext(context.Background(), bson.M{}, bson.M{"$max": bson.M{"Usn": 200000}}); err != nil {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, fmt.Sprintf("update users: %v", err)
+	}
+	if count, err := db.Users.FindContext(context.Background(), bson.M{"Usn": bson.M{"$lt": 200000}}).Count(); err != nil || count != 0 {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		if err != nil {
+			return false, fmt.Sprintf("verify user usn: %v", err)
+		}
+		return false, "verify user usn: baseline was not applied"
+	}
 
 	// notebook
-	db.UpdateByQField(db.Notebooks, bson.M{}, "IsDeleted", false)
-	this.setNotebookUsn()
+	if _, err := db.Notebooks.UpdateAllContext(context.Background(), bson.M{}, bson.M{"$set": bson.M{"IsDeleted": false}}); err != nil {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, fmt.Sprintf("update notebooks: %v", err)
+	}
+	if err := this.setNotebookUsn(); err != nil {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, fmt.Sprintf("set notebook usn: %v", err)
+	}
 
 	// note
 	// 1-N
-	db.UpdateByQField(db.Notes, bson.M{}, "IsDeleted", false)
-	this.setNoteUsn()
+	if _, err := db.Notes.UpdateAllContext(context.Background(), bson.M{}, bson.M{"$set": bson.M{"IsDeleted": false}}); err != nil {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, fmt.Sprintf("update notes: %v", err)
+	}
+	if err := this.setNoteUsn(); err != nil {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, fmt.Sprintf("set note usn: %v", err)
+	}
 
 	// tag
 	// 1-N
 	/// tag, 要重新插入, 将之前的Tag表迁移到NoteTag中
-	this.moveTag()
+	if err := this.moveTag(); err != nil {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, fmt.Sprintf("migrate tags: %v", err)
+	}
 
-	configService.UpdateGlobalStringConfig(userId, "UpgradeBetaToBeta4", "1")
+	if !configService.UpdateGlobalStringConfig(userId, "UpgradeBetaToBeta4", "1") {
+		_ = db.FailUpgradeCheckpoint(context.Background(), cp.value, "storage", time.Now().UTC())
+		return false, "persist upgrade marker failed"
+	}
+	if _, err := db.CompleteUpgradeCheckpoint(context.Background(), cp.value, upgradeInputDigest("upgrade-beta4-result", "completed"), time.Now().UTC()); err != nil {
+		return false, fmt.Sprintf("complete upgrade checkpoint: %v", err)
+	}
 
 	return true, ""
 }

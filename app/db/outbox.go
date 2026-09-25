@@ -38,6 +38,19 @@ var (
 	ErrOutboxTransportRejected = errors.New("outbox transport rejected the message")
 )
 
+func classifyTransportError(err error) string {
+	if err == nil {
+		return "unknown"
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "timeout"
+	}
+	if errors.Is(err, ErrOutboxTransportRejected) {
+		return "transport_rejected"
+	}
+	return "transport_error"
+}
+
 type OutboxEvent struct {
 	ID                   domain.ObjectID `bson:"_id,omitempty"`
 	IdempotencyKey       string          `bson:"IdempotencyKey,omitempty"`
@@ -56,6 +69,67 @@ type OutboxEvent struct {
 	CancelRequested      bool            `bson:"CancelRequested"`
 	CancelledAt          time.Time       `bson:"CancelledAt,omitempty"`
 	TransportHandedOffAt time.Time       `bson:"TransportHandedOffAt,omitempty"`
+	// Typed comment metadata is present on new comment events. Zero values are
+	// retained for legacy payload-only events, which are read through the
+	// bounded compatibility decoder below.
+	CommentID    domain.ObjectID `bson:"CommentId,omitempty"`
+	RecipientID  domain.ObjectID `bson:"RecipientId,omitempty"`
+	EventVersion int32           `bson:"EventVersion,omitempty"`
+	TargetDigest string          `bson:"TargetDigest,omitempty"`
+}
+
+func DecodeCommentMetadata(event OutboxEvent) (OutboxEvent, error) {
+	if event.Kind != "comment" {
+		return event, errors.New("outbox event is not a comment")
+	}
+	typedCount := 0
+	if !event.CommentID.IsZero() {
+		typedCount++
+	}
+	if !event.RecipientID.IsZero() {
+		typedCount++
+	}
+	if event.EventVersion != 0 {
+		typedCount++
+	}
+	// New typed events require all four identity fields. IdempotencyKey is not
+	// part of the legacy discriminator: deployed payload-only events may carry
+	// the key written by the old producer and must remain read-only compatible.
+	if typedCount == 3 {
+		if event.IdempotencyKey == "" {
+			return event, errors.New("typed comment idempotency key is missing")
+		}
+		if event.CommentID != event.AggregateID || event.EventVersion < 1 {
+			return event, errors.New("typed comment metadata is inconsistent")
+		}
+		if event.IdempotencyKey != "comment:"+event.AggregateID.Hex()+":"+event.RecipientID.Hex() {
+			return event, errors.New("typed comment idempotency key is inconsistent")
+		}
+		if payloadRecipient, ok := event.Payload["recipientId"].(string); ok && payloadRecipient != "" && payloadRecipient != event.RecipientID.Hex() {
+			return event, errors.New("typed comment recipient conflicts with payload")
+		}
+		return event, nil
+	}
+	if typedCount != 0 {
+		return event, errors.New("typed comment metadata is incomplete")
+	}
+	// Legacy events are read-only compatible. We require a valid recipient in
+	// the payload and never write these derived fields back automatically.
+	recipientText, ok := event.Payload["recipientId"].(string)
+	recipientID, parseErr := domain.ParseObjectID(recipientText)
+	if !ok || parseErr != nil || recipientID.IsZero() || event.AggregateID.IsZero() {
+		return event, errors.New("legacy comment metadata is unavailable")
+	}
+	if payloadComment, ok := event.Payload["commentId"].(string); ok && payloadComment != "" && payloadComment != event.AggregateID.Hex() {
+		return event, errors.New("legacy comment id conflicts with aggregate")
+	}
+	if event.IdempotencyKey != "" && event.IdempotencyKey != "comment:"+event.AggregateID.Hex()+":"+recipientID.Hex() {
+		return event, errors.New("legacy comment idempotency key is inconsistent")
+	}
+	event.CommentID = event.AggregateID
+	event.RecipientID = recipientID
+	event.EventVersion = 1
+	return event, nil
 }
 
 type OutboxTransport func(context.Context, OutboxEvent) error
@@ -252,6 +326,24 @@ func DeliverOutbox(parent context.Context, eventID domain.ObjectID, now time.Tim
 		if updateErr != nil {
 			return fmt.Errorf("%w: %v (record retry state: %v)", ErrSideEffect, transportErr, updateErr)
 		}
+		if event.Kind == "feedback" && FeedbackReceipts != nil {
+			state := OutboxStatusRetry
+			if event.Attempts >= OutboxMaxAttempts {
+				state = OutboxStatusDead
+			}
+			if receiptErr := MarkFeedbackReceiptForOutbox(context.Background(), event.ID, state, "side_effect", now); receiptErr != nil {
+				return fmt.Errorf("%w: %v (feedback receipt: %v)", ErrSideEffect, transportErr, receiptErr)
+			}
+		}
+		if event.Kind == "broadcast" && BroadcastReceipts != nil {
+			state := OutboxStatusRetry
+			if event.Attempts >= OutboxMaxAttempts {
+				state = OutboxStatusDead
+			}
+			if receiptErr := MarkBroadcastReceiptForOutbox(context.Background(), event.ID, state, "side_effect", now); receiptErr != nil {
+				return fmt.Errorf("%w: %v (broadcast receipt: %v)", ErrSideEffect, transportErr, receiptErr)
+			}
+		}
 		return fmt.Errorf("%w: %v", ErrSideEffect, transportErr)
 	}
 	statusCtx, cancelStatus := boundedOperationContext(context.Background())
@@ -265,6 +357,16 @@ func DeliverOutbox(parent context.Context, eventID domain.ObjectID, now time.Tim
 	}
 	if result.MatchedCount != 1 {
 		return fmt.Errorf("%w: mark sent: claim is no longer held", ErrSideEffect)
+	}
+	if event.Kind == "feedback" {
+		if err := MarkFeedbackReceiptForOutbox(context.Background(), event.ID, OutboxStatusSent, "", now); err != nil {
+			return fmt.Errorf("%w: feedback receipt: %v", ErrSideEffect, err)
+		}
+	}
+	if event.Kind == "broadcast" {
+		if err := MarkBroadcastReceiptForOutbox(context.Background(), event.ID, OutboxStatusSent, "", now); err != nil {
+			return fmt.Errorf("%w: broadcast receipt: %v", ErrSideEffect, err)
+		}
 	}
 	return nil
 }
@@ -287,6 +389,13 @@ func deliverCommentOutbox(parent context.Context, eventID domain.ObjectID, now t
 	event, err := decodeOutbox(raw)
 	if err != nil {
 		return err
+	}
+	event, err = DecodeCommentMetadata(event)
+	if err != nil {
+		if markErr := markCommentMetadataUnknown(event, now); markErr != nil {
+			return fmt.Errorf("%w: comment metadata is invalid (%v): %v", ErrOutboxHandoffUnknown, err, markErr)
+		}
+		return fmt.Errorf("%w: comment metadata is invalid", ErrOutboxHandoffUnknown)
 	}
 	if err := commentOutboxCAS(event, OutboxStatusClaimed, OutboxStatusHandoffPending, now, leaseID, false); err != nil {
 		return err
@@ -321,6 +430,19 @@ func deliverCommentOutbox(parent context.Context, eventID domain.ObjectID, now t
 	}
 	if result.MatchedCount != 1 {
 		return fmt.Errorf("%w: comment claim is no longer held", ErrSideEffect)
+	}
+	return nil
+}
+
+func markCommentMetadataUnknown(event OutboxEvent, now time.Time) error {
+	ctx, cancel := boundedOperationContext(context.Background())
+	defer cancel()
+	result, err := Outbox.coll.UpdateOne(ctx, bson.M{"_id": event.ID, "Kind": "comment", "Status": OutboxStatusClaimed, "Version": event.Version, "LeaseId": event.LeaseID}, bson.M{"$set": bson.M{"Status": OutboxStatusHandoffUnknown, "LastError": "comment_metadata_invalid", "UpdatedAt": now}, "$inc": bson.M{"Version": 1}, "$unset": bson.M{"LeaseUntil": "", "LeaseId": ""}})
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount != 1 {
+		return errors.New("comment metadata state changed")
 	}
 	return nil
 }
@@ -422,7 +544,7 @@ func recordOutboxFailure(eventID domain.ObjectID, leaseID string, attempts int, 
 	statusCtx, cancel := boundedOperationContext(context.Background())
 	defer cancel()
 	result, err := Outbox.coll.UpdateOne(statusCtx, bson.M{"_id": eventID, "Status": OutboxStatusSending, "LeaseId": leaseID}, bson.M{
-		"$set":   bson.M{"Status": status, "NextAttemptAt": retryAt, "LastError": deliveryErr.Error(), "UpdatedAt": now},
+		"$set":   bson.M{"Status": status, "NextAttemptAt": retryAt, "LastError": classifyTransportError(deliveryErr), "UpdatedAt": now},
 		"$unset": bson.M{"LeaseUntil": "", "LeaseId": ""},
 	})
 	if err != nil {
@@ -438,33 +560,60 @@ func recordOutboxFailure(eventID domain.ObjectID, leaseID string, attempts int, 
 // after the comment has been deleted. The worker's lease is deliberately
 // invalidated by the same CAS, so a worker that was only holding a snapshot
 // cannot mark the event sent.
-func CancelOutboxForAggregate(ctx context.Context, aggregateID domain.ObjectID, reason string) error {
+type CancelOutboxResult struct {
+	Cancelled        []domain.ObjectID
+	AlreadyCancelled []domain.ObjectID
+	HandedOff        []domain.ObjectID
+	Unknown          []domain.ObjectID
+}
+
+func CancelOutboxForAggregateDetailed(ctx context.Context, aggregateID domain.ObjectID, reason string) (CancelOutboxResult, error) {
+	var resultState CancelOutboxResult
 	if Outbox == nil {
-		return ErrMongoClientNotInitialized
+		return resultState, ErrMongoClientNotInitialized
 	}
 	if aggregateID.IsZero() {
-		return errors.New("outbox aggregate id is required")
+		return resultState, errors.New("outbox aggregate id is required")
 	}
 	var events []OutboxEvent
 	if err := Outbox.FindContext(ctx, bson.M{"AggregateId": aggregateID, "Kind": "comment"}).All(&events); err != nil {
-		return err
+		return resultState, err
 	}
 	for _, event := range events {
 		if event.Status == OutboxStatusCancelled {
+			resultState.AlreadyCancelled = append(resultState.AlreadyCancelled, event.ID)
 			continue
 		}
 		if event.Status == OutboxStatusHandedOff || event.Status == OutboxStatusSent || event.Status == OutboxStatusHandoffUnknown || !event.TransportHandedOffAt.IsZero() {
-			return fmt.Errorf("%w: event %s", ErrOutboxAlreadyHandedOff, event.ID.Hex())
+			if event.Status == OutboxStatusHandoffUnknown {
+				resultState.Unknown = append(resultState.Unknown, event.ID)
+			} else {
+				resultState.HandedOff = append(resultState.HandedOff, event.ID)
+			}
+			return resultState, fmt.Errorf("%w: event %s", ErrOutboxAlreadyHandedOff, event.ID.Hex())
 		}
 		result, err := Outbox.coll.UpdateOne(ctx, bson.M{"_id": event.ID, "Kind": "comment", "Status": event.Status, "Version": event.Version, "CancelRequested": bson.M{"$ne": true}, "TransportHandedOffAt": bson.M{"$exists": false}}, bson.M{"$set": bson.M{"Status": OutboxStatusCancelled, "CancelRequested": true, "CancelledAt": time.Now(), "LastError": reason, "UpdatedAt": time.Now()}, "$inc": bson.M{"Version": 1}, "$unset": bson.M{"LeaseUntil": "", "LeaseId": ""}})
 		if err != nil {
-			return err
+			return resultState, err
 		}
 		if result.MatchedCount != 1 {
-			return fmt.Errorf("%w: cancel CAS lost for %s", ErrSideEffect, event.ID.Hex())
+			return resultState, fmt.Errorf("%w: cancel CAS lost for %s", ErrSideEffect, event.ID.Hex())
 		}
+		var readBack OutboxEvent
+		if err := Outbox.FindIdContext(ctx, event.ID).One(&readBack); err != nil {
+			return resultState, fmt.Errorf("%w: cancel read-back for %s: %v", ErrPartialWrite, event.ID.Hex(), err)
+		}
+		if readBack.Status != OutboxStatusCancelled || !readBack.CancelRequested {
+			return resultState, fmt.Errorf("%w: cancel read-back mismatch for %s", ErrPartialWrite, event.ID.Hex())
+		}
+		resultState.Cancelled = append(resultState.Cancelled, event.ID)
 	}
-	return nil
+	return resultState, nil
+}
+
+func CancelOutboxForAggregate(ctx context.Context, aggregateID domain.ObjectID, reason string) error {
+	_, err := CancelOutboxForAggregateDetailed(ctx, aggregateID, reason)
+	return err
 }
 
 // VerifyOutboxCancelledForAggregate confirms that every comment notification
@@ -679,7 +828,7 @@ func (s *MemoryOutboxStore) Deliver(ctx context.Context, id domain.ObjectID, now
 		}
 		event.LeaseUntil = time.Time{}
 		event.LeaseID = ""
-		event.LastError = err.Error()
+		event.LastError = classifyTransportError(err)
 		event.UpdatedAt = now
 		s.events[id] = event
 		s.mu.Unlock()
@@ -703,6 +852,23 @@ func (s *MemoryOutboxStore) Deliver(ctx context.Context, id domain.ObjectID, now
 }
 
 func (s *MemoryOutboxStore) deliverComment(ctx context.Context, event OutboxEvent, now time.Time, transport OutboxTransport) error {
+	if len(event.Payload) > 0 || !event.CommentID.IsZero() || !event.RecipientID.IsZero() || event.EventVersion > 0 || event.IdempotencyKey != "" {
+		decoded, metadataErr := DecodeCommentMetadata(event)
+		if metadataErr != nil {
+			s.mu.Lock()
+			if current, ok := s.events[event.ID]; ok {
+				current.Status = OutboxStatusHandoffUnknown
+				current.LastError = "comment_metadata_invalid"
+				current.LeaseID = ""
+				current.LeaseUntil = time.Time{}
+				current.Version++
+				s.events[event.ID] = current
+			}
+			s.mu.Unlock()
+			return fmt.Errorf("%w: comment metadata is invalid", ErrOutboxHandoffUnknown)
+		}
+		event = decoded
+	}
 	s.mu.Lock()
 	if event.Status == OutboxStatusUnconfirmed || event.Status == OutboxStatusCancelled || event.Status == OutboxStatusHandoffUnknown {
 		s.mu.Unlock()

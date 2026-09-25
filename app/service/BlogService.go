@@ -1588,6 +1588,7 @@ func (this *BlogService) Comment(noteId, toCommentId, userId, content, submissio
 				if _, err := db.EnqueueOutboxEvent(ctx, db.OutboxEvent{
 					IdempotencyKey: commentNotificationKey(desired.Comment.CommentId, recipientID),
 					Kind:           "comment", AggregateID: desired.Comment.CommentId, Status: db.OutboxStatusUnconfirmed,
+					CommentID: desired.Comment.CommentId, RecipientID: recipientID, EventVersion: 1,
 					Payload: map[string]any{"email": recipient.Email, "content": desired.Comment.Content, "noteId": noteID.Hex(), "recipientId": recipientID.Hex()},
 				}); err != nil {
 					return err

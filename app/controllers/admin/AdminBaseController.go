@@ -6,6 +6,7 @@ import (
 	//	"encoding/json"
 	"github.com/yangphere/leanote/app/controllers"
 	. "github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/service"
 	//	"io/ioutil"
 	//	"fmt"
 	//	"math"
@@ -50,10 +51,18 @@ func (c AdminBaseController) getSorter(sorterField string, isAsc bool, okSorter 
 	return sorterField, isAsc
 }
 
-func (c AdminBaseController) updateConfig(keys []string) {
+func (c AdminBaseController) updateConfig(keys []string) service.ConfigMutationResult {
 	userId := c.GetUserId()
+	values := make(map[string]string, len(keys))
 	for _, key := range keys {
-		v := c.Params.Values.Get(key)
-		configService.UpdateGlobalStringConfig(userId, key, v)
+		values[key] = c.Params.Values.Get(key)
 	}
+	return configService.UpdateGlobalStringConfigs(userId, values)
+}
+
+func (c AdminBaseController) requireAdmin() error {
+	if configService == nil {
+		return service.ErrAdminPrincipal
+	}
+	return configService.RequireAdmin(c.RequestContext(), c.GetUserId(), c.GetUsername())
 }

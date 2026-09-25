@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"strings"
+
 	"github.com/revel/revel"
 )
 
@@ -26,7 +28,10 @@ func (c Admin) Index() revel.Result {
 
 // 模板
 func (c Admin) T(t string) revel.Result {
-	c.ViewArgs["str"] = configService.GlobalStringConfigs
+	if !allowedAdminTemplate(t) {
+		return c.NotFound("admin template not found")
+	}
+	c.ViewArgs["str"] = configService.RedactedStringConfigs()
 	c.ViewArgs["arr"] = configService.GlobalArrayConfigs
 	c.ViewArgs["map"] = configService.GlobalMapConfigs
 	c.ViewArgs["arrMap"] = configService.GlobalArrMapConfigs
@@ -35,5 +40,25 @@ func (c Admin) T(t string) revel.Result {
 }
 
 func (c Admin) GetView(view string) revel.Result {
-	return c.RenderTemplate("admin/" + view)
+	if !allowedAdminTemplate(view) {
+		return c.NotFound("admin view not found")
+	}
+	return c.RenderTemplate("admin/" + view + ".html")
+}
+
+func allowedAdminTemplate(name string) bool {
+	name = strings.TrimSpace(name)
+	if name == "" || strings.ContainsAny(name, "\\\x00\r\n") || strings.Contains(name, "..") || strings.HasPrefix(name, "/") {
+		return false
+	}
+	allowed := map[string]struct{}{
+		"email/set": {}, "email/template": {}, "email/sendToUsers": {}, "email/send": {},
+		"setting/site_url": {}, "setting/home_page": {}, "setting/demo": {}, "setting/open_register": {},
+		"setting/share_note": {}, "setting/upload": {}, "setting/export_pdf": {}, "data/configuration": {},
+		"upgrade/beta2": {}, "upgrade/beta3": {},
+	}
+	if _, ok := allowed[name]; ok {
+		return true
+	}
+	return false
 }

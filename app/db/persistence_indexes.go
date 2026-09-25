@@ -93,6 +93,66 @@ func PersistenceIndexModels() map[string][]mongo.IndexModel {
 					SetUnique(true).
 					SetPartialFilterExpression(nonEmptyStringFilter("IdempotencyKey")),
 			},
+			{
+				Keys: bson.D{{Key: "Kind", Value: 1}, {Key: "CommentId", Value: 1}, {Key: "RecipientId", Value: 1}},
+				Options: options.Index().
+					SetName("outbox_comment_typed_identity_unique").
+					SetUnique(true).
+					SetPartialFilterExpression(bson.M{
+						"Kind":           "comment",
+						"CommentId":      bson.M{"$type": "objectId"},
+						"RecipientId":    bson.M{"$type": "objectId"},
+						"IdempotencyKey": bson.M{"$type": "string", "$gt": ""},
+						"EventVersion":   bson.M{"$type": "int"},
+					}),
+			},
+			{
+				Keys:    bson.D{{Key: "Kind", Value: 1}, {Key: "CommentId", Value: 1}, {Key: "Status", Value: 1}},
+				Options: options.Index().SetName("outbox_comment_typed_status"),
+			},
+		},
+		"feedbackReceipts": {
+			{
+				Keys: bson.D{{Key: "ActorId", Value: 1}, {Key: "SubmissionId", Value: 1}, {Key: "Kind", Value: 1}},
+				Options: options.Index().
+					SetName("feedback_receipt_actor_submission_kind_uq").
+					SetUnique(true).
+					SetPartialFilterExpression(bson.M{
+						"Kind":         "feedback",
+						"RetrySafe":    true,
+						"SubmissionId": bson.M{"$exists": true, "$type": "string", "$gt": ""},
+					}),
+			},
+			{
+				Keys:    bson.D{{Key: "ExpiresAt", Value: 1}},
+				Options: options.Index().SetName("feedback_receipts_expires_at"),
+			},
+		},
+		"broadcastReceipts": {
+			{
+				Keys: bson.D{{Key: "ActorId", Value: 1}, {Key: "BatchId", Value: 1}, {Key: "Kind", Value: 1}},
+				Options: options.Index().
+					SetName("broadcast_receipt_actor_batch_kind_uq").
+					SetUnique(true).
+					SetPartialFilterExpression(bson.M{
+						"Kind":    "broadcast",
+						"BatchId": bson.M{"$type": "string", "$gt": ""},
+					}),
+			},
+			{
+				Keys:    bson.D{{Key: "ExpiresAt", Value: 1}},
+				Options: options.Index().SetName("broadcast_receipts_expires_at"),
+			},
+		},
+		"upgradeCheckpoints": {
+			{
+				Keys:    bson.D{{Key: "OperationId", Value: 1}, {Key: "StepKey", Value: 1}, {Key: "TargetScope", Value: 1}},
+				Options: options.Index().SetName("upgrade_checkpoint_operation_step_uq").SetUnique(true),
+			},
+			{
+				Keys:    bson.D{{Key: "State", Value: 1}, {Key: "LeaseUntil", Value: 1}},
+				Options: options.Index().SetName("upgrade_checkpoint_state_lease"),
+			},
 		},
 		"workspace_operations": {
 			{

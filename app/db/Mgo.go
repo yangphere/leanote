@@ -39,6 +39,9 @@ var Outbox *Collection
 var WorkspaceOperations *Collection
 
 var Suggestions *Collection
+var FeedbackReceipts *Collection
+var BroadcastReceipts *Collection
+var UpgradeCheckpoints *Collection
 
 // Album & file(image)
 var Albums *Collection
@@ -155,6 +158,9 @@ func InitWithError(url, dbname string) error {
 
 	// Suggestion
 	Suggestions = wrapCollection(database.Collection("suggestions"))
+	FeedbackReceipts = wrapCollection(database.Collection("feedbackReceipts"))
+	BroadcastReceipts = wrapCollection(database.Collection("broadcastReceipts"))
+	UpgradeCheckpoints = wrapCollection(database.Collection("upgradeCheckpoints"))
 
 	// Album & file
 	Albums = wrapCollection(database.Collection("albums"))
@@ -212,6 +218,9 @@ func resetCollections() {
 	Outbox = nil
 	WorkspaceOperations = nil
 	Suggestions = nil
+	FeedbackReceipts = nil
+	BroadcastReceipts = nil
+	UpgradeCheckpoints = nil
 	Albums = nil
 	Files = nil
 	Attachs = nil

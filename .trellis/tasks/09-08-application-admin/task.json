@@ -3,7 +3,7 @@
   "name": "application-admin",
   "title": "应用层：管理与运维业务",
   "description": "收敛管理端、配置、升级、邮件和审计相关业务，明确权限、失败和可观测性边界。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": "application layer / administration and operations",
   "package": null,
@@ -12,7 +12,7 @@
   "assignee": "wanfeng",
   "createdAt": "2026-09-08",
   "completedAt": null,
-  "branch": null,
+  "branch": "dev",
   "base_branch": "dev",
   "worktree_path": null,
   "commit": null,
@@ -21,6 +21,16 @@
   "children": [],
   "parent": "09-08-business-layer-architecture",
   "relatedFiles": [],
-  "notes": "Accepts the application-notes Suggestion/feedback handoff. Planning must freeze anonymous policy, Addr/Suggestion input boundaries, duplicate identity, durable persistence success and legacy wire shape; email is delivered through an outbox, transport failure does not roll back persisted feedback, and request-path fire-and-forget goroutines are forbidden. PDF ownership handoff is descriptor-only: admin validates configuration and allow policy, while application-content exclusively owns renderer process, sandbox, timeout, artifacts and cleanup.",
-  "meta": {"layer": "application", "depends_on": ["09-08-domain-contracts", "09-08-application-notes", "09-08-application-content"]}
+  "notes": "2026-09-25 specification audit and decision closure: consumes domain, infrastructure, identity, notes, content and publishing contracts directly. Preserve the public anonymous /suggestion wire baseline. User adopted all Q-A1..Q-A6 recommendations: Addr is optional strict contact email (254 bytes), Suggestion is valid UTF-8/nonblank (2000 runes/8192 bytes), feedback uses optional 32-char lowercase-hex submissionId with actor-scoped receipt and 30-day terminal retention, feedbackRecipients is a validated internal list capped at 20, admin feedback/broadcast return durable enqueue success with legacy HTTP 200/Re shape, backup uses non-public mongodb_backup root with 30-copy/20-GiB retention and 100000-file/10-GiB source/4-GiB archive budgets, restore is same configured database only, and new comment events use typed metadata/index with strict read-only legacy compatibility and explicit migration. Feedback and admin broadcast mail use durable outbox delivery; transport failure does not roll back persisted feedback and request-path fire-and-forget goroutines are forbidden. Current comment outbox state machine exists in app/db and BlogService; admin owns typed comment transport, metadata/index compatibility, cancellation read-back and redacted SMTP evidence, while publishing owns comment permission/recipient/combined mutation. PDF ownership remains descriptor-only: admin validates configuration and allow policy, while application-content exclusively owns renderer process, sandbox, timeout, artifacts and cleanup. Decisions are frozen; implementation and real-environment evidence remain open.",
+  "meta": {
+    "layer": "application",
+    "depends_on": [
+      "09-08-domain-contracts",
+      "09-08-infrastructure-persistence",
+      "09-08-application-identity",
+      "09-08-application-notes",
+      "09-08-application-content",
+      "09-08-application-publishing"
+    ]
+  }
 }

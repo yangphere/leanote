@@ -81,10 +81,14 @@ func AuthInterceptor(c *revel.Controller) revel.Result {
 		}
 	*/
 
-	// 验证是否已登录
-	// 必须是管理员
-	if username, ok := c.Session["Username"]; ok && username.(string) == configService.GetAdminUsername() {
-		return nil // 已登录
+	// Verify the authenticated principal and the persisted admin record before
+	// any controller action can mutate Mongo, files, upgrades or outbox state.
+	userID, userIDOK := c.Session["UserId"].(string)
+	username, usernameOK := c.Session["Username"].(string)
+	if userIDOK && usernameOK && configService != nil {
+		if _, err := configService.ResolveAdminPrincipal(c.Request.Context(), userID, username); err == nil {
+			return nil
+		}
 	}
 
 	// 没有登录, 判断是否是ajax操作

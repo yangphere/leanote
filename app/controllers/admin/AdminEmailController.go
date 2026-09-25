@@ -1,9 +1,11 @@
 package admin
 
 import (
+	"context"
 	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
+	"github.com/yangphere/leanote/app/service"
 	"strconv"
 	"strings"
 )
@@ -12,6 +14,22 @@ import (
 
 type AdminEmail struct {
 	AdminBaseController
+}
+
+func (c AdminEmail) enqueueBroadcast(recipients []string, subject, body string) info.Re {
+	re := info.NewRe()
+	batchID := ""
+	if c.Params != nil {
+		batchID = c.Params.Values.Get("batchId")
+	}
+	result, err := emailService.EnqueueBroadcast(context.Background(), c.GetObjectUserId(), batchID, recipients, subject, body)
+	if err != nil {
+		re.Msg = "admin.mail_enqueue_failed"
+		return re
+	}
+	re.Ok = true
+	re.Id = result.ReconciliationID
+	return re
 }
 
 // email配置
@@ -29,9 +47,14 @@ func (c AdminEmail) Blog() revel.Result {
 }
 func (c AdminEmail) DoBlogTag(recommendTags, newTags string) revel.Result {
 	re := info.NewRe()
-
-	re.Ok = configService.UpdateGlobalArrayConfig(c.GetUserId(), "recommendTags", strings.Split(recommendTags, ","))
-	re.Ok = configService.UpdateGlobalArrayConfig(c.GetUserId(), "newTags", strings.Split(newTags, ","))
+	result := configService.UpdateGlobalConfigs(c.GetUserId(), nil, map[string][]string{
+		"recommendTags": strings.Split(recommendTags, ","),
+		"newTags":       strings.Split(newTags, ","),
+	})
+	re.Ok = result.Err() == nil
+	if !re.Ok {
+		re.Msg = "admin.config_update_failed"
+	}
 
 	return c.RenderJSON(re)
 }
@@ -40,7 +63,7 @@ func (c AdminEmail) DoBlogTag(recommendTags, newTags string) revel.Result {
 // blog标签设置
 func (c AdminEmail) Demo() revel.Result {
 	c.ViewArgs["demoUsername"] = configService.GetGlobalStringConfig("demoUsername")
-	c.ViewArgs["demoPassword"] = configService.GetGlobalStringConfig("demoPassword")
+	c.ViewArgs["demoPassword"] = service.RedactedSecretValue
 	return c.RenderTemplate("admin/setting/demo.html")
 }
 func (c AdminEmail) DoDemo(demoUsername, demoPassword string) revel.Result {
@@ -55,9 +78,15 @@ func (c AdminEmail) DoDemo(demoUsername, demoPassword string) revel.Result {
 		return c.RenderJSON(re)
 	}
 
-	re.Ok = configService.UpdateGlobalStringConfig(c.GetUserId(), "demoUserId", userInfo.UserId.Hex())
-	re.Ok = configService.UpdateGlobalStringConfig(c.GetUserId(), "demoUsername", demoUsername)
-	re.Ok = configService.UpdateGlobalStringConfig(c.GetUserId(), "demoPassword", demoPassword)
+	result := configService.UpdateGlobalStringConfigs(c.GetUserId(), map[string]string{
+		"demoUserId":   userInfo.UserId.Hex(),
+		"demoUsername": demoUsername,
+		"demoPassword": demoPassword,
+	})
+	re.Ok = result.Err() == nil
+	if !re.Ok {
+		re.Msg = "admin.config_update_failed"
+	}
 
 	return c.RenderJSON(re)
 }
@@ -76,11 +105,11 @@ func (c AdminEmail) DoToImage(toImageBinPath string) revel.Result {
 
 func (c AdminEmail) Set(emailHost, emailPort, emailUsername, emailPassword, emailSSL string) revel.Result {
 	re := info.NewRe()
-	re.Ok = configService.UpdateGlobalStringConfig(c.GetUserId(), "emailHost", emailHost)
-	re.Ok = configService.UpdateGlobalStringConfig(c.GetUserId(), "emailPort", emailPort)
-	re.Ok = configService.UpdateGlobalStringConfig(c.GetUserId(), "emailUsername", emailUsername)
-	re.Ok = configService.UpdateGlobalStringConfig(c.GetUserId(), "emailPassword", emailPassword)
-	re.Ok = configService.UpdateGlobalStringConfig(c.GetUserId(), "emailSSL", emailSSL)
+	result := configService.UpdateGlobalStringConfigs(c.GetUserId(), map[string]string{"emailHost": emailHost, "emailPort": emailPort, "emailUsername": emailUsername, "emailPassword": emailPassword, "emailSSL": emailSSL})
+	re.Ok = result.Err() == nil
+	if !re.Ok {
+		re.Msg = "admin.config_update_failed"
+	}
 
 	return c.RenderJSON(re)
 }
@@ -110,7 +139,12 @@ func (c AdminEmail) Template() revel.Result {
 				re.Msg = "Error key: " + key + "<br />" + msg
 				return c.RenderJSON(re)
 			} else {
-				configService.UpdateGlobalStringConfig(userId, key, v)
+				result := configService.UpdateGlobalStringConfigs(userId, map[string]string{key: v})
+				if err := result.Err(); err != nil {
+					re.Ok = false
+					re.Msg = "admin.template_update_failed"
+					return c.RenderJSON(re)
+				}
 			}
 		}
 	}
@@ -123,7 +157,10 @@ func (c AdminEmail) Template() revel.Result {
 func (c AdminEmail) SendEmailToEmails(sendEmails, latestEmailSubject, latestEmailBody string, verified, saveAsOldEmail bool) revel.Result {
 	re := info.NewRe()
 
-	c.updateConfig([]string{"sendEmails", "latestEmailSubject", "latestEmailBody"})
+	if err := c.updateConfig([]string{"sendEmails", "latestEmailSubject", "latestEmailBody"}).Err(); err != nil {
+		re.Msg = "admin.config_update_failed"
+		return c.RenderJSON(re)
+	}
 
 	if latestEmailSubject == "" || latestEmailBody == "" {
 		re.Msg = "subject or body is blank"
@@ -133,13 +170,16 @@ func (c AdminEmail) SendEmailToEmails(sendEmails, latestEmailSubject, latestEmai
 	if saveAsOldEmail {
 		oldEmails := configService.GetGlobalMapConfig("oldEmails")
 		oldEmails[latestEmailSubject] = latestEmailBody
-		configService.UpdateGlobalMapConfig(c.GetUserId(), "oldEmails", oldEmails)
+		if !configService.UpdateGlobalMapConfig(c.GetUserId(), "oldEmails", oldEmails) {
+			re.Msg = "old email template persistence failed"
+			return c.RenderJSON(re)
+		}
 	}
 
 	sendEmails = strings.Replace(sendEmails, "\r", "", -1)
 	emails := strings.Split(sendEmails, "\n")
 
-	re.Ok, re.Msg = emailService.SendEmailToEmails(emails, latestEmailSubject, latestEmailBody)
+	re = c.enqueueBroadcast(emails, latestEmailSubject, latestEmailBody)
 	return c.RenderJSON(re)
 }
 
@@ -147,7 +187,10 @@ func (c AdminEmail) SendEmailToEmails(sendEmails, latestEmailSubject, latestEmai
 func (c AdminEmail) SendToUsers2(emails, latestEmailSubject, latestEmailBody string, verified, saveAsOldEmail bool) revel.Result {
 	re := info.NewRe()
 
-	c.updateConfig([]string{"sendEmails", "latestEmailSubject", "latestEmailBody"})
+	if err := c.updateConfig([]string{"sendEmails", "latestEmailSubject", "latestEmailBody"}).Err(); err != nil {
+		re.Msg = "admin.config_update_failed"
+		return c.RenderJSON(re)
+	}
 
 	if latestEmailSubject == "" || latestEmailBody == "" {
 		re.Msg = "subject or body is blank"
@@ -157,7 +200,10 @@ func (c AdminEmail) SendToUsers2(emails, latestEmailSubject, latestEmailBody str
 	if saveAsOldEmail {
 		oldEmails := configService.GetGlobalMapConfig("oldEmails")
 		oldEmails[latestEmailSubject] = latestEmailBody
-		configService.UpdateGlobalMapConfig(c.GetUserId(), "oldEmails", oldEmails)
+		if !configService.UpdateGlobalMapConfig(c.GetUserId(), "oldEmails", oldEmails) {
+			re.Msg = "old email template persistence failed"
+			return c.RenderJSON(re)
+		}
 	}
 
 	emails = strings.Replace(emails, "\r", "", -1)
@@ -166,7 +212,11 @@ func (c AdminEmail) SendToUsers2(emails, latestEmailSubject, latestEmailBody str
 	users := userService.ListUserInfosByEmails(emailsArr)
 	LogJ(emailsArr)
 
-	re.Ok, re.Msg = emailService.SendEmailToUsers(users, latestEmailSubject, latestEmailBody)
+	emailsArr = emailsArr[:0]
+	for _, user := range users {
+		emailsArr = append(emailsArr, user.Email)
+	}
+	re = c.enqueueBroadcast(emailsArr, latestEmailSubject, latestEmailBody)
 
 	return c.RenderJSON(re)
 }
@@ -177,7 +227,7 @@ func (c AdminEmail) SendEmailDialog(emails string) revel.Result {
 	emailsNl := strings.Join(emailsArr, "\n")
 
 	c.ViewArgs["emailsNl"] = emailsNl
-	c.ViewArgs["str"] = configService.GlobalStringConfigs
+	c.ViewArgs["str"] = configService.RedactedStringConfigs()
 	c.ViewArgs["map"] = configService.GlobalMapConfigs
 
 	return c.RenderTemplate("admin/email/emailDialog.html")
@@ -186,7 +236,10 @@ func (c AdminEmail) SendEmailDialog(emails string) revel.Result {
 func (c AdminEmail) SendToUsers(userFilterEmail, userFilterWhiteList, userFilterBlackList, latestEmailSubject, latestEmailBody string, verified, saveAsOldEmail bool) revel.Result {
 	re := info.NewRe()
 
-	c.updateConfig([]string{"userFilterEmail", "userFilterWhiteList", "userFilterBlackList", "latestEmailSubject", "latestEmailBody"})
+	if err := c.updateConfig([]string{"userFilterEmail", "userFilterWhiteList", "userFilterBlackList", "latestEmailSubject", "latestEmailBody"}).Err(); err != nil {
+		re.Msg = "admin.config_update_failed"
+		return c.RenderJSON(re)
+	}
 
 	if latestEmailSubject == "" || latestEmailBody == "" {
 		re.Msg = "subject or body is blank"
@@ -196,7 +249,10 @@ func (c AdminEmail) SendToUsers(userFilterEmail, userFilterWhiteList, userFilter
 	if saveAsOldEmail {
 		oldEmails := configService.GetGlobalMapConfig("oldEmails")
 		oldEmails[latestEmailSubject] = latestEmailBody
-		configService.UpdateGlobalMapConfig(c.GetUserId(), "oldEmails", oldEmails)
+		if !configService.UpdateGlobalMapConfig(c.GetUserId(), "oldEmails", oldEmails) {
+			re.Msg = "old email template persistence failed"
+			return c.RenderJSON(re)
+		}
 	}
 
 	users := userService.GetAllUserByFilter(userFilterEmail, userFilterWhiteList, userFilterBlackList, verified)
@@ -207,12 +263,17 @@ func (c AdminEmail) SendToUsers(userFilterEmail, userFilterWhiteList, userFilter
 		return c.RenderJSON(re)
 	}
 
-	re.Ok, re.Msg = emailService.SendEmailToUsers(users, latestEmailSubject, latestEmailBody)
+	re = c.enqueueBroadcast(func() []string {
+		emails := make([]string, 0, len(users))
+		for _, user := range users {
+			emails = append(emails, user.Email)
+		}
+		return emails
+	}(), latestEmailSubject, latestEmailBody)
 	if !re.Ok {
 		return c.RenderJSON(re)
 	}
 
-	re.Ok = true
 	re.Msg = "users:" + strconv.Itoa(len(users))
 
 	return c.RenderJSON(re)
