@@ -109,3 +109,20 @@ func TestProductionSectionsRejectForbiddenInheritedKey(t *testing.T) {
 		t.Fatal("test fixture did not include the inherited forbidden key")
 	}
 }
+
+func TestValidateProductionContentRootKeysRequiresProdValues(t *testing.T) {
+	values := map[string]string{}
+	for _, key := range productionContentRootKeys {
+		values[key] = "/var/lib/leanote/" + strings.ReplaceAll(key, ".", "-")
+	}
+	if err := validateProductionContentRootKeys(values); err != nil {
+		t.Fatalf("complete content root keys rejected: %v", err)
+	}
+
+	delete(values, "content.public.quarantine")
+	err := validateProductionContentRootKeys(values)
+	configErr, ok := err.(*ConfigError)
+	if !ok || configErr.Code != "CONFIG_CONTENT_ROOT_MISSING" || configErr.Key != "content.public.quarantine" {
+		t.Fatalf("missing prod root error = %v, want CONFIG_CONTENT_ROOT_MISSING/content.public.quarantine", err)
+	}
+}

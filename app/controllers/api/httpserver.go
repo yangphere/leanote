@@ -31,9 +31,9 @@ func RegisterHTTP(rs *httpserver.Registry, runMode string, policies ...httpserve
 	before := apiAuthBefore(apiCommonUrl, policy)
 
 	auth := &ApiAuthServer{}
-	rs.Register("ApiAuth", "Login", []httpserver.BeforeFunc{before}, auth.Login)
-	rs.Register("ApiAuth", "Logout", []httpserver.BeforeFunc{before}, auth.Logout)
-	rs.Register("ApiAuth", "Register", []httpserver.BeforeFunc{before}, auth.Register)
+	rs.RegisterMethods("ApiAuth", "Login", []string{"GET", "POST"}, []httpserver.BeforeFunc{before}, auth.Login)
+	rs.RegisterMethods("ApiAuth", "Logout", []string{"GET", "POST"}, []httpserver.BeforeFunc{before}, auth.Logout)
+	rs.RegisterMethods("ApiAuth", "Register", []string{"POST"}, []httpserver.BeforeFunc{before}, auth.Register)
 
 	tag := &ApiTagServer{}
 	rs.Register("ApiTag", "GetSyncTags", []httpserver.BeforeFunc{before}, tag.GetSyncTags)

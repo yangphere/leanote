@@ -30,8 +30,11 @@ RUN apt-get update \
     && ln -s /usr/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf \
     && groupadd --gid 10001 leanote \
     && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin leanote \
-    && mkdir -p /app/bin /app/app /app/messages /app/public /app/files /app/public/upload /etc/leanote \
-    && chown -R 10001:10001 /app /etc/leanote
+    && mkdir -p /app/bin /app/app /app/messages /app/public /etc/leanote \
+      /var/lib/leanote/private/files /var/lib/leanote/private/quarantine \
+      /var/lib/leanote/public/upload /var/lib/leanote/public/quarantine \
+      /var/lib/leanote/backup /var/lib/leanote/tmp \
+    && chown -R 10001:10001 /app /etc/leanote /var/lib/leanote
 WORKDIR /app
 COPY --from=backend /out/leanote /app/bin/leanote
 COPY --from=frontend /src/app/views /app/app/views
@@ -40,6 +43,6 @@ COPY --from=frontend /src/public /app/public
 COPY conf/app.conf-default /app/conf/app.conf-default
 COPY conf/routes /app/conf/routes
 RUN chmod 0755 /app/bin/leanote && chown -R 10001:10001 /app
-VOLUME ["/app/files", "/app/public/upload"]
+VOLUME ["/var/lib/leanote/private", "/var/lib/leanote/public", "/var/lib/leanote/backup"]
 USER 10001:10001
 ENTRYPOINT ["/app/bin/leanote", "-conf", "/etc/leanote/app.conf", "-runMode", "prod"]

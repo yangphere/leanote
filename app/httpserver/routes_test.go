@@ -137,6 +137,67 @@ func TestRouteTableCatchAllDispatchNames(t *testing.T) {
 	}
 }
 
+func TestRegistryMethodMatrixReturns405AndAllow(t *testing.T) {
+	app := &App{
+		Routes:   CompileRoutes(mustParse(t, "* /api/:controller/:action :controller.:action")),
+		Registry: NewRegistry(),
+	}
+	called := false
+	app.Registry.RegisterMethods("ApiAuth", "Register", []string{"POST"}, nil, func(c *Context) Result {
+		called = true
+		return c.RenderText("registered")
+	})
+
+	methodNotAllowed := httptest.NewRecorder()
+	app.ServeHTTP(methodNotAllowed, httptest.NewRequest(http.MethodGet, "/api/auth/register", nil))
+	if methodNotAllowed.Code != http.StatusMethodNotAllowed || methodNotAllowed.Header().Get("Allow") != "POST" {
+		t.Fatalf("method mismatch = status %d allow %q, want 405/POST", methodNotAllowed.Code, methodNotAllowed.Header().Get("Allow"))
+	}
+	if called {
+		t.Fatal("method mismatch reached action handler")
+	}
+
+	allowed := httptest.NewRecorder()
+	app.ServeHTTP(allowed, httptest.NewRequest(http.MethodPost, "/api/auth/register", nil))
+	if allowed.Code != http.StatusOK || allowed.Body.String() != "registered" {
+		t.Fatalf("allowed method = status %d body %q, want 200/registered", allowed.Code, allowed.Body.String())
+	}
+}
+
+func TestRegistryMethodMatrixMapsHeadToGet(t *testing.T) {
+	app := &App{
+		Routes:   CompileRoutes(mustParse(t, "* /api/:controller/:action :controller.:action")),
+		Registry: NewRegistry(),
+	}
+	app.Registry.RegisterMethods("ApiAuth", "Login", []string{"GET", "POST"}, nil, func(c *Context) Result {
+		return c.RenderText("login")
+	})
+	recorder := httptest.NewRecorder()
+	app.ServeHTTP(recorder, httptest.NewRequest(http.MethodHead, "/api/auth/login", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("HEAD status = %d, want 200", recorder.Code)
+	}
+}
+
+func TestAppInitializesLocaleAndViewArgsBeforeAction(t *testing.T) {
+	app := &App{
+		Routes:         CompileRoutes(mustParse(t, "GET /login Auth.Login")),
+		Registry:       NewRegistry(),
+		LocaleResolver: func(*http.Request) string { return "fr-fr" },
+	}
+	app.Registry.Register("Auth", "Login", nil, func(c *Context) Result {
+		if c.Locale != "fr-fr" || c.ViewArgs["currentLocale"] != "fr-fr" || c.ViewArgs["locale"] != "fr-fr" {
+			return c.RenderText("bad view args")
+		}
+		return c.RenderText("ok")
+	})
+	recorder := httptest.NewRecorder()
+	app.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/login", nil))
+	if recorder.Code != http.StatusOK || recorder.Body.String() != "ok" {
+		t.Fatalf("locale/view args response = status %d body %q", recorder.Code, recorder.Body.String())
+	}
+}
+
 func TestRouteTableNegatives(t *testing.T) {
 	app := &App{
 		Routes: CompileRoutes(mustParse(t, strings.Join([]string{

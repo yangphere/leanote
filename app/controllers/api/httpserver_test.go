@@ -148,6 +148,33 @@ func apiLoginForm(account apiTestAccount, password string) string {
 	return "email=" + url.QueryEscape(account.email) + "&pwd=" + url.QueryEscape(password)
 }
 
+func TestRegisterHTTPUsesIdentityMethodMatrix(t *testing.T) {
+	registry := httpserver.NewRegistry()
+	RegisterHTTP(registry, "test")
+
+	for _, test := range []struct {
+		action  string
+		methods []string
+	}{
+		{action: "Login", methods: []string{http.MethodGet, http.MethodPost}},
+		{action: "Logout", methods: []string{http.MethodGet, http.MethodPost}},
+		{action: "Register", methods: []string{http.MethodPost}},
+	} {
+		entry, ok := registry.Lookup("ApiAuth", test.action)
+		if !ok {
+			t.Fatalf("ApiAuth.%s was not registered", test.action)
+		}
+		if len(entry.AllowedMethods) != len(test.methods) {
+			t.Fatalf("ApiAuth.%s methods = %v, want %v", test.action, entry.AllowedMethods, test.methods)
+		}
+		for index := range test.methods {
+			if entry.AllowedMethods[index] != test.methods[index] {
+				t.Fatalf("ApiAuth.%s methods = %v, want %v", test.action, entry.AllowedMethods, test.methods)
+			}
+		}
+	}
+}
+
 func TestApiAuthServerLoginSurfacesStorageError(t *testing.T) {
 	saved := authService
 	authService = fakeHTTPAuthService{loginErr: errors.New("database unavailable")}

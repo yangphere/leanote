@@ -10,11 +10,12 @@
 
 ## B1 runtime 与 production-config
 
-- [ ] 生产 App 装配 `LocaleResolver`、SessionReader/SessionWriter；补 27 个模板函数名集冻结测试与 `ViewArgs` 框架键。
-- [ ] 抽取只读 `ProductionConfig`（Addr、ShutdownTimeout、DatabaseName、`ConfiguredDatabaseIdentity`、`CredentialProviderRef`）并提供 admin consumer fixture；删除 admin 侧重复解析（仅接线，不改 admin 业务规则）。
-- [ ] D-H4：解析 `content.private.data`/`content.private.quarantine`/`content.public.data`/`content.public.quarantine`/`content.temporary`/`admin.backup.root`，调用 content validator，补齐错误码与 exit 78 负例；`/upload/*` 与 `/public/upload/*` 改从 public data root 提供；删除 `initializeContentRuntime` 兼容映射。
-- [ ] D-H4：同步 `Dockerfile`（卷与 `/var/lib/leanote/tmp`）、`sh/package.sh` 与 `docs/modernization/cicd-delivery.md`（新键、三卷布局、旧 `/app/files`/`/app/public/upload` 一次性迁移步骤）。
-- [ ] D-H5：identity 方法矩阵 405 与 `Allow` 头；其他路由保持观察值的 route negative。
+- [x] 生产 App 装配 `LocaleResolver`、SessionReader/SessionWriter；补 27 个模板函数名集冻结测试与 `ViewArgs` 框架键。
+- [x] 抽取只读 `ProductionConfig`（Addr、ShutdownTimeout、DatabaseName、`ConfiguredDatabaseIdentity`、`CredentialProviderRef`）并提供 admin consumer fixture；admin 生产动作的实际消费留到 B6。
+- [x] D-H4：解析 `content.private.data`/`content.private.quarantine`/`content.public.data`/`content.public.quarantine`/`content.temporary`/`admin.backup.root`，调用 content validator，补齐稳定错误码；`/upload/*` 与 `/public/upload/*` 改从 public data root 提供；删除 `initializeContentRuntime` 兼容映射。
+- [ ] D-H4：补生产进程级 exit 78 负例，保留当前 in-process 配置错误测试作为前置证据。
+- [x] D-H4：同步 `Dockerfile`（卷与 `/var/lib/leanote/tmp`）与 `docs/modernization/cicd-delivery.md`（新键、三卷布局、tarball 绝对根目录创建和旧 `/app/files`/`/app/public/upload` 一次性迁移步骤）；确认 `sh/package.sh` 只打包应用前缀，不嵌入 `/var/lib/leanote`。
+- [x] D-H5：identity 方法矩阵 405 与 `Allow` 头；其他路由保持观察值的 route negative。
 
 ## B2 identity/API 身份批
 
@@ -31,6 +32,7 @@
 ## B4 publishing 批
 
 - [ ] 主站 `Blog`（含 8 处 JSONP、Q-P5 callback 过滤、Q-P9 `submissionId` 必填）、`Share`、`Preview`；博客自有 `html/template` 路径与主题 Preview 错误展示保持。
+- [ ] 主题 action 迁移时，ThemeService 使用 `ProductionConfig.ContentRoots.PublicUpload.Data` 写入用户主题资源，不再写入 `revel.BasePath/public/upload`。
 
 ## B5 member 批
 
@@ -39,11 +41,12 @@
 ## B6 admin 批
 
 - [ ] `admin/*` 全部 action，admin principal 与 `ProductionConfig` consumer。
+- [ ] `AdminData` 使用 `ProductionConfig.BackupRoot` 与 `DatabaseName`，移除 `revel.Config`、`revel.BasePath/mongodb_backup` 和 `revel.BasePath/files` 路径解析。
 
 ## B7 汇合
 
 - [ ] 提取 `needValidateAPI` 与 `needValidateWhitelist` 的重复白名单为单一 helper；registry 对账测试全绿。
-- [ ] 各批所用 service/lea 的 `revel.Config`/`revel.BasePath`/`revel.AppLog` 调用改走第一方 config/logger seam。
+- [ ] 各批所用 service/lea 的 `revel.Config`/`revel.BasePath`/`revel.AppLog` 调用改走第一方 config/logger seam；ThemeService 与 AdminData 的 typed-root 接线由 B4/B6 交付并验收。
 
 ## B8 入口与 harness（D-H2、D-H3）
 

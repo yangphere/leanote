@@ -14,6 +14,15 @@ import (
 
 const canonicalProductionConfig = "/etc/leanote/app.conf"
 
+var productionContentRootKeys = []string{
+	"content.private.data",
+	"content.private.quarantine",
+	"content.public.data",
+	"content.public.quarantine",
+	"content.temporary",
+	"admin.backup.root",
+}
+
 // ConfigError is a stable, redacted production configuration failure.
 type ConfigError struct {
 	Code string
@@ -90,6 +99,9 @@ func ValidateProductionConfig(path string) (*Config, error) {
 			return nil, configError("CONFIG_KEY_INVALID", required)
 		}
 	}
+	if err := validateProductionContentRootKeys(prod); err != nil {
+		return nil, err
+	}
 	if prod["db.urlEnv"] != "${MONGODB_URL}" || prod["app.secret"] != "${LEANOTE_APP_SECRET}" {
 		return nil, configError("CONFIG_SOURCE_CONFLICT", "db.urlEnv/app.secret")
 	}
@@ -124,6 +136,15 @@ func ValidateProductionConfig(path string) (*Config, error) {
 		return nil, configError("CONFIG_KEY_INVALID", "prod")
 	}
 	return cfg, nil
+}
+
+func validateProductionContentRootKeys(prod map[string]string) error {
+	for _, key := range productionContentRootKeys {
+		if value, ok := prod[key]; !ok || strings.TrimSpace(stripQuotes(value)) == "" {
+			return configError("CONFIG_CONTENT_ROOT_MISSING", key)
+		}
+	}
+	return nil
 }
 
 func parseProductionSections(data []byte) (map[string]map[string]string, error) {

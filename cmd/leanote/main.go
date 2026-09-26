@@ -30,7 +30,6 @@ var initContentRuntime = service.InitContentRuntime
 func main() {
 	confPath := flag.String("conf", "", "path to the canonical production app.conf")
 	runMode := flag.String("runMode", "", "active app.conf section (must be prod)")
-	port := flag.Int("port", 0, "override http.port from app.conf")
 	flag.Parse()
 	if err := validateCLIOptions(*runMode, hasCLIFlag("runMode"), hasCLIFlag("conf")); err != nil {
 		logConfigError(err)
@@ -41,6 +40,10 @@ func main() {
 		logConfigError(err)
 	}
 	appBase := applicationBase(*confPath)
+	runtimeCfg, err := httpserver.ValidateProductionRuntimeConfig(cfg, filepath.Join(appBase, "public"))
+	if err != nil {
+		logConfigError(err)
+	}
 	revel.BasePath = appBase
 	if err := setupPresentation(
 		cfg,
@@ -50,10 +53,8 @@ func main() {
 		log.Fatalf("load presentation assets: %v", err)
 	}
 
-	addr := fmt.Sprintf("%s:%d",
-		cfg.StringDefault("http.addr", "0.0.0.0"),
-		orInt(*port, cfg.IntDefault("http.port", 9000)))
-	shutdownTimeout := httpserver.ShutdownTimeout(cfg)
+	addr := runtimeCfg.Addr
+	shutdownTimeout := runtimeCfg.ShutdownTimeout
 
 	databaseReady := true
 	if err := initDatabase(cfg, *runMode); err != nil {
@@ -84,7 +85,7 @@ func main() {
 	if databaseReady && !service.ConfigS.InitGlobalConfigs() {
 		log.Printf("global configuration unavailable; email delivery will retry through outbox")
 	}
-	if err := initializeContentRuntime(appBase); err != nil {
+	if err := initContentRuntime(runtimeCfg.ContentRoots); err != nil {
 		log.Fatalf("initialize content runtime: %v", err)
 	}
 	controllers.InitService()
@@ -98,8 +99,13 @@ func main() {
 		Registry:        registry,
 		Sessions:        httpserver.NewSessionCodec(cfg),
 		PrincipalPolicy: api.PrincipalPolicyFromConfig(),
+		SessionReaderFactory: func(session map[string]string) httpserver.SessionReader {
+			return sessionReader{values: session}
+		},
+		SessionWriterFactory: func(ctx *httpserver.Context) httpserver.SessionWriter { return ctx },
+		LocaleResolver:       httpserver.LocaleResolverFromConfig(cfg),
 		StaticHandler: func(base string) http.Handler {
-			return staticHandler(appBase, base)
+			return staticHandlerWithContent(appBase, base, runtimeCfg.ContentRoots.PublicUpload.Data)
 		},
 		OnRequest:   db.CheckMongoSessionLost,
 		HealthCheck: db.Ping,
@@ -161,17 +167,6 @@ func staticAssetRoot(appBase, base string) string {
 	return filepath.Join(appBase, base)
 }
 
-func initializeContentRuntime(appBase string) error {
-	// This explicit compatibility mapping is removed when interface-http binds
-	// deployment-supplied roots. The service initializer never derives paths.
-	return initContentRuntime(service.ContentRoots{
-		PrivateFiles: service.ContentRootPair{Data: filepath.Join(appBase, "files"), Quarantine: filepath.Join(appBase, ".content-private-quarantine")},
-		PublicUpload: service.ContentRootPair{Data: filepath.Join(appBase, "public", "upload"), Quarantine: filepath.Join(appBase, ".content-public-quarantine")},
-		Temporary:    filepath.Join(appBase, ".content-temporary"),
-		ServedRoots:  []string{filepath.Join(appBase, "public")},
-	})
-}
-
 func staticHandler(appBase, base string) http.Handler {
 	assetPath := staticAssetRoot(appBase, base)
 	if info, err := os.Stat(assetPath); err == nil && !info.IsDir() {
@@ -180,6 +175,31 @@ func staticHandler(appBase, base string) http.Handler {
 		})
 	}
 	return http.FileServer(http.Dir(assetPath))
+}
+
+type sessionReader struct{ values map[string]string }
+
+func (r sessionReader) Get(key string) (string, bool, error) {
+	value, ok := r.values[key]
+	return value, ok, nil
+}
+
+func staticHandlerWithContent(appBase, base, publicUploadRoot string) http.Handler {
+	if base == "public/upload" {
+		return http.FileServer(http.Dir(publicUploadRoot))
+	}
+	if base == "public" {
+		assets := http.FileServer(http.Dir(filepath.Join(appBase, base)))
+		uploads := http.StripPrefix("/upload", http.FileServer(http.Dir(publicUploadRoot)))
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/upload/") || r.URL.Path == "/upload" {
+				uploads.ServeHTTP(w, r)
+				return
+			}
+			assets.ServeHTTP(w, r)
+		})
+	}
+	return staticHandler(appBase, base)
 }
 
 // setupPresentation installs the first-party template renderer and loads the
@@ -196,13 +216,6 @@ func setupPresentation(cfg *httpserver.Config, viewsDir, messagesDir string) err
 	i18n.DefaultLanguage = cfg.StringDefault("i18n.default_language", "en-us")
 	httpserver.TemplateRenderer = httpserver.TemplateSetRenderer(templates)
 	return nil
-}
-
-func orInt(override, base int) int {
-	if override != 0 {
-		return override
-	}
-	return base
 }
 
 func hasCLIFlag(name string) bool {

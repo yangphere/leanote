@@ -13,7 +13,6 @@ import (
 
 	"github.com/yangphere/leanote/app/httpserver"
 	i18n "github.com/yangphere/leanote/app/lea/i18n"
-	"github.com/yangphere/leanote/app/service"
 )
 
 func TestLogOutboxDeliveryErrorDoesNotExposeTransportDetails(t *testing.T) {
@@ -101,39 +100,6 @@ func TestApplicationBaseUsesConfigParentUnlessItIsConfDirectory(t *testing.T) {
 	}
 }
 
-func TestInitializeContentRuntimeForwardsTypedRoots(t *testing.T) {
-	savedInitializer := initContentRuntime
-	t.Cleanup(func() { initContentRuntime = savedInitializer })
-
-	var gotRoots service.ContentRoots
-	initContentRuntime = func(roots service.ContentRoots) error {
-		gotRoots = roots
-		return nil
-	}
-
-	if err := initializeContentRuntime("release-root"); err != nil {
-		t.Fatalf("initializeContentRuntime() error = %v", err)
-	}
-	if gotRoots.PrivateFiles.Data != filepath.Join("release-root", "files") ||
-		gotRoots.PublicUpload.Quarantine != filepath.Join("release-root", ".content-public-quarantine") ||
-		gotRoots.Temporary != filepath.Join("release-root", ".content-temporary") {
-		t.Fatalf("initializer roots = %+v", gotRoots)
-	}
-}
-
-func TestInitializeContentRuntimePropagatesStartupFailure(t *testing.T) {
-	savedInitializer := initContentRuntime
-	t.Cleanup(func() { initContentRuntime = savedInitializer })
-
-	want := errors.New("content roots invalid")
-	initContentRuntime = func(service.ContentRoots) error { return want }
-
-	err := initializeContentRuntime("release-root")
-	if !errors.Is(err, want) {
-		t.Fatalf("initializeContentRuntime() error = %v, want wrapped %v", err, want)
-	}
-}
-
 func TestStaticAssetRootIsRelativeToApplicationBase(t *testing.T) {
 	root := filepath.Join("workspace", "release")
 	if got, want := staticAssetRoot(root, "public"), filepath.Join(root, "public"); got != want {
@@ -156,6 +122,46 @@ func TestStaticHandlerServesExactFiles(t *testing.T) {
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || res.Body.String() != "icon" {
 		t.Fatalf("exact static file: status=%d body=%q", res.Code, res.Body.String())
+	}
+}
+
+func TestStaticHandlerWithContentRoutesUploadToConfiguredRoot(t *testing.T) {
+	appRoot := t.TempDir()
+	publicRoot := filepath.Join(appRoot, "public")
+	if err := os.MkdirAll(filepath.Join(publicRoot, "css"), 0o755); err != nil {
+		t.Fatalf("create public tree: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(publicRoot, "css", "app.css"), []byte("asset"), 0o644); err != nil {
+		t.Fatalf("write public asset: %v", err)
+	}
+	uploadRoot := filepath.Join(t.TempDir(), "upload")
+	if err := os.MkdirAll(uploadRoot, 0o755); err != nil {
+		t.Fatalf("create upload root: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(uploadRoot, "image.png"), []byte("upload"), 0o644); err != nil {
+		t.Fatalf("write upload asset: %v", err)
+	}
+	handler := staticHandlerWithContent(appRoot, "public", uploadRoot)
+	for _, test := range []struct {
+		path string
+		want string
+	}{
+		{path: "/upload/image.png", want: "upload"},
+		{path: "/css/app.css", want: "asset"},
+	} {
+		t.Run(test.path, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, test.path, nil))
+			if recorder.Code != http.StatusOK || recorder.Body.String() != test.want {
+				t.Fatalf("static response = status %d body %q, want 200/%q", recorder.Code, recorder.Body.String(), test.want)
+			}
+		})
+	}
+	uploadHandler := staticHandlerWithContent(appRoot, "public/upload", uploadRoot)
+	recorder := httptest.NewRecorder()
+	uploadHandler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/image.png", nil))
+	if recorder.Code != http.StatusOK || recorder.Body.String() != "upload" {
+		t.Fatalf("public/upload static response = status %d body %q, want 200/%q", recorder.Code, recorder.Body.String(), "upload")
 	}
 }
 

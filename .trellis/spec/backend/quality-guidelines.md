@@ -318,3 +318,96 @@ _ = repair.RecoverAbandoned(ctx, limit) // includes pre-notes
 // Correct: parent decision and action-scoped budget remain explicit.
 result, err := recoverAPINotePreNotes(ctx, scanner, workflow, limit)
 ```
+
+## Scenario: First-party HTTP startup and production configuration
+
+### 1. Scope / Trigger
+
+Use this contract when wiring `cmd/leanote` or adding an HTTP adapter that
+consumes production configuration. The interface layer validates deployment
+inputs once, creates a credential-free runtime handoff, and only then binds
+content storage, database access, and the listener.
+
+### 2. Signatures
+
+```go
+cfg, err := httpserver.ValidateProductionConfig("/etc/leanote/app.conf")
+runtime, err := httpserver.ValidateProductionRuntimeConfig(cfg, publicStaticRoot)
+registry.RegisterMethods("ApiAuth", "Register", []string{"POST"}, befores, handler)
+```
+
+`cmd/leanote` supplies `publicStaticRoot` from its resolved application base;
+the executable-inference wrapper is not the application entrypoint and must
+not replace that explicit handoff.
+
+Production configuration must provide `db.dbname`,
+`db.urlEnv=${MONGODB_URL}`, `app.secret=${LEANOTE_APP_SECRET}`,
+`content.private.data`, `content.private.quarantine`,
+`content.public.data`, `content.public.quarantine`, `content.temporary`,
+and `admin.backup.root`. `ProductionConfig` exposes only the address,
+shutdown timeout, database identity/digest, credential-provider reference,
+validated content roots, and backup root; it never carries raw credentials or
+the source `Config`.
+
+### 3. Contracts
+
+- Production reads exactly `/etc/leanote/app.conf` in `prod` mode. Mongo and
+  the app secret come from `MONGODB_URL` and `LEANOTE_APP_SECRET`.
+- All six content/backup paths are absolute existing directories. Content
+  pairs are canonicalized and pass `contentfs.ValidateContentRoots`; quarantine
+  roots are not HTTP served, roots do not overlap, and backup is outside all
+  content/static roots. `/upload/*` and `/public/upload/*` serve the validated
+  public data root.
+- The production app installs the locale resolver (configured cookie, first
+  `Accept-Language`, then default), session reader/writer, and `ViewArgs` keys
+  `currentLocale` and `locale` before an action runs.
+- Explicit routes keep their route-table method behavior. Catch-all identity
+  actions with an `AllowedMethods` list return `405` and an `Allow` header;
+  `HEAD` follows `GET`.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|---|---|
+| Non-canonical/missing/unreadable production config | stable `ConfigError`; process exits 78 before listener or database bind |
+| Missing/relative root | `CONFIG_CONTENT_ROOT_MISSING` or `CONFIG_CONTENT_ROOT_RELATIVE` |
+| Unwritable or cross-device data/quarantine pair | `CONFIG_CONTENT_ROOT_UNWRITABLE` or `CONFIG_CONTENT_ROOT_CROSS_DEVICE` |
+| Quarantine under a served root / any root overlap | `CONFIG_CONTENT_ROOT_PUBLIC` or `CONFIG_CONTENT_ROOT_OVERLAP` |
+| Catch-all identity method outside its matrix | `405` with deterministic `Allow`; do not invoke the action |
+| Explicit route method mismatch | `404` from route matching, preserving the observed route contract |
+
+### 5. Good / Base / Bad Cases
+
+- Good: validate and canonicalize roots once, pass the resulting typed values
+  to `service.InitContentRuntime`, then construct the `httpserver.App`.
+- Base: a unit test supplies temporary directories and a loopback static root
+  to `ValidateProductionRuntimeConfig` and asserts the complete handoff.
+- Bad: derive `/app/files` or `/app/public/upload` from the executable,
+  forward `*Config` to admin code, or silently fall back to another Mongo
+  URL/root when validation fails.
+
+### 6. Tests Required
+
+- Unit tests assert every stable root/config error code, canonical identity and
+  digest, locale precedence, `ViewArgs`, session commit behavior, static
+  upload routing, and the identity 405/`Allow` matrix.
+- Run `go build ./...`, focused `go test`, `go vet`, `gofmt -l`, task context
+  validation, and `git diff --check` before committing.
+- Real listener requests, Mongo/Golden replay, process-level exit 78, and
+  container volume/non-root checks remain separate evidence; focused tests do
+  not promote those gates.
+
+### 7. Wrong vs Correct
+
+```go
+// Wrong: application code derives a legacy path and receives raw config.
+roots := filepath.Join(appBase, "files")
+admin.Configure(cfg)
+
+// Correct: validate at the boundary and pass only typed, credential-free data.
+runtime, err := httpserver.ValidateProductionRuntimeConfig(cfg, publicRoot)
+if err != nil {
+	return err
+}
+service.InitContentRuntime(runtime.ContentRoots)
+```

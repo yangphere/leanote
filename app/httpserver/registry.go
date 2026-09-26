@@ -98,10 +98,11 @@ type ActionFunc func(c *Context) Result
 // Registration is explicit source code — an action that is not registered
 // cannot be reached by any URL (no reflection over exported methods).
 type ActionEntry struct {
-	Controller string
-	Name       string
-	Befores    []BeforeFunc
-	Handler    ActionFunc
+	Controller     string
+	Name           string
+	AllowedMethods []string
+	Befores        []BeforeFunc
+	Handler        ActionFunc
 }
 
 // Registry holds every reachable action.
@@ -125,8 +126,33 @@ func titleFirst(s string) string {
 // name conf/routes dispatches to) and records its controller-level before
 // hooks.
 func (r *Registry) Register(controller, method string, befores []BeforeFunc, handler ActionFunc) {
+	r.RegisterMethods(controller, method, nil, befores, handler)
+}
+
+// RegisterMethods makes an action reachable and, when methods is non-empty,
+// constrains catch-all dispatch to the explicit compatibility matrix. Route
+// table method mismatches still remain 404; this guard is only reached after
+// a route has selected the action.
+func (r *Registry) RegisterMethods(controller, method string, methods []string, befores []BeforeFunc, handler ActionFunc) {
 	name := titleFirst(controller) + "." + titleFirst(method)
-	r.actions[name] = &ActionEntry{Controller: titleFirst(controller), Name: method, Befores: befores, Handler: handler}
+	allowed := make([]string, 0, len(methods))
+	for _, candidate := range methods {
+		candidate = strings.ToUpper(strings.TrimSpace(candidate))
+		if candidate == "" {
+			continue
+		}
+		seen := false
+		for _, existing := range allowed {
+			if existing == candidate {
+				seen = true
+				break
+			}
+		}
+		if !seen {
+			allowed = append(allowed, candidate)
+		}
+	}
+	r.actions[name] = &ActionEntry{Controller: titleFirst(controller), Name: method, AllowedMethods: allowed, Befores: befores, Handler: handler}
 }
 
 func (r *Registry) Lookup(controller, method string) (*ActionEntry, bool) {
@@ -161,6 +187,10 @@ type Context struct {
 	SessionReader   SessionReader
 	SessionWriter   SessionWriter
 	PrincipalPolicy PrincipalPolicy
+	// ViewArgs is the framework render namespace shared by adapters and
+	// templates. Keep the established keys available even before controllers
+	// add action-specific values.
+	ViewArgs map[string]interface{}
 
 	// sessionDirty collects SetSession/DeleteSession calls; the dispatcher
 	// persists them into the session cookie after the action.
@@ -372,6 +402,11 @@ func (a *App) dispatch(w http.ResponseWriter, r *http.Request) {
 		ApplyResult(ctx, ctx.NotFound("No matching action: "+controller+"."+action))
 		return
 	}
+	if len(entry.AllowedMethods) > 0 && !actionAllowsMethod(entry.AllowedMethods, r.Method) {
+		sw.Header().Set("Allow", strings.Join(entry.AllowedMethods, ", "))
+		sw.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 
 	session, sessionID := map[string]string{}, ""
 	if a.Sessions != nil {
@@ -396,6 +431,7 @@ func (a *App) dispatch(w http.ResponseWriter, r *http.Request) {
 		Session: session, SessionID: sessionID,
 		Locale:     locale,
 		Controller: titleFirst(controller), Action: titleFirst(action),
+		ViewArgs:        map[string]interface{}{"currentLocale": locale, "locale": locale},
 		PrincipalPolicy: a.PrincipalPolicy,
 	}
 	if a.SessionReaderFactory != nil {
@@ -424,6 +460,19 @@ func (a *App) dispatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ApplyResult(ctx, result)
+}
+
+func actionAllowsMethod(allowed []string, method string) bool {
+	method = strings.ToUpper(method)
+	if method == http.MethodHead {
+		method = http.MethodGet
+	}
+	for _, candidate := range allowed {
+		if method == candidate {
+			return true
+		}
+	}
+	return false
 }
 
 func applySessionCommitFailure(ctx *Context, result Result) {
