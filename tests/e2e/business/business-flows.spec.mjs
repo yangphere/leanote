@@ -347,7 +347,7 @@ test('business flows: login, permission gates, note list/search, note+tag write,
     await page.locator('#upload input[name="file"]').first().setInputFiles({
       name: imageName,
       mimeType: 'image/png',
-      buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
     });
     const imageResponse = await imageDone;
     expect(imageResponse.status(), 'album image upload status').toBe(200);
