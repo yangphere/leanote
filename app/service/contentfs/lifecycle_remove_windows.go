@@ -17,7 +17,7 @@ type fileDispositionInfoEx struct {
 	Flags uint32
 }
 
-func removeOpenedLifecycleFile(file *os.File) error {
+func removeOpenedLifecycleFile(_ *os.Root, _ string, file *os.File) error {
 	handle, _, callErr := reOpenFile.Call(
 		file.Fd(),
 		windows.DELETE,

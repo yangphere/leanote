@@ -143,7 +143,7 @@ func (store *LifecycleStore) Purge(ctx context.Context, quarantine application.L
 	if !exists {
 		return nil
 	}
-	if err := removeOpenedLifecycleFile(file); err != nil {
+	if err := removeOpenedLifecycleFile(root, name, file); err != nil {
 		_ = file.Close()
 		return application.NewError(application.ErrorUnsupportedFS, "purge_remove_exact", err)
 	}
@@ -292,7 +292,7 @@ func (store *LifecycleStore) relocateRooted(ctx context.Context, sourceRoot *os.
 	} else if !exists {
 		return true, nil
 	}
-	if err := removeOpenedLifecycleFile(verifiedSource); err != nil {
+	if err := removeOpenedLifecycleFile(sourceRoot, sourceName, verifiedSource); err != nil {
 		_ = verifiedSource.Close()
 		return false, application.NewError(application.ErrorUnsupportedFS, "lifecycle_source_remove_exact", err)
 	}
