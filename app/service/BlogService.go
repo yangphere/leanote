@@ -48,6 +48,11 @@ func publicBlogNote(noteId string) (info.Note, bool) {
 	return note, err == nil && !note.NoteId.IsZero()
 }
 
+// publicBlogContentMirror 是公开读取对 NoteContent.IsBlog 镜像的谓词。发布状态以 note
+// 主记录为准；镜像显式为 false（发布/撤销未确认）时拒绝，但旧数据（含 install data）
+// 从未写过该字段，缺失时跟随 note 主记录，否则升级后已有博客全部 404。
+var publicBlogContentMirror = bson.M{"$ne": false}
+
 func publicBlogNoteChecked(noteId string) (info.Note, error) {
 	if !db.IsValidObjectIDHex(noteId) {
 		return info.Note{}, ErrPublicBlogNotFound
@@ -69,7 +74,7 @@ func publicBlogNoteChecked(noteId string) (info.Note, error) {
 	err = db.NoteContents.Find(bson.M{
 		"_id":    note.NoteId,
 		"UserId": note.UserId,
-		"IsBlog": true,
+		"IsBlog": publicBlogContentMirror,
 	}).One(&content)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
@@ -180,7 +185,7 @@ func (this *BlogService) GetBlogItemChecked(note info.Note) (info.BlogItem, erro
 	err := db.NoteContents.Find(bson.M{
 		"_id":    note.NoteId,
 		"UserId": note.UserId,
-		"IsBlog": true,
+		"IsBlog": publicBlogContentMirror,
 	}).One(&noteContent)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
@@ -322,7 +327,7 @@ func (this *BlogService) blogItemsFromNotesChecked(notes []info.Note) ([]info.Bl
 		noteIDs[i] = note.NoteId
 	}
 	contents := []info.NoteContent{}
-	if err := db.NoteContents.Find(bson.M{"_id": bson.M{"$in": noteIDs}, "UserId": notes[0].UserId, "IsBlog": true}).All(&contents); err != nil {
+	if err := db.NoteContents.Find(bson.M{"_id": bson.M{"$in": noteIDs}, "UserId": notes[0].UserId, "IsBlog": publicBlogContentMirror}).All(&contents); err != nil {
 		return nil, fmt.Errorf("load public blog contents: %w", err)
 	}
 	contentByNote := make(map[ObjectID]info.NoteContent, len(contents))
@@ -332,7 +337,7 @@ func (this *BlogService) blogItemsFromNotesChecked(notes []info.Note) ([]info.Bl
 	blogs := make([]info.BlogItem, len(notes))
 	for i, note := range notes {
 		content, ok := contentByNote[note.NoteId]
-		if !ok || content.NoteId.IsZero() || !content.IsBlog {
+		if !ok || content.NoteId.IsZero() {
 			return nil, fmt.Errorf("public blog content not found for %s: %w", note.NoteId.Hex(), ErrPublicBlogNotFound)
 		}
 		blogs[i] = info.BlogItem{Note: note, Abstract: content.Abstract, Content: content.Content, HasMore: true}
@@ -625,7 +630,7 @@ func (this *BlogService) SearchBlogChecked(key, userId string, page, pageSize in
 	if key != "" {
 		pattern := bson.Regex{Pattern: ".*?" + regexp.QuoteMeta(key) + ".*", Options: "i"}
 		contentIDs := []ObjectID{}
-		if err := db.NoteContents.Find(bson.M{"UserId": ownerID, "IsBlog": true, "Content": bson.M{"$regex": pattern}}).Select(bson.M{"_id": true}).All(&contentIDs); err != nil {
+		if err := db.NoteContents.Find(bson.M{"UserId": ownerID, "IsBlog": publicBlogContentMirror, "Content": bson.M{"$regex": pattern}}).Select(bson.M{"_id": true}).All(&contentIDs); err != nil {
 			return info.Page{}, nil, fmt.Errorf("search public blog contents: %w", err)
 		}
 		query["$or"] = []bson.M{

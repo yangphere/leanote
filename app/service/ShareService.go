@@ -366,7 +366,8 @@ func (this *ShareService) ListShareNotesChecked(myUserId, sharedUserId string,
 	}
 
 	if len(shareNotes) == 0 {
-		return []info.ShareNoteWithPerm{}, nil
+		// 保持旧版 wire 契约：无共享时 /share/listShareNotes 返回 null 而非 []
+		return nil, nil
 	}
 
 	_, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)

@@ -51,14 +51,29 @@ func (this *ConfigService) InitGlobalConfigs() bool {
 // A Mongo read or identity failure leaves the previous in-memory snapshot
 // untouched instead of silently falling back to empty/default settings.
 func (this *ConfigService) InitGlobalConfigsWithError() error {
-	if this == nil || db.Configs == nil || userService == nil || revel.Config == nil {
+	if revel.Config == nil {
 		return errors.New("configuration dependencies are not initialized")
 	}
 	adminUsername, _ := revel.Config.String("adminUsername")
+	siteURL, _ := revel.Config.String("site.url")
+	return this.InitGlobalConfigsWithValues(adminUsername, siteURL)
+}
+
+// InitGlobalConfigsWith 使用显式的启动配置初始化全局设置。原生入口 cmd/leanote
+// 不初始化 Revel 的全局 revel.Config，必须使用此方法。
+func (this *ConfigService) InitGlobalConfigsWith(adminUsername, siteURL string) bool {
+	return this.InitGlobalConfigsWithValues(adminUsername, siteURL) == nil
+}
+
+// InitGlobalConfigsWithValues is InitGlobalConfigsWithError with the startup
+// values supplied by the caller instead of the legacy revel.Config singleton.
+func (this *ConfigService) InitGlobalConfigsWithValues(adminUsername, siteURL string) error {
+	if this == nil || db.Configs == nil || userService == nil {
+		return errors.New("configuration dependencies are not initialized")
+	}
 	if adminUsername == "" {
 		adminUsername = "admin"
 	}
-	siteURL, _ := revel.Config.String("site.url")
 	userInfo := userService.GetUserInfoByAny(adminUsername)
 	if userInfo.UserId.IsZero() {
 		return errors.New("configured admin user does not exist")
@@ -73,6 +88,11 @@ func (this *ConfigService) InitGlobalConfigsWithError() error {
 	mapsConfig := map[string]map[string]string{}
 	arrMapsConfig := map[string][]map[string]string{}
 	for _, config := range configs {
+		if config.Key == "" {
+			// 旧版按用户存储的配置容器（无 Key 字段，见 install data 中的
+			// 52d26b4e99c37b609a000001），无法按 key 寻址，跳过而不是让整个快照失败。
+			continue
+		}
 		if strings.TrimSpace(config.Key) == "" {
 			return errors.New("global configuration contains a blank key")
 		}
