@@ -102,6 +102,9 @@ func startServer(repoRoot string, register func(*Server)) (*Server, error) {
 	if err := ensureTestPortAvailable(); err != nil {
 		return nil, err
 	}
+	if err := ensureRuntimeContentRoots(repoRoot); err != nil {
+		return nil, err
+	}
 	binary, cleanup, err := buildServerBinary(repoRoot)
 	if err != nil {
 		return nil, err
@@ -161,6 +164,30 @@ func startServer(repoRoot string, register func(*Server)) (*Server, error) {
 		return nil, err
 	}
 	return server, nil
+}
+
+// runtimeContentRoots are the repo-relative directories the Revel OnAppStart
+// hook passes to service.InitContentRuntime (app/init.go). The content runtime
+// fails closed when any of them is missing, and all of them are gitignored, so
+// a fresh checkout (CI) has none of them.
+var runtimeContentRoots = []string{
+	"files",
+	filepath.Join("public", "upload"),
+	".content-private-quarantine",
+	".content-public-quarantine",
+	".content-temporary",
+}
+
+// ensureRuntimeContentRoots provisions the empty content runtime roots before
+// the generated test server starts. Existing directories and their contents
+// are left untouched.
+func ensureRuntimeContentRoots(repoRoot string) error {
+	for _, relative := range runtimeContentRoots {
+		if err := os.MkdirAll(filepath.Join(repoRoot, relative), 0o700); err != nil {
+			return fmt.Errorf("create content runtime root %s: %w", relative, err)
+		}
+	}
+	return nil
 }
 
 func (s *Server) waitForReady(logPath string) error {

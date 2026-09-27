@@ -72,7 +72,22 @@ test "$code" = 78
 : "${PACKAGE_SMOKE_APP_SECRET:?PACKAGE_SMOKE_APP_SECRET is required}"
 if [ -e "$CONFIG_FILE" ]; then echo 'refusing to overwrite an existing production config' >&2; exit 1; fi
 if [ ! -d "$CONFIG_DIR" ]; then sudo mkdir -p "$CONFIG_DIR"; CONFIG_DIR_CREATED=true; fi
-printf '%s\n' '[prod]' 'db.urlEnv=${MONGODB_URL}' 'db.dbname=leanote' 'app.secret=${LEANOTE_APP_SECRET}' 'http.addr=127.0.0.1' 'http.port=19090' > "$TMP/app.conf"
+# The tarball intentionally ships no data roots (see docs/modernization/cicd-delivery.md).
+# Provision them in the smoke workspace instead of /var/lib/leanote so the
+# runner's real filesystem is never touched; one filesystem keeps data and
+# quarantine pairs rename-compatible.
+DATA_ROOT="$TMP/var-lib-leanote"
+mkdir -p "$DATA_ROOT/private/files" "$DATA_ROOT/private/quarantine" \
+  "$DATA_ROOT/public/upload" "$DATA_ROOT/public/quarantine" \
+  "$DATA_ROOT/backup" "$DATA_ROOT/tmp"
+chmod -R 0750 "$DATA_ROOT"
+printf '%s\n' '[prod]' 'db.urlEnv=${MONGODB_URL}' 'db.dbname=leanote' 'app.secret=${LEANOTE_APP_SECRET}' 'http.addr=127.0.0.1' 'http.port=19090' \
+  "content.private.data=$DATA_ROOT/private/files" \
+  "content.private.quarantine=$DATA_ROOT/private/quarantine" \
+  "content.public.data=$DATA_ROOT/public/upload" \
+  "content.public.quarantine=$DATA_ROOT/public/quarantine" \
+  "content.temporary=$DATA_ROOT/tmp" \
+  "admin.backup.root=$DATA_ROOT/backup" > "$TMP/app.conf"
 sudo install -o "$(id -u)" -g "$(id -g)" -m 0440 "$TMP/app.conf" "$CONFIG_FILE"
 CONFIG_CREATED=true
 MONGODB_URL="$PACKAGE_SMOKE_MONGODB_URL" LEANOTE_APP_SECRET="$PACKAGE_SMOKE_APP_SECRET" \

@@ -113,7 +113,11 @@ func assertHTMLPage(t testing.TB, client *Client, path string, expectedStatus in
 		t.Fatalf("request %s: %v", path, err)
 	}
 	if status != expectedStatus {
-		t.Fatalf("%s status = %d, want %d", path, status, expectedStatus)
+		excerpt := body
+		if len(excerpt) > 512 {
+			excerpt = excerpt[:512]
+		}
+		t.Fatalf("%s status = %d, want %d; body: %s", path, status, expectedStatus, excerpt)
 	}
 	if !strings.Contains(strings.ToLower(string(body)), "<html") {
 		t.Fatalf("%s did not return an HTML document", path)
