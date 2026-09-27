@@ -24,7 +24,8 @@
 - `research/action-inventory.md` records the code-derived baseline: 95 routes (83 action, 9 static, 3 catch-all) and 242 exported controller methods returning `revel.Result`; each row includes routability, owner, method, current BEFORE/commonUrl facts, response shape, and Golden status.
 - `go test ./app/httpserver -count=1`: passed, including route parsing and the negative that an exported `BaseController` helper is not reachable through the catch-all.
 - `go vet ./app/httpserver`: passed.
-- `go test ./app/controllers -run '^TestRegistryMatchesB0Inventory$' -count=1`: expected failure, `missing=241, extra=0`; the marker covers the 240 routable exported methods plus nine route aliases, while the current registry has 8 entries. This is the explicit migration gap until B1-B6 registrations land, so AC-H1 remains partial. No real HTTP/Mongo replay was run.
+- `LEANOTE_HTTP_INVENTORY_STRICT=1 go test ./app/controllers -run '^TestRegistryMatchesB0Inventory$' -count=1`: expected failure, `missing=241, extra=0`; the marker covers the 240 routable exported methods plus nine route aliases, while the current registry has 8 entries. This is the explicit migration gap until B1-B6 registrations land, so AC-H1 remains partial. No real HTTP/Mongo replay was run.
+- Default (CI) mode of the same test is a ratchet: it fails on registrations outside the inventory or when registered inventory actions drop below `minRegisteredInventoryActions` (8), and only logs the remaining gap. Raise the floor as B2-B6 land.
 
 ## B1 focused evidence (2026-09-26)
 
