@@ -115,12 +115,18 @@ test -s "$TMP/test-marker"
 : "${PACKAGE_SMOKE_PDF_URL:?PACKAGE_SMOKE_PDF_URL is required}"
 case "$PACKAGE_SMOKE_PDF_URL" in
   */note/toPdf\?*) ;;
-  *) echo 'PACKAGE_SMOKE_PDF_URL must target the real /note/toPdf route' >&2; exit 1 ;;
+  *) echo 'PACKAGE_SMOKE_PDF_URL must target the legacy /note/toPdf route' >&2; exit 1 ;;
 esac
+# The legacy appKey callback was retired (158a6de): it must stay a stub and
+# never render or leak note content, even with the correct secret as appKey.
 curl -fsS -D "$TMP/pdf.headers" -o "$TMP/pdf.html" "$PACKAGE_SMOKE_PDF_URL"
-grep -Eiq '^Content-Type: text/html(;|$)' "$TMP/pdf.headers"
-test -s "$TMP/pdf.html"
+grep -Eiq '^Content-Type: text/plain(;|$)' "$TMP/pdf.headers"
+test "$(cat "$TMP/pdf.html")" = 'no note'
+if grep -Eiq 'About Leanote|not just a notepad' "$TMP/pdf.html"; then echo 'legacy /note/toPdf leaked note content' >&2; exit 1; fi
+# The packaged PDF runtime must render a real document (not about:blank).
 test -x "$(command -v wkhtmltopdf)"
-wkhtmltopdf --quiet "$PACKAGE_SMOKE_PDF_URL" "$TMP/smoke.pdf"
+printf '%s\n' '<!doctype html><html><head><meta charset="utf-8"><title>Leanote PDF smoke</title></head>' \
+  '<body><h1>Leanote PDF smoke</h1><p>package runtime render check</p></body></html>' > "$TMP/smoke-render.html"
+wkhtmltopdf --quiet "$TMP/smoke-render.html" "$TMP/smoke.pdf"
 test -s "$TMP/smoke.pdf"
 test "$(dd if="$TMP/smoke.pdf" bs=1 count=5 2>/dev/null)" = '%PDF-'

@@ -75,12 +75,17 @@ grep -Fi 'Content-Type: application/json; charset=utf-8' "$TMP_HEALTH.headers" >
 : "${CONTAINER_SMOKE_PDF_URL:?CONTAINER_SMOKE_PDF_URL is required}"
 case "$CONTAINER_SMOKE_PDF_URL" in
   */note/toPdf\?*) ;;
-  *) echo 'CONTAINER_SMOKE_PDF_URL must target the real /note/toPdf route' >&2; exit 1 ;;
+  *) echo 'CONTAINER_SMOKE_PDF_URL must target the legacy /note/toPdf route' >&2; exit 1 ;;
 esac
+# The legacy appKey callback was retired (158a6de): it must stay a stub and
+# never render or leak note content, even with the correct secret as appKey.
 curl -fsS -D "$TMP_HEALTH.pdf.headers" -o "$TMP_HEALTH.pdf.html" "$CONTAINER_SMOKE_PDF_URL"
-grep -Eiq '^Content-Type: text/html(;|$)' "$TMP_HEALTH.pdf.headers"
-test -s "$TMP_HEALTH.pdf.html"
-docker exec "$APP" env "CONTAINER_SMOKE_PDF_URL=$CONTAINER_SMOKE_PDF_URL" sh -c 'printf persisted > /var/lib/leanote/private/files/smoke-marker && test -x /usr/local/bin/wkhtmltopdf && wkhtmltopdf --quiet "$CONTAINER_SMOKE_PDF_URL" /var/lib/leanote/private/files/smoke.pdf'
+grep -Eiq '^Content-Type: text/plain(;|$)' "$TMP_HEALTH.pdf.headers"
+test "$(cat "$TMP_HEALTH.pdf.html")" = 'no note'
+if grep -Eiq 'About Leanote|not just a notepad' "$TMP_HEALTH.pdf.html"; then echo 'legacy /note/toPdf leaked note content' >&2; exit 1; fi
+# The image's pinned PDF runtime must render a real document (not about:blank)
+# as the non-root user, writing into the persistent private volume.
+docker exec "$APP" sh -c 'printf persisted > /var/lib/leanote/private/files/smoke-marker && test -x /usr/local/bin/wkhtmltopdf && printf "%s\n" "<!doctype html><html><head><meta charset=\"utf-8\"><title>Leanote PDF smoke</title></head>" "<body><h1>Leanote PDF smoke</h1><p>container runtime render check</p></body></html>" > /var/lib/leanote/tmp/smoke-render.html && wkhtmltopdf --quiet /var/lib/leanote/tmp/smoke-render.html /var/lib/leanote/private/files/smoke.pdf'
 test -s "$FILES_DIR/smoke.pdf"
 test "$(dd if="$FILES_DIR/smoke.pdf" bs=1 count=5 2>/dev/null)" = '%PDF-'
 printf persisted-upload > "$UPLOAD_DIR/smoke-upload"
