@@ -1,10 +1,10 @@
 # Leanote presentation-frontend Codex Handoff
 
-更新时间：2026-09-28；目录：`.trellis/tasks/09-08-presentation-frontend`；状态：`in_progress`；分支：`dev`；HEAD：`5090f340`。
+更新时间：2026-09-28；归档目录：`.trellis/tasks/archive/2026-09/09-08-presentation-frontend`；实现状态：`completed`（真实验收未关闭）；分支：`dev`；工作提交：`08bdfadb7d40c67d61f9c410846f3f2ccfb924d2`。
 
 ## Goal and scope
 
-继续当前呈现层任务，落实第一方存量保存及 batch 请求身份、编辑器状态和构建资源闭包。用户已明确确认三项决定：成功响应返回本次提交精确 Usn；新建 receipt 不纳入；unknown 仅页面内存保留冻结请求、离开提示、重载核对、不自动重放。无需重新询问。
+呈现层实现及四项审核修复已按用户“提交并归档”授权完成本地工作提交和任务归档；下一阶段是 delivery-verification 承接未运行实证。已确认三项决定：成功响应返回本次提交精确 Usn；新建 receipt 不纳入；unknown 仅页面内存保留冻结请求、离开提示、重载核对、不自动重放。无需重新询问。
 
 ## Changes
 
@@ -14,7 +14,7 @@
 - `app/controllers/httpserver_notes.go`：仅受保护存量成功响应附加顶层 Usn，直接取 result.USN；避免 info.Re 自定义 MarshalJSON 吞掉新增字段。旧客户端/失败/新建形状保持。
 - `public/js/app/page.js`：离开仅提示，不临时发保存。模板重试提示、7 locale、manifest 和生成资源同步。
 - Node 行为回归、Go mapper 测试、Playwright 连续保存 Usn/OperationId 断言；HTTP inventory 测试路径指向实际已归档文件。
-- PRD/design/implement/acceptance 和 frontend/backend spec 已同步。保留会话开始已有改动，未提交、归档、journal 或 push。
+- PRD/design/implement/acceptance 和 frontend/backend spec 已同步。工作实现已提交并归档，全部未完成实证已登记到 delivery-verification PRD；journal 按工作提交哈希记录，不执行 push。
 
 ## Validation
 
@@ -36,6 +36,6 @@
 
 ## Next steps
 
-1. 阅读当前 diff、任务和验收矩阵；以代码/实际测试优先于本交接说明。
-2. 在隔离真实环境执行尚未运行的验收并记录候选 SHA、环境、结果与清理；没有运行的项目保持未勾选。
-3. 经单独授权再进入本地提交、归档、journal 流程；不要 push。交接文件保持工作区文档，不默认纳入业务提交。
+1. 阅读归档任务和验收矩阵；以工作提交代码及实际测试优先于本交接说明，completed 不等同于发布门禁通过。
+2. 由 delivery-verification 在隔离真实环境执行尚未运行的验收，记录候选 SHA、环境、结果与清理；没有运行的项目保持未勾选。
+3. 当前没有自动激活交付任务，也没有推送；工作、归档及 journal 提交哈希见 Git 与开发日志。

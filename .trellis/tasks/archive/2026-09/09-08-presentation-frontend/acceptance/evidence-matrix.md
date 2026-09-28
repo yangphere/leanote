@@ -65,3 +65,4 @@
 - 用户明确授权“提交并归档”；实现归档不等同于未执行 AC 通过。全部未完成实证由 delivery-verification 承接，其 PRD 已登记本矩阵和三类操作恢复场景。
 - 提交前重新执行 45 项 Node 针对性回归，全部通过；`GOTOOLCHAIN=local go test ./app/controllers/... ./app/httpserver -count=1 -timeout 60s` 五个包通过；task validate 和 diff 检查通过。前一轮完整 npm test 177 项（176 通过、1 条件跳过）之后没有再改业务代码。
 - 本地收尾次序为工作提交 → 实现任务归档 → journal；实际哈希由 task.json 和 journal 记录，不执行远程推送。
+- 工作提交：`08bdfadb7d40c67d61f9c410846f3f2ccfb924d2`。任务已移至 `.trellis/tasks/archive/2026-09/09-08-presentation-frontend`，状态 completed 仅指实现收尾；本地直接在 dev 完成、非 PR 分支，归档使用 `--skip-branch-validation`，归档后的两个上下文清单已修复自身路径。

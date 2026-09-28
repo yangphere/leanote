@@ -3,7 +3,7 @@
   "name": "presentation-frontend",
   "title": "呈现层：前端构建与编辑器运行时",
   "description": "维护 Node 24/esbuild 生成链，完成 jQuery、Bootstrap、TinyMCE 运行时和服务端模板的契约化呈现。",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": null,
   "scope": "presentation layer / frontend build and editor",
   "package": null,
@@ -11,16 +11,22 @@
   "creator": "wanfeng",
   "assignee": "wanfeng",
   "createdAt": "2026-09-08",
-  "completedAt": null,
+  "completedAt": "2026-09-28",
   "branch": "dev",
   "base_branch": "dev",
   "worktree_path": null,
-  "commit": null,
+  "commit": "08bdfadb7d40c67d61f9c410846f3f2ccfb924d2",
   "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": "09-08-business-layer-architecture",
   "relatedFiles": [],
   "notes": "Accepts notes KD-N6 first-party Web work: generate and reuse OperationId for update/copy/shared-copy/delete/move batch, send ExpectedUsn for update, reuse values only for the same unknown-result intent and rotate them for a new intent. Real browser evidence remains unrun and is handed to delivery-verification; server receipt/mapper defects must reopen application-notes.",
-  "meta": {"layer": "presentation", "depends_on": ["09-08-domain-contracts", "09-08-application-notes"]}
+  "meta": {
+    "layer": "presentation",
+    "depends_on": [
+      "09-08-domain-contracts",
+      "09-08-application-notes"
+    ]
+  }
 }

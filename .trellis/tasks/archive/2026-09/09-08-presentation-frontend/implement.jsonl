@@ -5,5 +5,5 @@
 {"file": "CONTEXT.md", "reason": "生成资源、HTML 与 USN 跨层不变量"}
 {"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "前端构建、URL 和浏览器支持决定"}
 {"file": ".trellis/tasks/archive/2026-09/09-08-application-notes/prd.md", "reason": "KD-N6 可选字段与旧客户端契约"}
-{"file": ".trellis/tasks/09-08-presentation-frontend/research/spec-audit-2026-09-28.md", "reason": "本任务现状证据和待确认事项"}
-{"file": ".trellis/tasks/09-08-presentation-frontend/acceptance/evidence-matrix.md", "reason": "各 AC 的执行与交付边界"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-presentation-frontend/research/spec-audit-2026-09-28.md", "reason": "本任务现状证据和待确认事项"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-presentation-frontend/acceptance/evidence-matrix.md", "reason": "各 AC 的执行与交付边界"}

@@ -5,5 +5,5 @@
 {"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "核对生成资源及 HTML/浏览器支持契约"}
 {"file": ".trellis/tasks/archive/2026-09/09-08-application-notes/prd.md", "reason": "核对 KD-N6 服务端输入与旧客户端边界"}
 {"file": ".trellis/tasks/09-08-delivery-verification/prd.md", "reason": "区分本地通过与真实交付矩阵"}
-{"file": ".trellis/tasks/09-08-presentation-frontend/research/spec-audit-2026-09-28.md", "reason": "核对事实依据和未决问题"}
-{"file": ".trellis/tasks/09-08-presentation-frontend/acceptance/evidence-matrix.md", "reason": "逐条检查 AC、状态和证据"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-presentation-frontend/research/spec-audit-2026-09-28.md", "reason": "核对事实依据和未决问题"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-presentation-frontend/acceptance/evidence-matrix.md", "reason": "逐条检查 AC、状态和证据"}
