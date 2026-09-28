@@ -3,25 +3,11 @@ package api
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/yangphere/leanote/app/domain"
 	"github.com/yangphere/leanote/app/info"
 )
-
-func TestAPIBaseControllerHasNoStorageOrMongoDependencies(t *testing.T) {
-	data, err := os.ReadFile("ApiBaseController.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, forbidden := range []string{"\"os\"", "\"path/filepath\"", "\"io/ioutil\"", "app/db", "mongo-driver", "revel.BasePath", "os.", "filepath."} {
-		if strings.Contains(string(data), forbidden) {
-			t.Fatalf("ApiBaseController retains forbidden dependency %q", forbidden)
-		}
-	}
-}
 
 func TestAPINoteCreateOperationDigestIncludesUploadedBytes(t *testing.T) {
 	owner, _ := domain.ParseObjectID("507f1f77bcf86cd799439011")

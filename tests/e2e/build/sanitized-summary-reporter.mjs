@@ -6,7 +6,7 @@ const summaryPath = path.join(reportDir, 'build-smoke-summary.json');
 const healthPath = path.join(reportDir, 'service-health-summary.json');
 const STAGES = new Set([
   'runner-initializing', 'runner-started', 'runner-error', 'ci-harness-starting',
-  'ci-revel-cli', 'ci-mongo-fixture', 'ci-service-start', 'ci-service-readiness', 'ci-service-exit', 'ci-cleanup',
+  'ci-native-entrypoint', 'ci-mongo-fixture', 'ci-service-start', 'ci-service-readiness', 'ci-service-exit', 'ci-cleanup',
   'prerequisite-check', 'service-readiness', 'authentication', 'page-checks',
   'resource-checks', 'template-check', 'complete', 'failed',
 ]);
@@ -16,7 +16,7 @@ const ERROR_CATEGORIES = new Set([
   'runner:console-error', 'runner:page-error', 'runner:unhandled-rejection',
   'runner:request-failed', 'runner:http-error', 'runner:missing-env', 'runner:unknown',
   'runner:identity-preflight', 'runner:identity-fresh-failed', 'runner:cleanup-failed',
-  'ci:revel-cli', 'ci:mongo-fixture', 'ci:service-start', 'ci:service-readiness',
+  'ci:native-entrypoint', 'ci:mongo-fixture', 'ci:service-start', 'ci:service-readiness',
   'ci:service-exit', 'ci:cleanup', 'ci:runner-error',
 ]);
 

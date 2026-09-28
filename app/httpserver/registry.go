@@ -170,8 +170,8 @@ func (r *Registry) Registered() []string {
 	return names
 }
 
-// Context is the first-party controller context replacing
-// *revel.Controller: request/params/session/locale plus the render helpers
+// Context is the first-party controller context replacing the old framework
+// controller: request/params/session/locale plus the render helpers
 // controllers use. It is handed to actions and before hooks.
 type Context struct {
 	Request   *http.Request
@@ -309,7 +309,7 @@ func (c *Context) NotFound(msg string) Result {
 }
 
 // App assembles the route table, action registry and session codec into the
-// root http.Handler, replicating the revel filter chain order:
+// root http.Handler, preserving the legacy filter chain order:
 // recover → route/rewrite → session → i18n/locale → interceptors → action,
 // with gzip around the response (CompressFilter).
 type App struct {
@@ -326,7 +326,17 @@ type App struct {
 	// contract without exposing application state.
 	HealthCheck   func() error
 	StaticHandler func(base string) http.Handler // serves a Static.Serve base dir
+	// Ready, when set, gates the application on startup dependencies (D-H9:
+	// the global configuration snapshot). While it reports false, GET
+	// /healthz and every non-static request answer 503 with the fixed
+	// not_ready JSON line, static routes keep serving, and neither OnRequest,
+	// HealthCheck nor any action runs. Once true, dispatch is unchanged.
+	Ready func() bool
 }
+
+// notReadyBody is the fixed readiness-failure payload shared by /healthz and
+// the D-H9 startup gate.
+var notReadyBody = map[string]string{"status": "not_ready"}
 
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	next := http.HandlerFunc(a.dispatch)
@@ -334,15 +344,23 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) dispatch(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet && r.URL.Path == "/healthz" && a.HealthCheck != nil {
+	ready := a.Ready == nil || a.Ready()
+	if r.Method == http.MethodGet && r.URL.Path == "/healthz" && (a.HealthCheck != nil || a.Ready != nil) {
 		status := http.StatusOK
 		body := map[string]string{"status": "ready"}
-		if err := a.HealthCheck(); err != nil {
-			status = http.StatusServiceUnavailable
-			body["status"] = "not_ready"
+		if !ready {
+			status, body = http.StatusServiceUnavailable, notReadyBody
+		} else if a.HealthCheck != nil {
+			if err := a.HealthCheck(); err != nil {
+				status, body = http.StatusServiceUnavailable, notReadyBody
+			}
 		}
 		ctx := &Context{Request: r, Writer: newStatusWriter(w)}
 		ApplyResult(ctx, JSONLineResult(status, body))
+		return
+	}
+	if !ready {
+		a.dispatchNotReady(w, r)
 		return
 	}
 	if a.OnRequest != nil {
@@ -357,15 +375,7 @@ func (a *App) dispatch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if route.IsStatic {
-		if a.StaticHandler == nil {
-			NotFoundText(sw, "(intentionally)")
-			return
-		}
-		prefix := "/public"
-		if i := strings.Index(route.Path, "/*"); i > 0 {
-			prefix = route.Path[:i]
-		}
-		http.StripPrefix(prefix, a.StaticHandler(route.StaticBase)).ServeHTTP(sw, r)
+		a.serveStatic(sw, r, route)
 		return
 	}
 
@@ -462,6 +472,32 @@ func (a *App) dispatch(w http.ResponseWriter, r *http.Request) {
 	ApplyResult(ctx, result)
 }
 
+// dispatchNotReady serves static routes and answers everything else with the
+// fixed 503 not_ready JSON line, before any session decode, hook or action.
+func (a *App) dispatchNotReady(w http.ResponseWriter, r *http.Request) {
+	sw := newStatusWriter(w)
+	if a.Routes != nil {
+		if route, _, matched := a.Routes.Match(r.Method, r.URL.Path); matched && route.IsStatic {
+			a.serveStatic(sw, r, route)
+			return
+		}
+	}
+	ctx := &Context{Request: r, Writer: sw}
+	ApplyResult(ctx, JSONLineResult(http.StatusServiceUnavailable, notReadyBody))
+}
+
+func (a *App) serveStatic(sw *statusWriter, r *http.Request, route *Route) {
+	if a.StaticHandler == nil {
+		NotFoundText(sw, "(intentionally)")
+		return
+	}
+	prefix := "/public"
+	if i := strings.Index(route.Path, "/*"); i > 0 {
+		prefix = route.Path[:i]
+	}
+	http.StripPrefix(prefix, a.StaticHandler(route.StaticBase)).ServeHTTP(sw, r)
+}
+
 func actionAllowsMethod(allowed []string, method string) bool {
 	method = strings.ToUpper(method)
 	if method == http.MethodHead {
@@ -484,7 +520,7 @@ func applySessionCommitFailure(ctx *Context, result Result) {
 }
 
 // applySessionCookie refreshes the session cookie when the action wrote
-// session keys (revel SessionFilter behaviour).
+// session keys (legacy session-filter behaviour).
 func (a *App) applySessionCookie(ctx *Context) error {
 	if a.Sessions == nil || len(ctx.sessionDirty) == 0 {
 		return nil

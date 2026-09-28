@@ -3,7 +3,6 @@ package i18n
 import (
 	"bufio"
 	"fmt"
-	"github.com/revel/revel"
 	"github.com/robfig/config"
 	. "github.com/yangphere/leanote/app/lea"
 	"os"
@@ -16,11 +15,8 @@ import (
 const (
 	CurrentLocaleViewArg = "currentLocale" // The key for the current locale render arg value
 
-	messageFilesDirectory = "messages"
-	messageFilePattern    = `^\w+\.conf$`
-	unknownValueFormat    = "??? %s ???"
-	defaultLanguageOption = "i18n.default_language"
-	localeCookieConfigKey = "i18n.cookie"
+	messageFilePattern = `^\w+\.conf$`
+	unknownValueFormat = "??? %s ???"
 )
 
 var (
@@ -39,8 +35,7 @@ func HasLang(lang string) bool {
 }
 
 func GetDefaultLang() string {
-	lang, _ := revel.Config.String(defaultLanguageOption)
-	return lang
+	return DefaultLanguage
 }
 
 // Return all currently loaded message languages.
@@ -58,7 +53,7 @@ func MessageLanguages() []string {
 //
 // When either an unknown locale or message is detected, a specially formatted string is returned.
 // DefaultLanguage is the fallback language when the requested locale has
-// no message; settable by plain-Go processes (Revel reads
+// no message; settable by plain-Go processes (the old runtime reads
 // i18n.default_language from app.conf).
 var DefaultLanguage = ""
 
@@ -66,18 +61,13 @@ func Message(locale, message string, args ...interface{}) string {
 	language, region := parseLocale(locale)
 
 	langAndRegion := language + "-" + region
-	// revel.TRACE.Println(langAndRegion + " 怎么回事")
+	// Legacy runtime trace: langAndRegion + " 怎么回事"
 
 	messageConfig, knownLanguage := messages[langAndRegion]
 	if !knownLanguage {
-		// Default language resolution: i18n.default_language under Revel;
-		// the settable DefaultLanguage var in plain-Go processes (seam).
+		// The native entrypoint sets DefaultLanguage after validating its
+		// configuration; keep that as the only runtime config source.
 		defaultLanguage := DefaultLanguage
-		if defaultLanguage == "" && revel.Config != nil {
-			if v, found := revel.Config.String(defaultLanguageOption); found && v != "" {
-				defaultLanguage = v
-			}
-		}
 		if defaultLanguage == "" {
 			return fmt.Sprintf(unknownValueFormat, message)
 		}
@@ -97,7 +87,7 @@ func Message(locale, message string, args ...interface{}) string {
 	}
 
 	if len(args) > 0 {
-		// revel.TRACE.Printf("Arguments detected, formatting '%s' with %v", value, args)
+		// Legacy runtime trace: arguments detected, formatting the value.
 		value = fmt.Sprintf(value, args...)
 	}
 
@@ -168,7 +158,7 @@ func loadMessageFile(locale string, path string, info os.FileInfo, osError error
 			return error
 		} else {
 			// locale := parseLocaleFromFileName(info.Name())
-			// revel.TRACE.Print(locale + "----locale")
+			// Legacy runtime trace: locale + "----locale"
 
 			// If we have already parsed a message file for this locale, merge both
 			if _, exists := messages[locale]; exists {
@@ -244,62 +234,8 @@ func parseLocaleFromFileName(file string) string {
 	return strings.ToLower(extension)
 }
 
-func init() {
-	revel.OnAppStart(func() {
-		if err := loadMessages(filepath.Join(revel.BasePath, messageFilesDirectory)); err != nil {
-			panic(err)
-		}
-	})
-}
-
-// LoadMessages loads message files from dir for plain-Go processes
-// (revel used OnAppStart with BasePath + the messages dir name).
+// LoadMessages loads message files from the resolved messages root. The
+// caller owns configuration and resource-root validation.
 func LoadMessages(dir string) error {
 	return loadMessages(dir)
-}
-
-func I18nFilter(c *revel.Controller, fc []revel.Filter) {
-	if foundCookie, cookieValue := hasLocaleCookie(c.Request); foundCookie {
-		// revel.TRACE.Printf("Found locale cookie value: %s", cookieValue)
-		setCurrentLocaleControllerArguments(c, cookieValue)
-	} else if foundHeader, headerValue := hasAcceptLanguageHeader(c.Request); foundHeader {
-		// revel.TRACE.Printf("Found Accept-Language header value: %s", headerValue)
-		setCurrentLocaleControllerArguments(c, headerValue)
-	} else {
-		// revel.TRACE.Println("Unable to find locale in cookie or header, using empty string")
-		setCurrentLocaleControllerArguments(c, "")
-	}
-	fc[0](c, fc[1:])
-}
-
-// Set the current locale controller argument (CurrentLocaleControllerArg) with the given locale.
-func setCurrentLocaleControllerArguments(c *revel.Controller, locale string) {
-	c.Request.Locale = locale
-	c.ViewArgs[CurrentLocaleViewArg] = locale
-}
-
-// Determine whether the given request has valid Accept-Language value.
-//
-// Assumes that the accept languages stored in the request are sorted according to quality, with top
-// quality first in the slice.
-func hasAcceptLanguageHeader(request *revel.Request) (bool, string) {
-	if request.AcceptLanguages != nil && len(request.AcceptLanguages) > 0 {
-		return true, request.AcceptLanguages[0].Language
-	}
-
-	return false, ""
-}
-
-// Determine whether the given request has a valid language cookie value.
-func hasLocaleCookie(request *revel.Request) (bool, string) {
-	if request != nil {
-		name := revel.Config.StringDefault(localeCookieConfigKey, revel.CookiePrefix+"_LANG")
-		if cookie, error := request.Cookie(name); error == nil {
-			return true, cookie.GetValue()
-		} else {
-			// revel.TRACE.Printf("Unable to read locale cookie with name '%s': %s", name, error.Error())
-		}
-	}
-
-	return false, ""
 }

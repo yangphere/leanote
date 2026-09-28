@@ -16,35 +16,60 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/controllers"
+	adminControllers "github.com/yangphere/leanote/app/controllers/admin"
 	api "github.com/yangphere/leanote/app/controllers/api"
+	memberControllers "github.com/yangphere/leanote/app/controllers/member"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/httpserver"
+	"github.com/yangphere/leanote/app/lea"
 	"github.com/yangphere/leanote/app/lea/i18n"
 	"github.com/yangphere/leanote/app/service"
+	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/connstring"
 )
 
 var initContentRuntime = service.InitContentRuntime
 
 func main() {
 	confPath := flag.String("conf", "", "path to the canonical production app.conf")
-	runMode := flag.String("runMode", "", "active app.conf section (must be prod)")
+	runMode := flag.String("runMode", "", "active app.conf section (dev, test, or prod)")
 	flag.Parse()
 	if err := validateCLIOptions(*runMode, hasCLIFlag("runMode"), hasCLIFlag("conf")); err != nil {
 		logConfigError(err)
 	}
-
-	cfg, err := httpserver.ValidateProductionConfig(*confPath)
+	configPath, err := configPathForRunMode(*confPath, *runMode)
 	if err != nil {
 		logConfigError(err)
 	}
-	appBase := applicationBase(*confPath)
-	runtimeCfg, err := httpserver.ValidateProductionRuntimeConfig(cfg, filepath.Join(appBase, "public"))
+	var cfg *httpserver.Config
+	if *runMode == "prod" {
+		cfg, err = httpserver.ValidateProductionConfig(configPath)
+	} else {
+		cfg, err = httpserver.LoadConfigFile(configPath, *runMode)
+	}
 	if err != nil {
 		logConfigError(err)
 	}
-	revel.BasePath = appBase
+	appBase := applicationBase(configPath)
+	var runtimeCfg *httpserver.ProductionConfig
+	if *runMode == "prod" {
+		runtimeCfg, err = httpserver.ValidateProductionRuntimeConfig(cfg, filepath.Join(appBase, "public"))
+	} else {
+		runtimeCfg, err = httpserver.ValidateLocalRuntimeConfig(cfg, *runMode, appBase, filepath.Join(appBase, "public"))
+	}
+	if err != nil {
+		logConfigError(err)
+	}
+	// First-party application-config seam (adminUsername, site.url) from the
+	// already-validated configuration, installed before the registry is
+	// wired. The global configuration snapshot never reads framework globals.
+	service.SetAppConfigSource(cfg)
+	service.SetRuntimeConfig(service.RuntimeConfig{
+		BackupRoot:       runtimeCfg.BackupRoot,
+		DatabaseName:     runtimeCfg.DatabaseName,
+		DatabaseIdentity: runtimeCfg.ConfiguredDatabaseIdentity,
+		DatabaseProvider: databaseConnectionProvider(cfg, *runMode, runtimeCfg),
+	})
 	if err := setupPresentation(
 		cfg,
 		filepath.Join(appBase, "app", "views"),
@@ -52,9 +77,13 @@ func main() {
 	); err != nil {
 		log.Fatalf("load presentation assets: %v", err)
 	}
+	service.SetThemeTemplateFuncs(httpserver.TemplateFuncs())
 
 	addr := runtimeCfg.Addr
 	shutdownTimeout := runtimeCfg.ShutdownTimeout
+	if err := db.ConfigureTimeouts(cfg); err != nil {
+		logConfigError(err)
+	}
 
 	databaseReady := true
 	if err := initDatabase(cfg, *runMode); err != nil {
@@ -69,7 +98,7 @@ func main() {
 	}
 
 	// Wire the first-party stack: conf/routes table + registered actions +
-	// sessions + static file roots (module.static equivalents). db must be
+	// sessions + static file roots. db must be
 	// initialised before serving; run-mode is injected into controllers.
 	// The production config is mounted outside the application tree. Resolve
 	// routes from the packaged application root, alongside views/messages.
@@ -82,16 +111,33 @@ func main() {
 		log.Fatalf("parse routes: %v", err)
 	}
 	service.InitService()
-	if databaseReady && !service.ConfigS.InitGlobalConfigs() {
-		log.Printf("global configuration unavailable; email delivery will retry through outbox")
+	lea.InitEmail(cfg)
+	lea.InitVd()
+	// D-H9: the app is not ready until the global configuration snapshot has
+	// loaded. Try once now when MongoDB is up (keeping the OnAppStart order
+	// db → service → global config → api → registry); otherwise the
+	// background loop below reconnects and reloads with backoff.
+	readiness := newStartupReadiness(databaseReady,
+		func() error { return initDatabase(cfg, *runMode) },
+		service.ConfigS.InitGlobalConfigsWithError,
+		log.Printf,
+	)
+	if databaseReady {
+		if err := readiness.attempt(); err != nil {
+			log.Printf("global configuration unavailable: %v; not ready, retrying in background", err)
+		}
 	}
 	if err := initContentRuntime(runtimeCfg.ContentRoots); err != nil {
 		log.Fatalf("initialize content runtime: %v", err)
 	}
 	controllers.InitService()
 	api.InitService()
+	memberControllers.InitService()
+	adminControllers.InitService()
 	registry := httpserver.NewRegistry()
 	controllers.RegisterHTTP(registry, *runMode, cfg)
+	memberControllers.RegisterHTTP(registry, controllers.WebSessionBefore)
+	adminControllers.RegisterHTTP(registry, adminControllers.HTTPDeps{Production: runtimeCfg, SessionBefore: controllers.WebSessionBefore})
 	api.RegisterHTTP(registry, *runMode)
 
 	app := &httpserver.App{
@@ -109,34 +155,34 @@ func main() {
 		},
 		OnRequest:   db.CheckMongoSessionLost,
 		HealthCheck: db.Ping,
+		Ready:       readiness.Ready,
 	}
 
 	log.Printf("leanote starting: addr=%s runMode=%s shutdownTimeout=%s", addr, *runMode, shutdownTimeout)
 	srv := httpserver.NewServer(addr, app, shutdownTimeout)
-	var stopOutbox context.CancelFunc
-	var outboxDone chan struct{}
-	if databaseReady {
+	// Background work shares one shutdown context: readiness retries until
+	// the snapshot loads, then the outbox worker runs. The outbox never
+	// delivers on an empty snapshot.
+	backgroundCtx, stopBackground := context.WithCancel(context.Background())
+	backgroundDone := make(chan struct{})
+	go func() {
+		defer close(backgroundDone)
+		if !readiness.run(backgroundCtx) {
+			return
+		}
 		worker := service.NewOutboxWorker(service.EmailS.DeliverOutbox)
 		worker.SetErrorHandler(logOutboxDeliveryError)
-		workerCtx, cancel := context.WithCancel(context.Background())
-		stopOutbox = cancel
-		outboxDone = make(chan struct{})
-		go func() {
-			defer close(outboxDone)
-			worker.Run(workerCtx)
-		}()
-	}
+		worker.Run(backgroundCtx)
+	}()
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, os.Interrupt)
 	runErr := srv.Run(signals, nil)
-	if stopOutbox != nil {
-		stopOutbox()
-		select {
-		case <-outboxDone:
-		case <-time.After(shutdownTimeout):
-			runErr = errors.Join(runErr, errors.New("outbox worker shutdown timed out"))
-		}
+	stopBackground()
+	select {
+	case <-backgroundDone:
+	case <-time.After(shutdownTimeout):
+		runErr = errors.Join(runErr, errors.New("readiness/outbox worker shutdown timed out"))
 	}
 	if runErr != nil {
 		log.Fatalf("shutdown: %v", runErr)
@@ -229,13 +275,24 @@ func hasCLIFlag(name string) bool {
 }
 
 func validateCLIOptions(runMode string, hasRunMode, hasConf bool) error {
-	if !hasRunMode || runMode != "prod" {
+	if !hasRunMode || (runMode != "prod" && runMode != "dev" && runMode != "test") {
 		return &httpserver.ConfigError{Code: "CONFIG_RUN_MODE_INVALID"}
 	}
-	if !hasConf {
+	if runMode == "prod" && !hasConf {
 		return &httpserver.ConfigError{Code: "CONFIG_PATH_INVALID", Key: "conf"}
 	}
 	return nil
+}
+
+func configPathForRunMode(confPath, runMode string) (string, error) {
+	path := confPath
+	if runMode != "prod" && path == "" {
+		path = filepath.Join("conf", "app.conf")
+	}
+	if runMode != "prod" && filepath.Clean(path) == httpserver.CanonicalProductionConfigPath() {
+		return "", &httpserver.ConfigError{Code: "CONFIG_PATH_INVALID", Key: "conf"}
+	}
+	return path, nil
 }
 
 func logConfigError(err error) {
@@ -246,16 +303,63 @@ func logConfigError(err error) {
 // initDatabase consumes the validated production placeholders. No alternate
 // URL, host/port or database-name source is accepted here.
 func initDatabase(cfg *httpserver.Config, runMode string) error {
-	if runMode != "prod" {
+	if cfg == nil || (runMode != "prod" && runMode != "dev" && runMode != "test") {
 		return &httpserver.ConfigError{Code: "CONFIG_RUN_MODE_INVALID"}
 	}
-	url, ok := cfg.String("db.urlEnv")
-	if !ok || url == "" {
-		return &httpserver.ConfigError{Code: "CONFIG_VALUE_MISSING", Key: "MONGODB_URL"}
+	url, err := databaseURL(cfg, runMode)
+	if err != nil {
+		return err
 	}
 	dbname, ok := cfg.String("db.dbname")
 	if !ok || dbname == "" {
 		return &httpserver.ConfigError{Code: "CONFIG_KEY_INVALID", Key: "db.dbname"}
 	}
 	return db.InitWithError(url, dbname)
+}
+
+func databaseURL(cfg *httpserver.Config, runMode string) (string, error) {
+	if runMode == "prod" {
+		value, ok := cfg.String("db.urlEnv")
+		if !ok || strings.TrimSpace(value) == "" {
+			return "", &httpserver.ConfigError{Code: "CONFIG_VALUE_MISSING", Key: "MONGODB_URL"}
+		}
+		return strings.TrimSpace(value), nil
+	}
+	for _, key := range []string{"db.url", "db.urlEnv"} {
+		if value, ok := cfg.String(key); ok && strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value), nil
+		}
+	}
+	dbname := cfg.StringDefault("db.dbname", "")
+	if dbname == "" {
+		return "", &httpserver.ConfigError{Code: "CONFIG_MONGO_INVALID", Key: "db.host"}
+	}
+	return httpserver.MongoURL(cfg, dbname)
+}
+
+func databaseConnectionProvider(cfg *httpserver.Config, runMode string, runtimeCfg *httpserver.ProductionConfig) service.DatabaseConnectionProvider {
+	return service.DatabaseConnectionProviderFunc(func() (service.DatabaseConnection, error) {
+		if runtimeCfg == nil {
+			return service.DatabaseConnection{}, errors.New("database runtime configuration is unavailable")
+		}
+		raw, err := databaseURL(cfg, runMode)
+		if err != nil {
+			return service.DatabaseConnection{}, err
+		}
+		parsed, err := connstring.ParseAndValidate(raw)
+		if err != nil {
+			return service.DatabaseConnection{}, fmt.Errorf("parse database connection: %w", err)
+		}
+		identity := runtimeCfg.ConfiguredDatabaseIdentity
+		return service.DatabaseConnection{
+			Scheme:       identity.Scheme,
+			Host:         identity.ClusterHost,
+			Port:         identity.ClusterPort,
+			DatabaseName: runtimeCfg.DatabaseName,
+			Username:     parsed.Username,
+			Password:     parsed.Password,
+			AuthSource:   parsed.AuthSource,
+			TLSMode:      identity.TLSMode,
+		}, nil
+	})
 }

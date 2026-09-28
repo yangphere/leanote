@@ -89,6 +89,8 @@ func TestNormalizeHeadersKeepsOnlyComparableHeaders(t *testing.T) {
 	headers.Set("Content-Type", "application/json; charset=utf-8")
 	headers.Set("Location", "/login")
 	headers.Set("Date", "Mon, 02 Jan 2006 15:04:05 GMT")
+	headers.Set("Vary", "Accept-Encoding")
+	headers.Set("Allow", "POST")
 	headers.Set("Set-Cookie", "LEANOTE=a")
 	headers.Set("Content-Length", "123")
 

@@ -47,7 +47,7 @@ func TestConfigEnvInterpolation(t *testing.T) {
 		t.Fatalf("db.urlEnv = %q ok=%v, want env-expanded value", v, ok)
 	}
 
-	// revel/config computeVar errors on an empty/unset ${VAR} resolution,
+	// The legacy parser errors on an empty/unset ${VAR} resolution,
 	// which collapses to found=false in Context.String. Production startup
 	// treats that as a configuration failure instead of using legacy aliases.
 	cfg2, err := ParseConfig([]byte("x=${LEANOTE_TEST_EMPTY}\n"), "")
@@ -60,7 +60,7 @@ func TestConfigEnvInterpolation(t *testing.T) {
 }
 
 func TestConfigCycleExpansionIsAnError(t *testing.T) {
-	// revel/config computeVar errors with "Possible cycle" when the depth
+	// The legacy parser errors with "Possible cycle" when the depth
 	// bound is exhausted; Context.String collapses that to found=false. The
 	// same must hold here — a cycle must never surface a garbage value as
 	// found.
@@ -112,7 +112,7 @@ func TestConfigExplicitEmptyReferencedKeyIsError(t *testing.T) {
 		t.Fatalf("ParseConfig: %v", err)
 	}
 	if v, ok := cfg.String("a"); ok || v != "" {
-		t.Fatalf("a = %q ok=%v, want not-found collapse (explicit-empty reference errors like revel)", v, ok)
+		t.Fatalf("a = %q ok=%v, want not-found collapse (explicit-empty reference errors like the legacy parser)", v, ok)
 	}
 }
 
@@ -151,8 +151,12 @@ func TestParseRealShippedConfigs(t *testing.T) {
 			if cfg.Section() != mode {
 				t.Fatalf("%s[%s]: Section() = %q", path, mode, cfg.Section())
 			}
-			if v, ok := cfg.Int("http.port"); !ok || v != 9000 {
-				t.Fatalf("%s[%s]: http.port = %d ok=%v, want 9000", path, mode, v, ok)
+			wantPort := 9000
+			if mode == "test" {
+				wantPort = 28017
+			}
+			if v, ok := cfg.Int("http.port"); !ok || v != wantPort {
+				t.Fatalf("%s[%s]: http.port = %d ok=%v, want %d", path, mode, v, ok, wantPort)
 			}
 			if v, _ := cfg.String("adminUsername"); v != "admin" {
 				t.Fatalf("%s[%s]: adminUsername = %q", path, mode, v)
@@ -293,12 +297,12 @@ func TestConfigBoolVocabulary(t *testing.T) {
 		}
 	}
 	// "log.trace.output = off" — the exact line shipped in app.conf-default:
-	// the value must read as "off" (revel Bool vocabulary), not fall back.
+	// the value must read as "off" (legacy Bool vocabulary), not fall back.
 	cfg2, err := ParseConfig([]byte("log.trace.output = off\n"), "")
 	if err != nil {
 		t.Fatalf("ParseConfig: %v", err)
 	}
 	if v, ok := cfg2.Bool("log.trace.output"); !ok || v != false {
-		t.Fatalf("Bool(log.trace.output) = %v,%v; want false,true (revel y/n/on/off vocabulary)", v, ok)
+		t.Fatalf("Bool(log.trace.output) = %v,%v; want false,true (legacy y/n/on/off vocabulary)", v, ok)
 	}
 }

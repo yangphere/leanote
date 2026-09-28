@@ -66,11 +66,7 @@ func publicBlogNoteChecked(noteId string) (info.Note, error) {
 		return info.Note{}, err
 	}
 	var content info.NoteContent
-	err = db.NoteContents.Find(bson.M{
-		"_id":    note.NoteId,
-		"UserId": note.UserId,
-		"IsBlog": true,
-	}).One(&content)
+	err = db.NoteContents.Find(publicBlogContentQuery(note.NoteId, note.UserId)).One(&content)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return info.Note{}, ErrPublicBlogNotFound
@@ -177,11 +173,7 @@ func (this *BlogService) GetBlogItemChecked(note info.Note) (info.BlogItem, erro
 		return info.BlogItem{}, db.ErrMongoClientNotInitialized
 	}
 	noteContent := info.NoteContent{}
-	err := db.NoteContents.Find(bson.M{
-		"_id":    note.NoteId,
-		"UserId": note.UserId,
-		"IsBlog": true,
-	}).One(&noteContent)
+	err := db.NoteContents.Find(publicBlogContentQuery(note.NoteId, note.UserId)).One(&noteContent)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return info.BlogItem{}, fmt.Errorf("public blog content not found: %w", ErrPublicBlogNotFound)
@@ -211,6 +203,26 @@ func (this *BlogService) GetBlogItem(note info.Note) (blog info.BlogItem) {
 	blog = info.BlogItem{Note: note, Abstract: noteContent.Abstract, Content: noteContent.Content, HasMore: false, User: info.User{}}
 
 	return
+}
+
+// publicBlogContentQuery keys the projection by the already-validated note
+// owner and allows the historical projection shape where IsBlog was omitted.
+// An explicit false value remains private; only a missing field gets the
+// compatibility path. The note document remains the public source of truth
+// for publishing visibility.
+func publicBlogContentQuery(noteID, userID ObjectID) bson.M {
+	query := bson.M{"_id": noteID, "UserId": userID}
+	for key, value := range publicBlogContentVisibilityQuery() {
+		query[key] = value
+	}
+	return query
+}
+
+func publicBlogContentVisibilityQuery() bson.M {
+	return bson.M{"$or": []bson.M{
+		{"IsBlog": true},
+		{"IsBlog": bson.M{"$exists": false}},
+	}}
 }
 
 // 得到用户共享的notebooks
@@ -322,7 +334,11 @@ func (this *BlogService) blogItemsFromNotesChecked(notes []info.Note) ([]info.Bl
 		noteIDs[i] = note.NoteId
 	}
 	contents := []info.NoteContent{}
-	if err := db.NoteContents.Find(bson.M{"_id": bson.M{"$in": noteIDs}, "UserId": notes[0].UserId, "IsBlog": true}).All(&contents); err != nil {
+	contentQuery := bson.M{"_id": bson.M{"$in": noteIDs}, "UserId": notes[0].UserId}
+	for key, value := range publicBlogContentVisibilityQuery() {
+		contentQuery[key] = value
+	}
+	if err := db.NoteContents.Find(contentQuery).All(&contents); err != nil {
 		return nil, fmt.Errorf("load public blog contents: %w", err)
 	}
 	contentByNote := make(map[ObjectID]info.NoteContent, len(contents))
@@ -332,7 +348,7 @@ func (this *BlogService) blogItemsFromNotesChecked(notes []info.Note) ([]info.Bl
 	blogs := make([]info.BlogItem, len(notes))
 	for i, note := range notes {
 		content, ok := contentByNote[note.NoteId]
-		if !ok || content.NoteId.IsZero() || !content.IsBlog {
+		if !ok || content.NoteId.IsZero() {
 			return nil, fmt.Errorf("public blog content not found for %s: %w", note.NoteId.Hex(), ErrPublicBlogNotFound)
 		}
 		blogs[i] = info.BlogItem{Note: note, Abstract: content.Abstract, Content: content.Content, HasMore: true}
@@ -625,7 +641,11 @@ func (this *BlogService) SearchBlogChecked(key, userId string, page, pageSize in
 	if key != "" {
 		pattern := bson.Regex{Pattern: ".*?" + regexp.QuoteMeta(key) + ".*", Options: "i"}
 		contentIDs := []ObjectID{}
-		if err := db.NoteContents.Find(bson.M{"UserId": ownerID, "IsBlog": true, "Content": bson.M{"$regex": pattern}}).Select(bson.M{"_id": true}).All(&contentIDs); err != nil {
+		contentQuery := bson.M{"UserId": ownerID, "Content": bson.M{"$regex": pattern}}
+		for key, value := range publicBlogContentVisibilityQuery() {
+			contentQuery[key] = value
+		}
+		if err := db.NoteContents.Find(contentQuery).Distinct("_id", &contentIDs); err != nil {
 			return info.Page{}, nil, fmt.Errorf("search public blog contents: %w", err)
 		}
 		query["$or"] = []bson.M{

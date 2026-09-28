@@ -1,10 +1,11 @@
 package api
 
 import (
+	"net/http/httptest"
 	"net/url"
 	"testing"
 
-	"github.com/yangphere/leanote/app/info"
+	"github.com/yangphere/leanote/app/httpserver"
 )
 
 func TestAPINoteFilesPresenceLeavesAssetsUnchangedWhenFilesAreAbsent(t *testing.T) {
@@ -13,43 +14,37 @@ func TestAPINoteFilesPresenceLeavesAssetsUnchangedWhenFilesAreAbsent(t *testing.
 		"FileDatas[local-file-id]": {"upload bytes are bound separately"},
 	}
 
-	if apiNoteFilesPresent(values, nil) {
+	request := httptest.NewRequest("POST", "/api/note/update", nil)
+	request.Form = values
+	context := &httpserver.Context{Request: request}
+	if apiNoteAssetsSupplied(context) {
 		t.Fatal("unrelated fields were treated as a complete files collection")
 	}
 }
 
 func TestAPINoteFilesPresenceAcceptsExplicitEmptyMarkers(t *testing.T) {
-	for _, marker := range []string{"FilesPresent", "HasFiles"} {
-		t.Run(marker, func(t *testing.T) {
-			if !apiNoteFilesPresent(url.Values{marker: {"1"}}, nil) {
-				t.Fatalf("%s did not mark an explicit empty files collection as present", marker)
-			}
-		})
-	}
-}
-
-func TestAPINoteFilesPresenceRejectsDisabledEmptyMarkers(t *testing.T) {
-	for _, marker := range []string{"FilesPresent", "HasFiles"} {
-		t.Run(marker, func(t *testing.T) {
-			if apiNoteFilesPresent(url.Values{marker: {"0"}}, nil) {
-				t.Fatalf("%s=0 was treated as an explicit empty files collection", marker)
-			}
-		})
+	for _, values := range []url.Values{
+		{"Files": {""}},
+		{"Files[0][Title]": {""}},
+	} {
+		request := httptest.NewRequest("POST", "/api/note/update", nil)
+		request.Form = values
+		if !apiNoteAssetsSupplied(&httpserver.Context{Request: request}) {
+			t.Fatalf("values %v did not mark an explicit files collection as present", values)
+		}
 	}
 }
 
 func TestAPINoteFilesPresenceAcceptsAnyIndexedFilesField(t *testing.T) {
-	values := url.Values{"Files[3][Title]": {"attachment.txt"}}
-
-	if !apiNoteFilesPresent(values, nil) {
+	request := httptest.NewRequest("POST", "/api/note/update", nil)
+	request.Form = url.Values{"Files[3][Title]": {"attachment.txt"}}
+	if !apiNoteAssetsSupplied(&httpserver.Context{Request: request}) {
 		t.Fatal("an indexed Files field did not mark the complete collection as present")
 	}
 }
 
-func TestAPINoteFilesPresenceAcceptsNonEmptyDecodedCollection(t *testing.T) {
-	files := []info.NoteFile{{LocalFileId: "local-file-id"}}
-
-	if !apiNoteFilesPresent(nil, files) {
-		t.Fatal("a non-empty decoded files collection was treated as absent")
+func TestAPINoteFilesPresenceRequiresRequest(t *testing.T) {
+	if apiNoteAssetsSupplied(nil) {
+		t.Fatal("nil request context reported supplied assets")
 	}
 }

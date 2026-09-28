@@ -483,7 +483,12 @@ func TestCommentOutboxMongoUsesHandoffGate(t *testing.T) {
 	defer func() { Outbox = saved }()
 
 	now := time.Now().UTC().Truncate(time.Second)
-	event := OutboxEvent{ID: NewObjectID(), Kind: "comment", AggregateID: NewObjectID(), NextAttemptAt: now}
+	commentID := NewObjectID()
+	recipientID := NewObjectID()
+	event := OutboxEvent{
+		ID: NewObjectID(), Kind: "comment", AggregateID: commentID, NextAttemptAt: now,
+		Payload: map[string]any{"recipientId": recipientID.Hex()},
+	}
 	if _, err := EnqueueOutboxEvent(context.Background(), event); err != nil {
 		t.Fatal(err)
 	}
@@ -505,13 +510,21 @@ func TestCommentOutboxMongoUsesHandoffGate(t *testing.T) {
 	if stored.Status != OutboxStatusSent || stored.TransportHandedOffAt.IsZero() {
 		t.Fatalf("comment handoff state = %+v", stored)
 	}
-	rejected := OutboxEvent{ID: NewObjectID(), Kind: "comment", AggregateID: NewObjectID(), NextAttemptAt: now}
+	rejectedCommentID := NewObjectID()
+	rejected := OutboxEvent{
+		ID: NewObjectID(), Kind: "comment", AggregateID: rejectedCommentID, NextAttemptAt: now,
+		Payload: map[string]any{"recipientId": NewObjectID().Hex()},
+	}
 	if _, err := EnqueueOutboxEvent(context.Background(), rejected); err != nil {
 		t.Fatal(err)
 	}
 	if err := ConfirmCommentOutbox(context.Background(), rejected.ID, now); err != nil {
 		t.Fatal(err)
 	}
+	// The Mongo driver leaves struct fields untouched when an optional BSON
+	// field is absent. Decode the second event into a fresh value so the
+	// previous sent event's handoff timestamp cannot leak into this assertion.
+	stored = OutboxEvent{}
 	secret := "private SMTP recipient@example.test"
 	err := DeliverOutbox(context.Background(), rejected.ID, now, func(context.Context, OutboxEvent) error {
 		return fmt.Errorf("%w: %s", ErrOutboxTransportRejected, secret)

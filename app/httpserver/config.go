@@ -1,4 +1,4 @@
-// Package httpserver hosts the first-party HTTP stack that replaces Revel:
+// Package httpserver hosts the first-party HTTP stack:
 // configuration, routing registry, sessions, request binding, responses and
 // middleware. Services must not import this package.
 package httpserver
@@ -18,14 +18,14 @@ var (
 	envVarRegExp = regexp.MustCompile(`\$\{([a-zA-Z0-9_.\-]+)}`)
 )
 
-// boolString reproduces revel/config's accepted boolean vocabulary
+// boolString preserves the accepted legacy boolean vocabulary
 // (config.go boolString map), matched case-insensitively.
 var boolString = map[string]bool{
 	"t": true, "true": true, "y": true, "yes": true, "on": true, "1": true,
 	"f": false, "false": false, "n": false, "no": false, "off": false, "0": false,
 }
 
-// Config reproduces the revel/config semantics the app relies on: a default
+// Config preserves the configuration semantics the app relies on: a default
 // section plus run-mode sections, ${VAR} expansion from the environment and
 // %(key)s interpolation from other keys, both applied lazily at read time.
 type Config struct {
@@ -33,13 +33,13 @@ type Config struct {
 	section string
 }
 
-// maxExpansionDepth mirrors revel/config's DepthValues recursion bound.
+// maxExpansionDepth mirrors the previous parser's recursion bound.
 const maxExpansionDepth = 200
 
 // ParseConfig parses app.conf content and activates the run-mode section.
 // Lookups consult the active section first, then the default section. An
 // empty runMode activates only the default section; a named section that is
-// absent is a load error (Revel fails the same way).
+// absent is a load error, matching the previous runtime.
 func ParseConfig(data []byte, runMode string) (*Config, error) {
 	c := &Config{data: map[string]map[string]string{defaultSection: {}}}
 	section := defaultSection
@@ -118,8 +118,8 @@ func (c *Config) lookup(key string) (string, bool) {
 	}
 	value, err := c.expand(strings.TrimSpace(raw), c.section)
 	if err != nil {
-		// Undefined %(...)s references read as absent, exactly like
-		// revel/config's OptionError collapse in Context.String.
+		// Undefined %(...)s references read as absent, matching the previous
+		// parser's option-error collapse in String.
 		return "", false
 	}
 	return value, true
@@ -127,7 +127,7 @@ func (c *Config) lookup(key string) (string, bool) {
 
 // expand resolves %(key)s against the config (section overrides default)
 // recursively up to maxExpansionDepth, then ${VAR} from the environment.
-// Matching revel/config's computeVar: an empty resolution — an undefined
+// Matching the previous parser's variable expansion: an empty resolution — an undefined
 // %(key)s, or an unset/empty ${VAR} — is an error ("Option not found"), and
 // exhausting the depth is a cycle error. Both surface as found=false via
 // lookup.
@@ -167,7 +167,7 @@ func (c *Config) expand(value, section string) (string, error) {
 }
 
 // envExpand substitutes ${VAR} from the environment; an unset or empty
-// variable is an error, matching revel/config's empty-resolution rule.
+// variable is an error, matching its empty-resolution rule.
 func envExpand(value string) (string, error) {
 	for _, m := range envVarRegExp.FindAllStringSubmatchIndex(value, -1) {
 		name := value[m[2]:m[3]]
@@ -198,7 +198,7 @@ func (c *Config) StringDefault(key, def string) string {
 }
 
 // Int returns the integer value and whether the key was found. Parse
-// failures report found=false (revel/config OptionError semantics).
+// failures report found=false (the previous parser's option-error semantics).
 func (c *Config) Int(key string) (int, bool) {
 	raw, ok := c.lookup(key)
 	if !ok {
@@ -220,7 +220,7 @@ func (c *Config) IntDefault(key string, def int) int {
 }
 
 // Bool returns the boolean value and whether the key was found. The
-// accepted vocabulary matches revel/config: t/true/y/yes/on/1 and
+// accepted vocabulary is t/true/y/yes/on/1 and
 // f/false/n/no/off/0, case-insensitively.
 func (c *Config) Bool(key string) (bool, bool) {
 	raw, ok := c.lookup(key)
@@ -244,7 +244,7 @@ func (c *Config) BoolDefault(key string, def bool) bool {
 
 // stripInlineComment removes an inline "#" or " ;" comment that is either
 // at the start of the value or preceded by whitespace, honouring quotes and
-// backslash escapes. This mirrors how revel/config reads app.conf values.
+// backslash escapes. This mirrors how app.conf values were read historically.
 func stripInlineComment(value string) string {
 	var quote rune
 	escaped := false
@@ -291,7 +291,7 @@ func stripInlineComment(value string) string {
 }
 
 // stripQuotes removes one layer of matching surrounding double quotes from
-// a config value, as revel/config does for String lookups.
+// a config value, as the previous runtime did for String lookups.
 func stripQuotes(value string) string {
 	if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
 		return value[1 : len(value)-1]

@@ -29,9 +29,13 @@ func TestGoldenAPIActions(t *testing.T) {
 	}
 	for _, action := range protectedActions {
 		path := "/api/" + action
+		method := http.MethodGet
+		if action == "user/updateUsername" || action == "user/updatePwd" || action == "user/updateLogo" || action == "user/getSyncState" {
+			method = http.MethodPost
+		}
 		for _, auth := range []string{"none", "invalid"} {
 			snapshot := captureGolden(t, store, NewClient(server.BaseURL), "api/"+action+"_"+auth+".json", RequestSpec{
-				Method: http.MethodGet,
+				Method: method,
 				Path:   path,
 				Auth:   auth,
 			})
@@ -64,7 +68,8 @@ func TestGoldenAPIActions(t *testing.T) {
 	})
 
 	captureGolden(t, store, admin, "api/user_info.json", RequestSpec{Method: http.MethodGet, Path: "/api/user/info", Auth: "admin"})
-	captureGolden(t, store, admin, "api/user_getSyncState.json", RequestSpec{Method: http.MethodGet, Path: "/api/user/getSyncState", Auth: "admin"})
+	captureGolden(t, store, admin, "api/user_getSyncState.json", RequestSpec{Method: http.MethodPost, Path: "/api/user/getSyncState", Auth: "admin"})
+	captureGolden(t, store, admin, "api/user/getSyncState_get.json", RequestSpec{Method: http.MethodGet, Path: "/api/user/getSyncState", Auth: "admin"})
 	captureGolden(t, store, admin, "api/user_updateUsername.json", RequestSpec{
 		Method: http.MethodPost,
 		Path:   "/api/user/updateUsername",

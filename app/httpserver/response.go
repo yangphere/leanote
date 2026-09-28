@@ -6,12 +6,13 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 )
 
 // Result is what a controller action returns; the server applies it to the
-// response. It replaces the revel.Result interface.
+// response. It replaces the legacy framework result interface.
 type Result interface {
 	Apply(w http.ResponseWriter, r *http.Request)
 }
@@ -52,7 +53,7 @@ func (w *statusWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
-// JSONResult serialises v exactly like Revel's RenderJSON: compact
+// JSONResult serialises v exactly like the legacy RenderJSON contract: compact
 // json.Marshal output with no trailing newline and the
 // "application/json; charset=utf-8" content type.
 func JSONResult(status int, v interface{}) Result {
@@ -161,9 +162,9 @@ func (r jsonResult) Apply(w http.ResponseWriter, req *http.Request) {
 	w.Write(body)
 }
 
-// JSONPResult renders the Revel RenderJsonP shape: an
+// JSONPResult renders the legacy RenderJsonP shape: an
 // `application/javascript; charset=utf-8` body of `callback(json);`
-// (revel results.go renderJsonP).
+// (the former results renderer).
 func JSONPResult(callback string, v interface{}) Result {
 	return jsonpResult{callback: callback, value: v}
 }
@@ -254,14 +255,37 @@ type binaryResult struct {
 	data        []byte
 }
 
+// DownloadDisposition returns a safe Content-Disposition value for a
+// download name supplied by a service or request. The legacy actions expose
+// user-controlled display names, so path components and header control
+// characters must not cross the HTTP boundary.
+func DownloadDisposition(kind, name string) string {
+	name = filepath.Base(strings.ReplaceAll(name, "\\", "/"))
+	var safe strings.Builder
+	for _, r := range name {
+		switch {
+		case r == '"' || r == '\\' || r == '\r' || r == '\n' || r < 0x20 || r == 0x7f:
+			safe.WriteByte('_')
+		default:
+			safe.WriteRune(r)
+		}
+	}
+	filename := safe.String()
+	if filename == "" || filename == "." || filename == string(filepath.Separator) {
+		filename = "download"
+	}
+	return kind + `; filename="` + filename + `"`
+}
+
 func (r binaryResult) Apply(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Accept-Ranges", "bytes")
 	w.Header().Set("Content-Type", r.contentType)
 	w.WriteHeader(r.status)
 	w.Write(r.data)
 }
 
 // FileResult streams a file from disk as an attachment download, with the
-// deterministic content-type mapping Revel applies (revel
+// deterministic content-type mapping the legacy runtime applied (its
 // ContentTypeByFilename: known extension wins, text/* gains a charset,
 // unknown extension degrades to application/octet-stream).
 func FileResult(path, downloadName string) Result {
@@ -290,7 +314,7 @@ func (r fileResult) Apply(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", contentTypeByFilename(r.name))
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", r.name))
+	w.Header().Set("Content-Disposition", DownloadDisposition("attachment", r.name))
 	http.ServeContent(w, req, r.name, info.ModTime(), f)
 }
 
@@ -321,7 +345,7 @@ var fileContentTypes = map[string]string{
 	"mp4":   "video/mp4",
 }
 
-// contentTypeByFilename mirrors revel.ContentTypeByFilename: a known
+// contentTypeByFilename mirrors the legacy framework content type helper: a known
 // extension wins, text/* gains a charset, anything unknown degrades to
 // application/octet-stream.
 func contentTypeByFilename(filename string) string {

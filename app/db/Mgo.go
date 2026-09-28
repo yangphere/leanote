@@ -3,9 +3,6 @@ package db
 import (
 	"context"
 	"errors"
-	"strings"
-
-	"github.com/revel/revel"
 	. "github.com/yangphere/leanote/app/lea"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -68,35 +65,6 @@ func Init(url, dbname string) {
 	if err := InitWithError(url, dbname); err != nil {
 		panic(err)
 	}
-}
-
-// InitFromRevelConfigForDevelopment keeps the legacy Revel test harness
-// usable without making those aliases part of the production entry point.
-// Production callers must use the explicit db.urlEnv contract instead.
-func InitFromRevelConfigForDevelopment() {
-	if revel.Config == nil {
-		panic("development database configuration is unavailable")
-	}
-	dbURL, _ := revel.Config.String("db.url")
-	if dbURL == "" {
-		dbURL, _ = revel.Config.String("db.urlEnv")
-	}
-	dbName, _ := revel.Config.String("db.dbname")
-	if dbURL == "" {
-		host, _ := revel.Config.String("db.host")
-		port, _ := revel.Config.String("db.port")
-		user, _ := revel.Config.String("db.username")
-		pass, _ := revel.Config.String("db.password")
-		credentials := ""
-		if user != "" && pass != "" {
-			credentials = user + ":" + pass + "@"
-		}
-		dbURL = "mongodb://" + credentials + host + ":" + port + "/" + dbName
-	}
-	if strings.TrimSpace(dbURL) == "" || strings.TrimSpace(dbName) == "" {
-		panic("development database configuration is incomplete")
-	}
-	Init(strings.TrimSpace(dbURL), strings.TrimSpace(dbName))
 }
 
 // InitWithError initializes MongoDB and collections, returning connection

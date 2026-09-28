@@ -11,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/domain"
 	"github.com/yangphere/leanote/app/info"
@@ -36,9 +35,9 @@ func TestThemeActivationStateCycleCreatesNewReceipt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	previousBasePath := revel.BasePath
-	revel.BasePath = basePath
-	t.Cleanup(func() { revel.BasePath = previousBasePath })
+	previousRoots := configuredContentRoots
+	configuredContentRoots = ContentRoots{ServedRoots: []string{filepath.Join(basePath, "public")}}
+	t.Cleanup(func() { configuredContentRoots = previousRoots })
 	owner, _ := domain.ParseObjectID("507f1f77bcf86cd799439011")
 	first, _ := domain.ParseObjectID("507f1f77bcf86cd799439012")
 	second, _ := domain.ParseObjectID("507f1f77bcf86cd799439013")

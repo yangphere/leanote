@@ -9,8 +9,8 @@ import (
 )
 
 // Recover returns middleware that converts a panic into a 500 with the
-// stack logged, replacing revel.PanicFilter. onPanic is optional (nil =
-// default logger).
+// stack logged, replacing the legacy framework panic filter. onPanic is
+// optional (nil = default logger).
 func Recover(onPanic func(r *http.Request, panicValue interface{}, stack []byte)) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -45,8 +45,8 @@ func (g *gzipResponseWriter) Write(b []byte) (int, error) {
 	return g.gz.Write(b)
 }
 
-// Gzip returns middleware replicating revel.CompressFilter's observable
-// behaviour: when the client sends Accept-Encoding: gzip the response body
+// Gzip returns middleware with the old framework compression filter's
+// observable behaviour: when the client sends Accept-Encoding: gzip the body
 // is gzipped and Content-Encoding: gzip + Vary: Accept-Encoding are set.
 // Requests without the header pass through untouched.
 func Gzip(next http.Handler) http.Handler {
@@ -98,6 +98,13 @@ func LoginRequired(whitelist map[string]map[string]bool, anonymous func(c *Conte
 }
 
 func needValidateWhitelist(whitelist map[string]map[string]bool, controller, method string) bool {
+	return NeedValidateWhitelist(whitelist, controller, method)
+}
+
+// NeedValidateWhitelist reports whether an action is protected by the
+// controller whitelist. Both the web and API adapters use the same lookup
+// semantics so an omitted controller or action fails closed consistently.
+func NeedValidateWhitelist(whitelist map[string]map[string]bool, controller, method string) bool {
 	if actions, ok := whitelist[controller]; ok {
 		return !actions[method]
 	}

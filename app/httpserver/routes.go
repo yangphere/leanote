@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// Route is one parsed line of conf/routes. Patterns use Revel's syntax:
+// Route is one parsed line of conf/routes. Patterns use the legacy route syntax:
 // ":name" matches one path segment, a trailing "*" (bare or "*name")
 // matches the rest of the path. Method is GET/POST/* (upper-cased; the
 // file mixes cases).
@@ -111,7 +111,7 @@ func compileSegments(pattern string) []routeSegment {
 		}
 	}
 	// A trailing bare "*" route ("/blog/*") must also match the prefix
-	// itself ("/blog"), which Revel's router accepts.
+	// itself ("/blog"), which the legacy router accepts.
 	return segs
 }
 

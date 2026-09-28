@@ -202,9 +202,43 @@ func TestSetupPresentationRejectsMalformedMessageFile(t *testing.T) {
 	}
 }
 
-func TestValidateCLIOptionsRequiresProductionMode(t *testing.T) {
-	if err := validateCLIOptions("dev", true, true); err == nil {
-		t.Fatal("validateCLIOptions() accepted non-production run mode")
+func TestValidateCLIOptionsAcceptsLocalModesWithoutExplicitConfig(t *testing.T) {
+	for _, mode := range []string{"dev", "test"} {
+		if err := validateCLIOptions(mode, true, false); err != nil {
+			t.Fatalf("validateCLIOptions(%q) = %v, want local mode accepted", mode, err)
+		}
+	}
+}
+
+func TestConfigPathForRunModeSeparatesProductionAndLocalSources(t *testing.T) {
+	if got, err := configPathForRunMode("", "test"); err != nil || got != filepath.Join("conf", "app.conf") {
+		t.Fatalf("default test config path = %q/%v, want repository conf/app.conf", got, err)
+	}
+	if _, err := configPathForRunMode(httpserver.CanonicalProductionConfigPath(), "test"); err == nil {
+		t.Fatal("test mode accepted canonical production config")
+	}
+	if got, err := configPathForRunMode(httpserver.CanonicalProductionConfigPath(), "prod"); err != nil || got != httpserver.CanonicalProductionConfigPath() {
+		t.Fatalf("production config path = %q/%v, want canonical path", got, err)
+	}
+}
+
+func TestDatabaseURLEscapesLocalCredentialsConsistently(t *testing.T) {
+	cfg, err := httpserver.ParseConfig([]byte("[dev]\n"+
+		"db.dbname=leanote_test\n"+
+		"db.host=127.0.0.1\n"+
+		"db.port=27017\n"+
+		"db.username=user@example\n"+
+		"db.password=p:a@ss\n"), "dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := databaseURL(cfg, "dev")
+	if err != nil {
+		t.Fatalf("databaseURL() error = %v", err)
+	}
+	want := "mongodb://user%40example:p%3Aa%40ss@127.0.0.1:27017/leanote_test"
+	if got != want {
+		t.Fatalf("databaseURL() = %q, want %q", got, want)
 	}
 }
 

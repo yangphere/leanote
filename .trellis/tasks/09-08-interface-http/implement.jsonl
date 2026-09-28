@@ -14,3 +14,5 @@
 {"file":".trellis/tasks/archive/2026-09/09-08-application-admin/research/action-contract-inventory.md","reason":"admin action wire"}
 {"file":".trellis/tasks/archive/2026-09/09-08-application-admin/design.md","reason":"ProductionConfig consumer、ConfiguredDatabaseIdentity、CredentialProviderRef 与 backup root"}
 {"file":".trellis/tasks/archive/2026-09/09-08-domain-contracts/research/input-contracts.json","reason":"binder 字段级 schema 与非法输入失败语义"}
+{"file":".trellis/tasks/09-08-interface-http/research/spec-audit-2026-09-26.md","reason":"B2 前复核：Revel 全局消费点、U-05 矩阵、binder 边界与已确认的 D-H8~D-H10"}
+{"file":".trellis/tasks/09-08-interface-http/research/spec-audit-2026-09-28.md","reason":"当前 continuation 的 AddNote multipart 资产链、测试结果和环境阻塞边界"}

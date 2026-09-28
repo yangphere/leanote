@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"path/filepath"
+	"strings"
 	"time"
 
 	applicationcontent "github.com/yangphere/leanote/app/application/content"
@@ -60,6 +62,30 @@ var contentStore contentRuntimeStore
 var contentDeleteManifests *contentfs.DeleteManifestStore
 var contentLifecycle *contentfs.LifecycleStore
 var contentCreateRepair *applicationcontent.CreateRepairService
+var configuredContentRoots ContentRoots
+
+// ContentPath resolves a legacy logical content path against the validated
+// runtime roots. It keeps the logical paths stored in Mongo stable while
+// preventing native adapters from falling back to the application tree.
+func ContentPath(logical string) string {
+	parsed, err := applicationcontent.ParseStoredPath(logical)
+	if err != nil || parsed.Value == "" {
+		return ""
+	}
+	var root string
+	switch parsed.Kind {
+	case applicationcontent.RootPrivateFiles:
+		root = configuredContentRoots.PrivateFiles.Data
+	case applicationcontent.RootPublicUpload:
+		root = configuredContentRoots.PublicUpload.Data
+	default:
+		return ""
+	}
+	if strings.TrimSpace(root) == "" {
+		return ""
+	}
+	return filepath.Join(root, filepath.FromSlash(parsed.Value))
+}
 
 // ContentRootPair identifies one durable data root and its non-public,
 // same-filesystem quarantine root. The interface layer owns where these
@@ -138,6 +164,12 @@ func InitContentRuntime(config ContentRoots) error {
 	contentLifecycle = lifecycle
 	contentCreateRepair = createRepair
 	ContentPDF = exporter
+	configuredContentRoots = ContentRoots{
+		PrivateFiles: config.PrivateFiles,
+		PublicUpload: config.PublicUpload,
+		Temporary:    config.Temporary,
+		ServedRoots:  append([]string(nil), config.ServedRoots...),
+	}
 	if err := closeContentRuntime(previous, previousManifests, previousLifecycle); err != nil {
 		return fmt.Errorf("replace content runtime: %w", err)
 	}

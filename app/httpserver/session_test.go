@@ -99,12 +99,12 @@ func TestSessionRejectsExpired(t *testing.T) {
 	}
 }
 
-func TestSessionRejectsLegacyRevelCookie(t *testing.T) {
+func TestSessionRejectsLegacyFrameworkCookie(t *testing.T) {
 	codec := newTestCodec(t)
-	// A legacy Revel session cookie (base64 gob blob) must not decode.
+	// A legacy framework session cookie (base64 gob blob) must not decode.
 	legacy := "DACTYlTDjJiX5xI9AhUJFAZ1c2VySWQYAiQBSGVtYWlsGgIkB0FkbWlu"
 	if _, err := codec.Decode(legacy); err == nil {
-		t.Fatal("legacy Revel cookie must be rejected (anonymous), not decoded")
+		t.Fatal("legacy framework cookie must be rejected (anonymous), not decoded")
 	}
 }
 

@@ -115,6 +115,32 @@ func testContentRoots(base string) ContentRoots {
 	}
 }
 
+func TestContentPathUsesStoredPathResolverForLegacyPrefixes(t *testing.T) {
+	privateRoot := filepath.Join(t.TempDir(), "private")
+	publicRoot := filepath.Join(t.TempDir(), "public")
+	previous := configuredContentRoots
+	configuredContentRoots = ContentRoots{
+		PrivateFiles: ContentRootPair{Data: privateRoot},
+		PublicUpload: ContentRootPair{Data: publicRoot},
+	}
+	t.Cleanup(func() { configuredContentRoots = previous })
+
+	if got, want := ContentPath("files/owner/attach.bin"), filepath.Join(privateRoot, "owner", "attach.bin"); got != want {
+		t.Fatalf("private ContentPath = %q, want %q", got, want)
+	}
+	if got, want := ContentPath("upload/owner/image.png"), filepath.Join(publicRoot, "owner", "image.png"); got != want {
+		t.Fatalf("legacy upload ContentPath = %q, want %q", got, want)
+	}
+	if got, want := ContentPath("public/upload/owner/image.png"), filepath.Join(publicRoot, "owner", "image.png"); got != want {
+		t.Fatalf("public upload ContentPath = %q, want %q", got, want)
+	}
+	for _, unsafe := range []string{"files/../secret", "upload/../secret", `files\\owner\\..\\secret`, "C:/secret"} {
+		if got := ContentPath(unsafe); got != "" {
+			t.Errorf("ContentPath(%q) = %q, want rejection", unsafe, got)
+		}
+	}
+}
+
 func TestContentStartupMaintenanceUsesFixedRetentionAndBound(t *testing.T) {
 	now := time.Unix(1_800_000_000, 0).UTC()
 	gc := &recordingTerminalGC{result: contentfs.TerminalGCResult{Scanned: 3, Removed: []string{"first"}, Truncated: true}}

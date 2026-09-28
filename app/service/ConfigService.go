@@ -4,19 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/revel/revel"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/domain"
 	"github.com/yangphere/leanote/app/info"
 	. "github.com/yangphere/leanote/app/lea"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"log"
 	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -33,6 +34,46 @@ type ConfigService struct {
 	GlobalMapConfigs    map[string]map[string]string
 	GlobalArrMapConfigs map[string][]map[string]string
 	findDemoUser        func(string) (info.User, error)
+	// findAdminUser/loadGlobalConfigs are same-package test seams; nil uses
+	// the UserService lookup and the Mongo configs collection.
+	findAdminUser     func(string) info.User
+	loadGlobalConfigs func() ([]info.Config, error)
+	// snapshotLoaded is set only after InitGlobalConfigsWithError published a
+	// complete snapshot, so callers can tell "not loaded" from "not
+	// configured" (D-H9).
+	snapshotLoaded atomic.Bool
+}
+
+// AppConfigSource is the read-only first-party application configuration
+// view behind the global configuration snapshot. It only supplies the
+// non-secret keys adminUsername (default "admin") and site.url, and is
+// run-mode agnostic: cmd/leanote injects its validated *httpserver.Config and
+// the legacy entry used to inject a global config object. ConfigService now
+// reads only this first-party source for the snapshot.
+type AppConfigSource interface {
+	String(key string) (string, bool)
+}
+
+// appConfigSource is installed once during startup, before the registry is
+// wired and before any snapshot load or request can read it.
+var appConfigSource AppConfigSource
+
+var errConfigDependencies = errors.New("configuration dependencies are not initialized")
+
+// ErrGlobalConfigNotLoaded reports that no global configuration snapshot has
+// been published yet. It is distinct from "demo/admin not configured".
+var ErrGlobalConfigNotLoaded = errors.New("global configuration snapshot is not loaded")
+
+// SetAppConfigSource installs the first-party application configuration and
+// derives the site.url domain helpers (GetSchema/GetDefaultDomain/
+// GetUserUrl) from it. A nil source clears both.
+func SetAppConfigSource(source AppConfigSource) {
+	appConfigSource = source
+	siteURL := ""
+	if source != nil {
+		siteURL, _ = source.String("site.url")
+	}
+	applySiteURLDomain(siteURL)
 }
 
 var ErrDemoConfiguration = errors.New("demo configuration")
@@ -51,20 +92,35 @@ func (this *ConfigService) InitGlobalConfigs() bool {
 // A Mongo read or identity failure leaves the previous in-memory snapshot
 // untouched instead of silently falling back to empty/default settings.
 func (this *ConfigService) InitGlobalConfigsWithError() error {
-	if this == nil || db.Configs == nil || userService == nil || revel.Config == nil {
-		return errors.New("configuration dependencies are not initialized")
+	if this == nil {
+		return errConfigDependencies
 	}
-	adminUsername, _ := revel.Config.String("adminUsername")
+	findAdmin := this.findAdminUser
+	loadConfigs := this.loadGlobalConfigs
+	if (findAdmin == nil || loadConfigs == nil) && (db.Configs == nil || userService == nil) {
+		return errConfigDependencies
+	}
+	if findAdmin == nil {
+		findAdmin = userService.GetUserInfoByAny
+	}
+	if loadConfigs == nil {
+		loadConfigs = loadGlobalConfigsFromDatabase
+	}
+	source := appConfigSource
+	if source == nil {
+		return errors.New("application configuration source is not initialized")
+	}
+	adminUsername, _ := source.String("adminUsername")
 	if adminUsername == "" {
 		adminUsername = "admin"
 	}
-	siteURL, _ := revel.Config.String("site.url")
-	userInfo := userService.GetUserInfoByAny(adminUsername)
+	siteURL, _ := source.String("site.url")
+	userInfo := findAdmin(adminUsername)
 	if userInfo.UserId.IsZero() {
 		return errors.New("configured admin user does not exist")
 	}
-	configs := []info.Config{}
-	if err := db.Configs.FindContext(context.Background(), bson.M{}).All(&configs); err != nil {
+	configs, err := loadConfigs()
+	if err != nil {
 		return fmt.Errorf("load global configurations: %w", err)
 	}
 	all := map[string]interface{}{}
@@ -105,7 +161,78 @@ func (this *ConfigService) InitGlobalConfigsWithError() error {
 	this.GlobalArrayConfigs = arraysConfig
 	this.GlobalMapConfigs = mapsConfig
 	this.GlobalArrMapConfigs = arrMapsConfig
+	this.snapshotLoaded.Store(true)
 	return nil
+}
+
+// GlobalSnapshotLoaded reports whether a complete global configuration
+// snapshot has been published by InitGlobalConfigsWithError.
+func (this *ConfigService) GlobalSnapshotLoaded() bool {
+	return this != nil && this.snapshotLoaded.Load()
+}
+
+func loadGlobalConfigsFromDatabase() ([]info.Config, error) {
+	configs := []info.Config{}
+	// The fixture and older installations can contain one pre-key migration
+	// document with empty StringConfigs/ArrayConfigs maps. Read keyed documents
+	// through the current model, then inspect only the keyless documents so a
+	// malformed record cannot disappear behind a broad query filter.
+	if err := db.Configs.FindContext(context.Background(), bson.M{"Key": bson.M{"$exists": true}}).All(&configs); err != nil {
+		return nil, err
+	}
+	var keyless []bson.Raw
+	if err := db.Configs.FindContext(context.Background(), bson.M{"Key": bson.M{"$exists": false}}).All(&keyless); err != nil {
+		return nil, err
+	}
+	for _, document := range keyless {
+		if !isLegacyEmptyConfigDocument(document) {
+			return nil, fmt.Errorf("global configuration document %s has no key", configDocumentID(document))
+		}
+		log.Printf("ignoring legacy empty global configuration document %s", configDocumentID(document))
+	}
+	return configs, nil
+}
+
+// isLegacyEmptyConfigDocument recognizes the one historical Config shape that
+// predates one-document-per-key storage. It is intentionally narrow: empty
+// legacy maps are a harmless migration placeholder, while non-empty maps or
+// any unknown fields remain startup errors instead of being silently dropped.
+func isLegacyEmptyConfigDocument(document bson.Raw) bool {
+	elements, err := document.Elements()
+	if err != nil {
+		return false
+	}
+	var hasStringConfigs, hasArrayConfigs bool
+	for _, element := range elements {
+		switch element.Key() {
+		case "_id", "UserId", "UpdatedTime":
+			// Historical metadata fields are allowed.
+		case "StringConfigs", "ArrayConfigs":
+			nested, ok := element.Value().DocumentOK()
+			if !ok {
+				return false
+			}
+			nestedElements, err := nested.Elements()
+			if err != nil || len(nestedElements) != 0 {
+				return false
+			}
+			if element.Key() == "StringConfigs" {
+				hasStringConfigs = true
+			} else {
+				hasArrayConfigs = true
+			}
+		default:
+			return false
+		}
+	}
+	return hasStringConfigs && hasArrayConfigs
+}
+
+func configDocumentID(document bson.Raw) string {
+	if id, ok := document.Lookup("_id").ObjectIDOK(); ok {
+		return id.Hex()
+	}
+	return "unknown"
 }
 
 func validateConfiguredSecurityArrays(arrays map[string][]string) error {
@@ -548,7 +675,11 @@ func (this *ConfigService) addBackupExcluding(path, remark, state string, protec
 	if state != "confirmed" && state != "protected" {
 		return false
 	}
-	root := filepath.Join(revel.BasePath, "mongodb_backup")
+	runtime := currentRuntimeConfig()
+	root := runtime.BackupRoot
+	if strings.TrimSpace(root) == "" {
+		return false
+	}
 	canonical, err := ValidateContainedPath(root, path)
 	if err != nil {
 		return false
@@ -654,21 +785,9 @@ func (this *ConfigService) validMongoExecutable(key string) (string, error) {
 }
 
 func configuredDatabaseIdentity() (ConfiguredDatabaseIdentity, string, error) {
-	if revel.Config == nil {
+	identity := currentRuntimeConfig().DatabaseIdentity
+	if strings.TrimSpace(identity.DatabaseName) == "" {
 		return ConfiguredDatabaseIdentity{}, "", errors.New("database configuration is unavailable")
-	}
-	host, _ := revel.Config.String("db.host")
-	port, _ := revel.Config.String("db.port")
-	databaseName, _ := revel.Config.String("db.dbname")
-	authSource, _ := revel.Config.String("db.authSource")
-	tlsMode, _ := revel.Config.String("db.tls")
-	identity := ConfiguredDatabaseIdentity{
-		Scheme:       "mongodb",
-		ClusterHost:  host,
-		ClusterPort:  port,
-		DatabaseName: databaseName,
-		AuthSource:   authSource,
-		TLSMode:      tlsMode,
 	}
 	digest, err := identity.Digest()
 	if err != nil {
@@ -723,19 +842,21 @@ func (this *ConfigService) Restore(createdTime string) (ok bool, msg string) {
 		return false, "Backup Not Found"
 	}
 
-	if revel.BasePath == "" || revel.Config == nil {
+	runtime := currentRuntimeConfig()
+	if strings.TrimSpace(runtime.BackupRoot) == "" || runtime.DatabaseProvider == nil {
 		return false, "restore configuration is unavailable"
 	}
-	dbname, _ := revel.Config.String("db.dbname")
-	host, _ := revel.Config.String("db.host")
-	port, _ := revel.Config.String("db.port")
-	username, _ := revel.Config.String("db.username")
-	password, _ := revel.Config.String("db.password")
+	connection, connectionErr := runtime.DatabaseProvider.ResolveDatabaseConnection()
+	if connectionErr != nil {
+		return false, "database connection unavailable"
+	}
+	dbname := connection.DatabaseName
+	host, port, username, password := connection.Host, connection.Port, connection.Username, connection.Password
 	_, identityDigest, identityErr := configuredDatabaseIdentity()
 	if identityErr != nil {
 		return false, "database identity unavailable"
 	}
-	root := filepath.Join(revel.BasePath, "mongodb_backup")
+	root := runtime.BackupRoot
 	registered, err := ValidateContainedPath(root, backup["path"])
 	if err != nil {
 		return false, "backup path validation failed"
@@ -791,18 +912,20 @@ func (this *ConfigService) backupWithState(remark, state string) (bool, string) 
 }
 
 func (this *ConfigService) backupWithStateExcluding(remark, state string, protectedPaths map[string]struct{}) (bool, string) {
-	if revel.BasePath == "" || revel.Config == nil {
+	runtime := currentRuntimeConfig()
+	if strings.TrimSpace(runtime.BackupRoot) == "" || runtime.DatabaseProvider == nil {
 		return false, "backup configuration is unavailable"
 	}
 	executable, err := this.validMongoExecutable("mongodumpPath")
 	if err != nil {
 		return false, "mongodump executable validation failed"
 	}
-	dbname, _ := revel.Config.String("db.dbname")
-	host, _ := revel.Config.String("db.host")
-	port, _ := revel.Config.String("db.port")
-	username, _ := revel.Config.String("db.username")
-	password, _ := revel.Config.String("db.password")
+	connection, connectionErr := runtime.DatabaseProvider.ResolveDatabaseConnection()
+	if connectionErr != nil {
+		return false, "database connection unavailable"
+	}
+	dbname := connection.DatabaseName
+	host, port, username, password := connection.Host, connection.Port, connection.Username, connection.Password
 	identity, identityDigest, identityErr := configuredDatabaseIdentity()
 	if identityErr != nil {
 		return false, "database identity unavailable"
@@ -810,7 +933,7 @@ func (this *ConfigService) backupWithStateExcluding(remark, state string, protec
 	if strings.TrimSpace(dbname) == "" || strings.TrimSpace(host) == "" || strings.TrimSpace(port) == "" {
 		return false, "database identity is incomplete"
 	}
-	root := filepath.Join(revel.BasePath, "mongodb_backup")
+	root := runtime.BackupRoot
 	if err := os.MkdirAll(root, 0700); err != nil {
 		return false, "create backup root failed"
 	}
@@ -873,7 +996,11 @@ func (this *ConfigService) DeleteBackup(createdTime string) (bool, string) {
 		return false, "Backup Not Found"
 	}
 
-	root := filepath.Join(revel.BasePath, "mongodb_backup")
+	runtime := currentRuntimeConfig()
+	if strings.TrimSpace(runtime.BackupRoot) == "" {
+		return false, "backup configuration is unavailable"
+	}
+	root := runtime.BackupRoot
 	path, err := ValidateContainedPath(root, backups[i]["path"])
 	if err != nil {
 		return false, "backup path validation failed"
@@ -949,37 +1076,28 @@ var defaultDomain string
 var schema = "http://"
 var port string
 
-func init() {
-	revel.OnAppStart(func() {
-		/*
-			不用配置的, 因为最终通过命令可以改, 而且有的使用nginx代理
-			port  = strconv.Itoa(revel.HttpPort)
-			if port != "80" {
-				port = ":" + port
-			} else {
-				port = "";
-			}
-		*/
+// applySiteURLDomain derives the sub-domain helpers from site.url exactly
+// as the former startup hook did (including its port quirks); it
+// resets first so repeated installation is idempotent.
+func applySiteURLDomain(siteUrl string) {
+	defaultDomain, schema, port = "", "http://", ""
+	if strings.HasPrefix(siteUrl, "http://") {
+		defaultDomain = siteUrl[len("http://"):]
+	} else if strings.HasPrefix(siteUrl, "https://") {
+		defaultDomain = siteUrl[len("https://"):]
+		schema = "https://"
+	}
 
-		siteUrl, _ := revel.Config.String("site.url") // 已包含:9000, http, 去掉成 leanote.com
-		if strings.HasPrefix(siteUrl, "http://") {
-			defaultDomain = siteUrl[len("http://"):]
-		} else if strings.HasPrefix(siteUrl, "https://") {
-			defaultDomain = siteUrl[len("https://"):]
-			schema = "https://"
-		}
-
-		// port localhost:9000
-		ports := strings.Split(defaultDomain, ":")
-		if len(ports) == 2 {
-			port = ports[1]
-		}
-		if port == "80" {
-			port = ""
-		} else {
-			port = ":" + port
-		}
-	})
+	// port localhost:9000
+	ports := strings.Split(defaultDomain, ":")
+	if len(ports) == 2 {
+		port = ports[1]
+	}
+	if port == "80" {
+		port = ""
+	} else {
+		port = ":" + port
+	}
 }
 
 func (this *ConfigService) GetSchema() string {

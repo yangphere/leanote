@@ -363,14 +363,16 @@ func fixtureTagByName(t testing.TB, tag string) int {
 
 func seedBinaryFiles(t testing.TB, repoRoot string) {
 	t.Helper()
-	seedDir := filepath.Join(repoRoot, "files", "test_seed")
+	// Native runtime content is rooted at the validated private data root;
+	// logical Mongo paths still use the legacy files/ prefix.
+	seedDir := filepath.Join(repoRoot, ".leanote-data", "private", "files", "test_seed")
 	if err := os.MkdirAll(seedDir, 0o755); err != nil {
 		t.Fatalf("create binary seed directory: %v", err)
 	}
 	// Register cleanup before writing either seed so partial setup failures do
 	// not leave files in the worktree.
 	t.Cleanup(func() {
-		_ = os.Remove(filepath.Join(repoRoot, "files", "About Leanote.tar.gz"))
+		_ = os.Remove(filepath.Join(repoRoot, ".leanote-data", "private", "files", "About Leanote.tar.gz"))
 		_ = os.RemoveAll(seedDir)
 	})
 	imagePath := filepath.Join(seedDir, "image.png")

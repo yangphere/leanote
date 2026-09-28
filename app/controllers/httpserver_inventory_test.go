@@ -9,7 +9,9 @@ import (
 	"testing"
 
 	"github.com/yangphere/leanote/app/controllers"
+	adminControllers "github.com/yangphere/leanote/app/controllers/admin"
 	apiControllers "github.com/yangphere/leanote/app/controllers/api"
+	memberControllers "github.com/yangphere/leanote/app/controllers/member"
 	"github.com/yangphere/leanote/app/httpserver"
 )
 
@@ -20,6 +22,8 @@ func TestRegistryMatchesB0Inventory(t *testing.T) {
 	want := readInventoryActions(t)
 	registry := httpserver.NewRegistry()
 	controllers.RegisterHTTP(registry, "test", &httpserver.Config{})
+	memberControllers.RegisterHTTP(registry)
+	adminControllers.RegisterHTTP(registry)
 	apiControllers.RegisterHTTP(registry, "test")
 
 	got := make(map[string]bool)
@@ -40,7 +44,7 @@ func TestRegistryMatchesB0Inventory(t *testing.T) {
 	sort.Strings(missing)
 	sort.Strings(extra)
 	if len(missing) != 0 || len(extra) != 0 {
-		t.Fatalf("registry/inventory mismatch: missing=%d (%s), extra=%d (%s); this is expected until B1-B6 registrations land", len(missing), previewNames(missing), len(extra), previewNames(extra))
+		t.Fatalf("registry/inventory mismatch: missing=%d (%s), extra=%d (%s); every routable inventory action must be registered", len(missing), previewNames(missing), len(extra), previewNames(extra))
 	}
 }
 

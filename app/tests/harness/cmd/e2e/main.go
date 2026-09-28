@@ -3,7 +3,7 @@
 // It owns the full identity contract required by the jquery-upgrade PRD
 // (R-jQ3/R-jQ6): restore the leanote_test Mongo fixture, generate a fresh
 // cryptographic run token, write the unique e2e_runs marker, rotate the
-// fixture admin password, start the Revel test-mode server with the run
+// fixture admin password, start the native test-mode server with the run
 // token injected, run the requested child command with the per-run
 // credentials in its environment, then unconditionally stop the server,
 // delete the marker and destroy the fixture.
@@ -45,7 +45,7 @@ const (
 	adminUsername       = "admin"
 )
 
-// supervisorState tracks the live child process and the Revel server so the
+// supervisorState tracks the live child process and the native server so the
 // signal handler can tear the whole process tree down in the right order:
 // terminate the child and its process group, stop the server, remove the
 // marker, destroy the fixture. Go defers do not run on os.Exit, so the

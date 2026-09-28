@@ -126,7 +126,7 @@ func TestUSNSyncBoundaries(t *testing.T) {
 
 func currentUserUSN(t testing.TB, client *Client, identity string) int {
 	t.Helper()
-	snapshot, err := client.Do(RequestSpec{Method: http.MethodGet, Path: "/api/user/getSyncState", Auth: identity})
+	snapshot, err := client.Do(RequestSpec{Method: http.MethodPost, Path: "/api/user/getSyncState", Auth: identity})
 	if err != nil {
 		t.Fatalf("get current user Usn: %v", err)
 	}

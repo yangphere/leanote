@@ -65,6 +65,11 @@ func firstPartyAPIApp(t *testing.T) (*httpserver.App, apiTestAccount) {
 	t.Cleanup(func() { dropAPITestDatabase(t, databaseName) })
 	service.InitService()
 	InitService()
+	// This fixture exercises identity actions, not snapshot loading (no
+	// admin user is seeded); treat the empty snapshot as published so the
+	// principal policy keeps its pre-D-H9 behaviour here. The readiness gate
+	// and the unloaded fail-closed policy are covered by dedicated tests.
+	markGlobalConfigLoaded(t)
 	account := seedAPITestAccount(t)
 
 	data, err := os.ReadFile("../../../conf/routes")
@@ -172,6 +177,54 @@ func TestRegisterHTTPUsesIdentityMethodMatrix(t *testing.T) {
 				t.Fatalf("ApiAuth.%s methods = %v, want %v", test.action, entry.AllowedMethods, test.methods)
 			}
 		}
+	}
+
+	for _, test := range []struct {
+		action string
+		method string
+	}{
+		{action: "Info", method: http.MethodGet},
+		{action: "UpdateUsername", method: http.MethodPost},
+		{action: "UpdatePwd", method: http.MethodPost},
+		{action: "UpdateLogo", method: http.MethodPost},
+		{action: "GetSyncState", method: http.MethodPost},
+	} {
+		entry, ok := registry.Lookup("ApiUser", test.action)
+		if !ok {
+			t.Fatalf("ApiUser.%s was not registered", test.action)
+		}
+		if len(entry.AllowedMethods) != 1 || entry.AllowedMethods[0] != test.method {
+			t.Fatalf("ApiUser.%s methods = %v, want [%s]", test.action, entry.AllowedMethods, test.method)
+		}
+	}
+}
+
+func TestBindAPINotePreservesLegacyFieldShapes(t *testing.T) {
+	params := &httpserver.Params{Query: url.Values{
+		"NotebookId": {"507f1f77bcf86cd799439011"},
+		"Tags[0]":    {"one"},
+		"Tags[1]":    {"two"},
+		"Usn":        {"7"},
+	}}
+	note := bindAPINote(&httpserver.Context{Params: params})
+	if note.NotebookId != "507f1f77bcf86cd799439011" || len(note.Tags) != 2 || note.Tags[0] != "one" || note.Usn != 7 {
+		t.Fatalf("bound API note = %#v", note)
+	}
+}
+
+func TestAPIPageDefaultsToFirstPage(t *testing.T) {
+	for _, query := range []url.Values{
+		nil,
+		{"page": {"0"}},
+		{"page": {"-2"}},
+		{"page": {"invalid"}},
+	} {
+		if got := apiPage(&httpserver.Context{Params: &httpserver.Params{Query: query}}); got != 1 {
+			t.Errorf("apiPage(%v) = %d, want 1", query, got)
+		}
+	}
+	if got := apiPage(&httpserver.Context{Params: &httpserver.Params{Query: url.Values{"page": {"3"}}}}); got != 3 {
+		t.Fatalf("apiPage(page=3) = %d, want 3", got)
 	}
 }
 

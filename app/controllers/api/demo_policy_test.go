@@ -1,22 +1,45 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/revel/config"
-	"github.com/revel/revel"
-	"github.com/revel/revel/session"
-	"github.com/yangphere/leanote/app/controllers"
 	"github.com/yangphere/leanote/app/httpserver"
-	"github.com/yangphere/leanote/app/info"
 	"github.com/yangphere/leanote/app/service"
 )
 
+// markGlobalConfigLoaded treats the test's in-memory ConfigService as a
+// published snapshot; production publishes it via InitGlobalConfigsWithError.
+func markGlobalConfigLoaded(t *testing.T) {
+	t.Helper()
+	saved := globalConfigLoaded
+	globalConfigLoaded = func() bool { return true }
+	t.Cleanup(func() { globalConfigLoaded = saved })
+}
+
+func TestPrincipalPolicyFromConfigFailsClosedWhenSnapshotNotLoaded(t *testing.T) {
+	saved := configService
+	// Same empty demo/admin configuration as the "unconfigured" case below,
+	// but never published: it must not read as "demo not configured".
+	configService = &service.ConfigService{GlobalStringConfigs: map[string]string{}}
+	defer func() { configService = saved }()
+
+	role, isDemo, err := PrincipalPolicyFromConfig()("507f1f77bcf86cd799439012")
+	if !errors.Is(err, service.ErrGlobalConfigNotLoaded) {
+		t.Fatalf("unloaded snapshot error = %v, want ErrGlobalConfigNotLoaded", err)
+	}
+	if errors.Is(err, service.ErrDemoConfiguration) || role != "" || isDemo {
+		t.Fatalf("unloaded snapshot = role %q demo=%t err=%v, want fail closed", role, isDemo, err)
+	}
+
+	principal, err := httpserver.AuthenticatedPrincipalWithPolicy("507f1f77bcf86cd799439012", httpserver.PrincipalSourceAPIToken, httpserver.TokenStateValid, PrincipalPolicyFromConfig())
+	if err == nil || principal.UserID != "" || principal.Role != httpserver.PrincipalRoleAnonymous {
+		t.Fatalf("principal with unloaded snapshot = %+v err=%v, want rejection", principal, err)
+	}
+}
+
 func TestPrincipalPolicyFromConfigLeavesUnconfiguredDemoAnonymous(t *testing.T) {
+	markGlobalConfigLoaded(t)
 	saved := configService
 	configService = &service.ConfigService{GlobalStringConfigs: map[string]string{}}
 	defer func() { configService = saved }()
@@ -28,6 +51,7 @@ func TestPrincipalPolicyFromConfigLeavesUnconfiguredDemoAnonymous(t *testing.T) 
 }
 
 func TestPrincipalPolicyFromConfigFailsClosedOnInvalidDemoConfiguration(t *testing.T) {
+	markGlobalConfigLoaded(t)
 	saved := configService
 	configService = &service.ConfigService{GlobalStringConfigs: map[string]string{
 		"demoUserId":   "not-an-object-id",
@@ -38,75 +62,5 @@ func TestPrincipalPolicyFromConfigFailsClosedOnInvalidDemoConfiguration(t *testi
 	_, _, err := PrincipalPolicyFromConfig()("507f1f77bcf86cd799439012")
 	if !errors.Is(err, service.ErrDemoConfiguration) {
 		t.Fatalf("invalid demo configuration error = %v", err)
-	}
-}
-
-func TestApiUserMutationFailsClosedWhenDemoIdentityConfigurationIsMissing(t *testing.T) {
-	saved := configService
-	savedConfig := revel.Config
-	configService = &service.ConfigService{GlobalStringConfigs: map[string]string{
-		"demoUsername": "demo@example.test",
-	}}
-	revel.Config = config.NewContext()
-	defer func() {
-		configService = saved
-		revel.Config = savedConfig
-	}()
-
-	ctx := revel.NewGoContext(nil)
-	ctx.Request.SetRequest(httptest.NewRequest(http.MethodPost, "/api/user/updateUsername", nil))
-	recorder := httptest.NewRecorder()
-	ctx.Response.Original = recorder
-	ctx.Response.SetWriter(recorder)
-	controller := revel.NewController(ctx)
-	controller.Session = session.NewSession()
-	controller.Session["_userId"] = "507f1f77bcf86cd799439012"
-	apiUser := ApiUser{ApiBaseContrller: ApiBaseContrller{
-		BaseController: controllers.BaseController{Controller: controller},
-	}}
-
-	result := apiUser.UpdateUsername("")
-	result.Apply(controller.Request, controller.Response)
-	var got info.ApiRe
-	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
-		t.Fatalf("decode API response: %v body=%q", err, recorder.Body.String())
-	}
-	if got.Ok || got.Msg != "configuration" {
-		t.Fatalf("UpdateUsername response = %+v, want configuration failure", got)
-	}
-}
-
-func TestApiUserAvatarFailsClosedBeforeUploadWhenDemoConfigurationIsMissing(t *testing.T) {
-	saved := configService
-	savedConfig := revel.Config
-	configService = &service.ConfigService{GlobalStringConfigs: map[string]string{
-		"demoUsername": "demo@example.test",
-	}}
-	revel.Config = config.NewContext()
-	defer func() {
-		configService = saved
-		revel.Config = savedConfig
-	}()
-
-	ctx := revel.NewGoContext(nil)
-	ctx.Request.SetRequest(httptest.NewRequest(http.MethodPost, "/api/user/updateLogo", nil))
-	recorder := httptest.NewRecorder()
-	ctx.Response.Original = recorder
-	ctx.Response.SetWriter(recorder)
-	controller := revel.NewController(ctx)
-	controller.Session = session.NewSession()
-	controller.Session["_userId"] = "507f1f77bcf86cd799439012"
-	apiUser := ApiUser{ApiBaseContrller: ApiBaseContrller{
-		BaseController: controllers.BaseController{Controller: controller},
-	}}
-
-	result := apiUser.UpdateLogo()
-	result.Apply(controller.Request, controller.Response)
-	var got info.ApiRe
-	if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
-		t.Fatalf("decode API response: %v body=%q", err, recorder.Body.String())
-	}
-	if got.Ok || got.Msg != "configuration" {
-		t.Fatalf("UpdateLogo response = %+v, want pre-upload configuration failure", got)
 	}
 }

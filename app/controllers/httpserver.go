@@ -3,27 +3,46 @@ package controllers
 import (
 	"net"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/httpserver"
 )
 
-// RegisterHTTP wires first-party (post-Revel) controller actions into the
+// RegisterHTTP wires first-party controller actions into the
 // httpserver registry. Production callers pass the validated config so
 // sensitive actions can consume the canonical runtime values.
 func RegisterHTTP(rs *httpserver.Registry, runMode string, cfg *httpserver.Config) {
 	e2e := &TestE2eServer{RunMode: runMode}
 	e2e.Register(rs)
+	RegisterMainHTTP(rs)
+	RegisterNotesHTTP(rs, runMode)
+	RegisterPublishingHTTP(rs)
 	if cfg != nil {
 		NewNotePDFServer(cfg).Register(rs)
 	}
 }
 
+// WebSessionBefore is the shared session-to-principal boundary for adapters
+// hosted outside this package (member/admin). The implementation remains
+// centralized so all web surfaces apply the same invalid-session behavior.
+func WebSessionBefore(c *httpserver.Context) httpserver.Result {
+	return webSessionBefore(c)
+}
+
+// pageParam preserves the legacy BaseController.GetPage contract: omitted,
+// malformed, zero and negative values all start at page one.
+func pageParam(c *httpserver.Context) int {
+	page := c.Params.Int("page", 1)
+	if page < 1 {
+		return 1
+	}
+	return page
+}
+
 // TestE2eServer is the first-party host for the test-mode-only E2E identity
 // endpoint (conf/routes: GET /_test/e2e/identity). The decision core is
-// shared with the legacy Revel path; only the HTTP plumbing differs.
+// shared with the previous controller path; only the HTTP plumbing differs.
 type TestE2eServer struct {
 	RunMode string
 }
@@ -43,7 +62,7 @@ func (s *TestE2eServer) identity(c *httpserver.Context) httpserver.Result {
 	}
 
 	databaseName := db.DatabaseName()
-	token := os.Getenv(e2eRunTokenEnv)
+	token := e2eIdentityResponseToken()
 
 	status := evaluateE2eIdentity(s.RunMode, host, databaseName, token, loadE2eRunMarkers(databaseName), time.Now())
 	switch status {

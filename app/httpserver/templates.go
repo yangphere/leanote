@@ -18,11 +18,11 @@ import (
 )
 
 // currentLocaleViewArg is the ViewArgs key carrying the request locale
-// (revel.CurrentLocaleViewArg value, kept for template compatibility).
+// (the legacy current-locale view argument, kept for template compatibility).
 const currentLocaleViewArg = "currentLocale"
 
 // TemplateFuncs returns the 27 active template functions in the exact
-// shape app/init.go registered with Revel. The name set is frozen by
+// shape the old application runtime registered. The name set is frozen by
 // TestTemplateFuncsNameSet.
 func TemplateFuncs() template.FuncMap {
 	return template.FuncMap{
@@ -93,7 +93,7 @@ func TemplateFuncs() template.FuncMap {
 			t := time.Unix(int64(sec), 0)
 			return template.HTML(t.Format("2006-01-02 15:04:05"))
 		},
-		// Revel builtins the views rely on (template_functions.go subset).
+		// Template builtins the views rely on (template_functions.go subset).
 		"set": func(viewArgs map[string]interface{}, key string, value interface{}) template.JS {
 			if viewArgs != nil {
 				viewArgs[key] = value
@@ -185,7 +185,7 @@ func TemplateFuncs() template.FuncMap {
 			}
 			return template.HTML(i18n.Message(str, message, args...))
 		},
-		// 不用revel的msg
+		// 不使用旧运行时的 msg
 		"leaMsg": func(renderArgs map[string]interface{}, key string) template.HTML {
 			locale, _ := renderArgs[currentLocaleViewArg].(string)
 			str := i18n.Message(locale, key)

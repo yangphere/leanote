@@ -13,7 +13,7 @@ import (
 )
 
 // TestTemplateFuncsNameSet freezes the template function name set: the 27
-// active app/init.go registrations plus the three Revel builtins the views
+// active template registrations plus the three legacy builtins the views
 // reference (set/append/pad) = 30.
 func TestTemplateFuncsNameSet(t *testing.T) {
 	want := []string{

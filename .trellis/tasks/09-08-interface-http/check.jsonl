@@ -10,3 +10,5 @@
 {"file":".trellis/tasks/archive/2026-09/09-08-application-content/prd.md","reason":"复核 ContentRoots 配置门禁与 content ownership"}
 {"file":".trellis/tasks/archive/2026-09/09-08-application-content/design.md","reason":"确认 HTTP 只绑定 typed roots，不复制 resolver/state machine"}
 {"file":".trellis/tasks/archive/2026-09/09-08-application-admin/prd.md","reason":"确认 admin 只消费 ProductionConfig，无重复解析"}
+{"file":".trellis/tasks/09-08-interface-http/research/spec-audit-2026-09-26.md","reason":"核对已确认的 D-H8~D-H10、design §7 消费点是否按批清零"}
+{"file":".trellis/tasks/09-08-interface-http/research/spec-audit-2026-09-28.md","reason":"以当前代码、diff 和测试复核 multipart AddNote 资产链及历史 replay/当前 Docker 阻塞边界"}

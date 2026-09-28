@@ -2,7 +2,9 @@ package api
 
 import (
 	"errors"
+	"io"
 	"strings"
+	"time"
 
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/httpserver"
@@ -35,10 +37,18 @@ func RegisterHTTP(rs *httpserver.Registry, runMode string, policies ...httpserve
 	rs.RegisterMethods("ApiAuth", "Logout", []string{"GET", "POST"}, []httpserver.BeforeFunc{before}, auth.Logout)
 	rs.RegisterMethods("ApiAuth", "Register", []string{"POST"}, []httpserver.BeforeFunc{before}, auth.Register)
 
+	user := &ApiUserServer{}
+	rs.RegisterMethods("ApiUser", "Info", []string{"GET"}, []httpserver.BeforeFunc{before}, user.Info)
+	rs.RegisterMethods("ApiUser", "UpdateUsername", []string{"POST"}, []httpserver.BeforeFunc{before}, user.UpdateUsername)
+	rs.RegisterMethods("ApiUser", "UpdatePwd", []string{"POST"}, []httpserver.BeforeFunc{before}, user.UpdatePwd)
+	rs.RegisterMethods("ApiUser", "UpdateLogo", []string{"POST"}, []httpserver.BeforeFunc{before}, user.UpdateLogo)
+	rs.RegisterMethods("ApiUser", "GetSyncState", []string{"POST"}, []httpserver.BeforeFunc{before}, user.GetSyncState)
+
 	tag := &ApiTagServer{}
 	rs.Register("ApiTag", "GetSyncTags", []httpserver.BeforeFunc{before}, tag.GetSyncTags)
 	rs.Register("ApiTag", "AddTag", []httpserver.BeforeFunc{before}, tag.AddTag)
 	rs.Register("ApiTag", "DeleteTag", []httpserver.BeforeFunc{before}, tag.DeleteTag)
+	RegisterNotesContentHTTP(rs, before)
 }
 
 // apiUserId returns the bound userId the api interceptor stored in the
@@ -55,6 +65,9 @@ func apiAuthBefore(whitelist map[string]map[string]bool, policy httpserver.Princ
 	return func(c *httpserver.Context) httpserver.Result {
 		if policy != nil {
 			c.PrincipalPolicy = policy
+		}
+		if sessionService == nil {
+			return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
 		}
 		token, supplied := c.Params.Get("token")
 		if !supplied {
@@ -80,6 +93,9 @@ func apiAuthBefore(whitelist map[string]map[string]bool, policy httpserver.Princ
 		// same rule applies to an unmapped anonymous _ID: lookup is read-only.
 		userId, err := sessionService.ResolveUserID(token)
 		if err == nil && userId != "" {
+			if requestedID, present := c.Params.Get("userId"); present && strings.TrimSpace(requestedID) != "" && strings.TrimSpace(requestedID) != userId {
+				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "forbidden"})
+			}
 			source := httpserver.PrincipalSourceAPIToken
 			if !supplied {
 				source = httpserver.PrincipalSourceWebSession
@@ -94,6 +110,9 @@ func apiAuthBefore(whitelist map[string]map[string]bool, policy httpserver.Princ
 				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
 			}
 		} else {
+			if requestedID, present := c.Params.Get("userId"); present && strings.TrimSpace(requestedID) != "" {
+				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "not_authenticated"})
+			}
 			if err != nil && !errors.Is(err, db.ErrSessionNotFound) {
 				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
 			}
@@ -106,7 +125,7 @@ func apiAuthBefore(whitelist map[string]map[string]bool, policy httpserver.Princ
 			c.SetPrincipal(httpserver.AnonymousPrincipal())
 		}
 
-		if !needValidateAPI(whitelist, c.Controller, c.Action) {
+		if !httpserver.NeedValidateWhitelist(whitelist, c.Controller, c.Action) {
 			return nil
 		}
 		if userId != "" {
@@ -118,10 +137,160 @@ func apiAuthBefore(whitelist map[string]map[string]bool, policy httpserver.Princ
 	}
 }
 
+// ApiUserServer is the standard-library adapter for the identity actions that
+// were previously only reachable through the legacy controller.
+type ApiUserServer struct{}
+
+func apiDemoPolicyErrorMessage(err error) string {
+	if errors.Is(err, service.ErrDemoConfiguration) {
+		return "configuration"
+	}
+	return "storage"
+}
+
+func (s *ApiUserServer) Info(c *httpserver.Context) httpserver.Result {
+	if userService == nil {
+		return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+	}
+	userInfo := userService.GetUserInfo(apiUserId(c))
+	if userInfo.UserId.IsZero() {
+		return c.RenderJSON(info.NewApiRe())
+	}
+	return c.RenderJSON(info.ApiUser{
+		UserId: userInfo.UserId.Hex(), Username: userInfo.Username, Email: userInfo.Email,
+		Logo: userInfo.Logo, Verified: userInfo.Verified,
+	})
+}
+
+func (s *ApiUserServer) UpdateUsername(c *httpserver.Context) httpserver.Result {
+	re := info.NewApiRe()
+	if err := ensureAPIDemoPolicy(c); err != nil {
+		re.Msg = apiDemoPolicyErrorMessage(err)
+		return c.RenderJSON(re)
+	}
+	if userService == nil {
+		re.Msg = "storage"
+		return c.RenderJSON(re)
+	}
+	if c.GetPrincipal().IsDemo {
+		re.Msg = "cannotUpdateDemo"
+		return c.RenderJSON(re)
+	}
+	if re.Ok, re.Msg = Vd("username", c.Params.String("username")); !re.Ok {
+		return c.RenderJSON(re)
+	}
+	re.Ok, re.Msg = userService.UpdateUsername(apiUserId(c), c.Params.String("username"))
+	return c.RenderJSON(re)
+}
+
+func (s *ApiUserServer) UpdatePwd(c *httpserver.Context) httpserver.Result {
+	re := info.NewApiRe()
+	if err := ensureAPIDemoPolicy(c); err != nil {
+		re.Msg = apiDemoPolicyErrorMessage(err)
+		return c.RenderJSON(re)
+	}
+	if userService == nil {
+		re.Msg = "storage"
+		return c.RenderJSON(re)
+	}
+	if c.GetPrincipal().IsDemo {
+		re.Msg = "cannotUpdateDemo"
+		return c.RenderJSON(re)
+	}
+	oldPwd, pwd := c.Params.String("oldPwd"), c.Params.String("pwd")
+	if re.Ok, re.Msg = Vd("password", oldPwd); !re.Ok {
+		return c.RenderJSON(re)
+	}
+	if re.Ok, re.Msg = Vd("password", pwd); !re.Ok {
+		return c.RenderJSON(re)
+	}
+	re.Ok, re.Msg = userService.UpdatePwd(apiUserId(c), oldPwd, pwd)
+	return c.RenderJSON(re)
+}
+
+func (s *ApiUserServer) GetSyncState(c *httpserver.Context) httpserver.Result {
+	if userService == nil {
+		return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+	}
+	return c.RenderJSON(map[string]interface{}{"LastSyncUsn": userService.GetUsn(apiUserId(c)), "LastSyncTime": time.Now().Unix()})
+}
+
+func (s *ApiUserServer) UpdateLogo(c *httpserver.Context) httpserver.Result {
+	re := info.NewApiRe()
+	if err := ensureAPIDemoPolicy(c); err != nil {
+		re.Msg = apiDemoPolicyErrorMessage(err)
+		return c.RenderJSON(re)
+	}
+	if userService == nil {
+		re.Msg = "storage"
+		return c.RenderJSON(re)
+	}
+	if c.GetPrincipal().IsDemo {
+		re.Msg = "cannotUpdateDemo"
+		return c.RenderJSON(re)
+	}
+	file, header, err := c.Params.FormFile("file")
+	if err != nil || file == nil || header == nil {
+		re.Msg = "fileRequired"
+		return c.RenderJSON(re)
+	}
+	defer file.Close()
+	data, readErr := io.ReadAll(io.LimitReader(file, 5*1024*1024+1))
+	if readErr != nil {
+		re.Msg = "storage"
+		return c.RenderJSON(re)
+	}
+	if len(data) == 0 {
+		re.Msg = "fileRequired"
+		return c.RenderJSON(re)
+	}
+	if len(data) > 5*1024*1024 {
+		re.Msg = "fileIsTooLarge"
+		return c.RenderJSON(re)
+	}
+	_, ext := SplitFilename(header.Filename)
+	if ext != ".gif" && ext != ".jpg" && ext != ".png" && ext != ".bmp" && ext != ".jpeg" {
+		re.Msg = "notImage"
+		return c.RenderJSON(re)
+	}
+	publication, err := service.PublishAPIAvatar(c.Request.Context(), apiUserId(c), header.Filename, data)
+	if err != nil {
+		re.Msg = "storage"
+		return c.RenderJSON(re)
+	}
+	if !userService.UpdateAvatar(apiUserId(c), publication.Path) {
+		_ = service.CleanupAPIAvatar(c.Request.Context(), publication)
+		re.Msg = "storage"
+		return c.RenderJSON(re)
+	}
+	return c.RenderJSON(map[string]string{"Logo": configService.GetSiteUrl() + "/" + publication.Path})
+}
+
+func ensureAPIDemoPolicy(c *httpserver.Context) error {
+	if configService == nil || !configService.GlobalSnapshotLoaded() {
+		return service.ErrGlobalConfigNotLoaded
+	}
+	return nil
+}
+
+// globalConfigLoaded reports whether the global configuration snapshot the
+// principal policy reads has been published. Package-level so tests can
+// exercise a loaded policy without MongoDB.
+var globalConfigLoaded = func() bool {
+	return configService.GlobalSnapshotLoaded()
+}
+
+// PrincipalPolicyFromConfig derives admin/demo facts from the loaded global
+// configuration snapshot. An unloaded snapshot fails closed with
+// service.ErrGlobalConfigNotLoaded instead of reading as "demo/admin not
+// configured"; the D-H9 readiness gate keeps requests away until it loads.
 func PrincipalPolicyFromConfig() httpserver.PrincipalPolicy {
 	return func(userID string) (httpserver.PrincipalRole, bool, error) {
 		if configService == nil {
 			return "", false, errors.New("identity configuration is not initialized")
+		}
+		if !globalConfigLoaded() {
+			return "", false, service.ErrGlobalConfigNotLoaded
 		}
 		role := httpserver.PrincipalRoleMember
 		if adminID := strings.TrimSpace(configService.GetAdminUserId()); adminID != "" && userID == adminID {
@@ -145,13 +314,6 @@ func tokenState(source httpserver.PrincipalSource) httpserver.TokenState {
 		return httpserver.TokenStateValid
 	}
 	return httpserver.TokenStateAbsent
-}
-
-func needValidateAPI(whitelist map[string]map[string]bool, controller, method string) bool {
-	if actions, ok := whitelist[controller]; ok {
-		return !actions[method]
-	}
-	return true
 }
 
 // ApiAuthServer is the first-party host of the api auth actions.

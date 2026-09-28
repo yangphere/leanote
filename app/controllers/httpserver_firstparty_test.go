@@ -10,7 +10,7 @@ import (
 	"github.com/yangphere/leanote/app/httpserver"
 )
 
-// firstPartyApp builds the post-Revel server over the REAL conf/routes with
+// firstPartyApp builds the native server over the real conf/routes with
 // the actions currently migrated into the first-party registry.
 func firstPartyApp(t *testing.T, runMode string) *httpserver.App {
 	t.Helper()
@@ -67,9 +67,7 @@ func TestFirstPartyE2EIdentity404OutsideTestMode(t *testing.T) {
 func TestFirstPartyUnregisteredRoutes404(t *testing.T) {
 	app := firstPartyApp(t, "test")
 	for _, path := range []string{
-		"/",      // Index.Default not migrated yet
-		"/login", // Auth.Login not migrated yet
-		"/note/abc123",
+		"/auth/notMigrated",
 	} {
 		req := httptest.NewRequest("GET", path, nil)
 		rec := httptest.NewRecorder()
@@ -78,10 +76,18 @@ func TestFirstPartyUnregisteredRoutes404(t *testing.T) {
 			t.Errorf("%s: status = %d, want 404 until migrated", path, rec.Code)
 		}
 	}
-	// The identity route IS reachable and its name dispatches correctly.
-	req := httptest.NewRequest("GET", "/_test/e2e/identity", nil)
-	req.RemoteAddr = "127.0.0.1:51000"
+	// Note.Index is now registered; unauthenticated requests follow the
+	// legacy LoginRequired redirect instead of the pre-B3 unregistered 404.
+	req := httptest.NewRequest("GET", "/note/abc123", nil)
 	rec := httptest.NewRecorder()
+	app.ServeHTTP(rec, req)
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/login" {
+		t.Fatalf("migrated note index = %d location %q, want 302 /login", rec.Code, rec.Header().Get("Location"))
+	}
+	// The identity route IS reachable and its name dispatches correctly.
+	req = httptest.NewRequest("GET", "/_test/e2e/identity", nil)
+	req.RemoteAddr = "127.0.0.1:51000"
+	rec = httptest.NewRecorder()
 	app.ServeHTTP(rec, req)
 	if !strings.Contains(rec.Body.String(), "") || rec.Code == http.StatusNotFound {
 		t.Fatalf("identity route should reach the registered action, got %d", rec.Code)

@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/revel/revel"
 	applicationnotes "github.com/yangphere/leanote/app/application/notes"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/domain"
@@ -256,9 +255,10 @@ func TestCopySharedNoteWithoutOperationKeepsLegacySingleUSNCreate(t *testing.T) 
 	notebookID := mustOperationTestID(t, "507f1f77bcf86cd799439044")
 	missingImageID := "507f1f77bcf86cd799439045"
 	sourceAttachID := mustOperationTestID(t, "507f1f77bcf86cd799439046")
-	oldBasePath := revel.BasePath
-	revel.BasePath = t.TempDir()
-	t.Cleanup(func() { revel.BasePath = oldBasePath })
+	basePath := t.TempDir()
+	previousRoots := configuredContentRoots
+	configuredContentRoots = testContentRoots(basePath)
+	t.Cleanup(func() { configuredContentRoots = previousRoots })
 	if err := db.Users.Insert(info.User{UserId: sourceOwner}, info.User{UserId: destinationOwner, Usn: 20}); err != nil {
 		t.Fatal(err)
 	}
@@ -276,7 +276,7 @@ func TestCopySharedNoteWithoutOperationKeepsLegacySingleUSNCreate(t *testing.T) 
 		t.Fatal(err)
 	}
 	sourceAttachPath := filepath.ToSlash(filepath.Join("files", sourceOwner.Hex(), "attachs", "legacy.txt"))
-	absoluteAttachPath := filepath.Join(revel.BasePath, filepath.FromSlash(sourceAttachPath))
+	absoluteAttachPath := filepath.Join(basePath, filepath.FromSlash(sourceAttachPath))
 	if err := os.MkdirAll(filepath.Dir(absoluteAttachPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -322,9 +322,10 @@ func TestCopySharedNoteRetryUsesFrozenAttachmentManifest(t *testing.T) {
 	const clientOperationID = "shared-copy-frozen-assets"
 	destinationID := stableCopyNoteIDForOwner(clientOperationID, sourceID.Hex(), destinationOwner.Hex())
 
-	oldBasePath := revel.BasePath
-	revel.BasePath = t.TempDir()
-	t.Cleanup(func() { revel.BasePath = oldBasePath })
+	basePath := t.TempDir()
+	previousRoots := configuredContentRoots
+	configuredContentRoots = testContentRoots(basePath)
+	t.Cleanup(func() { configuredContentRoots = previousRoots })
 	previousStore := contentStore
 	testStore := archiveStore{}
 	contentStore = testStore
@@ -333,7 +334,7 @@ func TestCopySharedNoteRetryUsesFrozenAttachmentManifest(t *testing.T) {
 	})
 	writeSourceAttach := func(id domain.ObjectID, name, body string) info.Attach {
 		relativePath := filepath.ToSlash(filepath.Join("files", sourceOwner.Hex(), "attachs", name))
-		path := filepath.Join(revel.BasePath, filepath.FromSlash(relativePath))
+		path := filepath.Join(basePath, filepath.FromSlash(relativePath))
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
 		}

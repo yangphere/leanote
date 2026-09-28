@@ -1,10 +1,10 @@
 # Regression test environment
 
-The harness generates the legacy Revel entrypoint with the **default `go` on
-PATH** and enforces a floor of **Go 1.26.7**: a missing, older, or unreadable
-default toolchain fails before any file is generated. Generation and build
-subprocesses always run with `GOTOOLCHAIN=local`, so toolchains are never
-downloaded automatically.
+The harness builds and runs the first-party `cmd/leanote` entrypoint in
+`test` mode with the **default `go` on PATH**. It enforces a floor of **Go
+1.26.7**: a missing, older, or unreadable default toolchain fails before the
+server is started. Build subprocesses always run with `GOTOOLCHAIN=local`, so
+toolchains are never downloaded automatically.
 
 Pointing the harness at a specific toolchain executable is an optional
 override and bypasses the version check:
@@ -54,6 +54,7 @@ the missing golden implicitly.
 The integration tests restore the fixture before starting their server, so a
 second replay starts from the same database state. Stop any standalone test
 container after manual work with `go run ./app/tests/harness/cmd/env down`.
-The `[test]` configuration binds the generated server to `127.0.0.1`; this
-keeps Windows firewall prompts scoped out of the regression run without
-changing the production `0.0.0.0` listener.
+The `[test]` configuration binds the native server to `127.0.0.1`; this keeps
+Windows firewall prompts scoped out of the regression run without changing the
+production `0.0.0.0` listener. The native entrypoint does not watch or rebuild
+files; restart it after changing Go or template sources.

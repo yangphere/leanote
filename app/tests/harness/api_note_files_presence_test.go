@@ -91,6 +91,14 @@ func TestRemoveFilesPresenceFixtureDirectoryRejectsUnexpectedFile(t *testing.T) 
 func newFilesPresenceFixtureDirectory(t testing.TB, repoRoot string) string {
 	t.Helper()
 	filesRoot := filepath.Join(repoRoot, "files")
+	return newFilesPresenceFixtureDirectoryAtRoot(t, filesRoot)
+}
+
+func newFilesPresenceFixtureDirectoryAtRoot(t testing.TB, filesRoot string) string {
+	t.Helper()
+	if err := os.MkdirAll(filesRoot, 0o755); err != nil {
+		t.Fatalf("create files root: %v", err)
+	}
 	resolvedRoot, err := filepath.EvalSymlinks(filesRoot)
 	if err != nil {
 		t.Fatalf("resolve files root: %v", err)
@@ -209,17 +217,20 @@ func TestAPIUpdateNoteFilesPresenceContract(t *testing.T) {
 	ownerID := db.MustObjectIDFromHex(fixtureAdminID)
 	attachID := db.NewObjectID()
 	obsoleteAttachID := db.NewObjectID()
-	attachDir := newFilesPresenceFixtureDirectory(t, repoRoot)
+	filesRoot := filepath.Join(repoRoot, ".leanote-data", "private", "files")
+	attachDir := newFilesPresenceFixtureDirectoryAtRoot(t, filesRoot)
 	attachPath := filepath.Join(attachDir, "attach.txt")
 	obsoleteAttachPath := filepath.Join(attachDir, "obsolete.txt")
-	attachRelativePath, err := filepath.Rel(repoRoot, attachPath)
+	attachRelativePath, err := filepath.Rel(filesRoot, attachPath)
 	if err != nil {
 		t.Fatalf("resolve fixture attachment path: %v", err)
 	}
-	obsoleteAttachRelativePath, err := filepath.Rel(repoRoot, obsoleteAttachPath)
+	obsoleteAttachRelativePath, err := filepath.Rel(filesRoot, obsoleteAttachPath)
 	if err != nil {
 		t.Fatalf("resolve obsolete fixture attachment path: %v", err)
 	}
+	attachStoredPath := filepath.ToSlash(filepath.Join("files", attachRelativePath))
+	obsoleteAttachStoredPath := filepath.ToSlash(filepath.Join("files", obsoleteAttachRelativePath))
 	t.Cleanup(func() {
 		ctx, cancel := harnessContext()
 		defer cancel()
@@ -243,7 +254,7 @@ func TestAPIUpdateNoteFilesPresenceContract(t *testing.T) {
 		UploadUserId: ownerID,
 		Name:         "attach.txt",
 		Title:        "attach.txt",
-		Path:         filepath.ToSlash(attachRelativePath),
+		Path:         attachStoredPath,
 		Type:         "txt",
 		Size:         int64(len(contents)),
 		CreatedTime:  time.Date(2015, 1, 20, 11, 13, 41, 0, time.FixedZone("CST", 8*60*60)),
@@ -256,7 +267,7 @@ func TestAPIUpdateNoteFilesPresenceContract(t *testing.T) {
 		UploadUserId: ownerID,
 		Name:         "obsolete.txt",
 		Title:        "obsolete.txt",
-		Path:         filepath.ToSlash(obsoleteAttachRelativePath),
+		Path:         obsoleteAttachStoredPath,
 		Type:         "txt",
 		Size:         int64(len("obsolete attachment\n")),
 		CreatedTime:  time.Date(2015, 1, 20, 11, 13, 42, 0, time.FixedZone("CST", 8*60*60)),

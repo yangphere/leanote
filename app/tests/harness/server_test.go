@@ -1,7 +1,6 @@
 package harness
 
 import (
-	"encoding/json"
 	"net"
 	"net/http"
 	"os"
@@ -11,27 +10,6 @@ import (
 	"strings"
 	"testing"
 )
-
-func TestServerRunModeMapsApplicationAndRevelPaths(t *testing.T) {
-	encoded, err := serverRunMode(`D:\work\leanote`, `C:\mod\github.com\revel\revel@v1.0.0`)
-	if err != nil {
-		t.Fatalf("serverRunMode() error = %v", err)
-	}
-
-	var got struct {
-		Mode           string            `json:"mode"`
-		PackagePathMap map[string]string `json:"packagePathMap"`
-	}
-	if err := json.Unmarshal([]byte(encoded), &got); err != nil {
-		t.Fatalf("serverRunMode() output is not JSON: %v", err)
-	}
-	if got.Mode != "test" {
-		t.Fatalf("serverRunMode() mode = %q, want test", got.Mode)
-	}
-	if got.PackagePathMap[appImportPath] != `D:\work\leanote` || got.PackagePathMap[revelImportPath] != `C:\mod\github.com\revel\revel@v1.0.0` {
-		t.Fatalf("serverRunMode() map = %#v", got.PackagePathMap)
-	}
-}
 
 func TestEnsureTestPortAvailableRejectsOccupiedFixedPort(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:28017")
@@ -61,7 +39,7 @@ func TestGoBinaryHonorsExplicitOverride(t *testing.T) {
 }
 
 // TestGoBinaryRejectsDefaultToolchainBelowFloor locks the fail-closed floor:
-// a default PATH go older than 1.26.7 fails before any generation with an
+// a default PATH go older than 1.26.7 fails before any build with an
 // error naming the required minimum.
 func TestGoBinaryRejectsDefaultToolchainBelowFloor(t *testing.T) {
 	stubDir := buildGoVersionStub(t, "go1.25.9")
@@ -72,8 +50,8 @@ func TestGoBinaryRejectsDefaultToolchainBelowFloor(t *testing.T) {
 	if err == nil {
 		t.Fatalf("goBinary() = %q, want an explicit below-floor failure", got)
 	}
-	if !strings.Contains(err.Error(), minGeneratorVersion.String()) {
-		t.Fatalf("goBinary() error = %v, want it to name the %s floor", err, minGeneratorVersion)
+	if !strings.Contains(err.Error(), minNativeToolchainVersion.String()) {
+		t.Fatalf("goBinary() error = %v, want it to name the %s floor", err, minNativeToolchainVersion)
 	}
 	if !strings.Contains(err.Error(), "LEANOTE_TEST_GO") {
 		t.Fatalf("goBinary() error = %v, want install/override guidance", err)
@@ -129,8 +107,8 @@ func TestGoBinaryResolvesRealSystemToolchain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse system toolchain version: %v", err)
 	}
-	if !version.atLeast(minGeneratorVersion) {
-		t.Fatalf("system toolchain go%s is below the %s floor", version, minGeneratorVersion)
+	if !version.atLeast(minNativeToolchainVersion) {
+		t.Fatalf("system toolchain go%s is below the %s floor", version, minNativeToolchainVersion)
 	}
 }
 
@@ -262,54 +240,14 @@ func hostGoExecutable(t testing.TB) string {
 	return executable
 }
 
-func TestPrepareGeneratedPathsRemovesOnlyEmptyDirectories(t *testing.T) {
-	repoRoot := t.TempDir()
-	for _, path := range []string{
-		filepath.Join(repoRoot, "app", "tmp"),
-		filepath.Join(repoRoot, "app", "routes"),
-	} {
-		if err := os.MkdirAll(path, 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := os.MkdirAll(filepath.Join(repoRoot, "app", "tmp", "run"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := prepareGeneratedPaths(repoRoot); err != nil {
-		t.Fatalf("prepareGeneratedPaths() error = %v", err)
-	}
-	for _, path := range []string{
-		filepath.Join(repoRoot, "app", "tmp"),
-		filepath.Join(repoRoot, "app", "routes"),
-	} {
-		if _, err := os.Stat(path); !os.IsNotExist(err) {
-			t.Fatalf("prepareGeneratedPaths() left %s: %v", path, err)
-		}
-	}
-}
-
-func TestPrepareGeneratedPathsRejectsExistingFiles(t *testing.T) {
-	repoRoot := t.TempDir()
-	path := filepath.Join(repoRoot, "app", "tmp")
-	if err := os.MkdirAll(path, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(path, "main.go"), []byte("generated"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	err := prepareGeneratedPaths(repoRoot)
-	if err == nil || !strings.Contains(err.Error(), "refusing to overwrite") {
-		t.Fatalf("prepareGeneratedPaths() error = %v", err)
-	}
-}
-
 func TestServerServesLoginOverRealHTTP(t *testing.T) {
 	if os.Getenv("LEANOTE_HTTP_INTEGRATION") != "1" {
 		t.Skip("set LEANOTE_HTTP_INTEGRATION=1 to run the real server smoke test")
 	}
-	server := StartServer(t)
+	// The native entrypoint keeps every non-static route behind the Mongo
+	// readiness gate. Reuse the baseline fixture lifecycle so this opt-in
+	// listener smoke exercises a ready server instead of testing the 503 path.
+	server, _, _ := startBaselineServer(t)
 	response, err := http.Get(server.BaseURL + "/login")
 	if err != nil {
 		t.Fatal(err)

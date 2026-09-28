@@ -7,7 +7,7 @@ const summaryPath = path.join(reportDir, 'build-smoke-summary.json');
 const healthPath = path.join(reportDir, 'service-health-summary.json');
 const [stage = 'ci-unknown', category = 'runner-error', exitCodeValue = ''] = process.argv.slice(2);
 const allowedCategories = new Set([
-  'revel-cli', 'mongo-fixture', 'service-start', 'service-readiness', 'service-exit', 'cleanup', 'runner-error',
+  'native-entrypoint', 'mongo-fixture', 'service-start', 'service-readiness', 'service-exit', 'cleanup', 'runner-error',
 ]);
 const safeCategory = allowedCategories.has(category) ? category : 'runner-error';
 

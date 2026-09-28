@@ -127,3 +127,56 @@ func TestClientExecutesMultipartRequestWithIdentityToken(t *testing.T) {
 		t.Fatalf("Do() error = %v", err)
 	}
 }
+
+func TestClientMultipartAddNoteCarriesMetadataAndFilePartsTogether(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Query().Get("token") != "sync-token" {
+			t.Fatalf("token = %q, want sync-token", request.URL.Query().Get("token"))
+		}
+		if err := request.ParseMultipartForm(1024); err != nil {
+			t.Fatal(err)
+		}
+		for key, want := range map[string]string{
+			"NotebookId": "507f1f77bcf86cd799439011",
+			"NoteId":     "507f1f77bcf86cd799439012",
+			"Title":      "multipart note",
+			"Content":    "hello",
+			"Usn":        "7",
+			"UserId":     "507f1f77bcf86cd799439013",
+		} {
+			if got := request.FormValue(key); got != want {
+				t.Fatalf("form %s = %q, want %q", key, got, want)
+			}
+		}
+		file, header, err := request.FormFile("FileDatas[local-1]")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer file.Close()
+		body, err := io.ReadAll(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if header.Filename != "image.png" || string(body) != "image-bytes" {
+			t.Fatalf("uploaded file = %q / %q", header.Filename, body)
+		}
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"Ok":true}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	client.SetToken("sync", "sync-token")
+	if _, err := client.Do(RequestSpec{
+		Method: http.MethodPost,
+		Path:   "/api/note/addNote",
+		Form: map[string][]string{
+			"NotebookId": {"507f1f77bcf86cd799439011"}, "NoteId": {"507f1f77bcf86cd799439012"},
+			"Title": {"multipart note"}, "Content": {"hello"}, "Usn": {"7"}, "UserId": {"507f1f77bcf86cd799439013"},
+		},
+		Files: map[string]FilePart{"FileDatas[local-1]": {Filename: "image.png", Body: []byte("image-bytes")}},
+		Auth:  "sync",
+	}); err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+}

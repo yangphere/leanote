@@ -63,3 +63,13 @@ func TestMessageContract(t *testing.T) {
 		t.Errorf("missing key = %q, want placeholder form", got)
 	}
 }
+
+func TestGetDefaultLangUsesPlainGoSeamWithoutFrameworkConfig(t *testing.T) {
+	savedDefault := DefaultLanguage
+	DefaultLanguage = "zh-cn"
+	defer func() { DefaultLanguage = savedDefault }()
+
+	if got := GetDefaultLang(); got != "zh-cn" {
+		t.Fatalf("GetDefaultLang() = %q, want plain-Go default", got)
+	}
+}

@@ -42,6 +42,8 @@ var jsonComparableHeaders = map[string]struct{}{
 var jsonIgnoredHeaders = map[string]struct{}{
 	"Content-Length": {},
 	"Date":           {},
+	"Vary":           {},
+	"Allow":          {},
 	"Set-Cookie":     {},
 }
 
@@ -54,6 +56,8 @@ var binaryComparableHeaders = map[string]struct{}{
 var binaryIgnoredHeaders = map[string]struct{}{
 	"Content-Length": {},
 	"Date":           {},
+	"Vary":           {},
+	"Allow":          {},
 	"Last-Modified":  {},
 	"Set-Cookie":     {},
 }

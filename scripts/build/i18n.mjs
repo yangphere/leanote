@@ -343,7 +343,8 @@ export async function scanI18nSources(root, manifest = MANIFEST) {
     for (const match of msgCode.matchAll(msgProperty)) {
       const parsed = parseMsgProperty(source, match);
       if (!parsed) continue;
-      // Revel template expressions embedded in validation attributes are server-side strings, not client keys.
+      // Server-side template expressions embedded in validation attributes are
+      // strings, not client keys.
       if (parsed.key.trimStart().startsWith('{{')) continue;
       const location = locator(source, match.index);
       const item = { key: parsed.key, namespace, path: relative, line: location.line };

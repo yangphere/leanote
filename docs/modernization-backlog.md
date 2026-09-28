@@ -2,6 +2,14 @@
 
 本清单记录已经识别、但不阻断当前技术栈现代化任务树完成的结构性工作。条目只有在建立独立任务、明确验收并获得批准后才进入实现。
 
+## MOD-004 CopyHttpImage operation identity
+
+- **状态**：延期，不阻断当前父任务。
+- **问题**：`File.CopyHttpImage` 通过外部 URL 导入图片时，现有调用方没有提供稳定的 operation identity，重试无法与首次导入可靠去重。
+- **本轮处理**：保持现有请求参数与 wire 行为，每次请求仍执行一次新导入；HTTP adapter 不伪造 operation ID。
+- **启动条件**：上游调用方能够提供并持久化稳定 operation identity，并完成重复提交、失败重试和清理语义的端到端契约。
+- **Owner**：独立 content/notes 任务。
+
 ## MOD-001 请求上下文贯穿数据访问链
 
 - **状态**：延期，不阻断当前父任务。

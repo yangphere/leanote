@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/revel/revel"
 	. "github.com/yangphere/leanote/app/lea"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -22,29 +21,56 @@ var (
 	operationTimeout = 15 * time.Second
 )
 
-func loadTimeoutConfig() {
-	// revel.Config is unavailable when tests call Init directly with an
-	// explicit URL; fall back to the defaults in that case.
-	if revel.Config == nil {
-		return
-	}
-	connectTimeout = timeoutConfigValue("db.connectTimeoutMs", connectTimeout)
-	operationTimeout = timeoutConfigValue("db.operationTimeoutMs", operationTimeout)
+type timeoutConfigSource interface {
+	String(key string) (string, bool)
 }
 
-// timeoutConfigValue reads a millisecond duration from config: a missing or
-// blank key keeps the default; an invalid value is a startup fatal, on par
-// with a failed connection (design §4).
-func timeoutConfigValue(key string, def time.Duration) time.Duration {
-	raw, ok := revel.Config.String(key)
+var databaseConfigSource timeoutConfigSource
+
+// ConfigureTimeouts installs the validated run-mode configuration seam used
+// by Mongo startup. Passing nil restores the documented defaults, which keeps
+// direct library tests deterministic without a second config parser.
+func ConfigureTimeouts(source timeoutConfigSource) error {
+	databaseConfigSource = source
+	connectTimeout = 10 * time.Second
+	operationTimeout = 15 * time.Second
+	if source == nil {
+		return nil
+	}
+	var err error
+	connectTimeout, err = configuredTimeout(source, "db.connectTimeoutMs", connectTimeout)
+	if err != nil {
+		return err
+	}
+	operationTimeout, err = configuredTimeout(source, "db.operationTimeoutMs", operationTimeout)
+	return err
+}
+
+func loadTimeoutConfig() {
+	if databaseConfigSource == nil {
+		return
+	}
+	var err error
+	connectTimeout, err = configuredTimeout(databaseConfigSource, "db.connectTimeoutMs", connectTimeout)
+	if err != nil {
+		panic(err)
+	}
+	operationTimeout, err = configuredTimeout(databaseConfigSource, "db.operationTimeoutMs", operationTimeout)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func configuredTimeout(source timeoutConfigSource, key string, def time.Duration) (time.Duration, error) {
+	raw, ok := source.String(key)
 	if !ok || strings.TrimSpace(raw) == "" {
-		return def
+		return def, nil
 	}
 	ms, err := strconv.Atoi(strings.TrimSpace(raw))
 	if err != nil || ms <= 0 {
-		panic(fmt.Sprintf("invalid %s=%q: must be a positive integer (ms)", key, raw))
+		return 0, fmt.Errorf("invalid %s=%q: must be a positive integer (ms)", key, raw)
 	}
-	return time.Duration(ms) * time.Millisecond
+	return time.Duration(ms) * time.Millisecond, nil
 }
 
 // contextWithTimeout bounds a stage of database work; unbounded contexts must

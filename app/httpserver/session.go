@@ -14,7 +14,7 @@ import (
 const sessionCookieSuffix = "_SESSION"
 
 // SessionCodec encodes the web session into a single HMAC-authenticated
-// cookie keyed by app.secret. It deliberately cannot read legacy Revel
+// cookie keyed by app.secret. It deliberately cannot read legacy framework
 // cookies: any undecodable input means an anonymous visitor who logs in
 // again (the accepted deployment impact of C-b).
 type SessionCodec struct {

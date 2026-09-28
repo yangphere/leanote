@@ -10,7 +10,7 @@ Go 1.26 monolith, standard `testing`, no linter beyond `gofmt`/`go vet` — the 
 
 ## Forbidden Patterns
 
-- Revel imports: `rg 'github.com/revel|revel\.' app go.mod sh conf` must stay zero hits (go.sum pongo2 hash is the recorded exception).
+- Legacy runtime imports: `rg -n -i 'github\.com/revel|revel\.' app cmd go.mod go.sum sh conf scripts .github Dockerfile` must stay zero hits. Historical notes under `docs/` and `.trellis/` are outside this runtime scan.
 - Probe-based or fallback environment selection (Mongo mode, toolchain) — fail closed instead (see `database-guidelines.md`).
 - Log-and-return at every layer; masking db/service errors as empty success (`error-handling.md`).
 - Hand-editing generated assets: anything produced by `scripts/build/manifest.mjs` (`public/js/app.min.js`, `public/tinymce/**` bundles, `app/views/note/note.html`) — regenerate via `npm run build`.
@@ -41,13 +41,14 @@ Go 1.26 monolith, standard `testing`, no linter beyond `gofmt`/`go vet` — the 
   controller directly.
 - Keep `LEANOTE_GOLDEN=replay` read-only and fail on a missing or mismatched
   snapshot. Only an explicit `LEANOTE_GOLDEN=record` may write snapshots.
-- Run the legacy Revel generator with a Go toolchain of at least 1.26.7. The
-  harness resolves `go` from PATH by default and fails closed below that floor;
-  `LEANOTE_TEST_GO` is an optional explicit override, and every generation or
-  build subprocess runs with `GOTOOLCHAIN=local` (no automatic toolchain
-  downloads).
-- Use MongoDB 5.0 for the `mgo.v2` baseline fixture. Restore the fixture before
-  integration tests and remove the named container afterward.
+- Build the native `cmd/leanote -runMode test` entrypoint with a Go toolchain of
+  at least 1.26.7. The harness resolves `go` from PATH by default and fails
+  closed below that floor; `LEANOTE_TEST_GO` is an optional explicit override,
+  and every build subprocess runs with `GOTOOLCHAIN=local` (no automatic
+  toolchain downloads).
+- Use the pinned MongoDB 8.0 `leanote-test-mongo` fixture for self-provisioned
+  replay. Restore it into `leanote_test` before integration tests and remove
+  the named container afterward; service-backed mode must never invoke Docker.
 - Treat `Content-Type` and `Location` as the only comparable HTTP headers for
   JSON responses; reject headers outside the documented comparison/exclusion
   sets. Binary snapshots compare non-empty body presence and stable headers,
@@ -60,27 +61,40 @@ Go 1.26 monolith, standard `testing`, no linter beyond `gofmt`/`go vet` — the 
 
 ### 1. Scope / Trigger
 
-The contract applies when adding or updating the legacy HTTP Golden, USN, smoke,
-or Mongo fixture harness under `app/tests/harness`.
+The contract applies when adding or updating the first-party HTTP Golden, USN,
+smoke, or Mongo fixture harness under `app/tests/harness`.
 
 ### 2. Signatures
 
 - `go run ./app/tests/harness/cmd/env up|down`
 - `LEANOTE_GOLDEN=record|replay go test -p 1 ./app/tests/... -count=1 -timeout 30m`
-- Generated Revel server entrypoints use the default `go` on PATH, enforced to be at least 1.26.7 (fail closed); `LEANOTE_TEST_GO` is an optional explicit override that bypasses the floor check
+- Native `cmd/leanote -runMode test` builds use the default `go` on PATH,
+  enforced to be at least 1.26.7 (fail closed); `LEANOTE_TEST_GO` is an
+  optional explicit override that bypasses the floor check.
 
 ### 3. Contracts
 
-- `up` starts `mongo:5.0` as `leanote-test-mongo`, restores into
+- `up` starts the pinned `mongo:8.0` image as `leanote-test-mongo`, restores into
   `leanote_test`, and verifies two fixture users; any setup failure after
   container creation must remove the named container before returning.
 - Replay reads `app/tests/golden/**/*.json` and never creates or rewrites files.
 - Record stores normalized request/response snapshots; dynamic ObjectId and
   timestamp replacement is field-scoped and preserves JSON key order.
-- The test server binds only to loopback (`http.addr=127.0.0.1`), listens on
-  fixed port `28017`, and uses the `[test]` config section with
-  `site.url=http://127.0.0.1:28017` so Windows does not expose the generated
-  test executable to public/private network firewall prompts.
+- The native test server binds only to loopback (`http.addr=127.0.0.1`),
+  listens on fixed port `28017`, and uses the `[test]` config section with
+  `site.url=http://127.0.0.1:28017` so Windows does not expose the test
+  executable to public/private network firewall prompts. A smoke test that
+  expects readiness must provision the Mongo fixture before starting the
+  process; without it, non-static requests correctly remain `503 not_ready`.
+- Self-provisioned replay is single-owner per Docker daemon/workspace: do not
+  run two harness processes concurrently because the fixed `leanote-test-mongo`
+  container name and host ports `27017`/`28017` are shared. Use serialized
+  runs (or service-backed/isolated resources) when parallel validation is
+  required.
+- `httpserver.Params.FormFile` must run the same bounded form parser as the
+  scalar parameter readers before delegating to `http.Request.FormFile`; an
+  upload action that accesses the file first must not bypass the request body
+  limit or lose ordinary multipart fields.
 - The configuration guard parses global and `[test]` values with section
   precedence, removes inline `#`/`;` comments, expands `${VAR}` values, and
   rejects empty or unresolved `db.url`/`db.urlEnv` values. Any active URL must
@@ -96,7 +110,7 @@ or Mongo fixture harness under `app/tests/harness`.
 |---|---|
 | Missing/invalid `LEANOTE_GOLDEN` | replay by default; invalid value fails |
 | Missing or mismatched replay file | test failure; no write |
-| Missing, older, or unreadable default `go` for server generation | explicit failure before any generation; `LEANOTE_TEST_GO` overrides |
+| Missing, older, or unreadable default `go` for the native server build | explicit failure before any build; `LEANOTE_TEST_GO` overrides |
 | Port 28017 occupied | explicit failure; no random fallback |
 | Unknown response header | normalization failure |
 | Missing ExportPdf golden or unavailable wkhtmltopdf in replay | explicit skip with a message to run the Linux record job; record mode fails |
@@ -107,7 +121,7 @@ or Mongo fixture harness under `app/tests/harness`.
 
 ### 5. Good / Base / Bad Cases
 
-- Good: restore Mongo 5.0, run real HTTP requests, replay unchanged snapshots.
+- Good: restore Mongo 8.0, run the native server, and replay unchanged snapshots.
 - Base: run pure normalization/store tests without Mongo.
 - Bad: call controllers directly, auto-record during replay, or silently choose
   another Go/Mongo/port configuration.
@@ -127,67 +141,60 @@ Wrong: LEANOTE_GOLDEN is unset and a missing snapshot is generated.
 Correct: unset means replay; a missing snapshot fails and asks for explicit record.
 ```
 
-## Scenario: Go 1.26 Travis Revel CLI
+## Scenario: Go 1.26 native entrypoint build
 
 ### 1. Scope / Trigger
 
-When a Travis job running Go 1.26+ invokes `sh/run.sh` or `sh/package.sh`, the
-Revel executable must be built from Leanote's main module graph. A versioned
-`go install github.com/revel/cmd/revel@v1.0.3` instead resolves Revel's frozen
-2020 `x/tools` dependency and panics during type checking (evidenced 2026-08-26;
-since the Revel 1.1 upgrade the isolated `go install ...@v1.1.2` graph happens
-to build, but the module-graph build with metadata assertion stays canonical).
+When CI or the Mongo harness builds the test server, it must compile the
+first-party `cmd/leanote` entrypoint with the repository module graph. The
+native harness owns this build and never generates a second runtime entrypoint.
 
 ### 2. Signatures
 
 ```sh
-export PATH="$PATH:$HOME/gopath/bin"
 export GOTOOLCHAIN=local
-go build -o "$HOME/gopath/bin/revel" github.com/revel/cmd/revel
-go version -m "$HOME/gopath/bin/revel" | grep -E 'github\.com/revel/cmd[[:space:]]+v1\.1\.2'
-go version -m "$HOME/gopath/bin/revel" | grep -E 'golang.org/x/tools[[:space:]]+v0\.49\.0'
+go version
+go build -o "$RUNNER_TEMP/leanote" ./cmd/leanote
+"$RUNNER_TEMP/leanote" -runMode=test -conf ./conf/app.conf
 ```
 
 ### 3. Contracts
 
-- The executable path is `$HOME/gopath/bin/revel`, the same PATH entry used by
-  `sh/run.sh` and `sh/package.sh`.
-- The main `go.mod` selects `github.com/revel/cmd v1.1.2` (Revel runtime
-  v1.1.0 since the 2026-08-28 C-a upgrade) and `golang.org/x/tools v0.49.0`;
-  the binary metadata checks prove that selected dependency graph reached the
-  executable.
-- `GOTOOLCHAIN=local` prohibits the CLI build from silently downloading a
-  different Go toolchain.
+- The native harness resolves the default `go` from PATH and rejects versions
+  below 1.26.7 before building; `LEANOTE_TEST_GO` is an explicit override.
+- `GOTOOLCHAIN=local` prohibits the build from silently downloading another
+  toolchain.
+- `sh/run.sh` invokes `go run ./cmd/leanote -runMode dev`; the test harness
+  builds the same `cmd/leanote` package and starts it with `-runMode test`.
 
 ### 4. Validation & Error Matrix
 
 | Condition | Required result |
 |---|---|
-| Module-aware build fails | Travis install fails with the original non-zero exit |
-| Metadata lacks x/tools v0.49.0 | `grep` fails and scripts do not start |
-| `revel version` fails | Travis install fails before Mongo restore or smoke requests |
-| `revel run` or `revel package` fails | Keep the command failure; do not fall back to stock install |
+| Native build fails | The harness fails before Mongo replay or smoke requests |
+| Default Go is missing, old, or unreadable | Fail closed before any build; `LEANOTE_TEST_GO` is the only explicit override |
+| `cmd/leanote -runMode test` exits before readiness | Preserve the exit and include the child log; do not fall back to another entrypoint |
+| Production config is supplied to test mode | Reject the source/database mismatch instead of silently falling back |
 
 ### 5. Good / Base / Bad Cases
 
-- Good: build the CLI from the checked-out Leanote module, inspect its build
-  metadata, then let both shell entrypoints resolve that binary through PATH.
-- Base: run `revel version` after metadata validation.
-- Bad: append `@v1.0.3` to `go install`, use a separate temporary module, or
-  ignore a CLI failure and continue to curl the server.
+- Good: build `./cmd/leanote` from the checked-out module with
+  `GOTOOLCHAIN=local`, then run the test mode against the isolated fixture.
+- Base: run the native build/toolchain contract tests without Mongo.
+- Bad: generate an alternate runtime entrypoint, download a different
+  toolchain implicitly, or ignore a native child-process failure.
 
 ### 6. Tests Required
 
-- Build `github.com/revel/cmd/revel` with `GOTOOLCHAIN=local` from the repository
-  root and assert `go version -m` contains `golang.org/x/tools v0.49.0`.
-- Run `revel version`; Linux entrypoint validation must exercise the same binary
-  with `sh/run.sh` and `sh/package.sh`.
+- Run the harness toolchain floor and native build tests.
+- Run `go build ./...` and the real Mongo/HTTP harness; Linux delivery may
+  additionally exercise `sh/run.sh` and `sh/package.sh`.
 
 ### 7. Wrong vs Correct
 
 ```text
-Wrong:   go install github.com/revel/cmd/revel@v1.0.3
-Correct: go build -o "$HOME/gopath/bin/revel" github.com/revel/cmd/revel
+Wrong:   generate a legacy runtime entrypoint or run `go install` for a second framework
+Correct: go build -o "$RUNNER_TEMP/leanote" ./cmd/leanote
 ```
 
 ## Scenario: Content roots, deletion recovery, and self-contained PDF export
@@ -410,4 +417,67 @@ if err != nil {
 	return err
 }
 service.InitContentRuntime(runtime.ContentRoots)
+```
+
+## Scenario: First-party content download adapters
+
+### 1. Scope / Trigger
+
+Use this contract when a standard-library adapter exposes an attachment,
+archive, image, or PDF through `Content-Disposition`.
+
+### 2. Signatures
+
+```go
+func DownloadDisposition(kind, name string) string
+type Result interface { Apply(http.ResponseWriter, *http.Request) }
+```
+
+### 3. Contracts
+
+- Services own authorization and readable streams; adapters stream them with
+  `io.Copy` and close them after the response. A service may stage a validated
+  asset in its private temporary root, but the HTTP adapter must not load the
+  complete download into a byte slice.
+- `DownloadDisposition` strips path components, quotes, and control
+  characters before constructing `filename="..."`.
+- D-H6 dependency failures use HTTP 500 with the legacy empty `Page`/slice
+  body; legacy attachment listing errors keep their 200 `Re{Msg:"error"}`
+  envelope.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|---|---|
+| Missing readable file/image | legacy empty text (or `No Such File` for API attachment) |
+| Stream read failure | same failure body; never report a successful binary |
+| Unsafe display name | sanitized basename in `Content-Disposition` |
+| `GetImages`/`GetAlbums` dependency failure | 500 plus empty legacy shape |
+
+### 5. Good / Base / Bad Cases
+
+- Good: call the content service, set the shared disposition sanitizer, copy the
+  reader directly to the response, and close it on every path.
+- Base: a valid download keeps its content type, body, and attachment/inline
+  disposition.
+- Bad: concatenate a database display name directly into a header, call
+  `io.ReadAll` for a large download, or return a partial body as success after
+  a stream error.
+
+### 6. Tests Required
+
+- Unit-test path, quote, CR/LF, and control-character filename sanitization.
+- Contract-test 500 empty-body shapes for image/album dependency failures and
+  the attachment legacy error envelope.
+- Keep real HTTP/Mongo stream and Golden replay as separate evidence; in-process
+  tests do not promote those gates.
+
+### 7. Wrong vs Correct
+
+```go
+// Wrong: a user-controlled display name reaches a response header.
+w.Header().Set("Content-Disposition", `attachment; filename="`+name+`"`)
+
+// Correct: the shared HTTP boundary sanitizes it once.
+w.Header().Set("Content-Disposition", httpserver.DownloadDisposition("attachment", name))
 ```

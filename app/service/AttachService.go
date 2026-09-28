@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/revel/revel"
 	applicationcontent "github.com/yangphere/leanote/app/application/content"
 	applicationnotes "github.com/yangphere/leanote/app/application/notes"
 	"github.com/yangphere/leanote/app/db"
@@ -634,7 +633,7 @@ func (this *AttachService) DeleteAttachWithOperation(attachIDText, userID, clien
 				if !errors.Is(err, mongo.ErrNoDocuments) {
 					return false, err
 				}
-				if _, err := os.Stat(filepath.Join(revel.BasePath, filepath.FromSlash(strings.TrimLeft(state.Attach.Path, "/")))); err == nil {
+				if _, err := os.Stat(ContentPath(state.Attach.Path)); err == nil {
 					return false, nil
 				} else if !errors.Is(err, os.ErrNotExist) {
 					return false, err
@@ -809,7 +808,7 @@ func (this *AttachService) copyAttachSet(attachs []info.Attach, toNoteId, toUser
 			newFilename = attach.AttachId.Hex() + ext
 		}
 		filePath := dir + "/" + newFilename
-		data, err := os.ReadFile(filepath.Join(revel.BasePath, filepath.FromSlash(strings.TrimLeft(attach.Path, "/"))))
+		data, err := os.ReadFile(ContentPath(attach.Path))
 		if err != nil {
 			return false
 		}
@@ -822,7 +821,7 @@ func (this *AttachService) copyAttachSet(attachs []info.Attach, toNoteId, toUser
 			// Do not route this path through the Web attachment mutation, whose
 			// permission/CAS boundary correctly requires an existing note and
 			// would silently drop every legacy copied attachment here.
-			target := filepath.Join(revel.BasePath, filepath.FromSlash(filePath))
+			target := ContentPath(filePath)
 			if err := publishFileNoClobber(target, data, 0777); err != nil {
 				return false
 			}
@@ -942,7 +941,7 @@ func (this *AttachService) VerifyUpdateOrDeleteAttachApiAtUSN(ctx context.Contex
 		if strings.TrimSpace(attach.Path) == "" {
 			return false, nil
 		}
-		if _, err := os.Stat(revel.BasePath + "/" + strings.TrimLeft(attach.Path, "/")); err != nil && !errors.Is(err, os.ErrNotExist) {
+		if _, err := os.Stat(ContentPath(attach.Path)); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return false, err
 		} else if errors.Is(err, os.ErrNotExist) {
 			return false, nil
@@ -962,7 +961,7 @@ func (this *AttachService) VerifyUpdateOrDeleteAttachApiAtUSN(ctx context.Contex
 		if strings.TrimSpace(image.Path) == "" {
 			return false, nil
 		}
-		if _, err := os.Stat(revel.BasePath + "/" + strings.TrimLeft(image.Path, "/")); err != nil && !errors.Is(err, os.ErrNotExist) {
+		if _, err := os.Stat(ContentPath(image.Path)); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return false, err
 		} else if errors.Is(err, os.ErrNotExist) {
 			return false, nil

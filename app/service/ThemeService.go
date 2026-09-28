@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/revel/revel"
 	applicationnotes "github.com/yangphere/leanote/app/application/notes"
 	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/info"
@@ -44,9 +43,24 @@ var defaultStyle = "blog_default"
 var elegantStyle = "blog_daqi"
 var fixedStyle = "blog_left_fixed"
 
+var themeTemplateFuncs = template.FuncMap{}
+
+// SetThemeTemplateFuncs installs the validated template functions supplied by
+// the native HTTP renderer without coupling the service package to it.
+func SetThemeTemplateFuncs(funcs template.FuncMap) {
+	themeTemplateFuncs = make(template.FuncMap, len(funcs))
+	for name, fn := range funcs {
+		themeTemplateFuncs[name] = fn
+	}
+}
+
 // admin用户的主题基路径
 func (this *ThemeService) getDefaultThemeBasePath() string {
-	return revel.BasePath + "/public/blog/themes"
+	root := publicStaticRoot()
+	if root == "" {
+		return ""
+	}
+	return filepath.Join(root, "blog", "themes")
 }
 
 // 默认主题路径
@@ -109,7 +123,11 @@ func (this *ThemeService) getUserThemeBasePath(userId string) string {
 	if !db.IsValidObjectIDHex(userId) {
 		return ""
 	}
-	return revel.BasePath + "/public/upload/" + Digest3(userId) + "/" + userId + "/themes"
+	root := publicUploadDataRoot()
+	if root == "" {
+		return ""
+	}
+	return filepath.Join(root, Digest3(userId), userId, "themes")
 }
 func (this *ThemeService) getUserThemePath(userId, themeId string) string {
 	if !db.IsValidObjectIDHex(userId) || !db.IsValidObjectIDHex(themeId) {
@@ -128,7 +146,28 @@ func (this *ThemeService) getUserThemeExportPath(userId string) string {
 	if !db.IsValidObjectIDHex(userId) {
 		return ""
 	}
-	return filepath.Join(revel.BasePath, "public", "upload", Digest3(userId), userId, "tmp")
+	root := publicUploadDataRoot()
+	if root == "" {
+		return ""
+	}
+	return filepath.Join(root, Digest3(userId), userId, "tmp")
+}
+
+func publicUploadDataRoot() string {
+	return strings.TrimSpace(configuredContentRoots.PublicUpload.Data)
+}
+
+func publicStaticRoot() string {
+	for _, root := range configuredContentRoots.ServedRoots {
+		root = strings.TrimSpace(root)
+		if filepath.Base(filepath.Clean(root)) == "public" {
+			return root
+		}
+	}
+	if len(configuredContentRoots.ServedRoots) > 1 {
+		return configuredContentRoots.ServedRoots[len(configuredContentRoots.ServedRoots)-1]
+	}
+	return ""
 }
 
 func (this *ThemeService) GetThemeUploadTempPath(userId string) string {
@@ -483,21 +522,39 @@ func (this *ThemeService) safeThemeAbsolutePath(userId, themeId, themePath strin
 	if !validateThemePath(userId, themeId, themePath) {
 		return "", ErrThemePath
 	}
-	basePath, err := filepath.Abs(revel.BasePath)
+	cleanPath := filepath.ToSlash(filepath.Clean(filepath.FromSlash(themePath)))
+	staticRoot := publicStaticRoot()
+	if staticRoot == "" {
+		return "", fmt.Errorf("%w: static public root unavailable", ErrThemePath)
+	}
+	basePath, err := filepath.Abs(staticRoot)
 	if err != nil {
 		return "", fmt.Errorf("%w: resolve base path: %v", ErrThemePath, err)
 	}
-	absPath := filepath.Clean(filepath.Join(basePath, filepath.FromSlash(themePath)))
-	if !pathWithin(basePath, absPath) {
+	relativePath := cleanPath
+	if !strings.HasPrefix(cleanPath, "public/upload/") {
+		relativePath = strings.TrimPrefix(cleanPath, "public/")
+	}
+	absPath := filepath.Clean(filepath.Join(basePath, filepath.FromSlash(relativePath)))
+	allowedRoot := filepath.Join(basePath, "blog", "themes")
+	if strings.HasPrefix(cleanPath, "public/upload/") {
+		relative := strings.TrimPrefix(cleanPath, "public/upload/")
+		absPath = filepath.Clean(filepath.Join(publicUploadDataRoot(), filepath.FromSlash(relative)))
+		allowedRoot = filepath.Join(publicUploadDataRoot(), Digest3(userId), userId, "themes", themeId)
+	}
+	rootForContainment := basePath
+	if strings.HasPrefix(cleanPath, "public/upload/") {
+		rootForContainment = publicUploadDataRoot()
+	}
+	if !pathWithin(rootForContainment, absPath) {
 		return "", ErrThemePath
 	}
 	resolvedPath, err := filepath.EvalSymlinks(absPath)
 	if err != nil {
 		return "", fmt.Errorf("%w: template root unavailable", ErrThemePath)
 	}
-	allowedRoot := filepath.Join(basePath, "public", "upload", Digest3(userId), userId, "themes", themeId)
-	if pathWithin(filepath.Join(basePath, "public", "blog", "themes"), absPath) {
-		allowedRoot = filepath.Join(basePath, "public", "blog", "themes")
+	if !strings.HasPrefix(cleanPath, "public/upload/") && pathWithin(filepath.Join(basePath, "blog", "themes"), absPath) {
+		allowedRoot = filepath.Join(basePath, "blog", "themes")
 	}
 	if !pathWithin(allowedRoot, resolvedPath) {
 		return "", ErrThemePath
@@ -641,6 +698,110 @@ func (this *ThemeService) GetThemePath(userId, themeId string) string {
 		return ""
 	}
 	return filepath.ToSlash(theme.Path)
+}
+
+// RenderBlogTemplate renders one public blog theme page from the validated
+// static or owner-scoped upload root. Theme files are deliberately parsed per
+// request: an uploaded theme can change without replacing the process-wide
+// application template set, while the root validation keeps reads inside the
+// configured content roots.
+func (this *ThemeService) RenderBlogTemplate(userBlog info.UserBlog, name string, args map[string]interface{}) ([]byte, error) {
+	root, err := this.blogThemeRoot(userBlog)
+	if err != nil {
+		return nil, err
+	}
+	roots := []string{root}
+	defaultRoot, defaultErr := this.defaultThemeRoot(userBlog.Style)
+	if defaultErr == nil && filepath.Clean(defaultRoot) != filepath.Clean(root) {
+		// The legacy renderer used the built-in theme as a fallback for missing
+		// files in an uploaded theme. Keep that behavior without reading from an
+		// application-relative path.
+		roots = append([]string{defaultRoot}, roots...)
+	}
+
+	tpl := template.New("blog").Funcs(themeTemplateFuncs)
+	for _, themeRoot := range roots {
+		if err := parseThemeTemplates(tpl, themeRoot); err != nil {
+			return nil, err
+		}
+	}
+	templateName := filepath.Base(filepath.FromSlash(strings.TrimSpace(name)))
+	if templateName == "." || templateName == "" {
+		return nil, fmt.Errorf("%w: empty template name", ErrThemeTemplate)
+	}
+	if tpl.Lookup(templateName) == nil {
+		return nil, fmt.Errorf("%w: template %q not found", ErrThemeTemplate, templateName)
+	}
+	var rendered bytes.Buffer
+	if err := tpl.ExecuteTemplate(&rendered, templateName, args); err != nil {
+		return nil, fmt.Errorf("%w: execute %s: %v", ErrThemeTemplate, templateName, err)
+	}
+	return rendered.Bytes(), nil
+}
+
+func (this *ThemeService) blogThemeRoot(userBlog info.UserBlog) (string, error) {
+	if userBlog.UserId.IsZero() || strings.TrimSpace(userBlog.ThemePath) == "" {
+		return "", fmt.Errorf("%w: blog theme identity unavailable", ErrThemePath)
+	}
+	if userBlog.ThemeId.IsZero() {
+		expected := filepath.ToSlash(this.GetDefaultThemePath(userBlog.Style))
+		if filepath.ToSlash(filepath.Clean(filepath.FromSlash(userBlog.ThemePath))) != expected {
+			return "", fmt.Errorf("%w: unexpected default theme path", ErrThemePath)
+		}
+		return this.defaultThemeRoot(userBlog.Style)
+	}
+	return this.safeThemeAbsolutePath(userBlog.UserId.Hex(), userBlog.ThemeId.Hex(), userBlog.ThemePath)
+}
+
+func (this *ThemeService) defaultThemeRoot(style string) (string, error) {
+	staticRoot := strings.TrimSpace(publicStaticRoot())
+	if staticRoot == "" {
+		return "", fmt.Errorf("%w: static public root unavailable", ErrThemePath)
+	}
+	base, err := filepath.Abs(staticRoot)
+	if err != nil {
+		return "", fmt.Errorf("%w: resolve static public root: %v", ErrThemePath, err)
+	}
+	themeDirectory := "default"
+	switch style {
+	case elegantStyle:
+		themeDirectory = "elegant"
+	case fixedStyle:
+		themeDirectory = "nav_fixed"
+	}
+	themeRoot := filepath.Clean(filepath.Join(base, "blog", "themes", themeDirectory))
+	resolved, err := filepath.EvalSymlinks(themeRoot)
+	if err != nil {
+		return "", fmt.Errorf("%w: built-in theme root unavailable", ErrThemePath)
+	}
+	if !pathWithin(base, resolved) || filepath.Base(filepath.Dir(filepath.Clean(resolved))) != "themes" {
+		return "", ErrThemePath
+	}
+	return resolved, nil
+}
+
+func parseThemeTemplates(tpl *template.Template, root string) error {
+	return filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || !strings.EqualFold(filepath.Ext(path), ".html") {
+			return nil
+		}
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		relative, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		name := filepath.ToSlash(relative)
+		if _, err := tpl.New(name).Parse(string(content)); err != nil {
+			return fmt.Errorf("parse theme template %s: %w", name, err)
+		}
+		return nil
+	})
 }
 
 // 更新模板内容
@@ -837,7 +998,7 @@ func (this *ThemeService) mustTpl(filename, content string) (ok bool, msg string
 			msg = fmt.Sprintf("%v: %v", ErrThemeTemplate, err)
 		}
 	}()
-	template.Must(template.New(filename).Funcs(revel.TemplateFuncs).Parse(content))
+	template.Must(template.New(filename).Funcs(themeTemplateFuncs).Parse(content))
 	return
 }
 
@@ -1180,7 +1341,7 @@ func (this *ThemeService) ImportTheme(userId, path string) (ok bool, msg string)
 	defer os.Remove(path)
 	themeIdO := db.NewObjectID()
 	themeId := themeIdO.Hex()
-	targetPath := this.getUserThemePath(userId, themeId) // revel.BasePath + "/public/upload/" + userId + "/themes/" + themeId
+	targetPath := this.getUserThemePath(userId, themeId)
 
 	err := os.MkdirAll(targetPath, 0755)
 	if err != nil {
@@ -1244,7 +1405,11 @@ func thisGetThemeUploadTempPath(userId string) string {
 	if !db.IsValidObjectIDHex(userId) {
 		return ""
 	}
-	return filepath.Join(revel.BasePath, "public", "upload", Digest3(userId), userId, "tmp")
+	root := publicUploadDataRoot()
+	if root == "" {
+		return ""
+	}
+	return filepath.Join(root, Digest3(userId), userId, "tmp")
 }
 
 // 升级用
@@ -1261,7 +1426,12 @@ func (this *ThemeService) upgradeThemeBeta2(userId, style string, isActive bool)
 	// 解压成功, 那么新建之
 	// 保存到数据库中
 	targetPath := this.GetDefaultThemePath(style)
-	theme, err := this.getThemeConfig(revel.BasePath + "/" + targetPath)
+	staticRoot := publicStaticRoot()
+	if staticRoot == "" {
+		return false
+	}
+	relative := strings.TrimPrefix(filepath.ToSlash(targetPath), "public/")
+	theme, err := this.getThemeConfig(filepath.Join(staticRoot, filepath.FromSlash(relative)))
 	if err != nil || theme.Name == "" {
 		ok = false
 		return

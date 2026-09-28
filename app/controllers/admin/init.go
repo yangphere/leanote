@@ -1,12 +1,6 @@
 package admin
 
-import (
-	"github.com/yangphere/leanote/app/info"
-	"github.com/yangphere/leanote/app/service"
-	//	. "github.com/yangphere/leanote/app/lea"
-	"github.com/revel/revel"
-	//	"strings"
-)
+import "github.com/yangphere/leanote/app/service"
 
 var userService *service.UserService
 var noteService *service.NoteService
@@ -28,81 +22,8 @@ var configService *service.ConfigService
 var emailService *service.EmailService
 var upgradeService *service.UpgradeService
 
-// 拦截器
-// 不需要拦截的url
-// Index 除了Note之外都不需要
-var commonUrl = map[string]map[string]bool{"Index": map[string]bool{"Index": true,
-	"Login":              true,
-	"DoLogin":            true,
-	"Logout":             true,
-	"Register":           true,
-	"DoRegister":         true,
-	"FindPasswword":      true,
-	"DoFindPassword":     true,
-	"FindPassword2":      true,
-	"FindPasswordUpdate": true,
-	"Suggestion":         true,
-},
-	"Blog": map[string]bool{"Index": true,
-		"View":       true,
-		"AboutMe":    true,
-		"SearchBlog": true,
-	},
-	// 用户的激活与修改邮箱都不需要登录, 通过链接地址
-	"User": map[string]bool{"UpdateEmail": true,
-		"ActiveEmail": true,
-	},
-	"Oauth":  map[string]bool{"GithubCallback": true},
-	"File":   map[string]bool{"OutputImage": true, "OutputFile": true},
-	"Attach": map[string]bool{"Download": true, "DownloadAll": true},
-}
-
-func needValidate(controller, method string) bool {
-	// 在里面
-	if v, ok := commonUrl[controller]; ok {
-		// 在commonUrl里
-		if _, ok2 := v[method]; ok2 {
-			return false
-		}
-		return true
-	} else {
-		// controller不在这里的, 肯定要验证
-		return true
-	}
-}
-func AuthInterceptor(c *revel.Controller) revel.Result {
-	// 全部变成首字大写
-	/*
-		var controller = strings.Title(c.Name)
-		var method = strings.Title(c.MethodName)
-		// 是否需要验证?
-		if !needValidate(controller, method) {
-			return nil
-		}
-	*/
-
-	// Verify the authenticated principal and the persisted admin record before
-	// any controller action can mutate Mongo, files, upgrades or outbox state.
-	userID, userIDOK := c.Session["UserId"].(string)
-	username, usernameOK := c.Session["Username"].(string)
-	if userIDOK && usernameOK && configService != nil {
-		if _, err := configService.ResolveAdminPrincipal(c.Request.Context(), userID, username); err == nil {
-			return nil
-		}
-	}
-
-	// 没有登录, 判断是否是ajax操作
-	if c.Request.Header.Get("X-Requested-With") == "XMLHttpRequest" {
-		re := info.NewRe()
-		re.Msg = "NOTLOGIN"
-		return c.RenderJSON(re)
-	}
-
-	return c.Redirect("/login")
-}
-
-// 最外层init.go调用
-// 获取service, 单例
+// InitService binds services for native admin adapters. Authorization is an
+// explicit registry BEFORE hook, so initialization has no global side effect.
 func InitService() {
 	notebookService = service.NotebookS
 	noteService = service.NoteS
@@ -123,14 +44,4 @@ func InitService() {
 	configService = service.ConfigS
 	emailService = service.EmailS
 	upgradeService = service.UpgradeS
-}
-
-func init() {
-	revel.InterceptFunc(AuthInterceptor, revel.BEFORE, &Admin{})
-	revel.InterceptFunc(AuthInterceptor, revel.BEFORE, &AdminSetting{})
-	revel.InterceptFunc(AuthInterceptor, revel.BEFORE, &AdminUser{})
-	revel.InterceptFunc(AuthInterceptor, revel.BEFORE, &AdminBlog{})
-	revel.InterceptFunc(AuthInterceptor, revel.BEFORE, &AdminEmail{})
-	revel.InterceptFunc(AuthInterceptor, revel.BEFORE, &AdminUpgrade{})
-	revel.InterceptFunc(AuthInterceptor, revel.BEFORE, &AdminData{})
 }

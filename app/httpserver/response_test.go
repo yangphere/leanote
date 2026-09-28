@@ -28,7 +28,7 @@ func TestJSONResult(t *testing.T) {
 	}
 	body := rec.Body.String()
 	if strings.HasSuffix(body, "\n") {
-		t.Fatal("Revel RenderJSON writes no trailing newline")
+		t.Fatal("legacy RenderJSON writes no trailing newline")
 	}
 	var parsed map[string]interface{}
 	if err := json.Unmarshal([]byte(body), &parsed); err != nil {
@@ -36,12 +36,12 @@ func TestJSONResult(t *testing.T) {
 	}
 }
 
-func TestJSONPResultMatchesRevelRenderJsonP(t *testing.T) {
+func TestJSONPResultMatchesLegacyRenderJsonP(t *testing.T) {
 	rec, sw := apply(t, JSONPResult("cb", map[string]interface{}{"Ok": true}))
 	if sw.status != http.StatusOK {
 		t.Fatalf("status = %d", sw.status)
 	}
-	// Revel results.go renderJsonP: application/javascript; charset=utf-8,
+	// Legacy renderJsonP: application/javascript; charset=utf-8,
 	// body `callback(json);`.
 	if ct := rec.Header().Get("Content-Type"); ct != "application/javascript; charset=utf-8" {
 		t.Fatalf("Content-Type = %q, want application/javascript; charset=utf-8", ct)
@@ -52,7 +52,7 @@ func TestJSONPResultMatchesRevelRenderJsonP(t *testing.T) {
 }
 
 func TestJSONPResultCallbackIsVerbatim(t *testing.T) {
-	// Revel concatenates the callback verbatim (no identifier escaping);
+	// The legacy renderer concatenates the callback verbatim (no identifier escaping);
 	// pin that so any future hardening is a conscious contract change.
 	rec, _ := apply(t, JSONPResult("cb(1)", map[string]interface{}{"Ok": true}))
 	if got := rec.Body.String(); got != `cb(1)({"Ok":true});` {
@@ -87,6 +87,13 @@ func TestBinaryResult(t *testing.T) {
 	}
 	if rec.Body.Len() != 2 || swBinary.status != http.StatusOK {
 		t.Fatalf("body len=%d status=%d", rec.Body.Len(), swBinary.status)
+	}
+}
+
+func TestDownloadDispositionSanitizesFilename(t *testing.T) {
+	got := DownloadDisposition("attachment", `..\\nested/unsafe"name`+"\r\n"+".txt")
+	if got != `attachment; filename="unsafe_name__.txt"` {
+		t.Fatalf("DownloadDisposition = %q", got)
 	}
 }
 

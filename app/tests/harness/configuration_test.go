@@ -5,7 +5,38 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/yangphere/leanote/app/httpserver"
 )
+
+func TestRepositoryRunModesDeclareRelativeContentRoots(t *testing.T) {
+	repoRoot, err := findRepositoryRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	configPath := filepath.Join(repoRoot, "conf", "app.conf")
+	for _, mode := range []string{"dev", "test"} {
+		t.Run(mode, func(t *testing.T) {
+			cfg, err := httpserver.LoadConfigFile(configPath, mode)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, key := range []string{
+				"content.private.data",
+				"content.private.quarantine",
+				"content.public.data",
+				"content.public.quarantine",
+				"content.temporary",
+				"admin.backup.root",
+			} {
+				value, ok := cfg.String(key)
+				if !ok || value == "" || filepath.IsAbs(value) {
+					t.Fatalf("%s %s = %q, want non-empty repository-relative value", mode, key, value)
+				}
+			}
+		})
+	}
+}
 
 func TestAssertTestConfigurationRejectsMissingTestSection(t *testing.T) {
 	repoRoot := writeTestConfigFixture(t, "db.dbname=leanote\n")
