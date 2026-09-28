@@ -542,3 +542,38 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 22: 完成接口适配层迁移并归档
+<!-- trellis-session: v=2 fp=1d71482440e78da5 -->
+
+**Date**: 2026-09-28
+**Task**: 完成接口适配层迁移并归档
+**Branch**: `dev`
+
+### Summary
+
+完成标准库 net/http 适配层、controller adapter、production config 与 native multipart replay；本地构建、vet、Go/Mongo harness、npm 与 Trellis 校验已通过，任务 09-08-interface-http 已归档。
+
+### Main Changes
+
+- 完成 Revel 到标准库 HTTP 的路由、参数、Session、模板、中间件和 controller 适配迁移。
+- 补齐 AddNote multipart 资产链、回执、预发布、链接替换、AttachNum、失败清理与 finalize。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f3354b46` | feat(http): 完成标准库接口适配层迁移 |
+
+### Testing
+
+- [OK] go build ./...、go vet ./...、Go harness（含 Docker Mongo replay）、npm test、gofmt、git diff --check、task.py validate 已通过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 真实 Mongo 7/replica-set、浏览器、跨进程恢复、failpoint、容器卷/non-root/restart、PDF golden 与发布环境证据继续由交付验证任务执行。
