@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 22
+- **Total Sessions**: 23
 - **Last Active**: 2026-09-28
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~579 | Active |
+| `journal-1.md` | ~616 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 23 | 2026-09-28 | 呈现层请求意图与恢复修复提交归档 | `08bdfadb7d40c67d61f9c410846f3f2ccfb924d2` | `dev` |
 | 22 | 2026-09-28 | 完成接口适配层迁移并归档 | `f3354b46` | `dev` |
 | 21 | 2026-09-25 | 完成应用管理端修复并归档 | `65f1b5ee` | `dev` |
 | 20 | 2026-09-25 | 完成应用发布链路 | `0b2bd184` | `dev` |

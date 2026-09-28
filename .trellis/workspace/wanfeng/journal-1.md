@@ -577,3 +577,40 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Next Steps
 
 - 真实 Mongo 7/replica-set、浏览器、跨进程恢复、failpoint、容器卷/non-root/restart、PDF golden 与发布环境证据继续由交付验证任务执行。
+
+
+## Session 23: 呈现层请求意图与恢复修复提交归档
+<!-- trellis-session: v=2 fp=23aa0ad336f2030c -->
+
+**Date**: 2026-09-28
+**Task**: 呈现层请求意图与恢复修复提交归档
+**Branch**: `dev`
+
+### Summary
+
+完成 presentation-frontend 实现与四项审核修复的本地提交、归档及上下文路径维护；真实环境验收继续由 delivery-verification 承接，未推送。
+
+### Main Changes
+
+- 接入受保护保存与批量请求意图；修复 move 权威 Usn 恢复、copy/delete 队列出口和错误文案，同步七种语言、规格与生成资源。
+- 归档至 .trellis/tasks/archive/2026-09/09-08-presentation-frontend，更新 task.json 工作提交和两个上下文清单；归档提交为 692c3824，当前任务已清空。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `08bdfadb7d40c67d61f9c410846f3f2ccfb924d2` | feat(frontend): 完善笔记请求意图与保存恢复 |
+
+### Testing
+
+- [OK] Node 全量 177 项：176 通过、1 项 Windows 条件跳过、0 失败；45 项针对性回归提交前复跑通过。
+- [OK] controllers、admin、api、member、httpserver 五个 Go 包测试通过，timeout 60s；JSON Golden、任务校验和 diff 检查通过。
+- [OK] 164 个构建产物零漂移且全部跟踪；Playwright 仅 discovery，未启动浏览器、服务或 Mongo。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- delivery-verification 承接全部 partial/unrun/delegated-unrun：干净候选/CI、真实 HTTP+DB/browser、旧客户端 Golden、跨进程/failpoint 和八槽发布矩阵，未执行项不勾选。
