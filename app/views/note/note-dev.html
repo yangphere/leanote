@@ -122,6 +122,10 @@ id="listNotebookDropdownMenu" data-bs-toggle="dropdown">
 				</div>
 
 				<div class="float-start" id="leanoteMsg">
+					<div id="noteMutationStatus" role="status" style="display:none">
+						<span id="noteMutationMessage"></span>
+						<button type="button" id="retryNoteMutations" class="btn btn-sm btn-warning" style="display:none"></button>
+					</div>
 					<span id="msg" style="display: inline-block;"></span>
 					<span id="loading">
 					</span>
@@ -910,6 +914,7 @@ var GlobalConfigs = {{.globalConfigs|jsonJs}};
 <script src="/js/plugins/libs-min/jquery.ui.widget.js"></script>
 <script src="/js/plugins/libs-min/jquery.iframe-transport.js"></script>
 <script src="/js/plugins/libs-min/jquery.fileupload.js"></script>
+<script src="/js/mutation-intents.js"></script>
 <script src="/js/app/note.js"></script>
 <script src="/js/app/tag.js"></script>
 <script src="/js/app/notebook.js"></script>

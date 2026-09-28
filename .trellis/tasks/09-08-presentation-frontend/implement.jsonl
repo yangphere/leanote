@@ -1,2 +1,9 @@
-{"file": "CONTEXT.md", "reason": "读取生成资源和编辑器不变量"}
-{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "核对前端生成资源决策"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "前端目录、状态和质量规范入口"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "编辑器 revision 与页面缓存的单一事实来源"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "构建失败、路径安全和测试证据门禁"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "受保护存量 Web save 的 committed Usn 响应和旧客户端兼容"}
+{"file": "CONTEXT.md", "reason": "生成资源、HTML 与 USN 跨层不变量"}
+{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "前端构建、URL 和浏览器支持决定"}
+{"file": ".trellis/tasks/archive/2026-09/09-08-application-notes/prd.md", "reason": "KD-N6 可选字段与旧客户端契约"}
+{"file": ".trellis/tasks/09-08-presentation-frontend/research/spec-audit-2026-09-28.md", "reason": "本任务现状证据和待确认事项"}
+{"file": ".trellis/tasks/09-08-presentation-frontend/acceptance/evidence-matrix.md", "reason": "各 AC 的执行与交付边界"}

@@ -15,9 +15,7 @@ import (
 	"github.com/yangphere/leanote/app/httpserver"
 )
 
-// TestRegistryMatchesB0Inventory is intentionally red during B0. It makes
-// the migration gap explicit until each route action gets a first-party
-// registration in a later batch.
+// The archived B0 inventory remains the authoritative route-action baseline.
 func TestRegistryMatchesB0Inventory(t *testing.T) {
 	want := readInventoryActions(t)
 	registry := httpserver.NewRegistry()
@@ -54,7 +52,7 @@ func readInventoryActions(t *testing.T) map[string]bool {
 	if !ok {
 		t.Fatal("runtime.Caller failed")
 	}
-	path := filepath.Join(filepath.Dir(thisFile), "..", "..", ".trellis", "tasks", "09-08-interface-http", "research", "action-inventory.md")
+	path := filepath.Join(filepath.Dir(thisFile), "..", "..", ".trellis", "tasks", "archive", "2026-09", "09-08-interface-http", "research", "action-inventory.md")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read action inventory: %v", err)

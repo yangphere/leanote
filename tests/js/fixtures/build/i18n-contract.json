@@ -343,7 +343,7 @@
       "key": "Are you sure to delete it ?",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2114
+      "line": 2162
     },
     {
       "key": "Are you sure to delete this image ?",
@@ -457,7 +457,7 @@
       "key": "cancelPublic",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2005
+      "line": 2053
     },
     {
       "key": "cancelPublic",
@@ -601,7 +601,7 @@
       "key": "copy",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2016
+      "line": 2064
     },
     {
       "key": "copyToMyNotebook",
@@ -655,7 +655,7 @@
       "key": "delete",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2010
+      "line": 2058
     },
     {
       "key": "delete",
@@ -697,7 +697,7 @@
       "key": "Delete",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2216
+      "line": 2264
     },
     {
       "key": "Delete Success!",
@@ -721,7 +721,7 @@
       "key": "Download",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2217
+      "line": 2265
     },
     {
       "key": "Edit mode",
@@ -955,31 +955,7 @@
       "key": "Error",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 490
-    },
-    {
-      "key": "Error",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 513
-    },
-    {
-      "key": "Error",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 514
-    },
-    {
-      "key": "Error",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 520
-    },
-    {
-      "key": "Error",
-      "namespace": "msg",
-      "path": "public/js/app/note.js",
-      "line": 521
+      "line": 518
     },
     {
       "key": "Error",
@@ -991,31 +967,43 @@
       "key": "Error",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 532
+      "line": 554
     },
     {
       "key": "Error",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 543
+      "line": 579
     },
     {
       "key": "Error",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 577
+      "line": 1493
     },
     {
       "key": "Error",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 586
+      "line": 1497
     },
     {
       "key": "Error",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 593
+      "line": 1795
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 1798
+    },
+    {
+      "key": "Error",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 1868
     },
     {
       "key": "Error",
@@ -1105,7 +1093,7 @@
       "key": "exportPdf",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2008
+      "line": 2056
     },
     {
       "key": "fold",
@@ -1411,7 +1399,7 @@
       "key": "Insert link into content",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2218
+      "line": 2266
     },
     {
       "key": "inviteEmailBody",
@@ -1477,7 +1465,73 @@
       "key": "move",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2011
+      "line": 2059
+    },
+    {
+      "key": "mutationPending",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 445
+    },
+    {
+      "key": "mutationPending",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 512
+    },
+    {
+      "key": "mutationPending",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 513
+    },
+    {
+      "key": "mutationPending",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 604
+    },
+    {
+      "key": "mutationRejected",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 444
+    },
+    {
+      "key": "mutationRetry",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 446
+    },
+    {
+      "key": "mutationRevisionRequired",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 408
+    },
+    {
+      "key": "mutationRevisionRequired",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 505
+    },
+    {
+      "key": "mutationRevisionRequired",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 517
+    },
+    {
+      "key": "mutationUnavailable",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 518
+    },
+    {
+      "key": "mutationUnknown",
+      "namespace": "msg",
+      "path": "public/js/app/note.js",
+      "line": 445
     },
     {
       "key": "Next",
@@ -1645,7 +1699,7 @@
       "key": "publicAsBlog",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2004
+      "line": 2052
     },
     {
       "key": "publicAsBlog",
@@ -1753,13 +1807,13 @@
       "key": "saveSuccess",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 538
+      "line": 552
     },
     {
       "key": "saving",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 481
+      "line": 559
     },
     {
       "key": "send",
@@ -1819,13 +1873,13 @@
       "key": "shareToFriends",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 1471
+      "line": 1510
     },
     {
       "key": "shareToFriends",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2002
+      "line": 2050
     },
     {
       "key": "shareToFriends",
@@ -1981,13 +2035,13 @@
       "key": "unTitled",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 1513
+      "line": 1552
     },
     {
       "key": "unTitled",
       "namespace": "msg",
       "path": "public/js/app/note.js",
-      "line": 2692
+      "line": 2740
     },
     {
       "key": "update",
@@ -2502,7 +2556,13 @@
         "click to remove this image": "Klicken um dieses Bild zu löschen",
         "error": "Fehler",
         "Prev": "Vorheriges",
-        "Next": "Nächstes"
+        "Next": "Nächstes",
+        "mutationPending": "Ein früherer Vorgang wartet auf Bestätigung. Weitere Änderungen sind noch nicht gespeichert.",
+        "mutationUnknown": "Das Ergebnis ist unbekannt. Dieselbe Anfrage erneut senden oder Änderungen sichern und nach dem Neuladen den Serverstand prüfen.",
+        "mutationRejected": "Der Vorgang ist fehlgeschlagen oder steht im Konflikt. Änderungen sichern, neu laden und vor einem weiteren Versuch abgleichen.",
+        "mutationRetry": "Unbestätigte Vorgänge wiederholen",
+        "mutationUnavailable": "Sicheres Senden nicht möglich. Unterstützung für sichere Zufallszahlen im Browser prüfen.",
+        "mutationRevisionRequired": "Keine sichere Notizversion verfügbar. Änderungen bleiben auf dieser Seite; erneut speichern, um die Version zu laden. Bei weiterem Fehler Änderungen sichern, dann die Seite neu laden und abgleichen."
       },
       "blog": {
         "blogNavs": "Navigation",
@@ -3168,7 +3228,13 @@
         "click to remove this image": "click to remove this image",
         "error": "error",
         "Prev": "Prev",
-        "Next": "Next"
+        "Next": "Next",
+        "mutationPending": "An earlier operation is still pending. Later edits remain unsaved.",
+        "mutationUnknown": "The result is unknown. Retry the same request, or preserve edits and reload to check server state.",
+        "mutationRejected": "The operation failed or conflicted. Preserve your edits, then reload and reconcile before another attempt.",
+        "mutationRetry": "Retry unconfirmed operations",
+        "mutationUnavailable": "Unable to submit safely. Check browser support for secure random numbers.",
+        "mutationRevisionRequired": "A safe note revision is not available. Edits remain in this page; retry saving to reload the revision. If this persists, back up your edits before refreshing and reconciling."
       },
       "blog": {
         "blogNavs": "Navs",
@@ -3835,7 +3901,13 @@
         "click to remove this image": "clic para eliminar esta imagen",
         "error": "error",
         "Prev": "Anterior",
-        "Next": "Siguiente"
+        "Next": "Siguiente",
+        "mutationPending": "Una operación anterior espera confirmación. Los cambios posteriores aún no se han guardado.",
+        "mutationUnknown": "El resultado es desconocido. Reintente la misma solicitud o conserve los cambios y recargue para comprobar el servidor.",
+        "mutationRejected": "La operación falló o hubo un conflicto. Conserve los cambios, recargue y verifique antes de intentarlo de nuevo.",
+        "mutationRetry": "Reintentar operaciones sin confirmar",
+        "mutationUnavailable": "No se puede enviar de forma segura. Compruebe el soporte de números aleatorios seguros del navegador.",
+        "mutationRevisionRequired": "No hay una revisión segura de la nota. Los cambios permanecen en esta página; vuelva a guardar para obtener la revisión. Si el error persiste, respalde los cambios antes de recargar y verificar."
       },
       "blog": {
         "blogNavs": "Navs",
@@ -4496,7 +4568,13 @@
         "click to remove this image": "cliquez pour supprimer cette image",
         "error": "erreur",
         "Prev": "Préc",
-        "Next": "Suiv"
+        "Next": "Suiv",
+        "mutationPending": "Une opération précédente attend confirmation. Les modifications suivantes ne sont pas encore enregistrées.",
+        "mutationUnknown": "Le résultat est inconnu. Réessayez la même requête ou conservez les modifications et rechargez pour vérifier le serveur.",
+        "mutationRejected": "Échec ou conflit. Conservez vos modifications, rechargez et vérifiez avant une nouvelle tentative.",
+        "mutationRetry": "Réessayer les opérations non confirmées",
+        "mutationUnavailable": "Envoi sécurisé impossible. Vérifiez la prise en charge des nombres aléatoires sécurisés du navigateur.",
+        "mutationRevisionRequired": "Aucune révision sûre de la note n’est disponible. Les modifications restent dans cette page ; réessayez l’enregistrement pour relire la révision. Si l’erreur persiste, sauvegardez vos modifications avant de recharger et de vérifier."
       },
       "blog": {
         "blogNavs": "Navigation",
@@ -5162,7 +5240,13 @@
         "click to remove this image": "clique para excluir esta imagem",
         "error": "erro",
         "Prev": "Anterior",
-        "Next": "Próxima"
+        "Next": "Próxima",
+        "mutationPending": "Uma operação anterior aguarda confirmação. As alterações seguintes ainda não foram guardadas.",
+        "mutationUnknown": "O resultado é desconhecido. Repita o mesmo pedido ou preserve as alterações e recarregue para verificar o servidor.",
+        "mutationRejected": "A operação falhou ou ocorreu um conflito. Preserve as alterações, recarregue e verifique antes de tentar novamente.",
+        "mutationRetry": "Repetir operações não confirmadas",
+        "mutationUnavailable": "Não é possível enviar com segurança. Verifique o suporte do navegador para números aleatórios seguros.",
+        "mutationRevisionRequired": "Não existe uma revisão segura da nota. As alterações permanecem nesta página; tente guardar novamente para obter a revisão. Se o erro persistir, copie as alterações antes de atualizar e verificar."
       },
       "blog": {
         "blogNavs": "Navegação",
@@ -5840,7 +5924,13 @@
         "click to remove this image": "删除图片",
         "error": "错误",
         "Prev": "上一页",
-        "Next": "下一页"
+        "Next": "下一页",
+        "mutationPending": "前一操作仍在等待确认，后续修改尚未保存。",
+        "mutationUnknown": "操作结果未知。可重试原请求；或先保留修改，刷新后核对服务端状态。",
+        "mutationRejected": "操作失败或发生冲突。请先保留修改，再刷新核对，随后重新操作。",
+        "mutationRetry": "重试未确认操作",
+        "mutationUnavailable": "无法安全提交。请检查浏览器安全随机数支持。",
+        "mutationRevisionRequired": "尚未取得可安全保存的笔记版本。修改仍保留在当前页面；请重试保存以重新读取，若仍失败，请先备份修改再刷新核对。"
       },
       "blog": {
         "blog": "博客",
@@ -6526,7 +6616,13 @@
         "click to remove this image": "刪除圖片",
         "error": "錯誤",
         "Prev": "上一頁",
-        "Next": "下一頁"
+        "Next": "下一頁",
+        "mutationPending": "前一操作仍在等待確認，後續修改尚未儲存。",
+        "mutationUnknown": "操作結果未知。可重試原請求；或先保留修改，重新整理後核對伺服器狀態。",
+        "mutationRejected": "操作失敗或發生衝突。請先保留修改，再重新整理核對，隨後重新操作。",
+        "mutationRetry": "重試未確認操作",
+        "mutationUnavailable": "無法安全提交。請檢查瀏覽器安全隨機數支援。",
+        "mutationRevisionRequired": "尚未取得可安全儲存的筆記版本。修改仍保留於目前頁面；請重試儲存以重新讀取，若仍失敗，請先備份修改再重新整理核對。"
       },
       "blog": {
         "blog": "部落格",

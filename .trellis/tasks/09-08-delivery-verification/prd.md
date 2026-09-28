@@ -15,6 +15,7 @@
 - identity 交接按 2026-09-10 已确认的 P-01～P-08 验证：匿名期 `_ID` 稳定且登录成功轮换、无 CSRF/query-form token/`_ID`+Captcha 兼容基线、登出和注册 Cookie 失败 envelope、32 字节 API token 摘要存储及旧 token 过渡。书面确认不替代真实 Mongo/HTTP/browser/mail/release artifact。
 - notes 交接按 `research/action-inventory.md` 建立 38-action 逐项 live HTTP 矩阵。已有可追溯覆盖为 21/38（17 API + 4 Web）；必须补齐其余 17 个 Web action，不得用 `discovered 105 / passed 103` 的 Go test event 数代替 action 覆盖。
 - notes/content/presentation 交接必须在真实环境验证：第一方 Web `OperationId`/`ExpectedUsn` 生成与 unknown-result 复用；note-specific asset receipt adapter 消费通用 publish/verify primitive；Mongo 7 standalone、Mongo 8 replica-set、进程 kill/restart、Mongo failpoint 和跨主机文件系统 failpoint。每项分别记录 executed/pass/fail/skip，不得以 server standalone passed 覆盖 delegated-unrun。
+- presentation 于 2026-09-28 按用户授权进行实现归档；本交付任务承接其 `acceptance/evidence-matrix.md` 中全部 partial/unrun/delegated-unrun 项，包括干净候选/CI 重建、资源/编辑器真实浏览器、HTTP+DB receipt 与旧客户端 Golden、move 权威读取失败/重试及 copy/delete 队列出口。按依赖任务名 `09-08-presentation-frontend` 定位归档目录；不得以任务 completed 或本地 Node 通过关闭这些验收。
 
 ## Acceptance criteria
 

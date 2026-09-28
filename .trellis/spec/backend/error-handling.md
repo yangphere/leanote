@@ -27,7 +27,9 @@
 
 ### Note Save Envelope
 
-`POST /note/updateNoteOrContent` always returns the existing `info.Re` JSON shape. Success is `{ "Ok": true }`; a successful new-note request also puts the created note in `Item`. Failure is `{ "Ok": false, "Msg": "..." }` with a non-empty, user-visible message. HTTP 200 does not imply business success.
+`POST /note/updateNoteOrContent` preserves the existing `info.Re` fields. For an existing-note request with a nonempty `OperationId`, success additionally returns top-level integer `Usn`, taken directly from this `SaveNote` result, including receipt replay. Requests without `OperationId`, new-note requests, and failures retain their previous field shape. New-note success still returns the created note in `Item`. Failures have `Ok:false` and a nonempty `Msg`; HTTP 200 does not imply business success.
+
+The mapper must not re-read the latest note or calculate `oldUsn + 1`. A later write may exist when an older receipt is replayed. Do not embed `info.Re` directly into the extended DTO: its promoted `MarshalJSON` would drop the added `Usn`. `workspaceWebSaveResponse` uses a method-free local envelope type. Its serialization regression checks the six legacy fields, the protected success revision, and unchanged failure shape. See the frontend state-management spec's protected mutation contract for consumer and recovery rules.
 
 The controller must inspect every `UpdateNote` and `UpdateNoteContent` result before setting `Ok`. A missing note/content record, permission failure, database insert/update failure, conflict, or a metadata-success/content-failure partial write must return `Ok:false`; the frontend may confirm its save revision and show success only after `Ok:true`.
 

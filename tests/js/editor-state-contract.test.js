@@ -14,6 +14,20 @@ function loadStateFactory() {
   return sandbox.window.LeanoteEditorState;
 }
 
+test('restoring a captured draft keeps confirmed content and respects load epoch', () => {
+  const state = loadStateFactory().create({ readOnly: true });
+  state.load({ noteId: 'n1', persistedContent: 'confirmed', editorContent: 'confirmed' });
+  const epoch = state.snapshot().loadEpoch;
+  assert.equal(state.restoreDraft('draft', epoch), true);
+  assert.equal(state.snapshot().persistedContent, 'confirmed');
+  assert.equal(state.isDirty(), true);
+  assert.equal(state.markMutation('user edit'), false, 'restoration must not unlock readonly editing');
+  state.load({ noteId: 'n2', persistedContent: 'other', editorContent: 'other' });
+  assert.equal(state.restoreDraft('stale', epoch), false);
+  assert.equal(state.restoreDraft('unbound'), false);
+  assert.equal(state.snapshot().currentContent, 'other');
+});
+
 test('programmatic load establishes an editor baseline without a content revision', () => {
   const api = loadStateFactory();
   const state = api.create({ readOnly: false });

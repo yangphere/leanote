@@ -529,12 +529,14 @@ function initEditor() {
 	};
 	tinymce.init(editorConfig);
 	
-	// 刷新时保存 参考autosave插件
+	// Leaving must not start a request whose result this page cannot observe.
 	window.onbeforeunload = function(e) {
-		if (LEA.isLogout) {
-			return;
+		if (Note.mutations.hasUnresolved() || Object.keys(Note.savePool).length ||
+			(!Note.isReadOnly && Note.curNoteId && Note.curHasChanged(true))) {
+			e.preventDefault();
+			e.returnValue = '';
+			return '';
 		}
-    	Note.curChangedSaveIt(true, null, {refresh: true});
 	}
 
 	// 全局快捷键

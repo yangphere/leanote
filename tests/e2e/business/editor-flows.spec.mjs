@@ -93,14 +93,23 @@ test('note editor keeps load baseline, title-only saves, content revisions, undo
     expect(await page.evaluate(() => ({ dirty: window.LeanoteEditorSession.isDirty(), revision: window.LeanoteEditorSession.snapshot().contentRevision })))
       .toEqual({ dirty: false, revision: 0 });
 
+    const initialUsn = await page.evaluate((id) => window.Note.cache[id].Usn, noteId);
+    expect(Number.isSafeInteger(initialUsn), 'initial revision is authoritative').toBe(true);
     await page.locator('#editBtn').click();
     await page.locator('#noteTitle').fill(`${title} title-only`);
     const titleRequestPromise = page.waitForRequest(saveRequest);
     const titleResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/note/updateNoteOrContent' && response.request().method() === 'POST');
     await page.locator('#saveBtn').click();
     const [titleRequest, titleResponse] = await Promise.all([titleRequestPromise, titleResponsePromise]);
-    expect((await titleResponse.json()).Ok, 'title-only save succeeds').toBe(true);
-    expect(new URLSearchParams(titleRequest.postData() || '').has('Content'), 'title-only save omits Content').toBe(false);
+    const titleResult = await titleResponse.json();
+    const titleFields = new URLSearchParams(titleRequest.postData() || '');
+    expect(titleResult.Ok, 'title-only save succeeds').toBe(true);
+    expect(titleFields.has('Content'), 'title-only save omits Content').toBe(false);
+    expect(titleFields.get('OperationId')).toMatch(/^[a-f0-9]{32}$/);
+    expect(titleFields.get('ExpectedUsn')).toBe(String(initialUsn));
+    expect(Number.isSafeInteger(titleResult.Usn), 'response contains committed revision').toBe(true);
+    expect(titleResult.Usn).toBeGreaterThan(initialUsn);
+    await expect.poll(() => page.evaluate((id) => window.Note.cache[id].Usn, noteId)).toBe(titleResult.Usn);
     expect(await page.evaluate(() => window.LeanoteEditorSession.isDirty()), 'title-only save keeps content clean').toBe(false);
 
     const editor = page.locator('#editorContent');
@@ -112,7 +121,11 @@ test('note editor keeps load baseline, title-only saves, content revisions, undo
     const contentResponsePromise = page.waitForResponse((response) => new URL(response.url()).pathname === '/note/updateNoteOrContent' && response.request().method() === 'POST');
     await page.locator('#saveBtn').click();
     const [contentRequest, contentResponse] = await Promise.all([contentRequestPromise, contentResponsePromise]);
-    const submittedContent = new URLSearchParams(contentRequest.postData() || '').get('Content');
+    const contentFields = new URLSearchParams(contentRequest.postData() || '');
+    const submittedContent = contentFields.get('Content');
+    expect(contentFields.get('OperationId')).toMatch(/^[a-f0-9]{32}$/);
+    expect(contentFields.get('OperationId')).not.toBe(titleFields.get('OperationId'));
+    expect(contentFields.get('ExpectedUsn')).toBe(String(titleResult.Usn));
     expect(submittedContent, 'content save sends serialized HTML').toBeTruthy();
     expect((await contentResponse.json()).Ok, 'content save succeeds').toBe(true);
     await expect.poll(() => page.evaluate(() => window.LeanoteEditorSession.isDirty()), { timeout: 15_000 }).toBe(false);

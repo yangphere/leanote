@@ -193,8 +193,8 @@ Note.renderNotesAndFirstOneContent = function(ret, hasSorted) {
 // 所以不用isDirty()
 // 只用Note.readOnly, 如果Note.readOnly, 那么不判断内容
 // 
-Note.curHasChanged = function(force, isRefreshOrCtrls) {
-	var cacheNote = Note.getCurNote(); 
+Note.curHasChanged = function(force, isRefreshOrCtrls, comparison) {
+	var cacheNote = comparison || Note.getCurNote();
 	if (!cacheNote) {
 		return false;
 	}
@@ -286,7 +286,7 @@ Note.curHasChanged = function(force, isRefreshOrCtrls) {
 		) {
 	*/
 	var editorState = window.LeanoteEditorSession;
-	var contentDirty = cacheNote.IsNew || !editorState || editorState.isDirty();
+	var contentDirty = comparison || cacheNote.IsNew || !editorState || editorState.isDirty();
 	if (cacheNote.Content != content && contentDirty) {
 		hasChanged.hasChanged = true;
 		hasChanged.Content = content;
@@ -395,8 +395,65 @@ Note.getImgSrc = function(content) {
 // 以后要定时调用
 // force , 默认是true, 表强校验内容
 // 定时保存传false
-Note.saveInProcess = {}; // noteId => bool, true表示该note正在保存到服务器, 服务器未响应
-Note.savePool = {}; // 保存池, 以后的保存先放在pool中, id => note
+Note.savePool = {}; // Latest captured edit waiting for a confirmed preceding save.
+Note.revisionReloads = {}; // Confirmed moves awaiting a safe authoritative read.
+Note.reloadMovedNote = function(noteId) {
+	var reload = Note.revisionReloads[noteId];
+	if (!reload || reload.request) return;
+	var request = {};
+	reload.request = request;
+	function failed() {
+		if (Note.revisionReloads[noteId] !== reload || reload.request !== request) return;
+		reload.request = null;
+		showMsg(getMsg("mutationRevisionRequired"), 5000);
+	}
+	ajaxGet('/note/getNoteAndContent', {noteId: noteId}, function(ret) {
+		if (Note.revisionReloads[noteId] !== reload || reload.request !== request) return;
+		var current = Note.getNote(noteId);
+		var baseline = reload.baseline;
+		// This legacy response is flat and omits duplicate embedded fields (including NoteId).
+		// Bind it to the requested note and never bless concurrent edits with a newer USN.
+		if (!current || !ret || !window.LeanoteMutationIntents.validRevision(ret.Usn) ||
+			ret.Usn < reload.previousUsn || ret.NotebookId !== baseline.NotebookId || ret.IsTrash || ret.IsDeleted ||
+			['Title', 'Content', 'IsMarkdown', 'HasSelfDefined', 'Desc', 'ImgSrc', 'Abstract'].some(function(key) {
+				return baseline[key] !== undefined && ret[key] !== baseline[key];
+			}) || JSON.stringify(ret.Tags || []) !== JSON.stringify(baseline.Tags || [])) {
+			failed();
+			return;
+		}
+		if (window.LeanoteMutationIntents.validRevision(current.Usn) && current.Usn > ret.Usn) {
+			failed();
+			return;
+		}
+		Note.setNoteCache({NoteId: noteId, Usn: ret.Usn, NotebookId: ret.NotebookId}, false);
+		delete Note.revisionReloads[noteId];
+		var queued = Note.savePool[noteId];
+		if (queued) {
+			queued.submitted.NotebookId = ret.NotebookId;
+			delete queued.reconcile;
+		}
+		Note.updatePoolNote();
+	}, failed);
+};
+Note.mutations = window.LeanoteMutationIntents.create({
+	crypto: window.crypto,
+	serialize: function(payload) { return $.param(payload); },
+	send: ajaxPost,
+	changed: function(counts) {
+		$('#noteMutationStatus').toggle(Boolean(counts.pending || counts.unknown || counts.rejected));
+		$('#noteMutationMessage').text(counts.rejected ? getMsg("mutationRejected") :
+			counts.unknown ? getMsg("mutationUnknown") : getMsg("mutationPending"));
+		$('#retryNoteMutations').toggle(counts.unknown > 0).text(getMsg("mutationRetry"));
+	}
+});
+$('#retryNoteMutations').on('click', function() { Note.mutations.retryUnknown(); });
+Note.pendingNoteView = function(note) {
+	var intent = Note.mutations.get(note.NoteId);
+	var queued = Note.savePool[note.NoteId];
+	var view = $.extend({}, note, intent && intent.kind === 'save' ? intent.payload : {}, queued ? queued.submitted : {});
+	if (typeof view.Tags === 'string') view.Tags = view.Tags ? view.Tags.split(',') : [];
+	return view;
+};
 function currentEditorSerialization() {
 	try {
 		var note = Note.getCurNote();
@@ -430,7 +487,11 @@ function isCurrentEditorSaveCapture(capture) {
 	return capture.revision >= session.snapshot().confirmedRevision;
 }
 function cacheSavedNote(note) {
+	var current = Note.getNote(note.NoteId);
+	if (current && current.Usn > note.Usn) return;
 	var cacheUpdate = $.extend({}, note);
+	delete cacheUpdate.OperationId;
+	delete cacheUpdate.ExpectedUsn;
 	if (typeof cacheUpdate.Tags === 'string') {
 		cacheUpdate.Tags = cacheUpdate.Tags.split(',');
 	}
@@ -438,175 +499,130 @@ function cacheSavedNote(note) {
 	Note.setNoteCache(cacheUpdate, false);
 	Note.clearCacheByNotebookId(cacheUpdate.NotebookId);
 }
-Note.curChangedSaveIt = function(force, callback, isRefreshOrCtrls) {
-	var me = this;
-	// 如果当前没有笔记, 不保存
-	// 或者是共享的只读笔记
-	if(!Note.curNoteId || Note.isReadOnly) {
-		// log(!Note.curNoteId ? '无当前笔记' : '共享只读');
-		return;
+Note.submitMutation = function(command) {
+	try {
+		if (command.noteIds.some(function(id) { return Note.revisionReloads[id]; })) {
+			var error = {Msg: getMsg("mutationRevisionRequired")};
+			showMsg(error.Msg, 5000);
+			if (command.failure) command.failure(error, 'blocked');
+			return null;
+		}
+		var intent = Note.mutations.start(command);
+		if (!intent) {
+			showMsg(getMsg("mutationPending"), 3000);
+			if (command.failure) command.failure({Msg: getMsg("mutationPending")}, 'blocked');
+		}
+		return intent;
+	} catch (error) {
+		error.Msg = error.code === 'REVISION_REQUIRED' ? getMsg("mutationRevisionRequired") :
+			error.code === 'RANDOMNESS_UNAVAILABLE' ? getMsg("mutationUnavailable") : getMsg("Error");
+		showMsg(error.Msg, 5000);
+		if (command.failure) command.failure(error, 'unsent');
+		return null;
 	}
+};
+Note.submitSave = function(submitted, saveContext, saveCapture, callback) {
+	var noteId = submitted.NoteId;
+	function failure(error) {
+		if (isCurrentEditorSaveContext(saveContext) && window.LeanoteEditorSession) {
+			window.LeanoteEditorSession.failSave(saveCapture);
+		}
+		callback && callback(false, error);
+		showMsg(error && error.Msg ? error.Msg : getMsg("Error"), 5000);
+	}
+	function success(ret) {
+		if (!ret || ret.Ok !== true) { failure(ret); return; }
+		var confirmed;
+		if (submitted.IsNew) {
+			if (!ret.Item || ret.Item.NoteId !== noteId) { failure(ret); return; }
+			confirmed = $.extend({}, ret.Item, { IsNew: false });
+			Note.setNoteCache(confirmed, false);
+		} else {
+			confirmed = $.extend({}, submitted, { Usn: ret.Usn });
+			cacheSavedNote(confirmed);
+		}
+		if (isCurrentEditorSaveContext(saveContext)) {
+			var editorConfirmed = true;
+			if (saveCapture && window.LeanoteEditorSession && isCurrentEditorSaveCapture(saveCapture)) {
+				editorConfirmed = window.LeanoteEditorSession.confirmSave(saveCapture, currentEditorSerialization());
+			}
+			if (submitted.IsNew) Pjax.changeNote(confirmed);
+			if (editorConfirmed) {
+				callback && callback(true, ret);
+				showMsg(getMsg("saveSuccess"), 1000);
+			} else {
+				failure({Msg: getMsg("Error")});
+			}
+		}
+		Note.updatePoolNote();
+	}
+	showMsg(getMsg("saving"));
+	if (submitted.IsNew) {
+		ajaxPost("/note/updateNoteOrContent", submitted, success, failure);
+		return true;
+	}
+	var cached = Note.getNote(noteId);
+	var payload = $.extend({}, submitted, { ExpectedUsn: cached && cached.Usn });
+	return Note.submitMutation({ path: '/note/updateNoteOrContent', kind: 'save', noteIds: [noteId],
+		payload: payload, success: success, failure: failure });
+};
+Note.curChangedSaveIt = function(force, callback, isRefreshOrCtrls) {
+	if (!Note.curNoteId || Note.isReadOnly) return;
+	var pending = Note.mutations.get(Note.curNoteId);
+	var comparison = pending && pending.kind === 'save'
+		? $.extend({}, Note.getCurNote(), pending.payload) : null;
+	if (comparison && typeof comparison.Tags === 'string') comparison.Tags = comparison.Tags.split(',');
 	var hasChanged;
 	try {
-		hasChanged = Note.curHasChanged(force, isRefreshOrCtrls);
-	} catch(e) {
-		// console.error('获取当前改变的笔记错误!');
-		callback && callback(false);
+		hasChanged = Note.curHasChanged(force, isRefreshOrCtrls, comparison);
+	} catch (error) {
+		showMsg(getMsg("Error"), 3000);
+		callback && callback(false, error);
 		return;
 	}
-	
-	if(hasChanged && hasChanged.hasChanged) {
-		log('需要保存...');
-		// 把已改变的渲染到左边 item-list
-		Note.renderChangedNote(hasChanged);
-		delete hasChanged.hasChanged;
-		
-		// 表示有未完成的保存
-		/*
-		if(me.saveInProcess[hasChanged.NoteId]) {
-			log("in process");
-			me.savePool[hasChanged.NoteId] = hasChanged;
-			me.startUpdatePoolNoteInterval();
-			return;
+	if (!hasChanged || !hasChanged.hasChanged) {
+		if (pending || Note.revisionReloads[Note.curNoteId]) delete Note.savePool[Note.curNoteId];
+		if (Note.revisionReloads[Note.curNoteId]) Note.reloadMovedNote(Note.curNoteId);
+		var session = window.LeanoteEditorSession;
+		var cached = Note.getCurNote();
+		if (!pending && session && session.isDirty() && cached && currentEditorSerialization() === cached.Content) {
+			// Reconcile this current load against already confirmed cache, without a write.
+			session.confirmSave(session.beginSave(cached.Content), cached.Content);
 		}
-		*/
-		
-		var saveContext = captureEditorSaveContext(hasChanged.NoteId);
-		var saveCapture = null;
-		if (hasChanged.Content !== undefined && window.LeanoteEditorSession) {
-			saveCapture = window.LeanoteEditorSession.beginSave(hasChanged.Content);
-		}
-		var submitted = $.extend({}, hasChanged);
-		// 保存之
-		showMsg(getMsg("saving"));
-		
-		me.saveInProcess[hasChanged.NoteId] = true;
-		
-		ajaxPost("/note/updateNoteOrContent", submitted, function(ret) {
-			me.saveInProcess[hasChanged.NoteId] = false;
-			if(!reIsOk(ret)) {
-				window.LeanoteEditorSession && window.LeanoteEditorSession.failSave(saveCapture);
-				callback && callback(false, ret);
-				showMsg(ret && ret.Msg ? ret.Msg : getMsg("Error"), 3000);
-				return;
-			}
-			// A successful response for a note/load epoch that is no longer active
-			// must not touch the current editor session, but its own cache still
-			// needs the confirmed server state.
-			if (!isCurrentEditorSaveContext(saveContext)) {
-				if (submitted.IsNew) {
-					var staleCreated = ret.Item;
-					if (staleCreated && staleCreated.NoteId) {
-						staleCreated.IsNew = false;
-						Note.setNoteCache(staleCreated, false);
-					}
-				} else {
-					cacheSavedNote(submitted);
-				}
-				return;
-			}
-			if(submitted.IsNew) {
-				// 缓存之, 后台得到其它信息
-				var created = ret.Item;
-				if (!created || !created.NoteId) {
-					window.LeanoteEditorSession && window.LeanoteEditorSession.failSave(saveCapture);
-					callback && callback(false, {Msg: getMsg("Error")});
-					showMsg(getMsg("Error"), 3000);
-					return;
-				}
-				created.IsNew = false;
-				if(saveCapture && window.LeanoteEditorSession && !isCurrentEditorSaveCapture(saveCapture)) return;
-				if(saveCapture && window.LeanoteEditorSession && !window.LeanoteEditorSession.confirmSave(saveCapture, currentEditorSerialization())) {
-					callback && callback(false, {Msg: getMsg("Error")});
-					showMsg(getMsg("Error"), 3000);
-					return;
-				}
-				Note.setNoteCache(created, false);
-
-				// 新建笔记也要change history
-				Pjax.changeNote(created);
-			} else {
-				if(saveCapture && window.LeanoteEditorSession && !isCurrentEditorSaveCapture(saveCapture)) return;
-				if(saveCapture && window.LeanoteEditorSession && !window.LeanoteEditorSession.confirmSave(saveCapture, currentEditorSerialization())) {
-					callback && callback(false, {Msg: getMsg("Error")});
-					showMsg(getMsg("Error"), 3000);
-					return;
-				}
-				cacheSavedNote(submitted);
-			}
-			callback && callback(true, ret);
-			showMsg(getMsg("saveSuccess"), 1000);
-		}, function(error) {
-			me.saveInProcess[hasChanged.NoteId] = false;
-			window.LeanoteEditorSession && window.LeanoteEditorSession.failSave(saveCapture);
-			callback && callback(false, error);
-			showMsg(getMsg("Error"), 3000);
-		});
-		
-		if(hasChanged['Tags'] != undefined && typeof hasChanged['Tags'] == 'string') {
-			hasChanged['Tags'] = hasChanged['Tags'].split(',');
-		}
+		return false;
+	}
+	Note.renderChangedNote(hasChanged);
+	delete hasChanged.hasChanged;
+	var saveContext = captureEditorSaveContext(hasChanged.NoteId);
+	var saveCapture = hasChanged.Content !== undefined && window.LeanoteEditorSession
+		? window.LeanoteEditorSession.beginSave(hasChanged.Content) : null;
+	var submitted = $.extend({}, hasChanged);
+	var queued = { submitted: submitted, context: saveContext, capture: saveCapture, callback: callback };
+	if (pending) {
+		queued.reconcile = pending.kind !== 'save';
+		Note.savePool[hasChanged.NoteId] = queued;
+		showMsg(getMsg("mutationPending"), 3000);
 		return hasChanged;
 	}
-	else {
-		log('无需保存');
+	if (Note.revisionReloads[hasChanged.NoteId]) {
+		queued.reconcile = true;
+		Note.savePool[hasChanged.NoteId] = queued;
+		Note.reloadMovedNote(hasChanged.NoteId);
+		return hasChanged;
 	}
-
-	return false;
+	delete Note.savePool[hasChanged.NoteId];
+	if (!Note.submitSave(submitted, saveContext, saveCapture, callback)) Note.savePool[hasChanged.NoteId] = queued;
+	return hasChanged;
 };
-
-// 更新池里的笔记
 Note.updatePoolNote = function() {
-	var me = this;
-	for (var noteId in me.savePool) {
-		if(!noteId) {
-			continue;
-		}
-		var hasChanged = me.savePool[noteId];
-		delete me.savePool[noteId];
-		if (!hasChanged) continue;
-		var saveContext = captureEditorSaveContext(noteId);
-		var saveCapture = hasChanged.Content !== undefined && noteId === me.curNoteId && window.LeanoteEditorSession
-			? window.LeanoteEditorSession.beginSave(hasChanged.Content) : null;
-		me.saveInProcess[noteId] = true;
-		(function (queuedNoteId, queuedChange, queuedCapture, queuedContext) {
-		ajaxPost("/note/updateNoteOrContent", queuedChange, function(ret) {
-			me.saveInProcess[queuedNoteId] = false;
-			if (!reIsOk(ret)) {
-				window.LeanoteEditorSession && window.LeanoteEditorSession.failSave(queuedCapture);
-				showMsg(ret && ret.Msg ? ret.Msg : getMsg("Error"), 3000);
-				return;
-			}
-			if (!isCurrentEditorSaveContext(queuedContext)) {
-				cacheSavedNote(queuedChange);
-				return;
-			}
-			if (queuedCapture && window.LeanoteEditorSession && !isCurrentEditorSaveCapture(queuedCapture)) return;
-			if (queuedCapture && window.LeanoteEditorSession && !window.LeanoteEditorSession.confirmSave(queuedCapture, currentEditorSerialization())) {
-				showMsg(getMsg("Error"), 3000);
-				return;
-			}
-			cacheSavedNote(queuedChange);
-		}, function() {
-			me.saveInProcess[queuedNoteId] = false;
-			window.LeanoteEditorSession && window.LeanoteEditorSession.failSave(queuedCapture);
-			showMsg(getMsg("Error"), 3000);
-		});
-		})(noteId, hasChanged, saveCapture, saveContext);
-	}
-};
-// 启动保存, 暂不处理
-Note.updatePoolNoteInterval = null;
-Note.startUpdatePoolNoteInterval = function() {
-	return;
-	var me = this;
-	if(me.updatePoolNoteInterval) {
-		return;
-	}
-	me.updatePoolNoteInterval = setTimeout(function() { 
-		log('update pool');
-		me.updatePoolNote();
-	}, 1000);
+	Object.keys(Note.savePool).forEach(function(noteId) {
+		if (Note.mutations.get(noteId)) return;
+		if (Note.revisionReloads[noteId]) { Note.reloadMovedNote(noteId); return; }
+		if (Note.savePool[noteId].reconcile) return;
+		var queued = Note.savePool[noteId];
+		delete Note.savePool[noteId];
+		if (!Note.submitSave(queued.submitted, queued.context, queued.capture, queued.callback)) Note.savePool[noteId] = queued;
+	});
 };
 
 // 样式
@@ -893,6 +909,7 @@ Note.renderNote = function(note) {
 	if(!note) {
 		return;
 	}
+	note = Note.pendingNoteView(note);
 	// title
 	// 不要trim, 允许用<>
 	$("#noteTitle").val(note.Title);
@@ -904,6 +921,8 @@ Note.renderNote = function(note) {
 
 // render content
 Note.renderNoteContent = function(content) {
+	// Cache may advance while the editor is loading; keep its original baseline.
+	content = $.extend({}, content);
 	var session = window.LeanoteEditorSession;
 	var loadEpoch = session && typeof session.beginLoad === "function"
 		? session.beginLoad({noteId: content.NoteId, persistedContent: content.Content || ''}) : undefined;
@@ -915,8 +934,21 @@ Note.renderNoteContent = function(content) {
 			var fallbackSerialized = content.IsMarkdown ? content.Content : (tinymce.activeEditor ? tinymce.activeEditor.getContent() : content.Content);
 			session.load({noteId: content.NoteId, persistedContent: content.Content || '', editorContent: fallbackSerialized || ''});
 		}
-		Note.setCurNoteId(content.NoteId);
-		Note.toggleReadOnly();
+		function ready() {
+			if (session && !session.isCurrentLoad(loadEpoch)) return;
+			Note.setCurNoteId(content.NoteId);
+			Note.toggleReadOnly();
+		}
+		var draft = Note.pendingNoteView(Note.getNote(content.NoteId) || content);
+		if (session && draft.Content !== content.Content && typeof draft.Content === 'string') {
+			setEditorContent(draft.Content, content.IsMarkdown, null, function() {
+				var restored = content.IsMarkdown ? draft.Content : tinymce.activeEditor.getContent();
+				session.restoreDraft(restored, loadEpoch);
+				ready();
+			}, loadEpoch);
+		} else {
+			ready();
+		}
 	}, loadEpoch);
 
 	// 只有在renderNoteContent时才设置curNoteId
@@ -1416,16 +1448,6 @@ Note.deleteNote = function(target, contextmenuItem, isShared) {
 		return;
 	}
 
-	// 如果删除的是已选中的, 赶紧设置curNoteId = null
-	if(noteIds.length == 1 && $(target).hasClass("item-active")) {
-		// -1 停止定时器
-		Note.stopInterval();
-		// 不保存
-		me.clearCurNoteId();
-		// 清空信息
-		Note.clearNoteInfo();
-	}
-
 	var $actives;
 	if(noteIds.length == 1) {
 		$actives = $(target);
@@ -1436,15 +1458,27 @@ Note.deleteNote = function(target, contextmenuItem, isShared) {
 
 	// 1
 	$actives.hide();
+	// Keep the item and current selection recoverable until the server confirms deletion.
+	// A rejected or unknown response must leave the visible list untouched.
 	// 2
-	ajaxPost('/note/deleteNote', {noteIds: noteIds, isShared: isShared}, function(ret) {
-		if(ret) {
-			Note.changeToNextSkipNotes(noteIds);
+	var listEpoch = me.renderNotesC;
+	Note.submitMutation({ path: '/note/deleteNote', kind: 'boolean', noteIds: noteIds,
+		payload: {noteIds: noteIds, isShared: isShared}, success: function(ret) {
+		if(ret === true) {
+			var sameSelection = listEpoch === me.renderNotesC &&
+				JSON.stringify(me.getBatchNoteIds()) === JSON.stringify(noteIds);
+			if (noteIds.indexOf(me.curNoteId) !== -1) {
+				Note.stopInterval();
+				me.clearCurNoteId();
+				Note.clearNoteInfo();
+			}
+			if (sameSelection) Note.changeToNextSkipNotes(noteIds);
 			$actives.remove();
 
 			// 删除缓存
 			for (var i = 0; i < noteIds.length; ++i) {
 				var noteId = noteIds[i];
+				delete Note.savePool[noteId];
 				var note = me.getNote(noteId);
 				if (note) {
 					// 减少数量
@@ -1453,10 +1487,15 @@ Note.deleteNote = function(target, contextmenuItem, isShared) {
 					delete Note.cache[noteId];
 				}
 			}
+			if (sameSelection) me.batch.reset();
+		} else {
+			$actives.show();
+			showMsg(ret && ret.Msg ? ret.Msg : getMsg("Error"), 3000);
 		}
-	});
-
-	me.batch.reset();
+	}, failure: function(error) {
+		$actives.show();
+		showMsg(error && error.Msg ? error.Msg : getMsg("Error"), 3000);
+	}});
 };
 
 // 显示共享信息
@@ -1702,8 +1741,13 @@ Note.moveNote = function(target, data) {
 		}
 	}
 	
-	ajaxPost("/note/moveNote", {noteIds: noteIds, notebookId: toNotebookId}, function(ret) {
-		if(ret) {
+	var $actives = noteIds.length == 1 ? $(target) : me.$itemList.find('.item-active');
+	var listEpoch = me.renderNotesC;
+	Note.submitMutation({ path: '/note/moveNote', kind: 'boolean', noteIds: noteIds,
+		payload: {noteIds: noteIds, notebookId: toNotebookId}, success: function(ret) {
+		if(ret === true) {
+			var sameSelection = listEpoch === me.renderNotesC &&
+				JSON.stringify(me.getBatchNoteIds()) === JSON.stringify(noteIds);
 
 			me.clearCacheByNotebookId(toNotebookId);
 
@@ -1727,35 +1771,32 @@ Note.moveNote = function(target, data) {
 					// 设置缓存
 					note.NotebookId = toNotebookId;
 					note.IsTrash = false;
+					// This boolean response cannot supply the move's authoritative USN.
+					Note.revisionReloads[noteId] = {baseline: JSON.parse(JSON.stringify(note)), previousUsn: note.Usn};
+					delete note.Usn;
 					note.UpdatedTime = new Date();
 					me.setNoteCache(note);
 				}
 			}
 
-			var $actives;
-			if(noteIds.length == 1) {
-				$actives = target;
-			}
-			else {
-				$actives = me.$itemList.find('.item-active');
-			}
-			// 不在all下, 就删除之
 			if(!Notebook.curActiveNotebookIsAll()) {
-				me.changeToNextSkipNotes(noteIds);
+				if (sameSelection) me.changeToNextSkipNotes(noteIds);
 				$actives.remove();
 			}
-			// 在all下, 不要删除
 			else {
 				// 不移动, 那么要改变其notebook title
 				$actives.find(".note-notebook").html(Notebook.getNotebookTitle(toNotebookId));
 
-				me.changeNote($actives.eq(0).attr('noteId'));
+				// Keep the open editor and any edits not yet captured by autosave.
 			}
+			if (sameSelection) me.batch.reset();
+			noteIds.forEach(function(noteId) { Note.reloadMovedNote(noteId); });
+		} else {
+			showMsg(ret && ret.Msg ? ret.Msg : getMsg("Error"), 3000);
 		}
-	});
-
-	// 重置, 因为可能移动后笔记下没笔记了
-	me.batch.reset();
+	}, failure: function(error) {
+		showMsg(error && error.Msg ? error.Msg : getMsg("Error"), 3000);
+	}});
 };
 
 // 复制
@@ -1797,7 +1838,8 @@ Note.copyNote = function(target, data, isShared) {
 		data.fromUserId = note.UserId;
 	}
 
-	ajaxPost(url, data, function(ret) {
+	Note.submitMutation({ path: url, kind: 'copy', noteIds: needNoteIds,
+		payload: data, success: function(ret) {
 		if(reIsOk(ret)) {
 			var notes = ret.Item;
 			if (isEmpty(notes)) {
@@ -1817,8 +1859,14 @@ Note.copyNote = function(target, data, isShared) {
 				// 增加数量
 				Notebook.incrNotebookNumberNotes(toNotebookId)
 			}
+			needNoteIds.forEach(function(noteId) {
+				if (Note.savePool[noteId]) delete Note.savePool[noteId].reconcile;
+			});
+			Note.updatePoolNote();
 		}
-	});
+	}, failure: function(error) {
+		showMsg(error && error.Msg ? error.Msg : getMsg("Error"), 3000);
+	}});
 };
 
 // 删除笔记标签

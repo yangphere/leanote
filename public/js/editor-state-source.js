@@ -36,12 +36,19 @@
 			state.currentContent = content || '';
 			return true;
 		}
-		function noteContentChanged(content, epoch) {
+		function recordContentChange(content, epoch) {
 			content = content || '';
-			if ((epoch !== undefined && !isCurrentLoad(epoch)) || readOnly || state.loading || content === state.currentContent) return false;
+			if ((epoch !== undefined && !isCurrentLoad(epoch)) || state.loading || content === state.currentContent) return false;
 			state.currentContent = content;
 			state.contentRevision += 1;
 			return true;
+		}
+		function noteContentChanged(content, epoch) {
+			return !readOnly && recordContentChange(content, epoch);
+		}
+		function restoreDraft(content, epoch) {
+			if (epoch === undefined || typeof content !== 'string') return false;
+			return recordContentChange(content, epoch);
 		}
 		function beginSave(serializedContent) {
 			if (!state.noteId) return null;
@@ -61,7 +68,7 @@
 			state.confirmedRevision = capture.revision;
 			return true;
 		}
-		return { load: load, beginLoad: beginLoad, completeLoad: completeLoad, isCurrentLoad: isCurrentLoad, setContentProgrammatically: setContentProgrammatically, noteContentChanged: noteContentChanged, markMutation: noteContentChanged, beginSave: beginSave, confirmSave: confirmSave, failSave: function () {}, setReadOnly: function (value) { readOnly = Boolean(value); }, isDirty: function () { return state.currentContent !== state.editorBaseline; }, snapshot: snapshot };
+		return { load: load, beginLoad: beginLoad, completeLoad: completeLoad, isCurrentLoad: isCurrentLoad, setContentProgrammatically: setContentProgrammatically, noteContentChanged: noteContentChanged, markMutation: noteContentChanged, restoreDraft: restoreDraft, beginSave: beginSave, confirmSave: confirmSave, failSave: function () {}, setReadOnly: function (value) { readOnly = Boolean(value); }, isDirty: function () { return state.currentContent !== state.editorBaseline; }, snapshot: snapshot };
 	}
 	window.LeanoteEditorState = { create: create };
 	window.LeanoteEditorSession = create({ readOnly: false });

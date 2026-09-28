@@ -41,7 +41,7 @@ const js = [
     'public/js/object_id.js',
   ], stripSourceMappingURL: true, output: 'public/js/dep.min.js', url: '/js/dep.min.js' },
   { name: 'app', kind: 'js', transform: 'esbuild-concat', inputs: [
-    'public/js/common.js', 'public/js/app/note.js', 'public/js/app/page.js',
+    'public/js/common.js', 'public/js/mutation-intents.js', 'public/js/app/note.js', 'public/js/app/page.js',
     'public/js/app/tag.js', 'public/js/app/notebook.js', 'public/js/app/share.js',
   ], output: 'public/js/app.min.js', url: '/js/app.min.js' },
   { name: 'plugins', kind: 'js', transform: 'esbuild-concat', inputs: [

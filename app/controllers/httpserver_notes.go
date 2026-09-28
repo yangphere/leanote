@@ -81,6 +81,23 @@ func nonEmptySaveMessage(msg string) string {
 	return msg
 }
 
+func workspaceWebSaveResponse(result service.WorkspaceCommandResult, protected bool) interface{} {
+	re := info.NewRe()
+	re.Ok = result.OK()
+	if !re.Ok {
+		re.Msg = workspaceWebSaveMessage(result.Error)
+	}
+	if !protected || !re.Ok {
+		return re
+	}
+	// Do not embed Re's MarshalJSON method: it would omit the added revision.
+	type saveEnvelope info.Re
+	return struct {
+		saveEnvelope
+		Usn int
+	}{saveEnvelope: saveEnvelope(re), Usn: result.USN}
+}
+
 type NotesHTTPServer struct {
 	RunMode string
 }
@@ -225,12 +242,7 @@ func (s *NotesHTTPServer) updateNoteOrContent(c *httpserver.Context) httpserver.
 		expectedUSN = &noteOrContent.ExpectedUsn
 	}
 	result := noteService.SaveNote(service.SaveNoteCommand{ActorUserID: c.GetPrincipal().UserID, OperationID: noteOrContent.OperationId, NoteID: noteOrContent.NoteId, ExpectedUSN: expectedUSN, Metadata: metadata, Content: content, Abstract: abstract, UpdatedTime: time.Now()})
-	re := info.NewRe()
-	re.Ok = result.OK()
-	if !re.Ok {
-		re.Msg = workspaceWebSaveMessage(result.Error)
-	}
-	return c.RenderJSON(re)
+	return c.RenderJSON(workspaceWebSaveResponse(result, noteOrContent.OperationId != ""))
 }
 
 func (s *NotesHTTPServer) Index(c *httpserver.Context) httpserver.Result {
