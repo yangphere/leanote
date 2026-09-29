@@ -695,3 +695,25 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 27: Docker 管理员环境密码初始化与强制改密
+<!-- trellis-session: v=2 fp=df7cddf848c779c9 -->
+
+**Date**: 2026-09-29
+**Task**: Docker 管理员环境密码初始化与强制改密
+**Branch**: `dev`
+
+### Summary
+
+Compose 新增管理员邮箱/初始密码/ENV 恢复开关配置；启动 bootstrap 按邮箱认定管理员并禁用 demo；登录以数据库密码为准，恢复开关仅接受未消费指纹的 ENV 密码；Web/API 统一强制改密门禁。build/vet/focused tests 通过；真实 Docker/Mongo/浏览器验收未运行。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3fb823fe` | feat(docker): 支持管理员环境密码初始化与首次登录强制改密 |
+
+### Status
+
+[OK] **Completed**
