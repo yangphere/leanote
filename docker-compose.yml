@@ -1,0 +1,49 @@
+services:
+  mongo:
+    image: docker.io/library/mongo:8.0@sha256:376f5173003b5408d7b8e6989667231c0bf0cefdce379d7c814910429d1a7a85
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' | grep -qx 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  mongo-seed:
+    image: docker.io/library/mongo:8.0@sha256:376f5173003b5408d7b8e6989667231c0bf0cefdce379d7c814910429d1a7a85
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      - ./mongodb_backup/leanote_install_data:/leanote_install_data:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - >-
+        if [ "$$(mongosh --quiet --host mongo --eval
+        'db.getSiblingDB("leanote").getCollectionNames().length')" -gt 0 ]; then exit 0; fi;
+        mongorestore --host mongo --db leanote --dir /leanote_install_data --drop
+
+  leanote:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${LEANOTE_VERSION:?LEANOTE_VERSION must be set}
+    image: leanote:local
+    restart: unless-stopped
+    depends_on:
+      mongo-seed:
+        condition: service_completed_successfully
+    environment:
+      MONGODB_URL: ${MONGODB_URL:?MONGODB_URL must be set}
+      LEANOTE_APP_SECRET: ${LEANOTE_APP_SECRET:?LEANOTE_APP_SECRET must be set}
+    ports:
+      - "${LEANOTE_HTTP_PORT:?LEANOTE_HTTP_PORT must be set}:9000"
+    volumes:
+      - leanote-data:/var/lib/leanote
+
+volumes:
+  mongo-data:
+  leanote-data:

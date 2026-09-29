@@ -42,6 +42,7 @@ COPY --from=frontend /src/messages /app/messages
 COPY --from=frontend /src/public /app/public
 COPY conf/app.conf-default /app/conf/app.conf-default
 COPY conf/routes /app/conf/routes
+COPY --chown=10001:10001 --chmod=0440 conf/app.conf-docker /etc/leanote/app.conf
 RUN chmod 0755 /app/bin/leanote && chown -R 10001:10001 /app
 VOLUME ["/var/lib/leanote/private", "/var/lib/leanote/public", "/var/lib/leanote/backup"]
 USER 10001:10001

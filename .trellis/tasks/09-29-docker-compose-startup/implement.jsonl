@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "遵循仓库后端质量与安全边界，尤其是配置 fail-closed 和验证证据要求"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "检查新增配置是否重复现有容器配置事实来源"}

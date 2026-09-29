@@ -1,0 +1,12 @@
+[prod]
+db.urlEnv=${MONGODB_URL}
+db.dbname=leanote
+app.secret=${LEANOTE_APP_SECRET}
+http.addr=0.0.0.0
+http.port=9000
+content.private.data=/var/lib/leanote/private/files
+content.private.quarantine=/var/lib/leanote/private/quarantine
+content.public.data=/var/lib/leanote/public/upload
+content.public.quarantine=/var/lib/leanote/public/quarantine
+content.temporary=/var/lib/leanote/tmp
+admin.backup.root=/var/lib/leanote/backup

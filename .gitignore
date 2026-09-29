@@ -31,6 +31,7 @@ package/leanote/
 leanote.log
 dist/
 ci-summaries/
+/.env
 
 # 排除根目录下所有以 . 开头的目录，但保留 .trellis 目录
 /.*/
