@@ -13,3 +13,5 @@
 {"file":".trellis/tasks/09-08-delivery-verification/acceptance/notes-action-replay.md","reason":"按 38 个唯一 action 建立真实 HTTP 映射"}
 {"file":".trellis/tasks/09-08-delivery-verification/research/browser-release-evidence.md","reason":"区分 precheck 与 final 同 run/attempt，保留唯一 schema"}
 {"file":".trellis/tasks/09-08-delivery-verification/acceptance/release-recovery.md","reason":"实现已确认的受控补建及原执行关联，禁止覆盖、重建制品和镜像重推"}
+{"file":".trellis/tasks/09-08-delivery-verification/acceptance/gate-integrity.md","reason":"落实当前候选绑定、完整门禁、远端存在性分类及原候选恢复版本约束"}
+{"file":".trellis/tasks/09-08-delivery-verification/research/implementation-2026-09-29.md","reason":"核对已授权工具实现、真实场景执行器缺口、API来源和交叉检查裁定"}

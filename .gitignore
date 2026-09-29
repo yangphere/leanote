@@ -37,6 +37,7 @@ ci-summaries/
 !/.trellis/
 !/.github/
 /.github/*
+!/.github/actionlint.yaml
 !/.github/workflows/
 /.github/workflows/*
 !/.github/workflows/*.yml

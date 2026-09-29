@@ -37,6 +37,7 @@ jobs:
           go test ./app/httpserver ./app/controllers ./app/db ./app/service ./cmd/leanote -count=1
           echo "CI_DISCOVERED_COUNT=$count" >> "$GITHUB_ENV"
           echo "CI_EXECUTED_COUNT=$count" >> "$GITHUB_ENV"
+          echo 'CI_EXIT_CODE=0' >> "$GITHUB_ENV"
       - name: Write summary
         if: always()
         env: { CI_JOB_ID: go-1_26_7, CI_JOB_STATUS: '${{ job.status }}', GO_VERSION: '1.26.7', CI_DISCOVERY: passed }
@@ -75,6 +76,7 @@ jobs:
           go test ./app/httpserver ./app/controllers ./app/db ./app/service ./cmd/leanote -count=1
           echo "CI_DISCOVERED_COUNT=$count" >> "$GITHUB_ENV"
           echo "CI_EXECUTED_COUNT=$count" >> "$GITHUB_ENV"
+          echo 'CI_EXIT_CODE=0' >> "$GITHUB_ENV"
       - name: Write summary
         if: always()
         env: { CI_JOB_ID: go-1_27_0, CI_JOB_STATUS: '${{ job.status }}', GO_VERSION: '1.27.0', CI_DISCOVERY: passed }
@@ -128,6 +130,7 @@ jobs:
           LEANOTE_GOLDEN=replay LEANOTE_REQUIRE_MONGO=1 go test -p 1 ./app/tests/... -count=1 -timeout 30m
           echo "CI_DISCOVERED_COUNT=$count" >> "$GITHUB_ENV"
           echo "CI_EXECUTED_COUNT=$count" >> "$GITHUB_ENV"
+          echo 'CI_EXIT_CODE=0' >> "$GITHUB_ENV"
       - name: Write summary
         if: always()
         env: { CI_JOB_ID: mongo-8_0, CI_JOB_STATUS: '${{ job.status }}', GO_VERSION: '1.26.7', MONGO_VERSION: '8.0.29', CI_DISCOVERY: passed }
@@ -168,6 +171,7 @@ jobs:
           npm test
           echo "CI_DISCOVERED_COUNT=$count" >> "$GITHUB_ENV"
           echo "CI_EXECUTED_COUNT=$count" >> "$GITHUB_ENV"
+          echo 'CI_EXIT_CODE=0' >> "$GITHUB_ENV"
       - name: Write summary
         if: always()
         env: { CI_JOB_ID: node-build, CI_JOB_STATUS: '${{ job.status }}', CI_DISCOVERY: passed }
@@ -210,6 +214,7 @@ jobs:
           go run ./app/tests/harness/cmd/e2e -- sh -c 'npm run test:e2e:build && npm run test:e2e'
           echo "CI_DISCOVERED_COUNT=$count" >> "$GITHUB_ENV"
           echo "CI_EXECUTED_COUNT=$count" >> "$GITHUB_ENV"
+          echo 'CI_EXIT_CODE=0' >> "$GITHUB_ENV"
       - name: Write summary
         if: always()
         env: { CI_JOB_ID: chromium-e2e, CI_JOB_STATUS: '${{ job.status }}', PLAYWRIGHT_VERSION: '1.62.1', CI_DISCOVERY: passed }
@@ -278,6 +283,7 @@ jobs:
           scripts/package-smoke.sh "dist/leanote-v$(node scripts/version.mjs)-linux-amd64.tar.gz"
           echo 'CI_DISCOVERED_COUNT=1' >> "$GITHUB_ENV"
           echo 'CI_EXECUTED_COUNT=1' >> "$GITHUB_ENV"
+          echo 'CI_EXIT_CODE=0' >> "$GITHUB_ENV"
           echo 'CI_HEALTH_PATH=/healthz' >> "$GITHUB_ENV"
           echo 'CI_SERVICE_READINESS=passed' >> "$GITHUB_ENV"
           echo 'CI_HTTP_STATUS=200' >> "$GITHUB_ENV"
@@ -330,6 +336,7 @@ jobs:
           scripts/container-smoke.sh leanote:ci
           echo 'CI_DISCOVERED_COUNT=1' >> "$GITHUB_ENV"
           echo 'CI_EXECUTED_COUNT=1' >> "$GITHUB_ENV"
+          echo 'CI_EXIT_CODE=0' >> "$GITHUB_ENV"
           echo 'CI_HEALTH_PATH=/healthz' >> "$GITHUB_ENV"
           echo 'CI_SERVICE_READINESS=passed' >> "$GITHUB_ENV"
           echo 'CI_HTTP_STATUS=200' >> "$GITHUB_ENV"
@@ -369,6 +376,7 @@ jobs:
           node scripts/ci/validate-summaries.mjs ci-summaries
           echo 'CI_DISCOVERED_COUNT=7' >> "$GITHUB_ENV"
           echo 'CI_EXECUTED_COUNT=7' >> "$GITHUB_ENV"
+          echo 'CI_EXIT_CODE=0' >> "$GITHUB_ENV"
       - name: Write summary
         if: always()
         env: { CI_JOB_ID: summary, CI_JOB_STATUS: '${{ job.status }}', CI_DISCOVERY: passed }

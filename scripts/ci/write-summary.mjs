@@ -1,10 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { qualityJobs } from './quality-contract.mjs';
 
-const allowedJobs = new Set([
-  'go-1_26_7', 'go-1_27_0', 'mongo-8_0', 'node-build',
-  'chromium-e2e', 'package-smoke', 'container-smoke', 'summary',
-]);
+const allowedJobs = new Set([...qualityJobs, 'summary']);
 const failureCategories = new Set([
   'none', 'job_not_started', 'checkout', 'setup', 'dependency', 'compile', 'lint',
   'test', 'discovery_zero', 'service_readiness', 'drift', 'package', 'container',
@@ -88,8 +86,12 @@ if (status === 'passed' && healthPath !== null && (readiness !== 'passed' || htt
 }
 const exitCodeRaw = process.env.CI_EXIT_CODE || '';
 if (exitCodeRaw && !/^[0-9]+$/.test(exitCodeRaw)) throw new Error('CI_EXIT_CODE is invalid');
-let exitCode = exitCodeRaw ? Number(exitCodeRaw) : (status === 'passed' ? 0 : null);
-if (exitCode !== null && (!Number.isInteger(exitCode) || exitCode < 0)) throw new Error('CI_EXIT_CODE is invalid');
+let exitCode = exitCodeRaw ? Number(exitCodeRaw) : null;
+if (exitCode !== null && (!Number.isSafeInteger(exitCode) || exitCode < 0)) throw new Error('CI_EXIT_CODE is invalid');
+if (status === 'passed' && exitCode !== 0) {
+  status = 'failed';
+  if (category === 'none') category = 'unknown';
+}
 if (forcedFallback) {
   healthPath = null;
   readiness = 'not_run';

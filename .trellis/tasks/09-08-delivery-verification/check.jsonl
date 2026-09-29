@@ -13,3 +13,5 @@
 {"file":".trellis/tasks/09-08-delivery-verification/acceptance/evidence-matrix.md","reason":"按九轨 13 行交付证据检查覆盖及真实状态"}
 {"file":".trellis/tasks/09-08-delivery-verification/acceptance/notes-action-replay.md","reason":"核对 38 个 action、历史 21/17 与当前独立证据"}
 {"file":".trellis/tasks/09-08-delivery-verification/acceptance/release-recovery.md","reason":"复核补建正负例、原 run/attempt 关联、未知/并发和零覆盖断言"}
+{"file":".trellis/tasks/09-08-delivery-verification/acceptance/gate-integrity.md","reason":"复核 GI-01～GI-09 失败传播、当前执行身份、原候选版本和零远端写入"}
+{"file":".trellis/tasks/09-08-delivery-verification/research/implementation-2026-09-29.md","reason":"核对已授权工具实现、真实场景执行器缺口、API来源和交叉检查裁定"}

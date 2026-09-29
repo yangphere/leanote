@@ -2,6 +2,8 @@
 
 ## 1. 责任与复用
 
+2026-09-29 收尾范围以 PRD“最新关闭决定”为准：仅归档仓库工具实现与本地验证；本文真实场景执行、候选发布及外部资源条件保留为未运行合同，不再阻断本次归档。此范围缩减不改变工具运行时的拒绝规则或实际发布授权要求。
+
 交付层只组合现有服务合同、harness、CI、包、browser 和 release validators。九轨入口与 AC 映射集中在 `acceptance/evidence-matrix.md`，notes 38 项清单集中在其上游 inventory；本任务 `notes-action-replay.md` 只是执行索引，不是第二业务合同。
 
 服务/适配缺陷记 owning task+失败场景+影响 AC，阻断相关门禁并回流 owner；环境/fixture/交付脚本缺陷由 delivery 修复。不能为让测试通过而重写 Golden、放宽权限、猜 USN 或在 harness 构造成功 receipt。归档 owner 的历史矩阵不被本任务倒填通过；新证据在本任务追加并反向引用。
@@ -34,6 +36,14 @@ summary 格式正确不能证明真实浏览器执行或日志安全。受保护
 
 仅使用合成测试账号和数据；秘钥由受保护环境注入，不记录值。公开 artifact 无正文、cookie/token、完整授权 URL、trace/截图/视频/原始服务日志；验证故障诊断输出同样脱敏。仅靠字段 allowlist 不声称已完成泄漏验证。
 
+### 门禁汇总与 schema 扩展
+
+现有 quality summary 的 producer/validator 只允许七个固定 job，workflow 汇总也固定计数为七；这些是现状，不是 R2～R8 已覆盖的证据。后续在现有 summary producer/validator 边界维护必需 job/场景集合，同步 workflow 依赖及 contract tests，禁止另写只认手工 passed 的发布旁路。扩展字段应同时明确 schema/版本兼容和显式拒绝规则；保留现有 browser 两文件与 release inputs 五文件 allowlist，不把业务清单塞进不允许的 artifact。
+
+业务细项按上游文件+条款/场景标识映射到 E-D01～13、runner/job 和结果。既有编号复用；无编号的边界子项使用稳定锚点并标明来源。场景可复用执行结果，但每项断言仍要可追溯；七个 job、十三个汇总行、38 action 和八槽四 coverage 是不同分母，互不代替。场景清单由批准规格生成/维护并在执行前冻结，不能由本次实际发现的用例反推必需集合。
+
+validator 将可信执行上下文作为预期身份，既检查记录彼此一致，也检查与该上下文一致。passed 必须有实际执行、成功退出及已确认清理；场景与 job 状态分别映射，不能把任务层的 partial/blocked 直接写入现有只接受 passed/failed/cancelled/not_run 的 job schema。启动前失败或取消仍留脱敏失败记录，不能因未生成 summary 而省略必需 job。判定和工作流接线负例见 `acceptance/gate-integrity.md`，均待后续实现。
+
 ## 4. 运行隔离、异常与兼容
 
 - native HTTP 使用 `cmd/leanote -runMode test`，数据库强制 `leanote_test`；service focused fixture 若有专用测试库，先核对 allowlist/隔离证明。failpoint、restore、kill/restart 仅作用于明确所属的测试资源，不探测/修改用户库。
@@ -64,7 +74,7 @@ summary 格式正确不能证明真实浏览器执行或日志安全。受保护
 
 1. 显式进入 recovery 模式，指定仓库、strict tag、完整 candidate SHA、原 release run/attempt。普通发布入口不因发现已有镜像而自动转 recovery。具体远端操作沿用已有明确发布授权；本轮规则确认只更新规格。
 2. 从可信的原 workflow 执行记录核验 repo/ref/commit/run/attempt，以及发布前 validate、quality、browser、扩展业务门禁均通过。原整体 run 可因 publish 失败而失败，不能要求它整体 success，也不能把 publish 之前的失败当作可恢复。
-3. 读取该原 run/attempt 的原始 release inputs、browser 两文件及必要联验证据，验证现有 schema、文件 allowlist、全部 hash、版本、epoch、平台和 image digest。原 artifacts 缺失/过期、来源不能认证或被撤销则阻断，不重建、不改 provenance、不用其他 run 的相同文件名替换。
+3. 读取该原 run/attempt 的原始 release inputs、browser 两文件及必要联验证据，验证现有 schema、文件 allowlist、全部 hash、版本、epoch、平台和 image digest。原 artifacts 缺失/过期、来源不能认证或被撤销则阻断，不重建、不改 provenance、不用其他 run 的相同文件名替换。原 run 的 workflow 路径/执行身份、attempt-specific job 结果和 artifact ID 都须核对，显示名称或 latest attempt 不能替代。恢复执行器与原候选数据分离：`package.json`、`package-lock.json` 及 commit epoch 从已核实的原 candidate 读取；当前 validator 的 cwd 默认值不得把 dispatch 分支版本混入原件核验，也不得通过改版本文件或环境中的 run/attempt 绕过校验。
 4. 分别记录 `source_run/source_attempt/source_artifact_ids` 与 `recovery_run/recovery_attempt`、候选身份、原摘要和核验结果；复用唯一 validator 的校验逻辑，增加明确 recovery 关联语义，不能靠覆盖 GITHUB_RUN_ID/ATTEMPT 冒充原执行。普通 final 的同 run/attempt guard 不变。
 5. 恢复入口必须实现与普通发布共用的仓库/tag 并发锁。现有 `release.yml:7-9` 仅为普通发布配置 `release-${{ github.ref }}`；tag push 时实际 group 为 `release-refs/tags/<tag>`。recovery 必须从显式目标 strict tag 派生完全相同的 `release-refs/tags/<tag>`，设置 `cancel-in-progress: false`，不能使用 dispatch 分支的 `github.ref`，也不能加入 workflow 名或 run/attempt。该互斥是待实现要求，不能因普通发布已有锁就视为 recovery 已具备。锁须覆盖远端重查、create 和最终读回；在锁内只读重查远端 tag peel、GHCR digest/元数据和 Release，只有身份全部一致且 Release 确认不存在才允许 create；网络/权限错误保持 unknown。镜像缺失不能借 recovery 重推。
 6. 创建前再次核对 tag/digest/Release 状态，仅从已验证的原 tarball、checksum、build-metadata 创建 Release。不得以当前 checkout 重建制品、覆盖已有资产、删除对象或移动 tag；create 不使用 clobber/update。若竞争者已创建，重新读回后按完整一致 no-op 或 conflict 分类，不覆盖。
@@ -72,6 +82,8 @@ summary 格式正确不能证明真实浏览器执行或日志安全。受保护
 
 恢复只补缺失 Release，不扩展为修复已有但不完整的 Release。原证据过期不能靠重跑普通流程覆盖既有 tag/image；须保持阻断并记录缺失材料。恢复正负例及无写入断言见 `acceptance/release-recovery.md`。
 
-## 6. 本轮限制
+远端查询先核验仓库/包身份及读取权限，再将结构化结果分类为 exists/absent/unknown；CLI 非零退出或任意文本包含 not found 不直接等于 absent。权限不足、限流、网络/解析错误、错误对象的 404 都保持 unknown 并零写入。普通发布与恢复复用此边界，不各自维护宽泛文本匹配。普通发布 create 后也须按步骤 7 核对三项发布资产实际字节和正式 Release 形态，不能只凭 create 命令退出 0 宣告完成；image-build-inputs/release-inputs 是内部交接材料，不新增为公开 Release 资产。
 
-以上为审核后的目标设计；现有 workflow 的实现差距见 `research/spec-audit-2026-09-29.md`。本轮不改任何 runtime/CI/script，不运行真实环境验证。
+## 6. 审核历史与当前实现边界
+
+审核阶段仅修改规格的限制已由用户“批准激活进入实现”取代。用户随后确认受保护环境尚未部署，本轮先完成仓库工具并保留真实验收阻断。工具实现、测试和未完成场景见 research/implementation-2026-09-29.md 与 acceptance/evidence-matrix.md；不把本地合同测试当作综合交付完成，未获具体远端发布、commit/archive/push 授权。

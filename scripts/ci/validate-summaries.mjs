@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { qualityJobs, executionIdentity, assertExecutionIdentity } from './quality-contract.mjs';
 
-const expected = ['go-1_26_7', 'go-1_27_0', 'mongo-8_0', 'node-build', 'chromium-e2e', 'package-smoke', 'container-smoke'];
+const expected = qualityJobs;
 const statuses = new Set(['passed', 'failed', 'cancelled', 'not_run']);
 const readinessStates = new Set(['passed', 'failed', 'not_run', 'unknown']);
 const failureCategories = new Set([
@@ -64,6 +65,8 @@ function validateRecord(record, file) {
   if (!Array.isArray(record.status_codes) || record.status_codes.length > 20 || record.status_codes.some((value) => !Number.isSafeInteger(value) || value < 100 || value > 599)) throw new Error(`${file}.status_codes invalid`);
   if (!isDate(record.generated_at)) throw new Error(`${file}.generated_at invalid`);
   if (record.status === 'passed' && record.failure.category !== 'none') throw new Error(`${file} passed with a failure category`);
+  if (record.status === 'passed' && (record.failure.exit_code !== 0 || record.service.exit_code !== 0)) throw new Error(`${file} passed with an unverified exit code`);
+  if (record.tests.executed_count !== null && record.tests.discovered_count !== null && record.tests.executed_count > record.tests.discovered_count) throw new Error(`${file} execution count exceeds discovery`);
   if (record.status !== 'passed' && record.failure.category === 'none') throw new Error(`${file} non-pass has no failure category`);
 }
 
@@ -76,11 +79,9 @@ for (const file of files) {
   validateRecord(record, file);
   records.push(record);
 }
-const baseline = records[0];
+const currentExecution = executionIdentity(process.env);
 for (const record of records) {
-  if (record.commit !== baseline.commit || record.ref !== baseline.ref || record.workflow !== baseline.workflow || record.run.id !== baseline.run.id || record.run.attempt !== baseline.run.attempt) {
-    throw new Error('quality-gate summary provenance is inconsistent');
-  }
+  assertExecutionIdentity(record, currentExecution);
   if (record.status !== 'passed') throw new Error(`quality-gate job ${record.job} failed`);
 }
 process.stdout.write(`validated ${records.length} quality-gate summaries\n`);

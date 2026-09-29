@@ -55,3 +55,37 @@ Q-DV1 已于 2026-09-29 由用户答复“允许”：允许核验后受控补�
 - 所有历史 runtime 证据均明确来自上游矩阵，不冒充本轮重跑。原 notes 旧 Revel 回放不能替代当前 native harness。
 - 本轮只验证 task contexts、JSON/路径/ID 覆盖、Markdown 引用和 git diff 范围/空白；不运行 Go/Node 产品测试、服务、数据库、浏览器、容器或发布。最终具体结果在 acceptance 矩阵记录。
 - task start 提示 branch=base_branch=dev 的未来 PR/archive 限制；记录为后续流程前置，本轮没有切分支、commit/archive/journal/push。
+
+## 6. 同日复审（基线 e1dfd907）
+
+本节对应用户再次要求按轨道选择并先审规格的本次执行，前五节保留首次审核历史。开始时工作树干净，当前任务已为 `in_progress`；重新核对父任务及九项 `meta.depends_on` 的归档 completed 状态后，仍选择唯一未完成叶 `09-08-delivery-verification`。已向用户先报告选择，本次没有重复 start、创建任务或改动 task.json。
+
+复审覆盖目标、范围、业务与兼容不变量、输入输出、交互、异常、数据/隐私、上下游交接和验收可实施性。已确认 Q-DV1 继续有效，不把此前规则批准解释为本次功能开发或具体发布授权。
+
+| 发现 | 当前实现依据 | 规格处置 / owner |
+| --- | --- | --- |
+| RA-01 / 高：七项 summary 内部一致不等于来自当前候选；扩展交接不可仅增加表格 | `scripts/ci/validate-summaries.mjs:4,79-85` 只允许七个 job 并以首记录为身份基准；`write-summary.mjs:4-7`、`quality-gate.yml:352-370` 分别维护集合/计数 | PRD R1、design §3 定义可信执行身份、完整必需场景集合及现有 producer/validator/workflow 同步；GI-01/02/04；delivery 后续实现 |
+| RA-02 / 高：passed 与非零退出可同时出现，缺乏明确拒绝用例 | `write-summary.mjs:56-57,89-92` 分别计算 status/exitCode；`validate-summaries.mjs:48,66-67` 校验退出类型和 category，却未要求 passed 对应退出 0 | 保留 R10 原失败/cleanup 不可通过的目标，增加 GI-03 和 schema 状态映射，不在审核阶段改脚本 |
+| RA-03 / 高：stderr 文本 not found 不足以区分缺资源与无权限/错误目标 | `release.yml:73-94` 用宽泛错误正文正则判空 | R9/design §5 明确目标身份、读取权限及结构化 exists/absent/unknown 分类；GI-05，普通发布与恢复共用边界 |
+| RA-04 / 高：跨分支 recovery 的原候选版本与执行器版本未明确隔离 | `validate-release-artifact.mjs:10,39-46` + `version.mjs:7-10` 从 cwd 读取版本并从 Git 取 epoch | 原 SHA 的版本文件/epoch 为候选事实；明确指定 source attempt、workflow 身份和 artifact ID；GI-06/08，不伪造当前版本或 provenance |
+| RA-05 / 中：普通发布需要和恢复相同的最终结果核对，不能止于 create 成功 | `release.yml:114-119` 以 create 结束，无后续资产字节读回 | design §5、GI-07 明确三项公开资产、正式发布形态及 partial/unknown；GI-09 明确具体执行授权，均是既有 R9 的验收细化 |
+
+新增 `acceptance/gate-integrity.md` 九项场景全部 `unrun`，已接入 AC-DV9、E-D13、执行计划与两份上下文清单。方案复用既有 validator/producer/harness，不引入第二业务事实来源。现有脚本中的实现缺口保留为后续 delivery 工作，未在本轮修复代码。
+
+### 九轨交接独立复核与主流程裁定
+
+只读代理检查了本叶 PRD/矩阵及九个归档叶的 PRD/验收矩阵；主流程对提示逐项复核，没有照搬历史缺口：
+
+- **RA-06 / 高，收敛范围**：content 矩阵 2026-09-17 早段记录 legacy orphan/无 repair，但后续 storage reliability 段已接统一 create repair。`app/service/content_create_repair.go` 仍是 owner-row 核对入口，服务端 repair 不等于客户端 response-loss 去重。interface PRD D-H7/AC-H9 和 backlog MOD-004 已批准 CopyHttpImage 不新增参数、每请求新导入且幂等延期不阻断父任务。R4/E-D06/执行计划明确该例外，避免“同操作不重复”误扩为全部 legacy 请求。
+- **RA-07 / 中，补显式验收而非重新决策**：content 历史记录称 GetImages/GetAlbums 错误 wire 未决；较新 interface PRD D-H6、矩阵 B3 已冻结 500+原 body。当前 `app/controllers/httpserver_notes.go:670-690` 实现与此一致；`Attach.GetAttachs` 后续分支仍保留 legacy 200 error。R6/E-D09 逐 action 接收真实 HTTP 负例，不把历史 open 当新待确认事项，也不把只读代码核对当运行通过。
+- **RA-08 / 中，历史状态解释**：admin AC-A9 的 in-progress 与当前证据状态集不同，仅在本叶接收规则区分原状态/任务生命周期/当前候选实证；不回写归档材料。
+- **未采纳为新增缺口**：persistence 旧矩阵未单列 Mongo 8 standalone，但 delivery R2/E-D02/Phase2 已明确三种拓扑，归档叶缺一条汇总文字不阻止本叶承接；不增加重复规格或改上游归档。
+
+未发现需要用户重新决定的关键产品要求。尚未核验的受保护 runner、浏览器/隔离服务、候选及具体发布授权仍是执行前置；没有以假设替代真实条件。
+
+### 本次验证结果
+
+- `task.py validate .trellis/tasks/09-08-delivery-verification` 通过，implement/check 各 16 个有效且不重复的路径；当前叶仍为 in_progress，九个依赖均 archived completed。
+- 静态检查通过：AC-DV1～10、E-D01～13；新增 GI-01～09 和原 RR-01～12 均为 unrun；D-H6/D-H7/MOD-004 显式接收。检查命令初次因多层字符串转义失败，修正后重新完整执行通过，未把失败命令计为验证成功。
+- `git diff --check` 通过；含新增文件共八个改动，全部位于本叶目录，task.json、归档任务、业务实现、测试、CI 和生成资源均未改动。引用存在、无尾随空白/冲突标记。
+- 本轮无功能编码、产品测试、服务/数据库/浏览器/容器启动或远端写入；未提交、归档、push，也未新增任务。规格审核完成不表示真实交付验收完成。

@@ -2,7 +2,7 @@
   "id": "delivery-verification",
   "name": "delivery-verification",
   "title": "交付层：集成验证与版本发布",
-  "description": "建立跨层 Golden、USN、真实浏览器、Docker、PDF、制品和 GitHub/GHCR 发布验收。",
+  "description": "完成仓库内交付门禁、证据校验与受控发布恢复工具；2026-09-29 按用户决定排除需要真实环境验证的功能并本地提交归档，保留真实验收 unrun 事实。",
   "status": "in_progress",
   "dev_type": null,
   "scope": "delivery layer / integration and release",

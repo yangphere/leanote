@@ -1,0 +1,108 @@
+name: Recover Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Original strict vX.Y.Z tag'
+        required: true
+        type: string
+      commit:
+        description: 'Original full 40-hex candidate commit'
+        required: true
+        type: string
+      source_run:
+        description: 'Original Release workflow run ID'
+        required: true
+        type: string
+      source_attempt:
+        description: 'Original successful gates attempt'
+        required: true
+        type: string
+      inputs_artifact:
+        description: 'Original leanote-release-inputs-v1 artifact ID'
+        required: true
+        type: string
+      browser_artifact:
+        description: 'Original browser-release-matrix-v1 artifact ID'
+        required: true
+        type: string
+      delivery_artifact:
+        description: 'Original leanote-delivery-evidence-v1 artifact ID'
+        required: true
+        type: string
+
+concurrency:
+  group: release-refs/tags/${{ inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    if: github.repository == 'yangphere/leanote'
+    environment: release
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    permissions:
+      contents: write
+      packages: read
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag }}
+      RECOVERY_COMMIT: ${{ inputs.commit }}
+      SOURCE_RUN_ID: ${{ inputs.source_run }}
+      SOURCE_ATTEMPT: ${{ inputs.source_attempt }}
+      SOURCE_INPUTS_ARTIFACT: ${{ inputs.inputs_artifact }}
+      SOURCE_BROWSER_ARTIFACT: ${{ inputs.browser_artifact }}
+      SOURCE_DELIVERY_ARTIFACT: ${{ inputs.delivery_artifact }}
+      RELEASE_APPROVED_IDENTITY: ${{ vars.RELEASE_APPROVED_IDENTITY }}
+      RELEASE_CANDIDATE_ROOT: candidate
+      RELEASE_RESULT_PATH: release-result.json
+    steps:
+      - name: Checkout approved recovery executor
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: '${{ github.sha }}', persist-credentials: false }
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with: { node-version: '24.20.0' }
+      - name: Verify original execution and artifact identities
+        run: node scripts/release-runner.mjs source-check
+      - name: Checkout original candidate separately
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.commit }}
+          path: candidate
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ inputs.inputs_artifact }}
+          run-id: ${{ inputs.source_run }}
+          github-token: ${{ github.token }}
+          path: dist
+          merge-multiple: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ inputs.browser_artifact }}
+          run-id: ${{ inputs.source_run }}
+          github-token: ${{ github.token }}
+          path: test-results
+          merge-multiple: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ inputs.delivery_artifact }}
+          run-id: ${{ inputs.source_run }}
+          github-token: ${{ github.token }}
+          path: delivery-results
+          merge-multiple: true
+      - name: Reconcile or create missing Release from original assets
+        run: node scripts/release-runner.mjs recover
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: recovery-result-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-result.json
+          retention-days: 7
+          if-no-files-found: error

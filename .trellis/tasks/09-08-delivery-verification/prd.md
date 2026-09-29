@@ -2,9 +2,17 @@
 
 ## Goal
 
-以真实可审计证据验证所有分层任务的兼容性，并建立不自动部署生产的版本制品交付。
+本次交付完成仓库内交付门禁、证据校验及受控发布恢复工具。原始目标为以真实可审计证据验证所有分层任务的兼容性，并建立不自动部署生产的版本制品交付；真实环境部分按以下最新决定排除本次关闭范围。
+
+## 最新关闭决定（2026-09-29）
+
+用户明确要求：“需要真实环境验证的功能都忽略掉. 直接提交并归档”。本任务按已实现仓库工具及本地确定性验证关闭；受保护场景执行器、未补齐的 17 个 Web action replay、Mongo/HTTP/SMTP/文件卷与故障场景、Linux/PDF、八槽浏览器和真实发布均不再作为本次归档条件。它们未实现或未运行的事实保留在 research/implementation-2026-09-29.md，不记为 passed，不声称综合联验完成。
+
+本决定覆盖历史“真实证据未齐不可归档”和“未授权提交归档”的本次收尾限制；授权本地工作提交、归档及日志记录，不授权 push 或真实远端发布。不删除已实现工具，不放宽 CI/发布的证据、权限与清理门禁。以下 R1～R9 和 AC 保留为原始完整交付合同；涉及真实环境的条款本次排除，其余按 acceptance/evidence-matrix.md 的本地工具证据验收。
 
 ## Scope and review status
+
+- 2026-09-29 最新授权：用户已批准进入实现；以下“本轮仅规格审核”描述属于已完成的审核阶段历史。后续按本 PRD/design/implement 落实交付工具与验收，不据此取得具体远端发布、commit/archive/push 授权。
 
 - 2026-09-29 选择并激活既有 P1 叶任务；`children=[]`，9 个 `meta.depends_on` 均为归档 completed。父任务只协调，当前没有更早未完成的 ready 叶。归档不等于真实验收完成。
 - 本轮仅规格审核：允许本任务 PRD/design/plan/context、research/acceptance 和授权激活所需元数据；不修改业务代码、测试脚本、CI 或生成资源，不提交、不发布。
@@ -18,6 +26,8 @@
 输入为干净检出的完整 candidate SHA、批准的业务契约及 fixture、锁定工具链/镜像、隔离测试配置和受保护 runner。正式发布另需与项目版本一致的严格 `vX.Y.Z` tag、仓库身份及明确发布授权。缺失/畸形 SHA、输入文件、依赖或凭据在副作用前失败，禁止自动补零、切换环境或借用旧制品。
 
 输出为逐场景证据矩阵、脱敏质量 summary、两文件 browser artifact、release-inputs/build-metadata/校验和/tarball，以及授权发布后的 GHCR digest 和 Release 资产核对结果。字段与文件 allowlist 复用现有 validator，不另建并行 schema。每条证据绑定候选、真实 run/attempt、环境、discovery/execution/pass/fail/skip、命令、退出与清理状态、artifact 和失败 owner，详见 acceptance 矩阵。
+
+证据彼此一致不是候选绑定：汇总还必须与可信执行上下文的 repo、candidate SHA、ref、workflow、run/attempt 对账，不能由待验输入自行声明预期身份。发布前必须证明所有必需场景均有唯一接收记录和实际执行结果；缺项、重复项抵数、仅 discovery、未知/非零退出或未确认清理均不得通过。具体门禁负例见 `acceptance/gate-integrity.md`。
 
 历史/本地/预检证据与最终发布证据分开：历史通过不能直接给新候选放行；本地记录不伪造 GitHub run；普通最终发布输入与浏览器 artifact 必须由该 release run/attempt 生成。独立 tag-precheck 仅验证候选，不能复用为 final，也不能替代实际发布完成。Q-DV1 恢复只消费原发布 run/attempt 的完整已验证制品，另记恢复 run/attempt 与原执行的关联，不能把原 provenance 改成恢复 run。
 
@@ -39,7 +49,9 @@ PR/push 质量门覆盖 Go 1.26/1.27、Mongo 8、Node 24、JS/build、Chromium�
 
 按 notes action inventory 的 38 个 ID 建立 live HTTP 逐项映射；历史 21/38（17 API+4 Web）只是线索，当前候选重新执行，补齐 17 Web，不能以测试事件数或 registry 数冒充覆盖。记录 method/path、principal、字段 presence、status/Content-Type/body、owner/USN/history/receipt 和 baseline/target。
 
-在隔离 Mongo/文件根验证 claim/apply/verify/save/commit 的 kill/restart、Mongo failpoint、跨主机/持久化卷文件故障：同操作不重复 USN/history/destination、不回拨 counter、冻结资产 manifest、unknown 可核对且不伪成功；验证 notes asset adapter 消费唯一 content publish/verify primitive。副作用故障与 cleanup 故障分别保留，未执行故障点保持 unrun。
+在隔离 Mongo/文件根验证 claim/apply/verify/save/commit 的 kill/restart、Mongo failpoint、跨主机/持久化卷文件故障：具备稳定且可重定位 operation identity 的同一逻辑操作不重复 USN/history/destination、不回拨 counter、冻结资产 manifest、unknown 可核对且不伪成功；验证 notes asset adapter 消费唯一 content publish/verify primitive。副作用故障与 cleanup 故障分别保留，未执行故障点保持 unrun。
+
+无 operation identity 的 legacy Web image/attachment upload 和 `CopyHttpImage`，验收已有 create-manifest 的 partial identity、`partial_write`、owner-row exact/absent/conflict 核对、quarantine/late-row restore 与二次 Verify 后清理；不能把服务端修复能力解释为响应丢失后的客户端重试幂等。interface D-H7 / `docs/modernization-backlog.md` MOD-004 已明确 `CopyHttpImage` 不新增参数、每次请求新导入，跨请求去重延期且不阻断本父任务；本任务验证该边界及已有修复合同，不扩大实现范围或伪造 operation identity。
 
 ### R5 — Publishing 与 admin 不得漏验
 
@@ -50,6 +62,8 @@ PR/push 质量门覆盖 Go 1.26/1.27、Mongo 8、Node 24、JS/build、Chromium�
 ### R6 — Native HTTP 与第一方交互
 
 只使用 `cmd/leanote -runMode test` 和隔离 `leanote_test` 的原生 harness。registry/action、binder、404/405、session、locale/template、SIGTERM、旧运行时清扫按 interface AC-H1～H12 验证；不得生成第二运行时。
+
+明确接收 interface D-H6 / AC-H9：`File.GetImages`、`Album.GetAlbums` 依赖失败返回 500、`application/json; charset=utf-8`，body 分别保留空 Page / `[]`，成功响应不变；真实 HTTP Golden 区分“成功但空”和“读取失败”。此受控例外不推广到 `Attach.GetAttachs`，其失败保留 200 + legacy error envelope（`Re.Msg=error`）。
 
 承接 presentation AC-PF1～PF7 全部 partial/unrun/delegated-unrun：干净候选构建零漂移、资源/iframe/编辑器、未编辑零写入、HTML 语义；update/copy/shared-copy/delete/move 中 OperationId/ExpectedUsn 生成、冻结未知重试、意图换代、stale conflict、HTTP+DB receipt；move 权威读取失败后的重读、copy/delete 队列出口及旧客户端 Golden。新建分支不擅自扩展 receipt，页面重载不恢复敏感请求体或自动重放。
 
@@ -71,6 +85,8 @@ Chrome/Edge/Firefox/Safari × current_major/previous_major 八槽；每槽固定
 
 现有流程先 GHCR push 再 GitHub Release。任何网络结果未知或部分发布必须保留 tag/commit/digest/资产身份，先只读核对远端；不得把“API 调用失败”当作“远端未写入”。Q-DV1 已确认允许受控补建：原发布必需门禁均通过、原制品完整可验证、远端 tag/commit 与 GHCR digest 一致，并明确确认 Release 不存在时，仅以原制品创建缺失 Release。恢复不得 build/push 镜像、删除/覆盖 Release 或资产、移动/重推 tag；任何查询未知、身份冲突或证据缺失立即阻断。Release 已完整匹配时只读确认完成，已存在但不完整/不一致时阻断，不补传或覆盖已有 Release。GHCR 与 Release 均读回匹配才可确认交付完成，并区分本次补建与此前已完成。
 
+普通发布与恢复共用远端存在性分类：先确认目标仓库/镜像身份和读取权限，再依据对应资源查询的结构化结果判断存在、不存在或未知；错误正文出现 `not found` 不足以证明不存在。恢复时 tag/version/epoch 的期望值来自原 candidate 的版本文件和提交元数据，不能取 dispatch 分支的当前版本；原材料不可获取则阻断，不猜值或重建制品。
+
 ### R10 — 状态、责任与完成边界
 
 任务 `in_progress` 表示已激活；场景 `unrun/partial/passed/failed/blocked` 表示证据状态，两者不能混用。必需项跳过、环境缺失、执行零项、清理失败或 artifact 缺失不算 passed；blocked 标注原因、owner、恢复条件。代码缺陷回既有 owner，交付工具缺陷留本任务。全部证据和远端结果确认前，不把本任务或父级综合验收标为完成。
@@ -85,7 +101,7 @@ Chrome/Edge/Firefox/Safari × current_major/previous_major 八槽；每槽固定
 - [ ] AC-DV6：native interface 与 presentation 的完整交互/恢复/旧客户端兼容通过；零编辑零写入有 browser+HTTP+DB 联证。
 - [ ] AC-DV7：Linux/container 配置退出/未就绪、非 root/volumes/restart、包、PDF 正负 corpus/zero outbound/清理通过。
 - [ ] AC-DV8：八槽四 coverage 的真实浏览器来源、完整版本与 final artifact 校验通过；额外业务清单和脱敏通过。
-- [ ] AC-DV9：质量及发布 validators 对缺文件、错字段、错 tag/version、非法跨 run/attempt、digest 漂移、重复/未知状态有明确失败，校验失败零远端写入；恢复仅允许原执行与恢复执行的显式关联，不放宽普通 final guard。
+- [ ] AC-DV9：质量及发布 validators 对缺文件、错字段、错 tag/version、非法跨 run/attempt、digest 漂移、重复/未知状态有明确失败，校验失败零远端写入；`acceptance/gate-integrity.md` GI-01～GI-09 全部有证据；恢复仅允许原执行与恢复执行的显式关联，不放宽普通 final guard。
 - [ ] AC-DV10：全部必需证据通过，获具体发布执行授权后 GHCR/Release 均读回一致；按 `acceptance/release-recovery.md` 完成 Q-DV1 恢复正负例，包括响应丢失、并发和重复调用，没有覆盖、自动删除或镜像重推。
 
 ## Out of scope

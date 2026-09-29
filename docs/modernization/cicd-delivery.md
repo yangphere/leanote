@@ -6,6 +6,120 @@ release tag is strict `vX.Y.Z` and maps to
 The release workflow only creates the GitHub Release and pushes the immutable
 image tag after the quality gate passes.
 
+## Protected delivery gates and authorization
+
+The tag workflow requires validate, quality-gate, browser-evidence and
+delivery-evidence before publish. The delivery artifact is separate from
+the five-file release handoff and two-file browser handoff:
+leanote-delivery-evidence-v1 contains only catalog.json and
+delivery-evidence.json. Its catalog binds upstream acceptance documents,
+the 38 notes action IDs, unchecked presentation operations and extended
+environment/failure scenarios by source hashes. Counts alone are not proof
+that the underlying business assertions ran.
+
+Provision a self-hosted runner with the protected-delivery label and the
+delivery-validation environment. Its LEANOTE_DELIVERY_RUNNER_CONFIG
+environment variable names an absolute protected JSON file:
+
+~~~json
+{
+  "executable": "/opt/leanote-delivery/bin/verified-runner",
+  "sha256": "<reviewed executable SHA-256>",
+  "args": [],
+  "timeout_ms": 7200000
+}
+~~~
+
+The executable and all its dependencies must be reviewed and immutable; a
+hash of a generic interpreter alone does not bind scripts supplied in args.
+The workflow serializes this repository's delivery runs under a single
+protected-delivery-resources concurrency group because the native fixture
+uses fixed ports/container names. Provision an exclusive runner pool; a
+repository lock does not serialize unrelated repositories on the same host.
+The wrapper invokes it with absolute --catalog and --result paths in a
+private temporary directory, in a clean candidate checkout. The runner must
+execute every catalog scenario, perform its process/container/fixture cleanup,
+and return {cleanup_status, records}. Each record supplies the exact scenario
+ID, discovered/executed/passed/failed/skipped counts, exit code, cleanup state,
+assertion identifiers, environment identifier and fixture hash. Missing,
+duplicate, skipped, zero-execution or unclean records block publication.
+Raw process output is never an artifact. delivery-failure-<run>-<attempt>
+is a separate diagnostic artifact with sanitized stage/exit/cleanup data;
+it cannot satisfy a release gate. If the process is killed before confirming
+cleanup, cleanup remains unknown. Removing evidence files does not prove
+fixture cleanup.
+
+**Implementation boundary:** the wrapper, catalog and gate are implemented;
+the complete protected scenario executable and its 38-action HTTP/DB,
+kill/restart/failpoint, SMTP/backup, Linux/PDF and browser mappings are not
+provided by this repository change. No synthetic runner may stand in for
+them. Until reviewed adapters and isolated resources are provisioned, the
+extended gate is blocked and a release must not be attempted.
+
+Configure a protected release environment with required reviewers and
+deployment branch/tag restrictions. Reviewers must approve the executor
+revision (especially recovery dispatch branches) and the target candidate.
+Set its RELEASE_APPROVED_IDENTITY variable to the explicitly authorized
+yangphere/leanote@vX.Y.Z:<full-candidate-commit>. Scripts never construct an
+approval from workflow inputs. Administrators must prevent unreviewed
+overrides. Changing code is not release authorization.
+
+Normal publication rejects any existing image or Release. A typed GHCR
+MANIFEST_UNKNOWN is trusted only after a successful authenticated listing
+of that exact package. NAME_UNKNOWN, denied access, rate limits, transport
+and JSON errors block writes. Initial package provisioning is an explicit
+administrator operation: this workflow does not infer permission or silently
+create an unverified package. Check this constraint before the first release.
+
+## Recovering an interrupted release
+
+Use Recover Release only when the original image has already been published.
+Dispatch from an approved executor revision with tag, commit, source_run,
+source_attempt, inputs_artifact, browser_artifact and delivery_artifact.
+The last three are immutable artifact IDs, not names or newest artifacts.
+All must remain available within retention.
+
+Recovery and normal publication hold the identical repository-scoped lock
+release-refs/tags/<tag> with cancellation disabled. Recovery verifies the
+original push workflow, attempt-specific required jobs and repository/artifact
+identities before downloading. The original overall run may have failed in
+publish; its preceding gates must have succeeded. Artifact contents must
+bind the original run/attempt. Partial job reruns do not authorize mixing
+attempts. A revoked workflow or expired artifact blocks recovery.
+
+The current executor stays at the workspace root; a separate candidate/
+checkout supplies the original package/lock version, source epoch and
+acceptance catalog. Recovery never changes GITHUB_RUN_ID or attempt to
+impersonate the original run. It does not build, push images, move tags,
+delete releases, overwrite assets or fill in an incomplete existing Release.
+
+When the exact tag, image digest/OCI metadata and original gates match,
+and the Release is explicitly absent, recovery creates it once from the
+original tarball, checksum and build metadata. It then reads back the formal
+Release and hashes the three asset downloads. A fully matching existing
+Release returns already-complete without writes. An uncertain create response
+causes read-only reconciliation, never an automatic second create. Partial,
+conflicting or unknown state remains blocked/unconfirmed.
+
+release-result.json records the mode, target, source execution/artifact IDs,
+current executor and result. Failures preserve a named stage and sanitized
+reason; publication-unconfirmed means a write was attempted without a verified
+complete result. A failed image push runs the read-only reconcile command;
+its result does not change the failed job into successful publication.
+source-verified and preflight-passed describe intermediate checks only.
+If checkout, cancellation or artifact download prevents later steps, these
+are not publication success. Inspect the workflow conclusion as well.
+
+Before actual publication, retain this unchecked operational checklist:
+
+- [ ] Freeze and approve a clean candidate SHA, strict tag and image digest.
+- [ ] Provision reviewed delivery adapters and isolated Mongo/SMTP/volume/PDF resources.
+- [ ] Execute real Chrome/Edge/Firefox/Safari current and previous slots plus business checks.
+- [ ] Verify release reviewers, branch restrictions and exact approval identity.
+- [ ] Verify target-package read access and original artifact retention.
+- [ ] Obtain authorization for this specific remote publish/recovery operation.
+- [ ] Record actual tag, GHCR digest and Release asset read-back evidence.
+
 ## Production configuration
 
 The production entry point must be invoked exactly as follows:
