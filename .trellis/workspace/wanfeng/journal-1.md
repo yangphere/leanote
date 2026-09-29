@@ -673,3 +673,25 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 26: 添加 Docker Compose 启动配置
+<!-- trellis-session: v=2 fp=7409b9c5d7cd3e18 -->
+
+**Date**: 2026-09-29
+**Task**: 添加 Docker Compose 启动配置
+**Branch**: `dev`
+
+### Summary
+
+新增 Leanote Docker Compose、MongoDB seed、生产配置模板和 .env.example；忽略本地 .env。Docker 构建、Compose ready、重启幂等、缺失变量失败、任务校验均通过。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `64d84dfd` | feat(docker): 添加 Leanote Docker Compose 启动配置 |
+
+### Status
+
+[OK] **Completed**
