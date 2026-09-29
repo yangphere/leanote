@@ -36,8 +36,10 @@ type ConfigService struct {
 	findDemoUser        func(string) (info.User, error)
 	// findAdminUser/loadGlobalConfigs are same-package test seams; nil uses
 	// the UserService lookup and the Mongo configs collection.
-	findAdminUser     func(string) info.User
-	loadGlobalConfigs func() ([]info.Config, error)
+	findAdminUser         func(string) info.User
+	findAdminUserByID     func(string) (info.User, error)
+	findBootstrappedAdmin func() (info.User, error)
+	loadGlobalConfigs     func() ([]info.Config, error)
 	// snapshotLoaded is set only after InitGlobalConfigsWithError published a
 	// complete snapshot, so callers can tell "not loaded" from "not
 	// configured" (D-H9).
@@ -46,7 +48,7 @@ type ConfigService struct {
 
 // AppConfigSource is the read-only first-party application configuration
 // view behind the global configuration snapshot. It only supplies the
-// non-secret keys adminUsername (default "admin") and site.url, and is
+// non-secret keys adminUsername (default "admin"), adminEmail and site.url, and is
 // run-mode agnostic: cmd/leanote injects its validated *httpserver.Config and
 // the legacy entry used to inject a global config object. ConfigService now
 // reads only this first-party source for the snapshot.
@@ -96,8 +98,12 @@ func (this *ConfigService) InitGlobalConfigsWithError() error {
 		return errConfigDependencies
 	}
 	findAdmin := this.findAdminUser
+	findAdminByID := this.findAdminUserByID
 	loadConfigs := this.loadGlobalConfigs
-	if (findAdmin == nil || loadConfigs == nil) && (db.Configs == nil || userService == nil) {
+	if loadConfigs == nil && db.Configs == nil {
+		return errConfigDependencies
+	}
+	if findAdmin == nil && findAdminByID == nil && userService == nil {
 		return errConfigDependencies
 	}
 	if findAdmin == nil {
@@ -106,16 +112,55 @@ func (this *ConfigService) InitGlobalConfigsWithError() error {
 	if loadConfigs == nil {
 		loadConfigs = loadGlobalConfigsFromDatabase
 	}
+	if findAdminByID == nil {
+		findAdminByID = func(userID string) (info.User, error) {
+			if !db.IsValidObjectIDHex(userID) || db.Users == nil {
+				return info.User{}, errConfigDependencies
+			}
+			var user info.User
+			err := db.Users.FindId(db.MustObjectIDFromHex(userID)).One(&user)
+			return user, err
+		}
+	}
+	findBootstrapped := this.findBootstrappedAdmin
+	if findBootstrapped == nil {
+		findBootstrapped = func() (info.User, error) {
+			var markers []info.Config
+			if err := db.Configs.Find(bson.M{"Key": "adminBootstrapCompleted"}).All(&markers); err != nil {
+				return info.User{}, fmt.Errorf("load administrator bootstrap marker: %w", err)
+			}
+			if len(markers) != 1 {
+				return info.User{}, errors.New("administrator bootstrap marker is missing or not unique")
+			}
+			user, err := findAdminByID(markers[0].ValueStr)
+			if err != nil {
+				return info.User{}, fmt.Errorf("load bootstrapped administrator: %w", err)
+			}
+			return user, nil
+		}
+	}
 	source := appConfigSource
 	if source == nil {
 		return errors.New("application configuration source is not initialized")
 	}
 	adminUsername, _ := source.String("adminUsername")
-	if adminUsername == "" {
-		adminUsername = "admin"
+	adminEmail, _ := source.String("adminEmail")
+	adminEmail = strings.ToLower(strings.TrimSpace(adminEmail))
+	userInfo := info.User{}
+	if adminEmail != "" {
+		var err error
+		userInfo, err = findBootstrapped()
+		if err != nil {
+			return err
+		}
+		adminUsername = userInfo.Username
+	} else {
+		if adminUsername == "" {
+			adminUsername = "admin"
+		}
+		userInfo = findAdmin(adminUsername)
 	}
 	siteURL, _ := source.String("site.url")
-	userInfo := findAdmin(adminUsername)
 	if userInfo.UserId.IsZero() {
 		return errors.New("configured admin user does not exist")
 	}

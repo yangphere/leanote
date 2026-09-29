@@ -56,7 +56,7 @@ func (s *PwdService) update(ctx context.Context, userID domain.ObjectID, passwor
 	if db.Users == nil {
 		return db.ErrMongoClientNotInitialized
 	}
-	return db.Users.UpdateOneMatchedContext(ctx, bson.M{"_id": userID}, bson.M{"$set": bson.M{"Pwd": password}})
+	return db.Users.UpdateOneMatchedContext(ctx, bson.M{"_id": userID}, bson.M{"$set": bson.M{"Pwd": password, "AdminPasswordSetupRequired": false}})
 }
 
 func (s *PwdService) consume(ctx context.Context, value string, tokenType int, now time.Time) error {

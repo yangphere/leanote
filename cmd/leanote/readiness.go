@@ -26,6 +26,7 @@ type startupReadiness struct {
 	ready           atomic.Bool
 	databaseReady   bool
 	connectDatabase func() error
+	prepareSnapshot func() error
 	loadSnapshot    func() error
 	initialBackoff  time.Duration
 	maxBackoff      time.Duration
@@ -33,10 +34,11 @@ type startupReadiness struct {
 	logf            func(format string, args ...interface{})
 }
 
-func newStartupReadiness(databaseReady bool, connectDatabase, loadSnapshot func() error, logf func(string, ...interface{})) *startupReadiness {
+func newStartupReadiness(databaseReady bool, connectDatabase, prepareSnapshot, loadSnapshot func() error, logf func(string, ...interface{})) *startupReadiness {
 	return &startupReadiness{
 		databaseReady:   databaseReady,
 		connectDatabase: connectDatabase,
+		prepareSnapshot: prepareSnapshot,
 		loadSnapshot:    loadSnapshot,
 		initialBackoff:  readinessInitialBackoff,
 		maxBackoff:      readinessMaxBackoff,
@@ -56,6 +58,11 @@ func (s *startupReadiness) attempt() error {
 			return err
 		}
 		s.databaseReady = true
+	}
+	if s.prepareSnapshot != nil {
+		if err := s.prepareSnapshot(); err != nil {
+			return err
+		}
 	}
 	if err := s.loadSnapshot(); err != nil {
 		return err

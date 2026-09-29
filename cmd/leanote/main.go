@@ -111,6 +111,25 @@ func main() {
 		log.Fatalf("parse routes: %v", err)
 	}
 	service.InitService()
+	adminEmail, _ := cfg.String("adminEmail")
+	adminPassword, _ := cfg.String("adminInitialPassword")
+	forceText, _ := cfg.String("adminForceEnvPassword")
+	adminSecret, _ := cfg.String("app.secret")
+	adminForce, err := service.ParseAdminForceEnvPassword(forceText)
+	if strings.TrimSpace(adminEmail) != "" {
+		if err != nil {
+			logConfigError(err)
+		}
+		if err := service.ConfigureDockerAdminPassword(adminEmail, adminPassword, adminSecret, adminForce); err != nil {
+			logConfigError(err)
+		}
+	}
+	adminBootstrap := func() error {
+		if strings.TrimSpace(adminEmail) == "" {
+			return nil
+		}
+		return service.BootstrapDockerAdmin(adminEmail, adminPassword, adminSecret, adminForce)
+	}
 	lea.InitEmail(cfg)
 	lea.InitVd()
 	// D-H9: the app is not ready until the global configuration snapshot has
@@ -119,6 +138,7 @@ func main() {
 	// background loop below reconnects and reloads with backoff.
 	readiness := newStartupReadiness(databaseReady,
 		func() error { return initDatabase(cfg, *runMode) },
+		adminBootstrap,
 		service.ConfigS.InitGlobalConfigsWithError,
 		log.Printf,
 	)

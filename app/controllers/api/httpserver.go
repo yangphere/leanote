@@ -129,6 +129,13 @@ func apiAuthBefore(whitelist map[string]map[string]bool, policy httpserver.Princ
 			return nil
 		}
 		if userId != "" {
+			required, gateErr := service.AdminPasswordChangeRequired(userId)
+			if gateErr != nil {
+				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "storage"})
+			}
+			if required && !(c.Controller == "ApiUser" && c.Action == "UpdatePwd") {
+				return c.RenderJSON(info.ApiRe{Ok: false, Msg: "admin_password_change_required"})
+			}
 			return nil
 		}
 		re := info.NewApiRe()
@@ -198,8 +205,15 @@ func (s *ApiUserServer) UpdatePwd(c *httpserver.Context) httpserver.Result {
 		return c.RenderJSON(re)
 	}
 	oldPwd, pwd := c.Params.String("oldPwd"), c.Params.String("pwd")
-	if re.Ok, re.Msg = Vd("password", oldPwd); !re.Ok {
+	required, err := service.AdminPasswordChangeRequired(apiUserId(c))
+	if err != nil {
+		re.Msg = "storage"
 		return c.RenderJSON(re)
+	}
+	if !required {
+		if re.Ok, re.Msg = Vd("password", oldPwd); !re.Ok {
+			return c.RenderJSON(re)
+		}
 	}
 	if re.Ok, re.Msg = Vd("password", pwd); !re.Ok {
 		return c.RenderJSON(re)

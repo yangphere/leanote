@@ -474,12 +474,17 @@ func (s *AuthService) deleteRegistrationNoteCopies(ctx context.Context, copies [
 // Use bcrypt (Md5 depreciated)
 func (this *AuthService) Login(emailOrUsername, pwd string) (info.User, error) {
 	emailOrUsername = strings.ToLower(strings.TrimSpace(emailOrUsername))
+	if dockerAdminConfig.email != "" {
+		if user, handled, err := loginWithDockerAdmin(emailOrUsername, pwd); handled {
+			return user, err
+		}
+	}
 	//	pwd = strings.Trim(pwd, " ")
 	userInfo, err := this.lookupUserByName(emailOrUsername)
 	if err != nil {
 		return info.User{}, fmt.Errorf("login user lookup: %w", err)
 	}
-	if userInfo.UserId.IsZero() || !ComparePwd(pwd, userInfo.Pwd) {
+	if userInfo.UserId.IsZero() || userInfo.Disabled || !ComparePwd(pwd, userInfo.Pwd) {
 		return info.User{}, ErrInvalidCredentials
 	}
 	return userInfo, nil

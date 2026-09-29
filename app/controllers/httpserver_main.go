@@ -80,6 +80,16 @@ func webSessionBefore(c *httpserver.Context) httpserver.Result {
 
 func requireWebAuthentication(c *httpserver.Context) httpserver.Result {
 	if c.GetPrincipal().UserID != "" {
+		required, err := service.AdminPasswordChangeRequired(c.GetPrincipal().UserID)
+		if err != nil {
+			return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+		}
+		if required && !(c.Controller == "User" && (c.Action == "Account" || c.Action == "UpdatePwd")) {
+			if c.Request != nil && strings.EqualFold(c.Request.Header.Get("X-Requested-With"), "XMLHttpRequest") {
+				return c.RenderJSON(info.Re{Ok: false, Msg: "admin_password_change_required"})
+			}
+			return c.Redirect("/user/account?tab=2")
+		}
 		return nil
 	}
 	if c.Request != nil && strings.EqualFold(c.Request.Header.Get("X-Requested-With"), "XMLHttpRequest") {
@@ -597,8 +607,15 @@ func (s *UserHTTPServer) UpdatePwd(c *httpserver.Context) httpserver.Result {
 		re.Msg = "cannotUpdateDemo"
 		return renderLocalizedRe(c, re)
 	}
-	if re.Ok, re.Msg = lea.Vd("password", c.Params.String("oldPwd")); !re.Ok {
-		return renderLocalizedRe(c, re)
+	required, err := service.AdminPasswordChangeRequired(c.GetPrincipal().UserID)
+	if err != nil {
+		re.Msg = "storage"
+		return c.RenderJSON(re)
+	}
+	if !required {
+		if re.Ok, re.Msg = lea.Vd("password", c.Params.String("oldPwd")); !re.Ok {
+			return renderLocalizedRe(c, re)
+		}
 	}
 	if re.Ok, re.Msg = lea.Vd("password", c.Params.String("pwd")); !re.Ok {
 		return renderLocalizedRe(c, re)

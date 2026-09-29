@@ -468,6 +468,19 @@ func (this *UserService) UpdatePwd(userId, oldPwd, pwd string) (bool, string) {
 		return false, "validation"
 	}
 	userInfo := this.GetUserInfo(userId)
+	if userInfo.UserId.IsZero() {
+		return false, "storage"
+	}
+	if userInfo.AdminPasswordSetupRequired {
+		passwd := GenPwd(pwd)
+		if passwd == "" {
+			return false, "GenerateHash error"
+		}
+		if err := forceUpdateAdminPassword(userId, passwd); err != nil {
+			return false, "storage"
+		}
+		return true, ""
+	}
 	if !ComparePwd(oldPwd, userInfo.Pwd) {
 		return false, "oldPasswordError"
 	}
@@ -477,8 +490,11 @@ func (this *UserService) UpdatePwd(userId, oldPwd, pwd string) (bool, string) {
 		return false, "GenerateHash error"
 	}
 
-	ok := db.UpdateByQField(db.Users, bson.M{"_id": db.MustObjectIDFromHex(userId)}, "Pwd", passwd)
-	return ok, ""
+	err := updatePasswordAndClearAdminGate(context.Background(), db.MustObjectIDFromHex(userId), passwd)
+	if err != nil {
+		return false, "storage"
+	}
+	return true, ""
 }
 
 // 管理员重置密码
@@ -494,7 +510,7 @@ func (this *UserService) ResetPwd(adminUserId, userId, pwd string) (ok bool, msg
 	if passwd == "" {
 		return false, "GenerateHash error"
 	}
-	ok = db.UpdateByQField(db.Users, bson.M{"_id": db.MustObjectIDFromHex(userId)}, "Pwd", passwd)
+	ok = db.UpdateByQI(db.Users, bson.M{"_id": db.MustObjectIDFromHex(userId)}, bson.M{"Pwd": passwd, "AdminPasswordSetupRequired": false})
 	return
 }
 

@@ -2,6 +2,9 @@
 db.urlEnv=${MONGODB_URL}
 db.dbname=leanote
 app.secret=${LEANOTE_APP_SECRET}
+adminEmail=${LEANOTE_ADMIN_EMAIL}
+adminInitialPassword=${LEANOTE_ADMIN_INITIAL_PASSWORD}
+adminForceEnvPassword=${LEANOTE_ADMIN_FORCE_ENV_PASSWORD}
 i18n.default_language=${LEANOTE_LANGUAGE}
 http.addr=0.0.0.0
 http.port=9000

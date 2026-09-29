@@ -23,7 +23,7 @@ import (
 
 func testReadiness(databaseReady bool, connect, load func() error) (*startupReadiness, *[]time.Duration) {
 	var waits []time.Duration
-	r := newStartupReadiness(databaseReady, connect, load, func(string, ...interface{}) {})
+	r := newStartupReadiness(databaseReady, connect, nil, load, func(string, ...interface{}) {})
 	r.initialBackoff = time.Second
 	r.maxBackoff = 4 * time.Second
 	r.wait = func(ctx context.Context, delay time.Duration) bool {
@@ -85,6 +85,19 @@ func TestStartupReadinessSkipsConnectWhenDatabaseAlreadyUp(t *testing.T) {
 	// Already ready: run returns immediately without waiting.
 	if !r.run(context.Background()) {
 		t.Fatal("run on a ready instance reported not ready")
+	}
+}
+
+func TestStartupReadinessPreparesSnapshotWhenDatabaseAlreadyUp(t *testing.T) {
+	prepared := 0
+	r := newStartupReadiness(true,
+		func() error { t.Fatal("connect called although the database is initialized"); return nil },
+		func() error { prepared++; return nil },
+		func() error { return nil },
+		func(string, ...interface{}) {},
+	)
+	if err := r.attempt(); err != nil || prepared != 1 || !r.Ready() {
+		t.Fatalf("attempt = %v prepared=%d ready=%t", err, prepared, r.Ready())
 	}
 }
 

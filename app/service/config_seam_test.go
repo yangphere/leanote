@@ -77,6 +77,28 @@ func TestInitGlobalConfigsUsesInjectedAppConfigSource(t *testing.T) {
 	}
 }
 
+func TestInitGlobalConfigsDockerUsesBootstrappedAdministrator(t *testing.T) {
+	withAppConfigSource(t, mapAppConfig{"adminEmail": "Admin@Example.com"})
+	adminID := db.MustObjectIDFromHex("507f1f77bcf86cd799439011")
+	lookedUpByEmail := false
+	svc := &ConfigService{
+		findAdminUser: func(string) info.User {
+			lookedUpByEmail = true
+			return info.User{}
+		},
+		findBootstrappedAdmin: func() (info.User, error) {
+			return info.User{UserId: adminID, Username: "admin-example"}, nil
+		},
+		loadGlobalConfigs: func() ([]info.Config, error) { return nil, nil },
+	}
+	if err := svc.InitGlobalConfigsWithError(); err != nil {
+		t.Fatalf("InitGlobalConfigsWithError: %v", err)
+	}
+	if lookedUpByEmail || svc.GetAdminUserId() != adminID.Hex() || svc.GetAdminUsername() != "admin-example" {
+		t.Fatalf("docker admin lookup email=%t id=%q username=%q", lookedUpByEmail, svc.GetAdminUserId(), svc.GetAdminUsername())
+	}
+}
+
 func TestInitGlobalConfigsDefaultsAdminUsernameAndKeepsEmptySiteURL(t *testing.T) {
 	withAppConfigSource(t, mapAppConfig{})
 	var lookedUp string

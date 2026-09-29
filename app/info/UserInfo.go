@@ -12,13 +12,16 @@ const (
 )
 
 type User struct {
-	UserId      domain.ObjectID `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
-	Email       string          `bson:"Email"`         // 全是小写
-	Verified    bool            `bson:"Verified"`      // Email是否已验证过?
-	Username    string          `bson:"Username"`      // 不区分大小写, 全是小写
-	UsernameRaw string          `bson:"UsernameRaw"`   // 可能有大小写
-	Pwd         string          `bson:"Pwd" json:"-"`
-	CreatedTime time.Time       `bson:"CreatedTime"`
+	UserId                      domain.ObjectID `bson:"_id,omitempty"` // 必须要设置bson:"_id" 不然mgo不会认为是主键
+	Email                       string          `bson:"Email"`         // 全是小写
+	Verified                    bool            `bson:"Verified"`      // Email是否已验证过?
+	Username                    string          `bson:"Username"`      // 不区分大小写, 全是小写
+	UsernameRaw                 string          `bson:"UsernameRaw"`   // 可能有大小写
+	Pwd                         string          `bson:"Pwd" json:"-"`
+	AdminPasswordSetupRequired  bool            `bson:"AdminPasswordSetupRequired" json:"-"`
+	AdminEnvPasswordFingerprint string          `bson:"AdminEnvPasswordFingerprint" json:"-"`
+	Disabled                    bool            `bson:"Disabled" json:"-"`
+	CreatedTime                 time.Time       `bson:"CreatedTime"`
 
 	Logo string `bson:"Logo"` // 9-24
 	// 主题

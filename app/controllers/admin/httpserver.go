@@ -101,6 +101,16 @@ func RegisterHTTP(rs *httpserver.Registry, deps ...HTTPDeps) {
 
 func requireAdminHTTP(c *httpserver.Context) httpserver.Result {
 	if c.GetPrincipal().Role == httpserver.PrincipalRoleAdmin {
+		required, err := service.AdminPasswordChangeRequired(c.GetPrincipal().UserID)
+		if err != nil {
+			return c.RenderJSON(info.Re{Ok: false, Msg: "storage"})
+		}
+		if required {
+			if c.Request != nil && strings.EqualFold(c.Request.Header.Get("X-Requested-With"), "XMLHttpRequest") {
+				return c.RenderJSON(info.Re{Ok: false, Msg: "admin_password_change_required"})
+			}
+			return c.Redirect("/user/account?tab=2")
+		}
 		return nil
 	}
 	if c.Request != nil && strings.EqualFold(c.Request.Header.Get("X-Requested-With"), "XMLHttpRequest") {
