@@ -614,3 +614,40 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Next Steps
 
 - delivery-verification 承接全部 partial/unrun/delegated-unrun：干净候选/CI、真实 HTTP+DB/browser、旧客户端 Golden、跨进程/failpoint 和八槽发布矩阵，未执行项不勾选。
+
+
+## Session 24: 交付工具提交与任务归档
+<!-- trellis-session: v=2 fp=14a88070b666c577 -->
+
+**Date**: 2026-09-29
+**Task**: 交付工具提交与任务归档
+**Branch**: `dev`
+
+### Summary
+
+完成仓库内交付门禁和受控发布恢复；按用户要求排除需要真实环境验证的功能并本地提交归档，保留 unrun 事实，不推送、不真实发布。
+
+### Main Changes
+
+- 统一质量摘要身份和退出码；接入交付目录及受保护执行协议；收敛发布恢复原制品、远端分类、并发锁和字节读回。
+- 本叶 completed 并归档；修复归档引用和测试夹具，活动任务指针已清除。dev/base_branch 同为 dev，使用非 PR 本地归档分支校验例外。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `62b9e2caa26ec98a4b23cd672364ed7da613b59a` | ci(delivery): 完善交付门禁和受控发布恢复 |
+
+### Testing
+
+- [OK] 最终七个交付套件 58/58；首轮 npm test 204 passed、1 Windows skip、0 failed；Node build、Go build/vet、actionlint 和 diff check 通过。
+- [OK] 归档后上下文 implement/check 各 17 引用有效，目录 203 项；归档夹具回归最终 6/6 通过。
+- [OK] 真实 Mongo/HTTP/SMTP/文件卷故障、Linux/PDF、八槽浏览器和 GitHub/GHCR 未运行；完整场景执行器及17 Web replay不纳入本次关闭条件。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 无本次关闭待办；未来真实发布须另行满足现有证据门禁和具体授权。
