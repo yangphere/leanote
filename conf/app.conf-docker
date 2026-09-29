@@ -2,6 +2,7 @@
 db.urlEnv=${MONGODB_URL}
 db.dbname=leanote
 app.secret=${LEANOTE_APP_SECRET}
+i18n.default_language=${LEANOTE_LANGUAGE}
 http.addr=0.0.0.0
 http.port=9000
 content.private.data=/var/lib/leanote/private/files

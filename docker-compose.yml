@@ -37,6 +37,7 @@ services:
       mongo-seed:
         condition: service_completed_successfully
     environment:
+      LEANOTE_LANGUAGE: ${LEANOTE_LANGUAGE:?LEANOTE_LANGUAGE must be set}
       MONGODB_URL: ${MONGODB_URL:?MONGODB_URL must be set}
       LEANOTE_APP_SECRET: ${LEANOTE_APP_SECRET:?LEANOTE_APP_SECRET must be set}
     ports:
