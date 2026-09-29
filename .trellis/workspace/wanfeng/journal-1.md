@@ -651,3 +651,25 @@ C-b 开局：需求审核三轮修正任务三文档（27 活跃 TemplateFuncs�
 ### Next Steps
 
 - 无本次关闭待办；未来真实发布须另行满足现有证据门禁和具体授权。
+
+
+## Session 25: 归档业务分层协调任务
+<!-- trellis-session: v=2 fp=2ebc8d888b53408b -->
+
+**Date**: 2026-09-29
+**Task**: 归档业务分层协调任务
+**Branch**: `dev`
+
+### Summary
+
+确认父任务无需功能编码；完成任务元数据提交，归档 09-08-business-layer-architecture，并保留十个已完成子任务及既有交付证据边界。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cbef7035` | chore(task): 激活业务分层协调任务 |
+
+### Status
+
+[OK] **Completed**
