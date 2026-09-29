@@ -1,13 +1,66 @@
 # 交付层：集成验证与版本发布 — 执行计划
 
-- [ ] 读取全部子任务的验收矩阵，确认依赖和候选 commit 一致。
-- [ ] 先读取并核对 `09-08-infrastructure-persistence/acceptance/evidence-matrix.md`、`09-08-application-identity/acceptance/evidence-matrix.md` 和 `09-08-interface-http` 的 route/replay 结果；缺任一前置矩阵或出现 `partial`/`unknown` 时保持 blocked。
-- [ ] 读取 `09-08-application-notes/research/action-inventory.md` 并生成 38 行执行表；标记已有 21/38（17 API + 4 Web）证据，为其余 17 个 Web action 补齐 live HTTP/Golden，不从 Go test 总事件数推导 action coverage。
-- [ ] 运行 Go 1.26/1.27、MongoDB 8、Node/build、Golden/USN、Chromium、package/container/PDF 质量门。
-- [ ] 运行 Mongo 7 standalone 与 Mongo 8 replica-set notes scenarios；在 durable receipt 的 claim/apply/verify/save/commit 边界执行 kill/restart 和 Mongo failpoint，记录最终 receipt/resource/USN/history 状态。
-- [ ] 在持久化卷/跨主机文件系统执行 publish-before-row、row-before-publish、Verify 错误和重启 failpoint，验证 digest/no-clobber/destination identity 与 provider contract。
-- [ ] 消费 presentation artifact，验证 update、copy/shared-copy、delete/move batch 的第一方 `OperationId`/`ExpectedUsn` 生成、unknown-result 复用、新意图换代和 stale conflict；server receipt/mapper 缺陷回流 notes。
-- [ ] 依据 `scripts/browser-release-evidence.mjs` 和 `scripts/validate-browser-artifact.mjs` 在受保护真实环境执行 Chrome/Edge/Firefox/Safari current/previous 八槽四 coverage，生成并校验不可变 artifact。
-- [ ] 验证生产配置、`/healthz`、非 root、外置 Mongo、data/quarantine paired volume、non-public writable roots、restart persistence、cross-device/static-reachable/overlap 错误、完整 PDF 和错误路径；对 PDF 记录 outbound connection 观测并执行 `file://`、loopback/private/metadata、redirect、CSS resource、script fetch 与 local-path 负向 corpus，确认 artifact 不含目标内容。
-- [ ] 用严格 `vX.Y.Z` tag 验证 tarball/SHA-256、OCI 元数据、GHCR digest 和 GitHub Release 输入。
-- [ ] 任一证据缺失标为 blocked，保留恢复路径；通过后才允许发布任务归档。
+## Phase 0 — 本轮规格审核
+
+- [x] 核对父轨道、9 个 archived completed 依赖及 children=[]；报告选中叶后再激活，不创建新任务。
+- [x] 修复上下文 7 个归档失效路径，validate 后激活既有任务；激活不授权本轮业务编码。
+- [x] 读取九轨证据、现有 CI/browser/release 与生产交付合同，补齐目标、输入输出、边界/异常/兼容/责任。
+- [x] 建立 13 行交付矩阵和 38-action 索引，所有本轮产品验证仍 unrun。
+- [x] 2026-09-29 用户确认 Q-DV1：核验后受控补建缺失 Release；已同步 PRD/design/恢复验收矩阵。
+- [x] 规格引用、38-action 索引、AC/证据覆盖与仅本叶改动范围校验通过；结果见 acceptance 矩阵。
+- [ ] 产品决策已收敛；最新规划摘要获后续开发授权后再进入功能实现。
+
+## Phase 1 — 后续候选与工具门禁
+
+- [ ] 先加载本任务上下文与上游明细；用现代码核对历史矩阵，不要求历史 partial 先自行变成 passed 才开始补齐。
+- [ ] 冻结干净 candidate/version、允许使用的隔离资源、工具链与浏览器清单；缺资源仅阻断对应工作，不伪造运行。
+- [ ] 范围内补齐交付 harness/CI/validator；业务/provider 缺陷记录并回原 owner，不能在测试侧建立第二业务逻辑。
+- [ ] 把 R2～R8 扩展门禁真正接入最终 publish 依赖链；静态 contract 通过不能代替实证。
+- [ ] 按已确认 Q-DV1 同步 scripts/tests/workflow：显式 recovery、原制品与执行关联、同 tag 并发锁、只补缺失 Release；普通 duplicate/final provenance guard 不变。
+- [ ] 按 design §5 实现并核对锁名：普通 tag 发布与 recovery 均解析为同仓库 `release-refs/tags/<tag>`，`cancel-in-progress: false`；从不同分支 dispatch 或独立 workflow 恢复也必须一致，锁覆盖重查/create/最终读回，并按 RR-09 验收。
+
+## Phase 2 — 跨层验收
+
+- [ ] 依序运行 Go/JS/build/Golden/USN 与干净候选资源零漂移，Node build 与复制工作树的测试串行。
+- [ ] 按 `acceptance/notes-action-replay.md` 的 38 个 ID 填完整请求/响应/owner/USN/receipt 映射；补缺 17 Web，并复验原 21 项。
+- [ ] 跑 Mongo 7 standalone、8 standalone、8 replica-set 的 notes/identity/persistence 场景；claim/apply/verify/save/commit kill/restart、Mongo failpoint、跨主机/persistent-volume 文件故障。
+- [ ] 汇合 publishing/admin 的权限/期限/Host/JSONP、主题 ZIP/preview、comment submission receipt/压缩、取消与 SMTP handoff_unknown、真实 backup/restore、升级续跑和反馈/broadcast。
+- [ ] 验证 native routes/session/config/未就绪/退出；完成 presentation 未编辑零写入、mutation 未知重试/冲突、move 重读及 copy/delete 队列出口，关联真实 HTTP+DB。
+- [ ] Linux/container 执行 production-config 负例、非 root、paired roots/backup volume、旧卷复制与重启，以及完整 PDF 正向和恶意 corpus/zero-outbound/cleanup。
+- [ ] 受保护真实八槽四 coverage；另执行上游手工清单，记录实际版本/命令来源；发布 artifact 中禁止原始日志/trace/截图。
+
+### 命令与证据要求
+
+本轮不运行下列产品验证。后续按候选的质量工作流配置执行，不在共享本机盲跑：
+
+```text
+GOTOOLCHAIN=local go build ./...
+GOTOOLCHAIN=local go vet ./...
+go mod verify
+go test <target packages> -count=1 -timeout 60s
+LEANOTE_GOLDEN=replay LEANOTE_HTTP_INTEGRATION=1 go test -p 1 ./app/tests/... -count=1 -timeout 30m
+npm ci
+npm run build
+npm test
+npm run test:e2e:build -- --list
+python ./.trellis/scripts/task.py validate .trellis/tasks/09-08-delivery-verification
+git diff --check
+```
+
+环境赋值示例为 POSIX 形式；Windows 用 PowerShell `$env:`。`--list` 仅 discovery；不得填 executed。真实浏览器按现有受保护命令执行，Mongo fixture/固定端口串行且完成 cleanup。每个扩展场景须记录实际命令/手工步骤，不能以笼统“全量通过”填表。
+
+## Phase 3 — 发布演练、授权与收尾
+
+- [ ] 验证 strict tag/version、SHA/tag peel、包与 image inputs/digest、同 run/attempt，以及缺文件/篡改/跨 attempt/duplicate/unknown/cleanup 失败矩阵。
+- [ ] 独立 browser precheck 仅候选证据；final 必须在 release workflow 内重新生成，部分 job 重跑不得借用旧 attempt artifact。
+- [ ] 执行 `acceptance/release-recovery.md` 全部恢复正负例，包括原门禁失败、过期/错来源、冲突/未知、并发/响应丢失、重复 no-op；演练使用受控 seam，不写真实 GitHub/GHCR，也不冒充实际发布实证。
+- [ ] 全部必需矩阵通过后呈现 candidate/tag/制品/digest/风险供发布授权；当前任务审核不构成该授权。
+- [ ] 获授权后发布并读回 GHCR digest、Release tag/资产/校验和；未知/部分成功按已确认策略处理，不自动删除或覆盖。
+- [ ] 全范围复核、记录最终证据和缺陷 owner；真实证据未齐不可归档为综合验收完成。commit/archive/journal/push 均按各自授权处理。
+
+## 回退与停止条件
+
+- 规格未决、provider 缺陷、资源不可用分别阻断相关阶段；记录恢复条件，不清除失败证据。
+- 失败测试和 Golden mismatch 先定位 owner，不通过修改预期隐藏问题。
+- 已远端发布的对象不能靠本地回退提交撤销；先只读对账，任何删除/覆盖须单独决策授权。
+- `task.py start` 已记录 branch/base_branch=dev 的后续 PR/archive 警告；本轮不据此自行切分支或绕过归档检查。

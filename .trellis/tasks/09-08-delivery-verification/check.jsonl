@@ -5,6 +5,11 @@
 {"file":".trellis/spec/frontend/quality-guidelines.md","reason":"核对真实浏览器 artifact 的脱敏、失败关闭和质量门要求"}
 {"file":".trellis/spec/frontend/directory-structure.md","reason":"核对四个稳定 browser-smoke coverage ID"}
 {"file":".trellis/tasks/archive/2026-09/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"汇合 persistence transaction/index/outbox/token 证据"}
-{"file":".trellis/tasks/09-08-application-identity/acceptance/evidence-matrix.md","reason":"汇合 identity principal/session/API Golden 证据"}
-{"file":".trellis/tasks/09-08-interface-http/prd.md","reason":"汇合 route/session/replay 和 production-config 证据"}
-{"file":".trellis/tasks/09-08-application-content/acceptance/evidence-matrix.md","reason":"汇合 quarantine restart 与 PDF sandbox/zero-outbound 交接证据"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-identity/acceptance/evidence-matrix.md","reason":"汇合 identity principal/session/API Golden 交接证据"}
+{"file":".trellis/tasks/archive/2026-09/09-08-interface-http/prd.md","reason":"汇合 route/session/replay 和 production-config 证据"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-content/acceptance/evidence-matrix.md","reason":"汇合 quarantine restart 与 PDF sandbox/zero-outbound 交接证据"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"复核 native HTTP/数据库隔离/真实运行证据，禁止测试侧伪成功"}
+{"file":".trellis/tasks/09-08-delivery-verification/research/spec-audit-2026-09-29.md","reason":"复核发现闭环、已确认发布恢复及审核阶段范围"}
+{"file":".trellis/tasks/09-08-delivery-verification/acceptance/evidence-matrix.md","reason":"按九轨 13 行交付证据检查覆盖及真实状态"}
+{"file":".trellis/tasks/09-08-delivery-verification/acceptance/notes-action-replay.md","reason":"核对 38 个 action、历史 21/17 与当前独立证据"}
+{"file":".trellis/tasks/09-08-delivery-verification/acceptance/release-recovery.md","reason":"复核补建正负例、原 run/attempt 关联、未知/并发和零覆盖断言"}
