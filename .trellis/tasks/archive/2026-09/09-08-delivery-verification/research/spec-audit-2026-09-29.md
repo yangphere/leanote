@@ -3,7 +3,7 @@
 ## 1. 选择、授权与基线
 
 - 已选择 `09-08-delivery-verification`：P1、原 planning、children=[]、layer=delivery；父任务 `09-08-business-layer-architecture` 仅协调。当前未归档任务只有父任务与本叶，按领域→应用→基础设施/接口→呈现/交付顺序，本叶是唯一 ready 叶。
-- `task.json.meta.depends_on` 是就绪依据。9 个依赖均在 `../archive/2026-09/` 下 status=completed：domain-contracts（09-09）、infrastructure-persistence（09-10）、application-notes（09-15）、application-content（09-18）、application-identity（09-24）、application-publishing/admin（09-25）、interface-http/presentation-frontend（09-28）；日期均为 2026 年。依赖图不由父子关系替代。
+- `task.json.meta.depends_on` 是就绪依据。9 个依赖均在 `.trellis/tasks/archive/2026-09/` 下 status=completed：domain-contracts（09-09）、infrastructure-persistence（09-10）、application-notes（09-15）、application-content（09-18）、application-identity（09-24）、application-publishing/admin（09-25）、interface-http/presentation-frontend（09-28）；日期均为 2026 年。依赖图不由父子关系替代。
 - 先向用户报告选择和依赖，再修复 activation 前 context 校验的 7 个旧路径。`task.py validate` 通过后 `task.py start` 成功，状态 in_progress，当前会话指向本任务；没有创建新任务。
 - 审核起点 HEAD=`3b963562`、branch=dev、工作树干净。本轮用户仅授权激活和规格审核；只编辑本叶规划/研究/验收/context 和激活元数据，没有业务实现、CI、测试脚本或生成资源变更。
 - 使用 trellis-start 核对流程；参考 trellis-brainstorm 的需求/证据收敛方法，用户明确要求激活既有任务优先于通用新任务创建/激活顺序，不据此扩展功能编码授权。

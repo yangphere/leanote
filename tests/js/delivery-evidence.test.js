@@ -66,12 +66,15 @@ test('catalog follows an archived delivery task but rejects ambiguous copies', a
   const { api, catalog } = await fixture();
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'leanote-catalog-archive-'));
   try {
+    const live = path.join(root, '.trellis/tasks/09-08-delivery-verification');
     for (const source of catalog.sources) {
-      const destination = path.join(root, source.path);
+      const destination = source.owner === 'delivery'
+        ? path.join(live, path.basename(source.path))
+        : path.join(root, source.path);
       await fs.mkdir(path.dirname(destination), { recursive: true });
       await fs.copyFile(source.path, destination);
     }
-    const live = path.join(root, '.trellis/tasks/09-08-delivery-verification');
+    assert.equal((await api.buildDeliveryCatalog(root)).scenarios.length, catalog.scenarios.length);
     const archived = path.join(root, '.trellis/tasks/archive/2027-01/09-08-delivery-verification');
     await fs.mkdir(path.dirname(archived), { recursive: true });
     await fs.rename(live, archived);

@@ -1,6 +1,6 @@
 # Notes 38-action live HTTP 验收索引
 
-唯一业务契约来源：`../../archive/2026-09/09-08-application-notes/research/action-inventory.md`。本表只索引其 38 个稳定 action ID，不复制业务规则；执行时从该清单、native registry 和批准的 target 核对 method/input/result。历史 `observed GET`/legacy 方法不是新增允许方法的决定，冲突回 interface/notes。
+唯一业务契约来源：`../../09-08-application-notes/research/action-inventory.md`。本表只索引其 38 个稳定 action ID，不复制业务规则；执行时从该清单、native registry 和批准的 target 核对 method/input/result。历史 `observed GET`/legacy 方法不是新增允许方法的决定，冲突回 interface/notes。
 
 历史覆盖按 notes 的 21/38 mapping 原样标识，不能作为当前合并后候选通过。每行至少附一个具名真实 HTTP case；mutation 另覆盖适用的 validation、owner、conflict、storage/timeout、多写失败、同操作重试；GET 也覆盖权限/非法输入/DB 错误。新增成功率按唯一 action ID 统计，不按 Go test event 数。
 

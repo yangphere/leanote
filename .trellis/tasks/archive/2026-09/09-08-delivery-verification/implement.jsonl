@@ -8,10 +8,10 @@
 {"file":".trellis/spec/backend/quality-guidelines.md","reason":"遵循 native harness、隔离数据库和真实证据边界"}
 {"file":".trellis/spec/frontend/quality-guidelines.md","reason":"遵循构建漂移、受保护浏览器和脱敏约束"}
 {"file":"docs/modernization/cicd-delivery.md","reason":"消费生产配置、卷迁移、制品和发布合同"}
-{"file":".trellis/tasks/09-08-delivery-verification/research/spec-audit-2026-09-29.md","reason":"读取全面规格审核、九轨来源和已确认 Q-DV1，保持审核与实现边界"}
-{"file":".trellis/tasks/09-08-delivery-verification/acceptance/evidence-matrix.md","reason":"逐项承接全部上游验收，不把归档和历史结果当当前候选通过"}
-{"file":".trellis/tasks/09-08-delivery-verification/acceptance/notes-action-replay.md","reason":"按 38 个唯一 action 建立真实 HTTP 映射"}
-{"file":".trellis/tasks/09-08-delivery-verification/research/browser-release-evidence.md","reason":"区分 precheck 与 final 同 run/attempt，保留唯一 schema"}
-{"file":".trellis/tasks/09-08-delivery-verification/acceptance/release-recovery.md","reason":"实现已确认的受控补建及原执行关联，禁止覆盖、重建制品和镜像重推"}
-{"file":".trellis/tasks/09-08-delivery-verification/acceptance/gate-integrity.md","reason":"落实当前候选绑定、完整门禁、远端存在性分类及原候选恢复版本约束"}
-{"file":".trellis/tasks/09-08-delivery-verification/research/implementation-2026-09-29.md","reason":"核对已授权工具实现、真实场景执行器缺口、API来源和交叉检查裁定"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/research/spec-audit-2026-09-29.md","reason":"读取全面规格审核、九轨来源和已确认 Q-DV1，保持审核与实现边界"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/acceptance/evidence-matrix.md","reason":"逐项承接全部上游验收，不把归档和历史结果当当前候选通过"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/acceptance/notes-action-replay.md","reason":"按 38 个唯一 action 建立真实 HTTP 映射"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/research/browser-release-evidence.md","reason":"区分 precheck 与 final 同 run/attempt，保留唯一 schema"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/acceptance/release-recovery.md","reason":"实现已确认的受控补建及原执行关联，禁止覆盖、重建制品和镜像重推"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/acceptance/gate-integrity.md","reason":"落实当前候选绑定、完整门禁、远端存在性分类及原候选恢复版本约束"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/research/implementation-2026-09-29.md","reason":"核对已授权工具实现、真实场景执行器缺口、API来源和交叉检查裁定"}
