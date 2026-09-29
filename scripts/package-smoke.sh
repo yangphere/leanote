@@ -72,7 +72,22 @@ test "$code" = 78
 : "${PACKAGE_SMOKE_APP_SECRET:?PACKAGE_SMOKE_APP_SECRET is required}"
 if [ -e "$CONFIG_FILE" ]; then echo 'refusing to overwrite an existing production config' >&2; exit 1; fi
 if [ ! -d "$CONFIG_DIR" ]; then sudo mkdir -p "$CONFIG_DIR"; CONFIG_DIR_CREATED=true; fi
-printf '%s\n' '[prod]' 'db.urlEnv=${MONGODB_URL}' 'db.dbname=leanote' 'app.secret=${LEANOTE_APP_SECRET}' 'http.addr=127.0.0.1' 'http.port=19090' > "$TMP/app.conf"
+# The tarball intentionally ships no data roots (see docs/modernization/cicd-delivery.md).
+# Provision them in the smoke workspace instead of /var/lib/leanote so the
+# runner's real filesystem is never touched; one filesystem keeps data and
+# quarantine pairs rename-compatible.
+DATA_ROOT="$TMP/var-lib-leanote"
+mkdir -p "$DATA_ROOT/private/files" "$DATA_ROOT/private/quarantine" \
+  "$DATA_ROOT/public/upload" "$DATA_ROOT/public/quarantine" \
+  "$DATA_ROOT/backup" "$DATA_ROOT/tmp"
+chmod -R 0750 "$DATA_ROOT"
+printf '%s\n' '[prod]' 'db.urlEnv=${MONGODB_URL}' 'db.dbname=leanote' 'app.secret=${LEANOTE_APP_SECRET}' 'http.addr=127.0.0.1' 'http.port=19090' \
+  "content.private.data=$DATA_ROOT/private/files" \
+  "content.private.quarantine=$DATA_ROOT/private/quarantine" \
+  "content.public.data=$DATA_ROOT/public/upload" \
+  "content.public.quarantine=$DATA_ROOT/public/quarantine" \
+  "content.temporary=$DATA_ROOT/tmp" \
+  "admin.backup.root=$DATA_ROOT/backup" > "$TMP/app.conf"
 sudo install -o "$(id -u)" -g "$(id -g)" -m 0440 "$TMP/app.conf" "$CONFIG_FILE"
 CONFIG_CREATED=true
 MONGODB_URL="$PACKAGE_SMOKE_MONGODB_URL" LEANOTE_APP_SECRET="$PACKAGE_SMOKE_APP_SECRET" \
@@ -100,12 +115,18 @@ test -s "$TMP/test-marker"
 : "${PACKAGE_SMOKE_PDF_URL:?PACKAGE_SMOKE_PDF_URL is required}"
 case "$PACKAGE_SMOKE_PDF_URL" in
   */note/toPdf\?*) ;;
-  *) echo 'PACKAGE_SMOKE_PDF_URL must target the real /note/toPdf route' >&2; exit 1 ;;
+  *) echo 'PACKAGE_SMOKE_PDF_URL must target the legacy /note/toPdf route' >&2; exit 1 ;;
 esac
+# The legacy appKey callback was retired (158a6de): it must stay a stub and
+# never render or leak note content, even with the correct secret as appKey.
 curl -fsS -D "$TMP/pdf.headers" -o "$TMP/pdf.html" "$PACKAGE_SMOKE_PDF_URL"
-grep -Eiq '^Content-Type: text/html(;|$)' "$TMP/pdf.headers"
-test -s "$TMP/pdf.html"
+grep -Eiq '^Content-Type: text/plain(;|$)' "$TMP/pdf.headers"
+test "$(cat "$TMP/pdf.html")" = 'no note'
+if grep -Eiq 'About Leanote|not just a notepad' "$TMP/pdf.html"; then echo 'legacy /note/toPdf leaked note content' >&2; exit 1; fi
+# The packaged PDF runtime must render a real document (not about:blank).
 test -x "$(command -v wkhtmltopdf)"
-wkhtmltopdf --quiet "$PACKAGE_SMOKE_PDF_URL" "$TMP/smoke.pdf"
+printf '%s\n' '<!doctype html><html><head><meta charset="utf-8"><title>Leanote PDF smoke</title></head>' \
+  '<body><h1>Leanote PDF smoke</h1><p>package runtime render check</p></body></html>' > "$TMP/smoke-render.html"
+wkhtmltopdf --quiet "$TMP/smoke-render.html" "$TMP/smoke.pdf"
 test -s "$TMP/smoke.pdf"
 test "$(dd if="$TMP/smoke.pdf" bs=1 count=5 2>/dev/null)" = '%PDF-'

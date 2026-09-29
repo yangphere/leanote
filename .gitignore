@@ -19,6 +19,9 @@ app/tmp/main.go
 .project
 public/config.codekit
 files/
+/.content-private-quarantine/
+/.content-public-quarantine/
+/.content-temporary/
 /node_modules
 .idea
 *.iml

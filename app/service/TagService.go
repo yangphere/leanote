@@ -181,7 +181,9 @@ func (this *TagService) DeleteTagResult(userId string, tag string) (map[string]i
 		return nil, false
 	}
 	if noteTag.TagId.IsZero() {
-		return nil, false
+		// 与旧版 DeleteTag 一致：没有 v2 标签记录时是幂等的空操作，返回 Ok 与空结果，
+		// 不触碰笔记（例如只经 note.Tags 写入、从未经 /tag/updateTag 创建的标签）。
+		return map[string]int{}, true
 	}
 	request := struct {
 		TagID string

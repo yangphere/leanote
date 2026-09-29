@@ -232,17 +232,24 @@ test('package smoke verifies reproducible archive output', async () => {
   assert.match(script, /sha256sum/);
   assert.match(script, /SOURCE_DATE_EPOCH/);
   assert.match(script, /PACKAGE_SMOKE_PDF_URL/);
-  assert.match(script, /real \/note\/toPdf route/);
-  assert.match(script, /curl[\s\S]*PDF/);
+  assert.match(script, /legacy \/note\/toPdf route/);
+  assert.match(script, /test "\$\(cat "\$TMP\/pdf\.html"\)" = 'no note'/);
+  assert.match(script, /if grep -Eiq 'About Leanote\|not just a notepad' "\$TMP\/pdf\.html"; then[^\n]*exit 1; fi/);
+  assert.match(script, /wkhtmltopdf --quiet "\$TMP\/smoke-render\.html"/);
+  assert.match(script, /%PDF-/);
   assert.doesNotMatch(script, /wkhtmltopdf --quiet about:blank/);
+  assert.doesNotMatch(script, /wkhtmltopdf --quiet "\$PACKAGE_SMOKE_PDF_URL"/);
 });
 
-test('container smoke renders the application PDF route instead of a blank page', async () => {
+test('container smoke keeps the retired PDF callback a stub and renders a real document', async () => {
   const script = await fs.readFile(path.join(process.cwd(), 'scripts/container-smoke.sh'), 'utf8');
   assert.match(script, /CONTAINER_SMOKE_PDF_URL/);
-  assert.match(script, /real \/note\/toPdf route/);
-  assert.match(script, /curl[\s\S]*PDF/);
+  assert.match(script, /legacy \/note\/toPdf route/);
+  assert.match(script, /test "\$\(cat "\$TMP_HEALTH\.pdf\.html"\)" = 'no note'/);
+  assert.match(script, /if grep -Eiq 'About Leanote\|not just a notepad' "\$TMP_HEALTH\.pdf\.html"; then[^\n]*exit 1; fi/);
+  assert.match(script, /wkhtmltopdf --quiet \/var\/lib\/leanote\/tmp\/smoke-render\.html/);
   assert.doesNotMatch(script, /wkhtmltopdf --quiet about:blank/);
+  assert.doesNotMatch(script, /wkhtmltopdf --quiet "\$CONTAINER_SMOKE_PDF_URL"/);
 });
 
 test('quality gate fallback summaries preserve GitHub provenance', async () => {
