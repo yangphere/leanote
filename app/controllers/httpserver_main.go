@@ -576,7 +576,10 @@ func (s *UserHTTPServer) Account(c *httpserver.Context) httpserver.Result {
 	args := prepareView(c)
 	args["userInfo"] = currentUser(c)
 	args["tab"] = c.Params.Int("tab", 0)
-	return c.RenderTemplate("user/account.html", args)
+	if c.Request != nil && strings.EqualFold(c.Request.Header.Get("X-Requested-With"), "XMLHttpRequest") {
+		return c.RenderTemplate("user/account.html", args)
+	}
+	return c.RenderTemplate("user/account_page.html", args)
 }
 
 func (s *UserHTTPServer) UpdateUsername(c *httpserver.Context) httpserver.Result {

@@ -121,3 +121,44 @@ func TestTemplateSetRenderSmoke(t *testing.T) {
 		t.Fatalf("unexpected render output: %q", got)
 	}
 }
+
+func TestAccountPageTemplateStructure(t *testing.T) {
+	const viewsDir = "../../app/views"
+	if _, err := os.Stat(viewsDir); err != nil {
+		t.Skipf("views dir not reachable: %v", err)
+	}
+	tpl, err := LoadTemplates(viewsDir)
+	if err != nil {
+		t.Fatalf("LoadTemplates: %v", err)
+	}
+	render := TemplateSetRenderer(tpl)
+	out, err := render("user/account_page.html", map[string]interface{}{
+		currentLocaleViewArg: "zh-cn",
+		"locale":             "zh-cn",
+		"userInfo": map[string]interface{}{
+			"Email":    "test@example.com",
+			"Username": "tester",
+		},
+		"tab": 0,
+	})
+	if err != nil {
+		t.Fatalf("render user/account_page.html: %v", err)
+	}
+	html := string(out)
+	for _, expected := range []string{
+		`id="boxBody"`,
+		`class="account-page"`,
+		`id="box"`,
+		`class="account-shell"`,
+		`background-color: #fff;`,
+		`class="modal-header"`,
+		`class="modal-body"`,
+		`class="modal-footer"`,
+		`id="boxFooter"`,
+		`/js/common.js`,
+	} {
+		if !strings.Contains(html, expected) {
+			t.Errorf("rendered html missing %q", expected)
+		}
+	}
+}

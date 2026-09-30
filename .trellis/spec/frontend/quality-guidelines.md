@@ -36,6 +36,18 @@ No linter is configured — the gates are `npm ci && npm run build && npm test` 
   headers, cookies, tokens, page content, traces, screenshots, videos, and raw
   logs are prohibited.
 
+### Standalone Bootstrap-derived views
+
+Views that reuse a modal fragment in a full-page response must keep page-only
+close behavior at the standalone wrapper boundary. A `data-bs-dismiss="modal"`
+attribute only closes an element when Bootstrap can find a `.modal` instance;
+it does not navigate away from a page containing only `.modal-dialog` and
+`.modal-content`.
+
+Keep the shared fragment's `data-bs-dismiss` contract unchanged so AJAX callers
+continue to close the real Bootstrap modal. Do not add standalone navigation to
+the fragment itself.
+
 ---
 
 ## Testing Requirements
