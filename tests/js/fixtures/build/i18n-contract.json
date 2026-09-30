@@ -354,12 +354,6 @@
     {
       "key": "Blockquote",
       "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Blockquote",
-      "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 8691
     },
@@ -382,30 +376,6 @@
       "line": 14484
     },
     {
-      "key": "Blockquote",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31483
-    },
-    {
-      "key": "Blockquote",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31484
-    },
-    {
-      "key": "Blockquote",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "Bulleted List",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
       "key": "Bulleted List",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
@@ -418,40 +388,10 @@
       "line": 14494
     },
     {
-      "key": "Bulleted List",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31494
-    },
-    {
-      "key": "Bulleted List",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "Cancel",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 14
-    },
-    {
       "key": "Cancel",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 16826
-    },
-    {
-      "key": "Cancel",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 33833
-    },
-    {
-      "key": "Cancel",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 13
     },
     {
       "key": "cancelPublic",
@@ -540,12 +480,6 @@
     {
       "key": "Code Sample",
       "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Code Sample",
-      "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 8694
     },
@@ -554,18 +488,6 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14486
-    },
-    {
-      "key": "Code Sample",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31486
-    },
-    {
-      "key": "Code Sample",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
     },
     {
       "key": "confirmBackup",
@@ -768,12 +690,6 @@
     {
       "key": "Emphasis",
       "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Emphasis",
-      "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 8684
     },
@@ -782,24 +698,6 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14476
-    },
-    {
-      "key": "Emphasis",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31476
-    },
-    {
-      "key": "Emphasis",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "emphasized text",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
     },
     {
       "key": "emphasized text",
@@ -814,24 +712,6 @@
       "line": 14477
     },
     {
-      "key": "emphasized text",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31477
-    },
-    {
-      "key": "emphasized text",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "enter code here",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
       "key": "enter code here",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
@@ -842,24 +722,6 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14487
-    },
-    {
-      "key": "enter code here",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31487
-    },
-    {
-      "key": "enter code here",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "enter image description here",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
     },
     {
       "key": "enter image description here",
@@ -874,24 +736,6 @@
       "line": 14490
     },
     {
-      "key": "enter image description here",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31490
-    },
-    {
-      "key": "enter image description here",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "enter link description here",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
       "key": "enter link description here",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
@@ -902,18 +746,6 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14480
-    },
-    {
-      "key": "enter link description here",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31480
-    },
-    {
-      "key": "enter link description here",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
     },
     {
       "key": "error",
@@ -1122,12 +954,6 @@
     {
       "key": "Heading",
       "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Heading",
-      "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 8705
     },
@@ -1150,24 +976,6 @@
       "line": 14498
     },
     {
-      "key": "Heading",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31497
-    },
-    {
-      "key": "Heading",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31498
-    },
-    {
-      "key": "Heading",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
       "key": "historiesNum",
       "namespace": "msg",
       "path": "public/js/plugins/history.js",
@@ -1182,12 +990,6 @@
     {
       "key": "Horizontal Rule",
       "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Horizontal Rule",
-      "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 8708
     },
@@ -1196,30 +998,6 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14500
-    },
-    {
-      "key": "Horizontal Rule",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31500
-    },
-    {
-      "key": "Horizontal Rule",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "Hyperlink",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Hyperlink",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 14
     },
     {
       "key": "Hyperlink",
@@ -1240,36 +1018,6 @@
       "line": 16824
     },
     {
-      "key": "Hyperlink",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31479
-    },
-    {
-      "key": "Hyperlink",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 33831
-    },
-    {
-      "key": "Hyperlink",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "Hyperlink",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 13
-    },
-    {
-      "key": "Image",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
       "key": "Image",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
@@ -1280,18 +1028,6 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14489
-    },
-    {
-      "key": "Image",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31489
-    },
-    {
-      "key": "Image",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
     },
     {
       "key": "inputEmail",
@@ -1416,12 +1152,6 @@
     {
       "key": "List item",
       "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "List item",
-      "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 8703
     },
@@ -1430,18 +1160,6 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14495
-    },
-    {
-      "key": "List item",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31495
-    },
-    {
-      "key": "List item",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
     },
     {
       "key": "Markdown syntax",
@@ -1578,12 +1296,6 @@
     {
       "key": "Numbered List",
       "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Numbered List",
-      "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 8701
     },
@@ -1594,88 +1306,22 @@
       "line": 14493
     },
     {
-      "key": "Numbered List",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31493
-    },
-    {
-      "key": "Numbered List",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "OK",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 14
-    },
-    {
       "key": "OK",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 16826
     },
     {
-      "key": "OK",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 33833
-    },
-    {
-      "key": "OK",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 13
-    },
-    {
-      "key": "optional title",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 14
-    },
-    {
       "key": "optional title",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 16826
-    },
-    {
-      "key": "optional title",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 33833
-    },
-    {
-      "key": "optional title",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 13
-    },
-    {
-      "key": "Please provide the link URL and an optional title",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 14
     },
     {
       "key": "Please provide the link URL and an optional title",
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 16825
-    },
-    {
-      "key": "Please provide the link URL and an optional title",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 33832
-    },
-    {
-      "key": "Please provide the link URL and an optional title",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 13
     },
     {
       "key": "Please sign in firstly!",
@@ -1734,12 +1380,6 @@
     {
       "key": "Redo",
       "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Redo",
-      "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 8711
     },
@@ -1754,18 +1394,6 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14504
-    },
-    {
-      "key": "Redo",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31503
-    },
-    {
-      "key": "Redo",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
     },
     {
       "key": "rename",
@@ -1896,12 +1524,6 @@
     {
       "key": "Strong",
       "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Strong",
-      "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 8681
     },
@@ -1910,24 +1532,6 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14473
-    },
-    {
-      "key": "Strong",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31473
-    },
-    {
-      "key": "Strong",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
-    },
-    {
-      "key": "strong text",
-      "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
     },
     {
       "key": "strong text",
@@ -1940,18 +1544,6 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14474
-    },
-    {
-      "key": "strong text",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31474
-    },
-    {
-      "key": "strong text",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
     },
     {
       "key": "Success",
@@ -1992,12 +1584,6 @@
     {
       "key": "Undo",
       "namespace": "msg",
-      "path": "public/js/markdown.min.js",
-      "line": 13
-    },
-    {
-      "key": "Undo",
-      "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 8710
     },
@@ -2006,18 +1592,6 @@
       "namespace": "msg",
       "path": "public/md/main-v2.js",
       "line": 14502
-    },
-    {
-      "key": "Undo",
-      "namespace": "msg",
-      "path": "public/md/main.js",
-      "line": 31502
-    },
-    {
-      "key": "Undo",
-      "namespace": "msg",
-      "path": "public/md/main.min.js",
-      "line": 12
     },
     {
       "key": "unfold",

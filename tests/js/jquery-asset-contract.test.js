@@ -252,8 +252,6 @@ test('leaui_image iframe loads the shared Font Awesome stylesheet for its icons'
 test('runtime sources fail closed on retired Bootstrap 3 URLs and signatures', () => {
   const roots = [path.join(ROOT, 'app/views'), path.join(ROOT, 'public')];
   const historical = new Set([
-    path.normalize('public/md/main.js'),
-    path.normalize('public/md/main.min.js'),
     path.normalize('public/admin/config.codekit'),
     path.normalize('public/css/config.codekit'),
   ]);
