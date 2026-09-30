@@ -599,7 +599,7 @@ Notebook.changeNotebook = function(notebookId, callback) {
 	// 2 先清空所有
 	Note.clearAll();
 	
-	var url = "/note/listNotes/";
+	var url = "/note/listNotes";
 	var param = {notebookId: notebookId};
 	
 	// 废纸篓
@@ -686,7 +686,7 @@ Notebook.changeNotebookForNewNote = function(notebookId) {
 	Notebook.changeNotebookNav(notebookId, true);
 	Notebook.curNotebookId = notebookId;
 	
-	var url = "/note/listNotes/";
+	var url = "/note/listNotes";
 	var param = {notebookId: notebookId};
 		
 	// 2 得到笔记本

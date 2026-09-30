@@ -48,6 +48,14 @@ Keep the shared fragment's `data-bs-dismiss` contract unchanged so AJAX callers
 continue to close the real Bootstrap modal. Do not add standalone navigation to
 the fragment itself.
 
+### HTTP route path literals
+
+Frontend request paths must match the corresponding `conf/routes` path exactly.
+The first-party HTTP matcher does not normalize a trailing slash, so a request
+such as `/note/listNotes/` does not match a route registered as
+`/note/listNotes`. When a route literal changes, add a contract test that reads
+the registered path and checks every relevant caller.
+
 ---
 
 ## Testing Requirements
