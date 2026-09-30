@@ -498,12 +498,6 @@
     {
       "key": "confirmPassword",
       "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 38
-    },
-    {
-      "key": "confirmPassword",
-      "namespace": "msg",
       "path": "app/views/member/user/password.html",
       "line": 34
     },
@@ -540,20 +534,8 @@
     {
       "key": "createAccountFailed",
       "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 73
-    },
-    {
-      "key": "createAccountFailed",
-      "namespace": "msg",
       "path": "app/views/user/account.html",
       "line": 188
-    },
-    {
-      "key": "createAccountSuccess",
-      "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 68
     },
     {
       "key": "createAccountSuccess",
@@ -876,12 +858,6 @@
     {
       "key": "errorEmail",
       "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 17
-    },
-    {
-      "key": "errorEmail",
-      "namespace": "msg",
       "path": "app/views/user/account.html",
       "line": 58
     },
@@ -896,12 +872,6 @@
       "namespace": "msg",
       "path": "public/js/common.js",
       "line": 913
-    },
-    {
-      "key": "errorPassword",
-      "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 27
     },
     {
       "key": "errorPassword",
@@ -1032,12 +1002,6 @@
     {
       "key": "inputEmail",
       "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 16
-    },
-    {
-      "key": "inputEmail",
-      "namespace": "msg",
       "path": "app/views/user/account.html",
       "line": 57
     },
@@ -1074,12 +1038,6 @@
     {
       "key": "inputPassword",
       "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 26
-    },
-    {
-      "key": "inputPassword",
-      "namespace": "msg",
       "path": "app/views/member/user/password.html",
       "line": 13
     },
@@ -1094,12 +1052,6 @@
       "namespace": "msg",
       "path": "app/views/user/account.html",
       "line": 133
-    },
-    {
-      "key": "inputPassword2",
-      "namespace": "msg",
-      "path": "app/views/member/user/add_account.html",
-      "line": 37
     },
     {
       "key": "inputPassword2",
