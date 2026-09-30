@@ -28,6 +28,84 @@ func TestBindWebNoteOrContentPreservesIndexedTagsAndStrictExpectedUsn(t *testing
 	}
 }
 
+func TestNoteParameterStringsAcceptsProductionArrayEncodings(t *testing.T) {
+	tests := []struct {
+		name  string
+		query url.Values
+		want  []string
+	}{
+		{name: "repeated", query: url.Values{"noteIds": {"one", "two"}}, want: []string{"one", "two"}},
+		{name: "bracket", query: url.Values{"noteIds[]": {"one", "two"}}, want: []string{"one", "two"}},
+		{name: "indexed", query: url.Values{"noteIds[0]": {"one"}, "noteIds[1]": {"two"}}, want: []string{"one", "two"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := &httpserver.Params{Query: tt.query}
+			got := noteParameterStrings(params, "noteIds")
+			if len(got) != len(tt.want) {
+				t.Fatalf("noteParameterStrings() = %#v, want %#v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Fatalf("noteParameterStrings() = %#v, want %#v", got, tt.want)
+				}
+			}
+		})
+	}
+}
+
+func TestBlogTargetNoteIDsPrefersListAndFallsBackToSingleID(t *testing.T) {
+	tests := []struct {
+		name  string
+		query url.Values
+		want  []string
+	}{
+		{name: "list takes precedence", query: url.Values{"noteIds[]": {"one", "two"}, "noteId": {"legacy"}}, want: []string{"one", "two"}},
+		{name: "single fallback", query: url.Values{"noteId": {"legacy"}}, want: []string{"legacy"}},
+		{name: "missing targets", query: nil, want: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := blogTargetNoteIDs(&httpserver.Params{Query: tt.query})
+			if len(got) != len(tt.want) {
+				t.Fatalf("blogTargetNoteIDs() = %#v, want %#v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Fatalf("blogTargetNoteIDs() = %#v, want %#v", got, tt.want)
+				}
+			}
+		})
+	}
+}
+
+func TestAllNotesToBlogRequiresEveryTargetAndContinuesAfterFailure(t *testing.T) {
+	var calls []string
+	publish := func(noteID string) bool {
+		calls = append(calls, noteID)
+		return noteID != "failed"
+	}
+
+	if got := allNotesToBlog(nil, publish); got {
+		t.Fatal("allNotesToBlog(empty) = true, want false")
+	}
+	if got := allNotesToBlog([]string{"one", "two"}, publish); !got {
+		t.Fatal("allNotesToBlog(all success) = false, want true")
+	}
+	if got := allNotesToBlog([]string{"failed", "remaining"}, publish); got {
+		t.Fatal("allNotesToBlog(partial failure) = true, want false")
+	}
+	wantCalls := []string{"one", "two", "failed", "remaining"}
+	if len(calls) != len(wantCalls) {
+		t.Fatalf("publish calls = %#v, want %#v", calls, wantCalls)
+	}
+	for i := range calls {
+		if calls[i] != wantCalls[i] {
+			t.Fatalf("publish calls = %#v, want %#v", calls, wantCalls)
+		}
+	}
+}
+
 func TestPageParamDefaultsToFirstPage(t *testing.T) {
 	for _, query := range []url.Values{
 		nil,

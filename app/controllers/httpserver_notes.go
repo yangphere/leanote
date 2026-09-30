@@ -161,6 +161,29 @@ func noteParameterStrings(params *httpserver.Params, name string) []string {
 	return values
 }
 
+func blogTargetNoteIDs(params *httpserver.Params) []string {
+	if noteIDs := noteParameterStrings(params, "noteIds"); len(noteIDs) > 0 {
+		return noteIDs
+	}
+	if noteID := params.String("noteId"); noteID != "" {
+		return []string{noteID}
+	}
+	return nil
+}
+
+func allNotesToBlog(noteIDs []string, publish func(string) bool) bool {
+	if len(noteIDs) == 0 {
+		return false
+	}
+	allSucceeded := true
+	for _, noteID := range noteIDs {
+		if !publish(noteID) {
+			allSucceeded = false
+		}
+	}
+	return allSucceeded
+}
+
 func (s *NotesHTTPServer) updateNoteOrContent(c *httpserver.Context) httpserver.Result {
 	if noteService == nil {
 		return c.RenderJSON(info.Re{Msg: "storage"})
@@ -540,23 +563,23 @@ func (s *NotesHTTPServer) dispatch(c *httpserver.Context) httpserver.Result {
 		if noteService == nil {
 			return c.RenderJSON(info.Re{Msg: "storage"})
 		}
-		return c.RenderJSON(noteService.DeleteNotesWithOperation(userID, c.Params.Strings("noteIds"), c.Params.Bool("isShared", false), c.Params.String("OperationId")).OK())
+		return c.RenderJSON(noteService.DeleteNotesWithOperation(userID, noteParameterStrings(c.Params, "noteIds"), c.Params.Bool("isShared", false), c.Params.String("OperationId")).OK())
 	case "Note.MoveNote":
 		if noteService == nil {
 			return c.RenderJSON(info.Re{Msg: "storage"})
 		}
-		return c.RenderJSON(noteService.MoveNotesWithOperation(userID, c.Params.Strings("noteIds"), c.Params.String("notebookId"), c.Params.String("OperationId")).OK())
+		return c.RenderJSON(noteService.MoveNotesWithOperation(userID, noteParameterStrings(c.Params, "noteIds"), c.Params.String("notebookId"), c.Params.String("OperationId")).OK())
 	case "Note.CopyNote":
 		if noteService == nil {
 			return c.RenderJSON(info.Re{Msg: "storage"})
 		}
-		r := noteService.CopyNotesWithOperation(userID, c.Params.Strings("noteIds"), c.Params.String("notebookId"), c.Params.String("OperationId"))
+		r := noteService.CopyNotesWithOperation(userID, noteParameterStrings(c.Params, "noteIds"), c.Params.String("notebookId"), c.Params.String("OperationId"))
 		return c.RenderJSON(info.Re{Ok: r.OK(), Item: r.Notes})
 	case "Note.CopySharedNote":
 		if noteService == nil {
 			return c.RenderJSON(info.Re{Msg: "storage"})
 		}
-		r := noteService.CopySharedNotesWithOperation(userID, c.Params.Strings("noteIds"), c.Params.String("notebookId"), c.Params.String("fromUserId"), c.Params.String("OperationId"))
+		r := noteService.CopySharedNotesWithOperation(userID, noteParameterStrings(c.Params, "noteIds"), c.Params.String("notebookId"), c.Params.String("fromUserId"), c.Params.String("OperationId"))
 		return c.RenderJSON(info.Re{Ok: r.OK(), Item: r.Notes})
 	case "Note.SearchNoteByTags":
 		if noteService == nil {
@@ -574,7 +597,14 @@ func (s *NotesHTTPServer) dispatch(c *httpserver.Context) httpserver.Result {
 		if noteService == nil {
 			return c.RenderJSON(info.Re{Msg: "storage"})
 		}
-		return c.RenderJSON(noteService.ToBlog(userID, c.Params.String("noteId"), c.Params.Bool("isBlog", false), c.Params.Bool("isTop", false)))
+		noteIDs := blogTargetNoteIDs(c.Params)
+		if len(noteIDs) == 0 {
+			return c.RenderJSON(false)
+		}
+		isBlog, isTop := c.Params.Bool("isBlog", false), c.Params.Bool("isTop", false)
+		return c.RenderJSON(allNotesToBlog(noteIDs, func(noteID string) bool {
+			return noteService.ToBlog(userID, noteID, isBlog, isTop)
+		}))
 	case "Note.ExportPDF":
 		return s.exportPDF(c, false)
 	case "Note.ToPdf":
