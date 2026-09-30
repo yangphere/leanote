@@ -762,3 +762,38 @@ Compose 新增管理员邮箱/初始密码/ENV 恢复开关配置；启动 boots
 ### Status
 
 [OK] **Completed**
+
+
+## Session 30: 修复博客发布及右键菜单参数绑定
+<!-- trellis-session: v=2 fp=5c3b8c0ba2f10a92 -->
+
+**Date**: 2026-09-30
+**Task**: 修复博客发布及右键菜单参数绑定
+**Branch**: `dev`
+
+### Summary
+
+修复博客发布的数组参数与单数回退，补齐回归测试并同步任务验收文档；完成本地提交和任务归档。
+
+### Main Changes
+
+- SetNote2Blog 统一解析 noteIds[] 与单数 noteId，并固定批量发布全成功汇总语义。
+- 同步修正任务设计、执行记录和验收勾选，归档 09-30-fix-blog-context-menu。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7594760d` | fix(note): 修复博客发布及右键菜单参数绑定 |
+
+### Testing
+
+- [OK] Go controllers tests、go vet、gofmt、git diff --check、task.py validate 通过；真实 Mongo/HTTP/浏览器/PDF 仍未运行。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 保留既有 .trellis/spec/backend/quality-guidelines.md 未提交改动，后续单独处理。
