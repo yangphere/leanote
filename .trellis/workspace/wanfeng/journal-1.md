@@ -740,3 +740,25 @@ Compose 新增管理员邮箱/初始密码/ENV 恢复开关配置；启动 boots
 ### Status
 
 [OK] **Completed**
+
+
+## Session 29: 修复新建笔记列表路由并归档
+<!-- trellis-session: v=2 fp=34dfcc9b1ed196a6 -->
+
+**Date**: 2026-09-30
+**Task**: 修复新建笔记列表路由并归档
+**Branch**: `dev`
+
+### Summary
+
+修复普通与 Markdown 新建笔记触发的 /note/listNotes/ 404；新增路由契约测试，完成前端测试与构建验证，提交 eb2f4836，归档任务并保留真实 MongoDB/浏览器验证未运行记录。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `eb2f4836` | fix(note): 修复新建笔记列表请求 404 |
+
+### Status
+
+[OK] **Completed**
