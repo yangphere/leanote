@@ -717,3 +717,26 @@ Compose 新增管理员邮箱/初始密码/ENV 恢复开关配置；启动 boots
 ### Status
 
 [OK] **Completed**
+
+
+## Session 28: 清理 public 无用前端库与未使用的视图、Go 包
+<!-- trellis-session: v=2 fp=e065253931bd8ced -->
+
+**Date**: 2026-09-30
+**Task**: 清理 public 无用前端库与未使用的视图、Go 包
+**Branch**: `dev`
+
+### Summary
+
+删除 public/ 下 613 个无引用的前端库与静态资源（MathJax 多余配置与字体、Markdown v1、ace 未用主题/扩展/worker、遗留脚本），目录从 47M 降到 25M；再删除 10 个无渲染入口的视图及其专属资源、未导入的 app/lea/netutil 包和失效的 IE 兼容脚本。i18n 契约夹具同步，文案键与生成物不变；npm build/test 与 Go build/vet/test 通过，真实服务端验收未运行。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7928927f` | chore(public): 清理无用前端库与静态资源 |
+| `a8ab8850` | chore: 清理未使用的视图模板、Go 包与失效的 IE 兼容脚本 |
+
+### Status
+
+[OK] **Completed**

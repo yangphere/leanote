@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 27
-- **Last Active**: 2026-09-29
+- **Total Sessions**: 28
+- **Last Active**: 2026-09-30
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~719 | Active |
+| `journal-1.md` | ~742 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 28 | 2026-09-30 | 清理 public 无用前端库与未使用的视图、Go 包 | `7928927f`, `a8ab8850` | `dev` |
 | 27 | 2026-09-29 | Docker 管理员环境密码初始化与强制改密 | `3fb823fe` | `dev` |
 | 26 | 2026-09-29 | 添加 Docker Compose 启动配置 | `64d84dfd` | `dev` |
 | 25 | 2026-09-29 | 归档业务分层协调任务 | `cbef7035` | `dev` |
