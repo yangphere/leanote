@@ -23,6 +23,80 @@ Go 1.26 monolith, standard `testing`, no linter beyond `gofmt`/`go vet` — the 
 - Windows-safe shell: `set -eu` scripts guard expansions (`${GITHUB_REF:-}`); MSYS path pitfalls handled with `MSYS_NO_PATHCONV` where needed.
 - Failure diagnostics preserved: smoke scripts dump app log tail / response headers / docker logs on failure (original-cause requirement).
 
+## Scenario: Note mutation and blog-publication parameter binding
+
+### 1. Scope / Trigger
+
+Use this contract when a note HTTP action receives one or more note IDs from
+the legacy jQuery client. jQuery encodes `noteIds` arrays as `noteIds[]`,
+while older callers may send repeated `noteIds`, indexed fields, or one
+`noteId` for blog publication.
+
+### 2. Signatures
+
+```go
+func noteParameterStrings(params *httpserver.Params, name string) []string
+func allNotesToBlog(noteIDs []string, publish func(string) bool) bool
+```
+
+`NoteService.ToBlog(userID, noteID, isBlog, isTop)` remains the sole owner of
+publication and authorization decisions.
+
+### 3. Contracts
+
+- `noteParameterStrings(params, "noteIds")` accepts repeated `noteIds`,
+  `noteIds[]`, and contiguous `noteIds[0]`, `noteIds[1]`, ... fields, in that
+  order of precedence.
+- `Note.SetNote2Blog` prefers the list forms and falls back to a non-empty
+  singular `noteId` for legacy clients. It returns the raw JSON boolean
+  `true` only when every target confirms through `ToBlog`.
+- An empty target list returns `false`; each target is attempted in request
+  order even after an earlier target fails. `isBlog`, `isTop`, owner identity,
+  and service-layer receipt/USN rules are passed through unchanged.
+- Delete, move, copy, and shared-copy actions use the same list binder;
+  share and PDF actions continue to consume singular `noteId`.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|---|---|
+| `noteIds[]` or repeated `noteIds` supplied | all values reach the mutation/publication service |
+| Indexed list supplied | contiguous values are read in index order |
+| No list and non-empty `noteId` on `SetNote2Blog` | one-item publication attempt |
+| Empty list and no singular fallback | raw JSON `false`; service is not called |
+| Invalid, unauthorized, or failed target | continue remaining targets; final result is `false` |
+| Every target confirms | raw JSON `true` |
+
+### 5. Good / Base / Bad Cases
+
+- Good: bind `noteIds[]` once and pass the resulting slice to the existing
+  service method; aggregate publication results without duplicating service
+  rules.
+- Base: a legacy request with one `noteId` still publishes one note.
+- Bad: call `Params.Strings("noteIds")` directly for a jQuery array, or stop
+  after the first failed target and report a partial success.
+
+### 6. Tests Required
+
+- Parameter-binding tests assert repeated, bracketed, and indexed encodings.
+- Publication aggregation tests assert empty input, all-success input, the
+  false result for partial failure, and invocation of targets after failure.
+- Keep Mongo, real HTTP, browser, and PDF-tool evidence separate from these
+  deterministic controller-boundary tests.
+
+### 7. Wrong vs Correct
+
+```go
+// Wrong: jQuery's noteIds[] values bind as an empty list.
+ids := c.Params.Strings("noteIds")
+
+// Correct: accept the deployed encodings through the shared binder.
+ids := noteParameterStrings(c.Params, "noteIds")
+ok := allNotesToBlog(ids, func(id string) bool {
+	return noteService.ToBlog(userID, id, isBlog, isTop)
+})
+```
+
 ## Testing Requirements
 
 - Every fix ships a focused regression case (AGENTS.md). Real server boundary for HTTP work — never call a controller directly.
