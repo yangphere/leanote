@@ -392,7 +392,7 @@ background-position:-1px -670px
   -moz-border-radius: 6px 0 6px 6px;
   border-radius: 6px 0 6px 6px;
 }
-.show > .dropdown-menu,
+.dropdown-menu.show,
 .dropdown-submenu:hover > .dropdown-menu {
   visibility: visible;
   -webkit-animation: pulldown 0.2s;

@@ -65,6 +65,30 @@ async function loadBlogThemeFixture(page, theme) {
   await page.addScriptTag({ path: asset('public/js/bootstrap-hover-dropdown.js') });
 }
 
+async function loadProfileDropdownFixture(page, theme = 'default') {
+  await page.setContent(`
+    <div id="header">
+      <div id="myProfile">
+        <div class="dropdown">
+          <a class="dropdown-toggle profile-img" title="admin" data-bs-toggle="dropdown">
+            <img id="myAvatar" alt="admin" src="/images/blog/default_avatar.png">
+            <span class="username">admin</span>
+            <i class="fa fa-angle-down"></i>
+          </a>
+          <ul class="dropdown-menu li-a" role="menu">
+            <li><a href="/member">Member center</a></li>
+            <li><a href="/logout">Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  `);
+  await page.addStyleTag({ path: asset('public/css/bootstrap.css') });
+  await page.addStyleTag({ path: asset(`public/css/theme/${theme}.css`) });
+  await page.addStyleTag({ content: '#myProfile { visibility: visible !important; }' });
+  await page.addScriptTag({ path: asset('public/js/bootstrap.js') });
+}
+
 async function loadLeauiIframeFixture(page, src) {
   await page.setContent('<main><iframe id="leaui-frame" title="Image manager"></iframe></main>');
   await page.evaluate(({ imageSrc }) => {
@@ -129,6 +153,18 @@ test('Bootstrap 5 modal, tab, dropdown, tooltip and alert interactions are obser
   await expect(page.locator('.tooltip')).toBeVisible();
   await page.locator('#alert .btn-close').click();
   await expect(page.locator('#alert')).toBeHidden();
+});
+
+test('Leanote profile dropdown is visible after Bootstrap 5 toggles it', async ({ page }) => {
+  for (const theme of ['default', 'simple', 'writting', 'writting-overwrite']) {
+    await loadProfileDropdownFixture(page, theme);
+
+    const menu = page.locator('#myProfile .dropdown-menu');
+    await expect(menu, `${theme} menu should start hidden`).not.toBeVisible();
+    await page.locator('#myProfile .dropdown-toggle').click();
+    await expect(menu).toHaveClass(/show/);
+    await expect(menu, `${theme} menu should become visible`).toBeVisible();
+  }
 });
 
 test('BootstrapDialog preserves dialog argument and button receiver through a real click', async ({ page }) => {
