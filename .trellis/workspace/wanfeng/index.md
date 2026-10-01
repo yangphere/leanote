@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 30
-- **Last Active**: 2026-09-30
+- **Total Sessions**: 31
+- **Last Active**: 2026-10-01
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~799 | Active |
+| `journal-1.md` | ~830 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 31 | 2026-10-01 | 修复 Bootstrap 5 账号下拉菜单显示 | `5da23fcb` | `dev` |
 | 30 | 2026-09-30 | 修复博客发布及右键菜单参数绑定 | `7594760d` | `dev` |
 | 29 | 2026-09-30 | 修复新建笔记列表路由并归档 | `eb2f4836` | `dev` |
 | 28 | 2026-09-30 | 清理 public 无用前端库与未使用的视图、Go 包 | `7928927f`, `a8ab8850` | `dev` |

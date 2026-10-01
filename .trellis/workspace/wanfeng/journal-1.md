@@ -797,3 +797,34 @@ Compose 新增管理员邮箱/初始密码/ENV 恢复开关配置；启动 boots
 ### Next Steps
 
 - 保留既有 .trellis/spec/backend/quality-guidelines.md 未提交改动，后续单独处理。
+
+
+## Session 31: 修复 Bootstrap 5 账号下拉菜单显示
+<!-- trellis-session: v=2 fp=2628d23bb7485f20 -->
+
+**Date**: 2026-10-01
+**Task**: 修复 Bootstrap 5 账号下拉菜单显示
+**Branch**: `dev`
+
+### Summary
+
+将主题下拉菜单可见性选择器对齐 Bootstrap 5 的 .dropdown-menu.show，并新增四主题回归测试；此前 npm 与针对性 Playwright 验证已通过。
+
+### Main Changes
+
+- 修复四套主题的账号下拉菜单显示选择器
+- 新增 Bootstrap 5 账号下拉菜单回归测试
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5da23fcb` | fix(theme): 修复 Bootstrap 5 账号下拉菜单显示 |
+
+### Testing
+
+- [OK] npm test、静态检查与针对性 Playwright 测试已通过
+
+### Status
+
+[OK] **Completed**
