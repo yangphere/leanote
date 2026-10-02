@@ -1,0 +1,2 @@
+{"file":".trellis/spec/backend/index.md","reason":"遵循后端运行、错误处理与验证证据约定，检查 Docker/HTTP 结果时保持边界明确。"}
+{"file":".trellis/spec/frontend/index.md","reason":"遵循浏览器交互和前端质量检查约定，记录 Computer Use 的页面行为与失败结果。"}
