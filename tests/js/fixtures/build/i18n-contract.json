@@ -331,13 +331,13 @@
       "key": "Are you sure ?",
       "namespace": "msg",
       "path": "app/views/member/group/index.html",
-      "line": 150
+      "line": 141
     },
     {
       "key": "Are you sure ?",
       "namespace": "msg",
       "path": "app/views/member/group/index.html",
-      "line": 201
+      "line": 192
     },
     {
       "key": "Are you sure to delete it ?",
@@ -919,7 +919,7 @@
       "key": "Group Title",
       "namespace": "msg",
       "path": "app/views/member/group/index.html",
-      "line": 116
+      "line": 107
     },
     {
       "key": "Heading",
@@ -1501,25 +1501,25 @@
       "key": "Success",
       "namespace": "msg",
       "path": "app/views/member/group/index.html",
-      "line": 139
+      "line": 130
     },
     {
       "key": "Success",
       "namespace": "msg",
       "path": "app/views/member/group/index.html",
-      "line": 154
+      "line": 145
     },
     {
       "key": "Success",
       "namespace": "msg",
       "path": "app/views/member/group/index.html",
-      "line": 185
+      "line": 176
     },
     {
       "key": "Success",
       "namespace": "msg",
       "path": "app/views/member/group/index.html",
-      "line": 206
+      "line": 197
     },
     {
       "key": "This album has images, please delete it's images at first.",

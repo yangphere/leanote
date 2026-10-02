@@ -192,6 +192,28 @@ $('#editorContent').fileupload('add', {files: files});
 
 ---
 
+### Legacy management shells and Bootstrap navigation
+
+The admin and member shells reuse the legacy `.nav-primary` markup while loading
+Bootstrap 5. Bootstrap 5 makes `.nav` a flex container by default, so the shared
+shell rules must explicitly keep the root navigation, its direct list items, and
+their links in a vertical block layout:
+
+```css
+.admin-shell .nav-primary > ul.nav,
+.member-shell .nav-primary > ul.nav { display: block; }
+
+.admin-shell .nav-primary > ul.nav > li > a,
+.member-shell .nav-primary > ul.nav > li > a { display: block; }
+```
+
+Keep this compatibility rule byte-identical in the corresponding `.less` and `.css`
+files. The frontend contract test must cover the synchronized rule block, and
+browser checks must inspect the rendered navigation and shell overflow at desktop
+and narrow widths.
+
+---
+
 ## Testing Requirements
 
 - Every parser or publication bug requires a regression test for the malformed

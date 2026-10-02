@@ -1,13 +1,4 @@
 {{template "member/top.html" .}}
-<style>
-.group-title {
-	color: #fff;
-	background: none;
-	border: none;
-	outline: none;
-	width: 200px;
-}
-</style>
 <div class="m-b-md"> <h3 class="m-b-none">{{msg . "group"}}</h3></div>
 
 <p>
@@ -25,7 +16,7 @@
 </script>
 
 <script type="text/x-jsrender" id="tGroup">
-	<div class="col-sm-4 each-group" data-id="[[:GroupId]]">
+	<div class="group-grid-item each-group" data-id="[[:GroupId]]">
 		<section class="card">
 		<header class="card-header bg-success lt no-border">
 			<div class="clearfix">
@@ -52,7 +43,7 @@
 
 <div class="row" id="groups">
 	{{range .groups}}
-	<div class="col-sm-4 each-group" data-id="{{.GroupId.Hex}}">
+	<div class="group-grid-item each-group" data-id="{{.GroupId.Hex}}">
 		<section class="card">
 		<header class="card-header bg-success lt no-border">
 			<div class="clearfix">

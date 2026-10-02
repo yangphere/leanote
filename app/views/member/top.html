@@ -11,7 +11,7 @@
 	<link href="/css/bootstrap.css" rel="stylesheet">
 	<link href="/public/member/css/member.css" rel="stylesheet">
 </head>
-<body class="lang-{{$.locale}}">
+<body class="lang-{{$.locale}} member-shell">
 	<section class="vbox">
 		<header class="bg-dark dk header navbar navbar-fixed-top-xs">
 			<div class="navbar-header aside-md logo-ctn">
@@ -21,23 +21,23 @@
 				</a>
 			</div>
 			
-			<ul class="nav navbar-nav ms-auto m-n d-none d-sm-block nav-user">
-				<li class="d-none d-sm-block">
+			<ul class="nav navbar-nav ms-auto m-n nav-user">
+				<li>
 					<a href="/note" class="dk">
 						{{msg . "myNote"}}
 					</a>
 				</li>
-				<li class="d-none d-sm-block">
+				<li>
 					<a href="/blog/{{$.session.Username}}" class="dk">
 						{{msg . "myBlog"}}
 					</a>
 				</li>
-				<li class="d-none d-sm-block">
+				<li>
 					<a href="/logout" class="dk">
 						{{msg . "logout"}}
 					</a>
 				</li>
-				<li class="d-none d-sm-block">
+				<li>
 					<img alt="{{.userInfo.Username}}" title="{{.userInfo.Username}}" src="{{if .userInfo.Logo}}{{.userInfo.Logo}}{{else}}/images/blog/default_avatar.png{{end}}" id="myAvatar"/>
 				</li>
 			</ul>
