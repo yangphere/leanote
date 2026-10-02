@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"复核 PDF 安全边界未放宽、测试覆盖与 smoke 证据。"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"复核依赖不可用不回退、不把错误伪装成成功。"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"复核管理后台模板改动与真实浏览器下载证据范围。"}
+{"file":".trellis/tasks/10-02-gotenberg-pdf-renderer/research/gotenberg-facts.md","reason":"复核部署参数与实施第 1 步的核验结论一致。"}
