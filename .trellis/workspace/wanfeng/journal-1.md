@@ -850,3 +850,34 @@ Compose 新增管理员邮箱/初始密码/ENV 恢复开关配置；启动 boots
 ### Status
 
 [OK] **Completed**
+
+
+## Session 33: 修复账号下拉菜单缓存
+<!-- trellis-session: v=2 fp=04b3dff56fb45d1c -->
+
+**Date**: 2026-10-02
+**Task**: 修复账号下拉菜单缓存
+**Branch**: `dev`
+
+### Summary
+
+刷新笔记主题 CSS 缓存版本，确保 Bootstrap 5 账号下拉菜单修复在浏览器中生效；已完成 Docker、构建、测试与浏览器验证。
+
+### Main Changes
+
+- 普通与开发笔记模板的主题 CSS 版本从 7 提升到 8
+- 新增主题资产版本契约测试
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7cf21120` | fix(note): 刷新账号下拉菜单主题样式缓存 |
+
+### Testing
+
+- [OK] npm run build；npm test（216 通过，1 跳过）；定向契约测试 29/29；Docker /healthz 200；浏览器菜单可见
+
+### Status
+
+[OK] **Completed**
