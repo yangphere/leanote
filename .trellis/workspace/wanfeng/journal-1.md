@@ -881,3 +881,25 @@ Compose 新增管理员邮箱/初始密码/ENV 恢复开关配置；启动 boots
 ### Status
 
 [OK] **Completed**
+
+
+## Session 34: 完成管理后台与个人中心响应式样式修复
+<!-- trellis-session: v=2 fp=a37879aaa731b172 -->
+
+**Date**: 2026-10-02
+**Task**: 完成管理后台与个人中心响应式样式修复
+**Branch**: `dev`
+
+### Summary
+
+修复 Bootstrap 5 导航 flex 布局导致的管理后台侧栏错位问题，完成 admin/member 响应式样式、用户组卡片布局、契约测试和 Docker/Playwright 验证。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8a491c1e` | fix(frontend): 修复管理后台与个人中心响应式样式 |
+
+### Status
+
+[OK] **Completed**
