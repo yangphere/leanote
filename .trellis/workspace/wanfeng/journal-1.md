@@ -828,3 +828,25 @@ Compose 新增管理员邮箱/初始密码/ENV 恢复开关配置；启动 boots
 ### Status
 
 [OK] **Completed**
+
+
+## Session 32: Docker 运行时博客与笔记修复
+<!-- trellis-session: v=2 fp=d5ca30ec781dc971 -->
+
+**Date**: 2026-10-02
+**Task**: Docker 运行时博客与笔记修复
+**Branch**: `dev`
+
+### Summary
+
+修复博客主机、分享弹窗、评论加载、localhost 公开博客及普通笔记剪贴板图片重复；完成 Docker/浏览器/Go/Node 验证，归档 10-02-docker-runtime-bug-fixes。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f8cfd6b1` | fix(docker): 修复博客分享与笔记图片运行时问题 |
+
+### Status
+
+[OK] **Completed**

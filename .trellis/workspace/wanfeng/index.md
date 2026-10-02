@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 31
-- **Last Active**: 2026-10-01
+- **Total Sessions**: 32
+- **Last Active**: 2026-10-02
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~830 | Active |
+| `journal-1.md` | ~852 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 32 | 2026-10-02 | Docker 运行时博客与笔记修复 | `f8cfd6b1` | `dev` |
 | 31 | 2026-10-01 | 修复 Bootstrap 5 账号下拉菜单显示 | `5da23fcb` | `dev` |
 | 30 | 2026-09-30 | 修复博客发布及右键菜单参数绑定 | `7594760d` | `dev` |
 | 29 | 2026-09-30 | 修复新建笔记列表路由并归档 | `eb2f4836` | `dev` |
