@@ -208,6 +208,18 @@ test('note toolbar actions do not initialize dropdowns without a menu', () => {
   }
 });
 
+test('note theme assets bump their cache key after CSS behavior fixes', () => {
+  const files = ['app/views/note/note-dev.html', 'app/views/note/note.html'];
+  const versions = files.map((file) => {
+    const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    const match = html.match(/\/css\/theme\/\{\{if \.userInfo\.Theme\}\}[\s\S]*?\.css\?id=(\d+)/);
+    assert.ok(match, `${file} must expose the normal-mode theme asset version`);
+    return match[1];
+  });
+  assert.equal(new Set(versions).size, 1, 'both note templates must share one theme asset version');
+  assert.ok(Number(versions[0]) > 7, 'the theme asset version must bypass cached pre-fix CSS');
+});
+
 test('album and image iframe forms use explicit Bootstrap 5 layout classes', () => {
   const files = [
     'app/views/album/index.html',

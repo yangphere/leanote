@@ -675,7 +675,7 @@ function hideMask () {
 	// 主题
 	$("#themeForm").on("click", "input", function(e) {
 		var val = $(this).val();
-		var preHref = $("#themeLink").attr("href"); // default.css?id=7
+		var preHref = $("#themeLink").attr("href"); // default.css?id=8
 		var arr = preHref.split('=');
 		var id = 1;
 		if (arr.length == 2) {
