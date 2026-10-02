@@ -8,6 +8,7 @@ adminForceEnvPassword=${LEANOTE_ADMIN_FORCE_ENV_PASSWORD}
 i18n.default_language=${LEANOTE_LANGUAGE}
 http.addr=0.0.0.0
 http.port=9000
+site.url=http://127.0.0.1:9000
 content.private.data=/var/lib/leanote/private/files
 content.private.quarantine=/var/lib/leanote/private/quarantine
 content.public.data=/var/lib/leanote/public/upload

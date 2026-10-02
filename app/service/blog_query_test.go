@@ -173,3 +173,24 @@ func TestCanonicalizeStoredCustomDomainRejectsIP(t *testing.T) {
 		t.Fatalf("IP custom domain error = %v", err)
 	}
 }
+
+func TestBlogHostsMatchAllowsOnlyLocalLoopbackAliases(t *testing.T) {
+	tests := []struct {
+		host, defaultHost string
+		want              bool
+	}{
+		{host: "127.0.0.1", defaultHost: "127.0.0.1", want: true},
+		{host: "localhost", defaultHost: "localhost", want: true},
+		{host: "localhost", defaultHost: "127.0.0.1", want: true},
+		{host: "127.0.0.1", defaultHost: "localhost", want: true},
+		{host: "example.com", defaultHost: "example.com", want: true},
+		{host: "localhost", defaultHost: "example.com", want: false},
+		{host: "example.com", defaultHost: "localhost", want: false},
+		{host: "127.0.0.2", defaultHost: "127.0.0.1", want: false},
+	}
+	for _, test := range tests {
+		if got := BlogHostsMatch(test.host, test.defaultHost); got != test.want {
+			t.Errorf("BlogHostsMatch(%q, %q) = %t, want %t", test.host, test.defaultHost, got, test.want)
+		}
+	}
+}

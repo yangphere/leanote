@@ -555,3 +555,71 @@ w.Header().Set("Content-Disposition", `attachment; filename="`+name+`"`)
 // Correct: the shared HTTP boundary sanitizes it once.
 w.Header().Set("Content-Disposition", httpserver.DownloadDisposition("attachment", name))
 ```
+
+## Scenario: Docker blog host and share-modal HTTP contracts
+
+### 1. Scope / Trigger
+
+Use this contract when a Docker production configuration or the authenticated
+blog/share adapters changes. These paths are cross-layer boundaries: the
+configured site URL selects the blog host, while share-info actions return a
+Bootstrap modal fragment consumed by the browser.
+
+### 2. Signatures
+
+```go
+func (s *ShareHTTPServer) dispatch(c *httpserver.Context) httpserver.Result
+func renderShareUserInfo(c *httpserver.Context, resourceID string, isNote bool,
+    users []info.ShareUserInfo) httpserver.Result
+```
+
+Docker must provide `site.url` in `conf/app.conf-docker`; share-info routes are
+`GET /share/listNoteShareUserInfo?noteId=<id>` and
+`GET /share/listNotebookShareUserInfo?notebookId=<id>`.
+
+### 3. Contracts
+
+- `site.url` is an explicit, non-empty deployment value used by blog host
+  canonicalization; Docker does not infer it from an empty config.
+- A valid share resource ID produces HTML containing `.modal-dialog`,
+  `.modal-content`, `#shareNotebookTable`, and the existing share controls.
+- The note/notebook distinction is preserved for permission and delete actions;
+  the adapter passes `isNote` and the canonical resource ID to the view.
+- Anonymous requests still run the session and authentication befores and are
+  redirected to `/login`.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|---|---|
+| Missing Docker `site.url` | fail blog-domain resolution instead of serving an ambiguous host |
+| Invalid share resource ID | HTTP 400 `invalid share resource` |
+| Valid ID with no shared users | HTTP 200 HTML modal with an empty list and add row |
+| Anonymous share request | HTTP 302 to `/login`; handler is not called |
+
+### 5. Good / Base / Bad Cases
+
+- Good: resolve the configured blog domain once and render the shared modal
+  template through the native HTTP boundary.
+- Base: a focused controller test invokes both share-info actions with a valid
+  and invalid ID and checks status, content type, and modal fragments.
+- Bad: return validation JSON for a remote modal request, infer a blog host from
+  an empty Docker setting, or duplicate note/notebook templates.
+
+### 6. Tests Required
+
+- Test authentication redirect, invalid-ID 400, HTML modal shape, and escaped
+  user email data for both note and notebook actions.
+- Run focused Go tests, `go vet`, `go build ./...`, and a real container
+  `/healthz` plus blog/share browser check. Unit tests do not replace Mongo,
+  HTTP, or browser evidence.
+
+### 7. Wrong vs Correct
+
+```go
+// Wrong: remote modal callers receive JSON validation output.
+return c.RenderJSON(service.ListNoteShareUserInfo(...))
+
+// Correct: both actions share one escaped HTML modal contract.
+return renderShareUserInfo(c, c.Params.String("noteId"), true, users)
+```

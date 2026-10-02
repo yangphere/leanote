@@ -701,6 +701,8 @@ Notebook.changeNotebookForNewNote = function(notebookId) {
 // 显示共享信息
 Notebook.listNotebookShareUserInfo = function(target) {
 	var notebookId = $(target).attr("notebookId");
+	Share.dialogIsNote = false;
+	Share.dialogNoteOrNotebookId = notebookId;
 	showDialogRemote("/share/listNotebookShareUserInfo", {notebookId: notebookId});
 }
 // 共享笔记本

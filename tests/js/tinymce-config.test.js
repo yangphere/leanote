@@ -42,6 +42,13 @@ test('TinyMCE profiles use the self-hosted v8 runtime and preserve visible comma
   assert.doesNotMatch(member.plugins.join(' '), /\b(?:paste|hr|contextmenu|textcolor|tabfocus|fullpage)\b/);
 });
 
+test('ordinary note clipboard images use Leanote upload handling only', () => {
+  const config = loadConfig();
+  const note = config.createNoteConfig({ selector: '#editorContent', locale: 'zh-cn' });
+
+  assert.equal(note.paste_data_images, false);
+});
+
 test('TinyMCE locale mapping uses canonical RFC 5646 codes and rejects unsupported application locales', () => {
   const config = loadConfig();
   const expected = {

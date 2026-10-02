@@ -7,7 +7,7 @@ const vm = require('node:vm');
 const ROOT = path.resolve(__dirname, '../..');
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 
-test('TinyMCE 8 owns ordinary paste and no legacy Clipboard fork remains', () => {
+test('TinyMCE 8 runs without a legacy Clipboard fork', () => {
   const core = read('public/tinymce/tinymce.js');
   const minCore = read('public/tinymce/tinymce.min.js');
   assert.match(core, /majorVersion\s*[:=]\s*["']8["']/);
@@ -22,9 +22,14 @@ test('TinyMCE 8 owns ordinary paste and no legacy Clipboard fork remains', () =>
 
 test('Leanote paste boundary has one upload owner and observable failure handling', () => {
   const source = read('public/js/plugins/editor_drop_paste.js');
-  const editorRegistrations = source.match(/#editorContent[^\n]*\.fileupload\(/g) ?? [];
+  const editorRegistrations = source.match(/#editorContent[^\n]*\.fileupload\(\{/g) ?? [];
   assert.equal(editorRegistrations.length, 1);
   assert.match(source, /url:\s*["']\/file\/pasteImage["']/);
+  assert.match(source, /addEventListener\('paste',[\s\S]*?true\)/);
+  assert.match(source, /clipboardData\.items/);
+  assert.match(source, /event\.preventDefault\(\)/);
+  assert.match(source, /event\.stopImmediatePropagation\(\)/);
+  assert.match(source, /\.fileupload\('add',\s*\{files: files\}\)/);
   assert.match(source, /data\.result\.Ok\s*==\s*true/);
   assert.match(source, /data\.process\.remove\(\)/);
   assert.doesNotMatch(source, /tinymce\.pasteplugin|Clipboard\.js/);

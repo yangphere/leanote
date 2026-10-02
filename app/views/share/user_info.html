@@ -1,0 +1,36 @@
+<div class="modal-dialog modal-lg">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">{{msg . "shareToFriends"}}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{msg . "close"}}"></button>
+        </div>
+        <div class="modal-body">
+            <div id="shareMsg" class="alert alert-danger" style="display:none"></div>
+            <div class="table-responsive">
+                <table id="shareNotebookTable" class="table align-middle">
+                    <thead><tr><th>#</th><th>{{msg . "email"}}</th><th>{{msg . "permission"}}</th><th>{{msg . "operation"}}</th></tr></thead>
+                    <tbody>
+                        {{range $index, $user := .shareUsers}}
+                        <tr>
+                            <td>{{add $index}}</td>
+                            <td>{{$user.Email}}</td>
+                            <td><a href="#" class="btn btn-secondary change-perm" noteOrNotebookId="{{$.resourceID}}" perm="{{$user.Perm}}" toUserId="{{$user.ToUserId.Hex}}" title="{{msg $ "clickToChangePermission"}}">{{if $user.Perm}}{{msg $ "writable"}}{{else}}{{msg $ "readOnly"}}{{end}}</a></td>
+                            <td><a href="#" class="btn btn-warning delete-share" noteOrNotebookId="{{$.resourceID}}" toUserId="{{$user.ToUserId.Hex}}">{{msg $ "delete"}}</a></td>
+                        </tr>
+                        {{end}}
+                        <tr id="tr1">
+                            <td>#</td>
+                            <td><input id="friendsEmail" type="email" class="form-control" placeholder="{{msg . "friendEmail"}}"></td>
+                            <td>
+                                <label><input type="radio" name="perm1" checked value="0"> {{msg . "readOnly"}}</label>
+                                <label><input type="radio" name="perm1" value="1"> {{msg . "writable"}}</label>
+                            </td>
+                            <td><button type="button" class="btn btn-success" onclick="addShareNoteOrNotebook(1)">{{msg . "share"}}</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button type="button" id="addShareNotebookBtn" class="btn btn-primary">{{msg . "addShare"}}</button>
+        </div>
+    </div>
+</div>

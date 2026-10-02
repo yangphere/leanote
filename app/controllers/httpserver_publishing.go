@@ -296,6 +296,10 @@ func (s *ShareHTTPServer) dispatch(c *httpserver.Context) httpserver.Result {
 			return c.NotFound("")
 		}
 		return c.RenderJSON(v)
+	case "ListNoteShareUserInfo":
+		return renderShareUserInfo(c, c.Params.String("noteId"), true, shareService.ListNoteShareUserInfo(c.Params.String("noteId"), uid))
+	case "ListNotebookShareUserInfo":
+		return renderShareUserInfo(c, c.Params.String("notebookId"), false, shareService.ListNotebookShareUserInfo(c.Params.String("notebookId"), uid))
 	case "ListShareNotes":
 		var v interface{}
 		var err error
@@ -345,6 +349,15 @@ func (s *ShareHTTPServer) dispatch(c *httpserver.Context) httpserver.Result {
 	default:
 		return c.RenderJSON(info.Re{Ok: false, Msg: "validation"})
 	}
+}
+
+func renderShareUserInfo(c *httpserver.Context, resourceID string, isNote bool, users []info.ShareUserInfo) httpserver.Result {
+	if !db.IsValidObjectIDHex(resourceID) {
+		return httpserver.TextResult(http.StatusBadRequest, "invalid share resource")
+	}
+	args := prepareView(c)
+	args["resourceID"], args["isNote"], args["shareUsers"] = resourceID, isNote, users
+	return c.RenderTemplate("share/user_info.html", args)
 }
 
 func serviceShareOptions(c *httpserver.Context) service.ShareGrantOptions {

@@ -13,6 +13,20 @@ import (
 
 var ErrInvalidBlogHost = errors.New("invalid blog host")
 
+// BlogHostsMatch reports whether a request host selects the configured default
+// blog. localhost and 127.0.0.1 are interchangeable only for the local
+// loopback default; custom domains remain exact matches.
+func BlogHostsMatch(host, defaultHost string) bool {
+	if host == defaultHost {
+		return true
+	}
+	return isLocalLoopbackBlogHost(host) && isLocalLoopbackBlogHost(defaultHost)
+}
+
+func isLocalLoopbackBlogHost(host string) bool {
+	return host == "localhost" || host == "127.0.0.1"
+}
+
 func CanonicalizeBlogHost(raw string) (string, error) {
 	host, err := stripBlogHostPort(raw)
 	if err != nil {

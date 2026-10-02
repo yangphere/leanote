@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/yangphere/leanote/app/httpserver"
@@ -113,7 +114,7 @@ func resolveBlogDomain(c *httpserver.Context) (bool, info.UserBlog, httpserver.R
 	if err != nil {
 		return false, info.UserBlog{}, httpserver.TextResult(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 	}
-	if host == defaultDomain {
+	if service.BlogHostsMatch(host, defaultDomain) {
 		return false, info.UserBlog{}, nil
 	}
 	if strings.HasSuffix(host, "."+defaultDomain) {
@@ -177,7 +178,7 @@ func buildBlogView(c *httpserver.Context, userBlog info.UserBlog, userInfo info.
 	args["prettifyJsUrl"] = "/js/google-code-prettify/prettify.js"
 	args["prettifyCssUrl"] = "/js/google-code-prettify/prettify.css"
 	args["blogCommonJsUrl"] = "/public/blog/js/common.js"
-	args["shareCommentCssUrl"] = "/public/blog/css/share_comment.css"
+	args["shareCommentCssUrl"] = versionedBlogAssetURL("/public/blog/css/share_comment.css", configService.GetVersion())
 	args["shareCommentJsUrl"] = "/public/blog/js/share_comment.js"
 	args["fontAwesomeUrl"] = "/css/font-awesome-4.2.0/css/font-awesome.css"
 	args["bootstrapCssUrl"] = "/css/bootstrap.css"
@@ -212,6 +213,13 @@ func buildBlogView(c *httpserver.Context, userBlog info.UserBlog, userInfo info.
 		args["themeInfo"] = map[string]interface{}{}
 	}
 	return args, nil
+}
+
+func versionedBlogAssetURL(path, version string) string {
+	if version == "" {
+		return path
+	}
+	return path + "?v=" + url.QueryEscape(version)
 }
 
 func populateBlogPage(c *httpserver.Context, args map[string]interface{}, userBlog info.UserBlog, userID, userRef string) error {

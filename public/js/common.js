@@ -379,6 +379,16 @@ function switchEditor(isMarkdown) {
 // 可能是tinymce还没有渲染成功
 var previewToken = "<div style='display: none'>FORTOKEN</div>"
 var clearIntervalForSetContent;
+var markdownEditorEventSource;
+function bindMarkdownEditorSession(md) {
+	if (markdownEditorEventSource === md.eventMgr) return;
+	md.eventMgr.addListener('onContentChanged', function(file) {
+		var note = Note.getCurNote();
+		if (!note || !note.IsMarkdown || Note.readOnly || file.content !== md.getContent()) return;
+		window.LeanoteEditorSession.markMutation(file.content);
+	});
+	markdownEditorEventSource = md.eventMgr;
+}
 function setEditorContent(content, isMarkdown, preview, callback, loadEpoch) {
 	if(!content) {
 		content = "";
@@ -441,6 +451,7 @@ function setEditorContent(content, isMarkdown, preview, callback, loadEpoch) {
 		}
 	*/
 		if(MD) {
+			bindMarkdownEditorSession(MD);
 			MD.setContent(content);
 			MD.clearUndo && MD.clearUndo();
 			callback && callback();

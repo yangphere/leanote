@@ -6,6 +6,31 @@ define('editor_drop_paste', [], function() {
 			(window.Note && (window.Note.readOnly || window.Note.isReadOnly)));
 	}
 
+	function clipboardImageFiles(event) {
+		var items = event && event.clipboardData && event.clipboardData.items;
+		if (!items || !items.length) return [];
+		var files = [];
+		for (var i = 0; i < items.length; i++) {
+			if (items[i].kind === 'file' && /^image\//i.test(items[i].type || '')) {
+				var file = items[i].getAsFile && items[i].getAsFile();
+				if (file) files.push(file);
+			}
+		}
+		return files;
+	}
+
+	function guardTinyMceImagePaste() {
+		var editorContent = $('#editorContent')[0];
+		if (!editorContent || typeof editorContent.addEventListener !== 'function') return;
+		editorContent.addEventListener('paste', function(event) {
+			var files = clipboardImageFiles(event);
+			if (!files.length) return;
+			event.preventDefault();
+			event.stopImmediatePropagation();
+			$('#editorContent').fileupload('add', {files: files});
+		}, true);
+	}
+
 	function currentEditorEpoch() {
 		if (window.LeanoteEditorSession && typeof window.LeanoteEditorSession.snapshot === 'function') {
 			return window.LeanoteEditorSession.snapshot().loadEpoch;
@@ -433,4 +458,5 @@ define('editor_drop_paste', [], function() {
 	
 	initUploader();
 	pasteImageInit();
+	guardTinyMceImagePaste();
 });

@@ -1501,6 +1501,8 @@ Note.deleteNote = function(target, contextmenuItem, isShared) {
 // 显示共享信息
 Note.listNoteShareUserInfo = function(target) {
 	var noteId = $(target).attr("noteId");
+	Share.dialogIsNote = true;
+	Share.dialogNoteOrNotebookId = noteId;
 	showDialogRemote("/share/listNoteShareUserInfo", {noteId: noteId});
 };
 

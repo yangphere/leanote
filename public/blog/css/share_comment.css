@@ -1,3 +1,7 @@
+.hide {
+  display: none !important;
+}
+
 .entry-controls {
   text-align: right;
   padding-top: 20px;

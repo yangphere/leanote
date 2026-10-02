@@ -32,7 +32,11 @@
 		config.plugins = ['autolink', 'link', 'lists', 'searchreplace', 'table', 'leaui_image', 'leaui_mindmap', 'leanote_nav', 'leanote_code'];
 		config.toolbar = 'blocks | forecolor backcolor | bold italic underline strikethrough | leaui_image leaui_mindmap | leanote_code leanote_inline_code | bullist numlist | alignleft aligncenter alignright alignjustify || outdent indent blockquote | link unlink | table | hr removeformat | subscript superscript | searchreplace | fontfamily fontsize';
 		config.valid_children = '+pre[div|#text|p|span|textarea|i|b|strong]';
-		config.paste_data_images = true;
+		// Leanote uploads clipboard images through editor_drop_paste so the
+		// resulting file is durable and addressable from notes and blogs. TinyMCE's
+		// data-image handler must stay disabled or it inserts a second blob image
+		// for the same clipboard event.
+		config.paste_data_images = false;
 		return config;
 	}
 

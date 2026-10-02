@@ -194,6 +194,20 @@ test('application templates do not retain removed Bootstrap 3 layout utilities',
   }
 });
 
+test('note toolbar actions do not initialize dropdowns without a menu', () => {
+  for (const file of ['app/views/note/note-dev.html', 'app/views/note/note.html']) {
+    const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    for (const id of ['editBtn', 'saveBtn', 'contentHistory', 'tipsBtn']) {
+      const action = html.match(new RegExp(`<a\\b[^>]*\\bid="${id}"[^>]*>`));
+      assert.ok(action, `${file} must retain ${id}`);
+      assert.doesNotMatch(action[0], /data-bs-toggle="dropdown"/,
+        `${file} ${id} has no dropdown menu and must not trigger Bootstrap's dropdown data API`);
+    }
+    assert.match(html, /id="noteInfoDropdown"[\s\S]*?data-bs-toggle="dropdown"[\s\S]*?id="noteInfo"/);
+    assert.match(html, /id="attachDropdown"[\s\S]*?data-bs-toggle="dropdown"[\s\S]*?id="attachMenu"/);
+  }
+});
+
 test('album and image iframe forms use explicit Bootstrap 5 layout classes', () => {
   const files = [
     'app/views/album/index.html',
@@ -220,6 +234,17 @@ test('built-in blog themes match Bootstrap 5 dropdown visibility state', () => {
     const css = fs.readFileSync(path.join(ROOT, `public/blog/themes/${theme}/style.css`), 'utf8');
     assert.match(css, /ul\.dropdown-menu\.show\s*\{/, `${theme} must reveal the menu state Bootstrap 5 applies`);
     assert.doesNotMatch(css, /\.show\s+ul\.dropdown-menu\s*\{/, `${theme} must not depend on a parent .show state`);
+  }
+});
+
+test('public blog comment visibility uses the legacy hide class contract', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'public/blog/css/share_comment.css'), 'utf8');
+  assert.match(css, /\.hide\s*\{\s*display:\s*none\s*!important\s*;\s*\}/,
+    'share_comment.css must hide comment loading and form elements while requests are pending');
+  for (const theme of ['default', 'elegant', 'nav_fixed']) {
+    const template = fs.readFileSync(path.join(ROOT, `public/blog/themes/${theme}/share_comment.html`), 'utf8');
+    assert.match(template, /class="comment-box hide"/, `${theme} must keep the shared comment-box visibility state`);
+    assert.match(template, /class="hide comments-more"/, `${theme} must keep the shared comments-more visibility state`);
   }
 });
 

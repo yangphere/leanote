@@ -193,6 +193,10 @@ func CanonicalizeStoredCustomDomain(raw string) (string, error) {
 	return domain.CanonicalizeStoredCustomDomain(raw)
 }
 
+func BlogHostsMatch(host, defaultHost string) bool {
+	return domain.BlogHostsMatch(host, defaultHost)
+}
+
 func SelectBlogHost(requestHost, forwarded, forwardedHost, remoteAddr, trustedProxyAllowlist string) (string, error) {
 	canonicalRequestHost, err := CanonicalizeBlogHost(requestHost)
 	if err != nil {
