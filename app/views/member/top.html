@@ -13,34 +13,34 @@
 </head>
 <body class="lang-{{$.locale}} member-shell">
 	<section class="vbox">
-		<header class="bg-dark dk header navbar navbar-fixed-top-xs">
+		<header class="bg-dark dk header navbar navbar-fixed-top-xs member-header">
 			<div class="navbar-header aside-md logo-ctn">
-				<a href="/member" class="navbar-brand clearfix" data-toggle="fullscreen">
+				<a href="/member" class="navbar-brand clearfix">
 					<span id="logo"></span>
 					<span class="logo-title">{{msg . "memberCenter"}}</span>
 				</a>
 			</div>
 			
-			<ul class="nav navbar-nav ms-auto m-n nav-user">
-				<li>
-					<a href="/note" class="dk">
-						{{msg . "myNote"}}
+			<div class="member-header-nav ms-auto">
+				<a href="/note" class="member-header-link" title="{{msg . "myNote"}}">
+					<i class="fa fa-book"></i>
+					<span>{{msg . "myNote"}}</span>
+				</a>
+				<a href="/blog/{{if $.session.Username}}{{$.session.Username}}{{else}}{{.userInfo.Username}}{{end}}" class="member-header-link" title="{{msg . "myBlog"}}">
+					<i class="fa fa-rss"></i>
+					<span>{{msg . "myBlog"}}</span>
+				</a>
+				<div class="member-header-user">
+					<a href="/member/user/avatar" class="member-avatar-wrapper" title="{{msg . "Avatar"}}">
+						<img alt="{{.userInfo.Username}}" src="{{if .userInfo.Logo}}{{.userInfo.Logo}}{{else}}/images/blog/default_avatar.png{{end}}" id="myAvatar" class="member-header-avatar"/>
 					</a>
-				</li>
-				<li>
-					<a href="/blog/{{$.session.Username}}" class="dk">
-						{{msg . "myBlog"}}
-					</a>
-				</li>
-				<li>
-					<a href="/logout" class="dk">
-						{{msg . "logout"}}
-					</a>
-				</li>
-				<li>
-					<img alt="{{.userInfo.Username}}" title="{{.userInfo.Username}}" src="{{if .userInfo.Logo}}{{.userInfo.Logo}}{{else}}/images/blog/default_avatar.png{{end}}" id="myAvatar"/>
-				</li>
-			</ul>
+					<span class="member-header-uname" title="{{.userInfo.Username}}">{{.userInfo.Username}}</span>
+				</div>
+				<a href="/logout" class="member-header-link member-header-logout" title="{{msg . "logout"}}">
+					<i class="fa fa-sign-out"></i>
+					<span>{{msg . "logout"}}</span>
+				</a>
+			</div>
 		</header>
 		<section>
 			<section class="hbox stretch">

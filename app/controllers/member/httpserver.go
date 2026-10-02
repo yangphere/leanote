@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/yangphere/leanote/app/db"
 	"github.com/yangphere/leanote/app/httpserver"
 	"github.com/yangphere/leanote/app/info"
 	"github.com/yangphere/leanote/app/service"
@@ -99,12 +100,13 @@ func template(c *httpserver.Context, name string) httpserver.Result {
 }
 
 func memberViewArgs(c *httpserver.Context) map[string]interface{} {
-	args := make(map[string]interface{}, len(c.ViewArgs)+6)
+	args := make(map[string]interface{}, len(c.ViewArgs)+7)
 	for key, value := range c.ViewArgs {
 		args[key] = value
 	}
 	args["currentLocale"] = c.Locale
 	args["locale"] = c.Locale
+	args["isAdmin"] = c.GetPrincipal().Role == httpserver.PrincipalRoleAdmin
 	if userService != nil {
 		args["userInfo"] = userService.GetUserInfo(uid(c))
 	}
@@ -131,9 +133,20 @@ type memberIndexServer struct{}
 func (s *memberIndexServer) Index(c *httpserver.Context) httpserver.Result {
 	args := memberViewArgs(c)
 	args["title"] = c.Message("Leanote Member Center")
-	if noteService != nil {
-		args["countNote"] = noteService.CountNote(uid(c))
-		args["countBlog"] = noteService.CountBlog(uid(c))
+	userId := uid(c)
+	if userId != "" && db.IsValidObjectIDHex(userId) {
+		if noteService != nil {
+			args["countNote"] = noteService.CountNote(userId)
+			args["countBlog"] = noteService.CountBlog(userId)
+			_, recentNotes := noteService.ListNotes(userId, "", false, 1, 6, "UpdatedTime", false, false)
+			args["recentNotes"] = recentNotes
+		}
+		if notebookService != nil {
+			args["countNotebook"] = len(notebookService.GetActiveNotebooks(userId))
+		}
+		if groupService != nil {
+			args["countGroup"] = len(groupService.GetGroups(userId))
+		}
 	}
 	return c.RenderTemplate("member/index.html", args)
 }
