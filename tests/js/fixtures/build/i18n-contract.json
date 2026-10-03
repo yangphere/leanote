@@ -595,7 +595,7 @@
       "key": "delete",
       "namespace": "msg",
       "path": "public/js/app/tag.js",
-      "line": 148
+      "line": 198
     },
     {
       "key": "Delete",
@@ -1243,7 +1243,7 @@
       "key": "noTag",
       "namespace": "msg",
       "path": "public/js/app/tag.js",
-      "line": 90
+      "line": 128
     },
     {
       "key": "Numbered List",

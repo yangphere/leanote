@@ -27,6 +27,44 @@ Tag.mapEn2Cn = {
 	"yellow": "黄色",
 }
 
+// 标签自定义颜色持久化管理
+Tag.colorMap = {};
+try {
+	var savedColors = localStorage.getItem("leanote_tag_colors");
+	if (savedColors) {
+		Tag.colorMap = JSON.parse(savedColors) || {};
+	}
+} catch(e) {}
+
+Tag.saveColorMap = function() {
+	try {
+		localStorage.setItem("leanote_tag_colors", JSON.stringify(Tag.colorMap));
+	} catch(e) {}
+};
+
+// 获取标签对应的样式类名
+Tag.getColorClass = function(text) {
+	if (!text) return "";
+	var enText = Tag.mapCn2En[text] || text;
+	var cnText = Tag.mapEn2Cn[text] || text;
+	
+	// 从持久化字典中查找
+	var colorName = Tag.colorMap[text] || Tag.colorMap[enText] || Tag.colorMap[cnText];
+	if (colorName) {
+		if (colorName.indexOf("label-") === -1) {
+			return "label label-" + colorName;
+		}
+		return colorName.indexOf("label ") === -1 ? "label " + colorName : colorName;
+	}
+	
+	// 从原生 Tag.classes 查找
+	if (Tag.classes[text]) return Tag.classes[text];
+	if (Tag.classes[enText]) return Tag.classes[enText];
+	if (Tag.classes[cnText]) return Tag.classes[cnText];
+	
+	return "";
+};
+
 Tag.t = $("#tags");
 
 // called by Note
@@ -69,15 +107,15 @@ function revertTagStatus() {
 }
 
 function hideTagList(event) {
-	$("#tagDropdown").removeClass("open");
+	$("#tagDropdown").removeClass("open show"); $("#tagColor").removeClass("show");
 	if (event) {
-		event.stopPropagation()
+		event.stopPropagation();
 	}
 }
 function showTagList(event) {
-	$("#tagDropdown").addClass("open");
+	$("#tagDropdown").addClass("open show"); $("#tagColor").addClass("show");
 	if (event) {
-		event.stopPropagation()
+		event.stopPropagation();
 	}
 }
 
@@ -88,27 +126,28 @@ Tag.renderReadOnlyTags = function(tags) {
 	$("#noteReadTags").html("");
 	if(isEmpty(tags) || (tags.length == 1 && tags[0] == "")) {
 		$("#noteReadTags").html(getMsg("noTag"));
+		return;
 	}
 	
 	var i = true;
 	function getNextDefaultClasses() {
 		if (i) {
+			i = false;
 			return "label label-default";
-			i = false
 		} else {
 			i = true;
 			return "label label-info";
 		}
 	}
 	
-	for(var i in tags) {
-		var text = tags[i];
+	for(var j in tags) {
+		var text = tags[j];
 		text = Tag.mapEn2Cn[text] || text;
-		var classes = Tag.classes[text];
+		var classes = Tag.getColorClass(text);
 		if(!classes) {
 			classes = getNextDefaultClasses();
 		}
-		tag = tt('<span class="?">?</span>', classes, trimTitle(text));
+		var tag = tt('<span class="?">?</span>', classes, trimTitle(text));
 		
 		$("#noteReadTags").append(tag);
 	}
@@ -127,14 +166,25 @@ Tag.appendTag = function(tag, save) {
 		if(!text) {
 			return;
 		}
+		// 检查传入的 classes 中是否包含特定颜色
+		var match = (classes || "").match(/label-(red|blue|yellow|green)/);
+		if (match) {
+			isColor = true;
+			var colorName = match[1];
+			Tag.colorMap[text] = colorName;
+			var enText = Tag.mapCn2En[text] || text;
+			Tag.colorMap[enText] = colorName;
+			Tag.saveColorMap();
+		}
 	} else {
 		tag = tag == null ? "" : String(tag).trim();
 		text = tag;
 		if(!text) {
 			return;
 		}
-		var classes = Tag.classes[text];
-		if(classes) {
+		var foundClass = Tag.getColorClass(text);
+		if(foundClass) {
+			classes = foundClass;
 			isColor = true;
 		} else {
 			classes = "label label-default";
@@ -150,13 +200,8 @@ Tag.appendTag = function(tag, save) {
 	// 避免重复
 	var isExists = false;
 	$("#tags").children().each(function() {
-		if (isColor) {
-			var tagHtml = $("<div></div>").append($(this).clone()).html();
-			if (tagHtml == tag) {
-				$(this).remove();
-				isExists = true;
-			}
-		} else if (text + "X" == $(this).text()) {
+		var existingText = ($(this).data('tag') || "").trim();
+		if (existingText === text || text + "X" === $(this).text()) {
 			$(this).remove();
 			isExists = true;
 		}
@@ -172,16 +217,15 @@ Tag.appendTag = function(tag, save) {
 	
 	// 笔记已污染
 	if(save) {
-		// 如果之前不存, 则添加之
-		if(!isExists) {
-			Note.curChangedSaveIt(true, function() {
+		Note.curChangedSaveIt(true, function() {
+			if (!isExists) {
 				ajaxPost("/tag/updateTag", {tag: rawText}, function(ret) {
 					if(reIsOk(ret)) {
 						Tag.addTagNav(ret.Item);
 					}
 				});	
-			});
-		}
+			}
+		});
 	}
 }
 
@@ -233,11 +277,11 @@ Tag.renderTagNav = function(tags) {
 		var tag = noteTag.Tag;
 		var text = tag;
 		if(LEA.locale == "zh") {
-			var text = Tag.mapEn2Cn[tag] || text;
+			text = Tag.mapEn2Cn[tag] || text;
 		}
 		text = trimTitle(text);
 		if (text) {
-			var classes = Tag.classes[tag] || "label label-default";
+			var classes = Tag.getColorClass(tag) || Tag.classes[tag] || "label label-default";
 			$("#tagNav").append(tt('<li data-tag="?"><a> <span class="?">?</span> <span class="tag-delete">X</span></li>', tag, classes, text));
 		}
 	}
@@ -269,65 +313,120 @@ Tag.addTagNav = function(newTag) {
 	me.renderTagNav(me.tags);
 };
 
+// 当前正在修改颜色的已有标签
+Tag.editingTag = null;
+
 // 事件
 $(function() {
-	// tag
-	$("#addTagTrigger").on('click', function() {
+	// 点击“点击添加标签”
+	$("#addTagTrigger").on('click', function(e) {
+		e.preventDefault();
+		Tag.editingTag = null;
 		$(this).hide();
 		$("#addTagInput").show().trigger('focus').val("");
+		showTagList(e);
 	});
 	
-	$("#addTagInput").on('click', function(event) {
+	$("#addTagInput").on('click focus', function(event) {
+		Tag.editingTag = null;
 		showTagList(event);
 	});
 	
-	$("#addTagInput").on('blur', function() {
-		var val = $(this).val();
-		if(val) {
-			Tag.appendTag(val, true);
-		}
-		return;
-		// 下面不能有, 有就有问题
-		$("#addTagTrigger").show();
-		$("#addTagInput").hide();
-		// revertTagStatus();
+	// 在下拉颜色区域及项上阻止 mousedown 默认失焦
+	$("#tagColor").on('mousedown', function(event) {
+		event.preventDefault();
 	});
+	$("#tagColor").on('mousedown', 'li, span', function(event) {
+		event.preventDefault();
+	});
+	
 	$('#addTagInput').on('keydown', function(e) {
 		if (e.keyCode == 13) {
-			hideTagList();
-			// 如果有值, 再生成, 没值直接隐藏
-			if ($("#addTagInput").val()) {
-				$(this).trigger("blur");
-				$("#addTagTrigger").trigger("click");
-			} else {
-				$(this).trigger("blur");
+			e.preventDefault();
+			var val = ($(this).val() || "").trim();
+			if (val) {
+				Tag.appendTag(val, true);
+				$(this).val("");
 			}
+			hideTagList();
+			$(this).hide();
+			$("#addTagTrigger").show();
+		} else if (e.keyCode == 27) {
+			e.preventDefault();
+			hideTagList();
+			$(this).val("").hide();
+			$("#addTagTrigger").show();
 		}
 	});
-	// 点击下拉时也会触发input的blur事件
-	$("#tagColor li").on('click', function(event) {
-		var a;
-		if($(this).attr("role")) {
-			a = $(this).find("span");
-		} else {
+	
+	// 点击下拉颜色项：优先将颜色赋予输入框中的文字，只生成一个彩色标签
+	$("#tagColor").on('click', 'li', function(event) {
+		event.preventDefault();
+		event.stopPropagation();
+		
+		var a = $(this).find("span");
+		if(!a.length) {
 			a = $(this);
 		}
-		Tag.appendTag({
-			classes : a.attr("class"),
-			text : a.text()
-		}, true);
+		var colorClass = a.attr("class") || "label label-red";
+		var colorText = a.text().trim();
+		var inputVal = ($("#addTagInput").val() || "").trim();
+		
+		if (inputVal) {
+			// 用户已在输入框中输入文本，点击颜色：将该颜色应用在输入的标签文本上！只生成这一个标签！
+			Tag.appendTag({
+				classes: colorClass,
+				text: inputVal
+			}, true);
+			$("#addTagInput").val("");
+		} else if (Tag.editingTag) {
+			// 为已有标签更新颜色
+			Tag.appendTag({
+				classes: colorClass,
+				text: Tag.editingTag
+			}, true);
+			Tag.editingTag = null;
+		} else {
+			// 输入框为空：按传统模式添加以颜色名称命名的标签
+			Tag.appendTag({
+				classes: colorClass,
+				text: colorText
+			}, true);
+		}
+		
+		hideTagList();
+		$("#addTagInput").hide();
+		$("#addTagTrigger").show();
 	});
-	// 这是个问题, 为什么? 捕获不了事件?, input的blur造成
-	/*
-	$(".label").on('click', function(event) {
-		var a = $(this);
-		Tag.appendTag({
-			classes : a.attr("class"),
-			text : a.text()
-		});
-		// event.stopPropagation();
+	
+	// 点击已有标签文本（非 X 区域），弹出颜色下拉菜单供用户随时修改颜色
+	$("#tags").on('click', 'span[data-tag]', function(e) {
+		if ($(e.target).is('i')) {
+			return; // 点击 X 删除
+		}
+		e.preventDefault();
+		e.stopPropagation();
+		var $tagSpan = $(this);
+		var currentTag = ($tagSpan.data('tag') || "").trim();
+		if (!currentTag) return;
+		Tag.editingTag = currentTag;
+		showTagList(e);
 	});
-	*/
+	
+	// 点击页面其他外部区域时，才执行失焦收起
+	$(document).on('click', function(e) {
+		if (!$(e.target).closest("#tagDropdown, #tags").length) {
+			Tag.editingTag = null;
+			hideTagList();
+			var val = ($("#addTagInput").val() || "").trim();
+			if (val) {
+				Tag.appendTag(val, true);
+				$("#addTagInput").val("");
+			}
+			$("#addTagInput").hide();
+			$("#addTagTrigger").show();
+		}
+	});
 	
 	$("#tags").on("click", "i", function() {
 		Tag.removeTag($(this).parent());
