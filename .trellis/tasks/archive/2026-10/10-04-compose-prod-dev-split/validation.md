@@ -86,11 +86,11 @@ docker compose --env-file <fixture> -p <isolated-project> -f docker-compose.yml 
 | 新文件 CLI + 真实 registry JSON | passed | has-latest=true；候选 1.9.9=false、2.0.1=false、2.0.2=true，仅判断无远端写入 |
 | YAML 1.2 解析 | passed | 使用项目已有 Playwright utilsBundle.yaml；concurrency={group:docker-image-latest,queue:max,cancel-in-progress:false} |
 | 所有 workflow shell block 语法 | passed | 从解析后的 jobs 提取 12 个 run block，逐个 Git sh -n 通过（仅解析，不执行） |
-| actionlint | unrun | 未安装；未以 YAML/语法检查推断 actionlint 通过 |
+| actionlint | executed / partial | 官方 v1.7.12 真实执行，仅 queue 新键兼容性失败；固定上游 PR #654 工具对原文件通过。详见 research/runtime-validation.md |
 | 追加后的完整 npm test | passed | 唯一实例 session 79854，exit 0；244 tests、243 passed、0 failed、1 skipped；323100.2458ms |
 | 追加后的 Trellis check | passed | 实现/测试/规格/任务元数据四层无代码 finding；复核发现的示例和任务证据旧文案已同步，最终记录见 check-review-ghcr.md |
-| 真实 GitHub queue:max 排队 | unrun | 未为验证触发 Actions；依据官方当前文档及静态配置检查 |
-| 新 guard 的真实远端晋升/缺 latest 初始化 | unrun | 未改写 2.0.1/latest 或发布新版本；纯逻辑/CLI 回归和真实只读数据验证不能代替远端写入证据 |
+| 真实 GitHub queue:max 排队 | passed（隔离工作流） | 后续授权后真实触发 3 次 push；同时保留 2 个 pending，最终全部 success，无取消。生产完整工作流未运行 |
+| 新 guard 的真实远端晋升/缺 latest 初始化 | passed（隔离 GHCR 包与原 helper） | 真实初始化、新版晋升、同版/旧版 skip 及 digest/版本读回通过；生产 2.0.1/latest 不变，完整生产发布链仍 unrun |
 
 可复现只读验证（无 credential 文件挂载）：
 
@@ -110,3 +110,7 @@ ADR/spec/交付文档已同步到最高成功晋升版本语义、100 pending �
 真实 GitHub 排队、新 guard 远端晋升、actionlint、新 dev override build/up 等未运行项继续保留，不以本地提交或归档推断通过。
 
 工作提交：`9322cfeb37fde8c2055d039603ada6d618339285`，24 个任务相关文件，提交后仅 `CONTEXT.md` 保持未提交。归档目标为 `.trellis/tasks/archive/2026-10/10-04-compose-prod-dev-split`；implement/check 中任务内 research 引用同步到归档目标，归档后重新执行 `task.py validate` 核对有效性。
+
+## 归档后的真实补充验证
+
+用户后续要求真实运行原 unrun 项，并明确不新建任务。运行、原始 artifact、独立复核及证据边界见 [runtime-validation.md](research/runtime-validation.md)。实际创建临时验证分支及独立 GHCR scratch fixture 包；3 次 Actions 全部 success，原 helper 的真实晋升/跳过读写通过。官方 actionlint 已真实执行但存在 queue schema 兼容性失败，固定上游 PR 版本通过。产品工作区和 main 未修改，生产镜像摘要不变。用户随后要求“提交并归档”，本次收尾提交补充证据并记录日志，保持原任务已归档，不新建任务或推送。原评审中 unrun 为此前的阶段记录，不能再据此认为本轮没有执行这些验证，也不能把隔离验证扩展成完整生产发布链通过。

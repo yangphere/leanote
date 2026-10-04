@@ -1,0 +1,72 @@
+{
+  "queue": [
+    {
+      "runId": 37184573081,
+      "startedAt": "2026-10-04T07:02:04Z",
+      "finishedAt": "2026-10-04T07:04:38.000Z"
+    },
+    {
+      "runId": 37184614263,
+      "startedAt": "2026-10-04T07:04:42Z",
+      "finishedAt": "2026-10-04T07:04:50.000Z"
+    },
+    {
+      "runId": 37184617541,
+      "startedAt": "2026-10-04T07:04:53Z",
+      "finishedAt": "2026-10-04T07:05:01.000Z"
+    }
+  ],
+  "decisions": [
+    {
+      "label": "initialize",
+      "candidate": "2.0.1",
+      "hasLatest": false,
+      "promote": true,
+      "latestVersion": "2.0.1",
+      "latestDigest": "sha256:1ec14b40e35310bdd1bac8c95fb33f988ef4494dc395262f2dd86dd84b57b34c"
+    },
+    {
+      "label": "advance",
+      "candidate": "2.0.2",
+      "hasLatest": true,
+      "promote": true,
+      "latestVersion": "2.0.2",
+      "latestDigest": "sha256:37407ce9cf50a0c4e2e457ada29f8ddabda183e696d63b66a33f091e677e4f62"
+    },
+    {
+      "label": "equal",
+      "candidate": "2.0.2",
+      "hasLatest": true,
+      "promote": false,
+      "latestVersion": "2.0.2",
+      "latestDigest": "sha256:37407ce9cf50a0c4e2e457ada29f8ddabda183e696d63b66a33f091e677e4f62"
+    },
+    {
+      "label": "older",
+      "candidate": "1.9.9",
+      "hasLatest": true,
+      "promote": false,
+      "latestVersion": "2.0.2",
+      "latestDigest": "sha256:37407ce9cf50a0c4e2e457ada29f8ddabda183e696d63b66a33f091e677e4f62"
+    }
+  ],
+  "manifests": {
+    "2.0.1": {
+      "manifestDigest": "sha256:1ec14b40e35310bdd1bac8c95fb33f988ef4494dc395262f2dd86dd84b57b34c",
+      "configDigest": "sha256:b2a1a987150f473a4baa5d2c832af90f9f635a22d6a2816031d6014bd5cfcea9"
+    },
+    "2.0.2": {
+      "manifestDigest": "sha256:37407ce9cf50a0c4e2e457ada29f8ddabda183e696d63b66a33f091e677e4f62",
+      "configDigest": "sha256:8b9c46c7439897caf41a2060a245b3b82c425f80d7432533e50fc99b4a90d7a8"
+    },
+    "1.9.9": {
+      "manifestDigest": "sha256:6c5691feb136d1c137ddf9391384346e317cedd0870de9f1f9058f65af34f77b",
+      "configDigest": "sha256:9368139540c5a84035dd3f0b5d424420a33271e3f12989742cc55bf4c53e0fbd"
+    }
+  },
+  "production": {
+    "2.0.1": "sha256:0b67446ea183a69aea3a35ede6dc187d85b5bb1e3e031ecd9cc0612c02a46c9a",
+    "latest": "sha256:0b67446ea183a69aea3a35ede6dc187d85b5bb1e3e031ecd9cc0612c02a46c9a"
+  },
+  "bootstrapDefaultRejected": true
+}

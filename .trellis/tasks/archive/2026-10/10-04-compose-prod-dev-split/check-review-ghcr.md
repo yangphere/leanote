@@ -2,6 +2,8 @@
 
 日期：2026-10-04。
 
+补充：本评审为真实运行前的四层检查。用户随后授权的真实 GitHub/GHCR/actionlint 结果见 [runtime-validation.md](research/runtime-validation.md)；下文 unrun 是原阶段边界，当前完整生产发布链仍未运行。
+
 ## Findings (fixed)
 
 - File: `.trellis/spec/backend/image-publishing.md`

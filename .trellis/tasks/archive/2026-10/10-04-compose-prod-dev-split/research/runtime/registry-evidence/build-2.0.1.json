@@ -1,0 +1,264 @@
+{
+  "buildx.build.provenance": {
+    "builder": {
+      "id": ""
+    },
+    "buildType": "https://mobyproject.org/buildkit@v1",
+    "invocation": {
+      "configSource": {
+        "entryPoint": "Dockerfile"
+      },
+      "parameters": {
+        "frontend": "dockerfile.v0",
+        "args": {
+          "build-arg:VERSION": "2.0.1"
+        },
+        "locals": [
+          {
+            "name": "context"
+          },
+          {
+            "name": "dockerfile"
+          }
+        ],
+        "root": {
+          "configSource": {
+            "path": "Dockerfile"
+          },
+          "request": {
+            "args": {
+              "build-arg:VERSION": "2.0.1"
+            }
+          }
+        },
+        "compatibilityVersion": 30
+      },
+      "environment": {
+        "dockerfileVersion": "1.27.0",
+        "github_actor": "yangphere",
+        "github_actor_id": "858136",
+        "github_event_name": "push",
+        "github_event_payload": {
+          "after": "07e42f756de3c8d9304310a8b2b95ae706903832",
+          "base_ref": null,
+          "before": "d525be93d7a393a40d3328ca737d50d977994092",
+          "commits": [
+            {
+              "author": {
+                "email": "yangphere@gmail.com",
+                "name": "wanfeng",
+                "username": "yangphere"
+              },
+              "committer": {
+                "email": "yangphere@gmail.com",
+                "name": "wanfeng",
+                "username": "yangphere"
+              },
+              "distinct": true,
+              "id": "07e42f756de3c8d9304310a8b2b95ae706903832",
+              "message": "GHCR live verification 1",
+              "timestamp": "2026-10-04T15:01:55+08:00",
+              "tree_id": "9d8015605e2b40c401b22fe6dbd0d637e8e4341f",
+              "url": "https://github.com/yangphere/leanote/commit/07e42f756de3c8d9304310a8b2b95ae706903832"
+            }
+          ],
+          "compare": "https://github.com/yangphere/leanote/compare/d525be93d7a3...07e42f756de3",
+          "created": false,
+          "deleted": false,
+          "forced": false,
+          "head_commit": {
+            "author": {
+              "email": "yangphere@gmail.com",
+              "name": "wanfeng",
+              "username": "yangphere"
+            },
+            "committer": {
+              "email": "yangphere@gmail.com",
+              "name": "wanfeng",
+              "username": "yangphere"
+            },
+            "distinct": true,
+            "id": "07e42f756de3c8d9304310a8b2b95ae706903832",
+            "message": "GHCR live verification 1",
+            "timestamp": "2026-10-04T15:01:55+08:00",
+            "tree_id": "9d8015605e2b40c401b22fe6dbd0d637e8e4341f",
+            "url": "https://github.com/yangphere/leanote/commit/07e42f756de3c8d9304310a8b2b95ae706903832"
+          },
+          "pusher": {
+            "email": "yangphere@gmail.com",
+            "name": "yangphere"
+          },
+          "ref": "refs/heads/codex/ghcr-live-verification-20261004-84f31d",
+          "repository": {
+            "allow_forking": true,
+            "archive_url": "https://api.github.com/repos/yangphere/leanote/{archive_format}{/ref}",
+            "archived": false,
+            "assignees_url": "https://api.github.com/repos/yangphere/leanote/assignees{/user}",
+            "blobs_url": "https://api.github.com/repos/yangphere/leanote/git/blobs{/sha}",
+            "branches_url": "https://api.github.com/repos/yangphere/leanote/branches{/branch}",
+            "clone_url": "https://github.com/yangphere/leanote.git",
+            "collaborators_url": "https://api.github.com/repos/yangphere/leanote/collaborators{/collaborator}",
+            "comments_url": "https://api.github.com/repos/yangphere/leanote/comments{/number}",
+            "commits_url": "https://api.github.com/repos/yangphere/leanote/commits{/sha}",
+            "compare_url": "https://api.github.com/repos/yangphere/leanote/compare/{base}...{head}",
+            "contents_url": "https://api.github.com/repos/yangphere/leanote/contents/{+path}",
+            "contributors_url": "https://api.github.com/repos/yangphere/leanote/contributors",
+            "created_at": 1460805085,
+            "default_branch": "main",
+            "deployments_url": "https://api.github.com/repos/yangphere/leanote/deployments",
+            "description": "Not Just A Notepad! (golang + mongodb) http://leanote.org",
+            "disabled": false,
+            "downloads_url": "https://api.github.com/repos/yangphere/leanote/downloads",
+            "events_url": "https://api.github.com/repos/yangphere/leanote/events",
+            "fork": true,
+            "forks": 0,
+            "forks_count": 0,
+            "forks_url": "https://api.github.com/repos/yangphere/leanote/forks",
+            "full_name": "yangphere/leanote",
+            "git_commits_url": "https://api.github.com/repos/yangphere/leanote/git/commits{/sha}",
+            "git_refs_url": "https://api.github.com/repos/yangphere/leanote/git/refs{/sha}",
+            "git_tags_url": "https://api.github.com/repos/yangphere/leanote/git/tags{/sha}",
+            "git_url": "git://github.com/yangphere/leanote.git",
+            "has_discussions": false,
+            "has_downloads": true,
+            "has_issues": false,
+            "has_pages": false,
+            "has_projects": true,
+            "has_pull_requests": true,
+            "has_wiki": true,
+            "homepage": "http://leanote.com",
+            "hooks_url": "https://api.github.com/repos/yangphere/leanote/hooks",
+            "html_url": "https://github.com/yangphere/leanote",
+            "id": 56379518,
+            "is_template": false,
+            "issue_comment_url": "https://api.github.com/repos/yangphere/leanote/issues/comments{/number}",
+            "issue_events_url": "https://api.github.com/repos/yangphere/leanote/issues/events{/number}",
+            "issues_url": "https://api.github.com/repos/yangphere/leanote/issues{/number}",
+            "keys_url": "https://api.github.com/repos/yangphere/leanote/keys{/key_id}",
+            "labels_url": "https://api.github.com/repos/yangphere/leanote/labels{/name}",
+            "language": "JavaScript",
+            "languages_url": "https://api.github.com/repos/yangphere/leanote/languages",
+            "license": null,
+            "master_branch": "main",
+            "merges_url": "https://api.github.com/repos/yangphere/leanote/merges",
+            "milestones_url": "https://api.github.com/repos/yangphere/leanote/milestones{/number}",
+            "mirror_url": null,
+            "name": "leanote",
+            "node_id": "MDEwOlJlcG9zaXRvcnk1NjM3OTUxOA==",
+            "notifications_url": "https://api.github.com/repos/yangphere/leanote/notifications{?since,all,participating}",
+            "open_issues": 0,
+            "open_issues_count": 0,
+            "owner": {
+              "avatar_url": "https://avatars.githubusercontent.com/u/858136?v=4",
+              "email": "yangphere@gmail.com",
+              "events_url": "https://api.github.com/users/yangphere/events{/privacy}",
+              "followers_url": "https://api.github.com/users/yangphere/followers",
+              "following_url": "https://api.github.com/users/yangphere/following{/other_user}",
+              "gists_url": "https://api.github.com/users/yangphere/gists{/gist_id}",
+              "gravatar_id": "",
+              "html_url": "https://github.com/yangphere",
+              "id": 858136,
+              "login": "yangphere",
+              "name": "yangphere",
+              "node_id": "MDQ6VXNlcjg1ODEzNg==",
+              "organizations_url": "https://api.github.com/users/yangphere/orgs",
+              "received_events_url": "https://api.github.com/users/yangphere/received_events",
+              "repos_url": "https://api.github.com/users/yangphere/repos",
+              "site_admin": false,
+              "starred_url": "https://api.github.com/users/yangphere/starred{/owner}{/repo}",
+              "subscriptions_url": "https://api.github.com/users/yangphere/subscriptions",
+              "type": "User",
+              "url": "https://api.github.com/users/yangphere",
+              "user_view_type": "public"
+            },
+            "private": false,
+            "pull_request_creation_policy": "all",
+            "pulls_url": "https://api.github.com/repos/yangphere/leanote/pulls{/number}",
+            "pushed_at": 1791097319,
+            "releases_url": "https://api.github.com/repos/yangphere/leanote/releases{/id}",
+            "size": 128143,
+            "ssh_url": "git@github.com:yangphere/leanote.git",
+            "stargazers": 0,
+            "stargazers_count": 0,
+            "stargazers_url": "https://api.github.com/repos/yangphere/leanote/stargazers",
+            "statuses_url": "https://api.github.com/repos/yangphere/leanote/statuses/{sha}",
+            "subscribers_url": "https://api.github.com/repos/yangphere/leanote/subscribers",
+            "subscription_url": "https://api.github.com/repos/yangphere/leanote/subscription",
+            "svn_url": "https://github.com/yangphere/leanote",
+            "tags_url": "https://api.github.com/repos/yangphere/leanote/tags",
+            "teams_url": "https://api.github.com/repos/yangphere/leanote/teams",
+            "topics": [],
+            "trees_url": "https://api.github.com/repos/yangphere/leanote/git/trees{/sha}",
+            "updated_at": "2026-10-04T04:53:29Z",
+            "url": "https://api.github.com/repos/yangphere/leanote",
+            "visibility": "public",
+            "watchers": 0,
+            "watchers_count": 0,
+            "web_commit_signoff_required": false
+          },
+          "sender": {
+            "avatar_url": "https://avatars.githubusercontent.com/u/858136?v=4",
+            "events_url": "https://api.github.com/users/yangphere/events{/privacy}",
+            "followers_url": "https://api.github.com/users/yangphere/followers",
+            "following_url": "https://api.github.com/users/yangphere/following{/other_user}",
+            "gists_url": "https://api.github.com/users/yangphere/gists{/gist_id}",
+            "gravatar_id": "",
+            "html_url": "https://github.com/yangphere",
+            "id": 858136,
+            "login": "yangphere",
+            "node_id": "MDQ6VXNlcjg1ODEzNg==",
+            "organizations_url": "https://api.github.com/users/yangphere/orgs",
+            "received_events_url": "https://api.github.com/users/yangphere/received_events",
+            "repos_url": "https://api.github.com/users/yangphere/repos",
+            "site_admin": false,
+            "starred_url": "https://api.github.com/users/yangphere/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/yangphere/subscriptions",
+            "type": "User",
+            "url": "https://api.github.com/users/yangphere",
+            "user_view_type": "public"
+          }
+        },
+        "github_job": "promotion",
+        "github_ref": "refs/heads/codex/ghcr-live-verification-20261004-84f31d",
+        "github_ref_name": "codex/ghcr-live-verification-20261004-84f31d",
+        "github_ref_protected": "false",
+        "github_ref_type": "branch",
+        "github_repository": "yangphere/leanote",
+        "github_repository_id": "56379518",
+        "github_repository_owner": "yangphere",
+        "github_repository_owner_id": "858136",
+        "github_run_attempt": "1",
+        "github_run_id": "37184573081",
+        "github_run_number": "1",
+        "github_runner_arch": "X64",
+        "github_runner_environment": "github-hosted",
+        "github_runner_image_os": "ubuntu22",
+        "github_runner_image_version": "20260927.309.1",
+        "github_runner_name": "GitHub Actions 1000001523",
+        "github_runner_os": "Linux",
+        "github_runner_tracking_id": "github_2809733d-0940-4b6c-9ba1-abaf921250b7",
+        "github_server_url": "https://github.com",
+        "github_triggering_actor": "yangphere",
+        "github_workflow": "GHCR live verification",
+        "github_workflow_ref": "yangphere/leanote/.github/workflows/ghcr-live-verification.yml@refs/heads/codex/ghcr-live-verification-20261004-84f31d",
+        "github_workflow_sha": "07e42f756de3c8d9304310a8b2b95ae706903832",
+        "platform": "linux/amd64"
+      }
+    }
+  },
+  "buildx.build.ref": "builder-572c30ff-6e19-43d8-95c8-d2ef8c73aac8/builder-572c30ff-6e19-43d8-95c8-d2ef8c73aac80/4fyz57aly7vvh1bun5kkneudt",
+  "containerimage.config.digest": "sha256:b2a1a987150f473a4baa5d2c832af90f9f635a22d6a2816031d6014bd5cfcea9",
+  "containerimage.descriptor": {
+    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+    "digest": "sha256:1ec14b40e35310bdd1bac8c95fb33f988ef4494dc395262f2dd86dd84b57b34c",
+    "size": 477,
+    "annotations": {
+      "org.opencontainers.image.created": "2026-10-04T07:04:03Z"
+    },
+    "platform": {
+      "architecture": "amd64",
+      "os": "linux"
+    }
+  },
+  "containerimage.digest": "sha256:1ec14b40e35310bdd1bac8c95fb33f988ef4494dc395262f2dd86dd84b57b34c"
+}
