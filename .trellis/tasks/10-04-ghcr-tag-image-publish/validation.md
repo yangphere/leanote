@@ -81,3 +81,20 @@ registry read-back evidence will be recorded here and in `publication.md`.
 
 Local runtime versions: Go 1.27.1 (Windows/amd64), Node 24.21.0, npm 11.19.0.
 GitHub CI will supply the pinned Linux toolchains and Chromium runtime evidence.
+
+## First real main CI
+
+[37172547373](https://github.com/yangphere/leanote/actions/runs/37172547373)
+at `dc323d9e`: six primary jobs passed (Node, Mongo, Go 1.26.7/1.27.0,
+package smoke, container smoke). Chromium failed because the canonical
+TinyMCE `index.html` URL still redirects (301); summary correctly failed.
+No publication tag was created. A follow-up uses canonical directory URLs
+for index resources, retaining disk outputs and the direct-200 smoke gate.
+
+Follow-up verification: explicit `/tinymce/plugins/leaui_image/index.html`
+returns 301 with `Location: ./`; the manifest now emits the directory URL.
+Both `/tinymce/plugins/leaui_image/` and
+`/tinymce/plugins/leaui_mindmap/mindmap/` return direct 200 from the existing
+local service. Focused manifest regression passed 1/1; `npm run build` passed
+without tracked generated-output drift. Full Chromium evidence awaits the
+next real main CI.

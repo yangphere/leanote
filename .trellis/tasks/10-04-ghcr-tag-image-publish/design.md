@@ -26,6 +26,7 @@ validate ──► quality-gate (uses ./.github/workflows/quality-gate.yml) ─�
 - registry 不存在性检查和实际 push 使用同一个无前缀版本标签。protected Release 保持 `v*.*.*`，本路径只响应无前缀版本，避免同时触发；quality-gate 的七个质量作业与汇总完整保留，仅 protected handoff 作业按原规则 skipped。
 - `sh/package.sh` 的版本检查必须在真实 tag 上分别验证严格 `X.Y.Z` 与严格 `vX.Y.Z`；branch push 不作 tag 校验。两种 tag 都必须与 package/lock 版本一致，不能仅修轻量 validate 而让质量门禁打包入口拒绝无前缀 tag。
 - 修复已由远端 CI 复现的四个门禁阻塞（见 `remote-ci-preflight.md`）：隔离 release fixture workflow 环境、恢复共享接口兼容 golden 并断言不泄漏数据、精确断言 preview 文本 404、把 TinyMCE manifest 运行 URL 映射到 canonical route。保留生产授权逻辑和完整门禁。
+- 实际 main CI 又证明正确前缀下的 `index.html` 仍会被 Go 静态服务重定向；因此此类 output 的运行 URL 必须是带尾斜杠的目录。保留 `index.html` 磁盘输出和 direct-200 浏览器门禁，本地真实请求已核实两个目录 URL 直接 200。
 
 ## 回滚
 

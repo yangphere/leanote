@@ -57,3 +57,48 @@ is still limited to `v` tags. Both publication stages refresh and validate
 the remote tag and `origin/main`; GHCR absence checks remain fail-closed; the
 candidate is smoked before the sole push and the pushed manifest digest is
 checked afterward. The candidate is ready for the real `main` CI gate.
+
+## Follow-up review — canonical TinyMCE index URLs
+
+### Findings (fixed)
+
+- No additional defect was found in the follow-up patch. The patch addresses
+  the concrete Chromium failure without changing the production handler:
+  manifest entries whose output ends in `/index.html` now expose the
+  containing directory URL with a trailing slash. Files remain at their
+  original `public/tinymce/.../index.html` output paths.
+
+### Findings (not fixed)
+
+- The follow-up has not yet run in GitHub Chromium. The next real `main` CI
+  must prove all seven primary quality jobs and `summary` pass together.
+- The `2.0.1` publication tag and all GHCR/public/anonymous-pull evidence
+  remain `unrun`; no tag or registry write was performed during review.
+
+### Verification
+
+- Focused manifest test: pass — 1 passed, 0 failed. It verifies every TinyMCE
+  asset keeps a `public/tinymce/...` output, uses a canonical `/tinymce/...`
+  runtime URL, and maps index files to directory URLs. The two discovered
+  mappings are `/tinymce/plugins/leaui_image/` and
+  `/tinymce/plugins/leaui_mindmap/mindmap/`.
+- Build: pass — `npm run build` exited 0 and introduced no additional tracked
+  output changes.
+- Live route evidence: recorded local requests returned 301 with `Location:
+  ./` for explicit `leaui_image/index.html`, while both manifest directory
+  URLs returned direct 200. This matches Go's canonical index behavior and
+  the no-redirect Chromium contract.
+- Remote evidence: GitHub run `37172547373` was independently queried. At
+  `dc323d9ef3b4f744735fb4665ab41d7009403e58`, Node, Mongo, Go 1.26.7, Go
+  1.27.0, package smoke and container smoke passed; Chromium failed and
+  `summary` correctly failed. `release-inputs` was skipped.
+- Workflow isolation: pass — this follow-up does not modify any workflow.
+  `docker-image.yml` still accepts only numeric tags, calls the full reusable
+  gate, checks `origin/main`, and confines `packages: write` to publish;
+  `release.yml` still accepts only `v*.*.*`; all seven quality jobs plus
+  `summary` remain present and `release-inputs` remains `v`-only.
+- Trellis validation and `git diff --check`: pass; only existing line-ending
+  conversion warnings were reported.
+
+No new local publication blocker remains. The candidate is ready for commit,
+merge to `main`, and the next complete remote quality gate.

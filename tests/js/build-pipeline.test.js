@@ -65,9 +65,13 @@ test('manifest declares the complete TinyMCE-aware output contract', async () =>
   const tinyMceAssets = new Map(MANIFEST.assets.map((entry) => [entry.name, entry]));
   for (const entry of MANIFEST.assets) {
     assert.match(entry.output, /^public\/tinymce\//, `${entry.name} must publish under public/tinymce`);
-    assert.equal(entry.url, `/${entry.output.slice('public/'.length)}`, `${entry.name} must use the canonical /tinymce route`);
+    const fileUrl = `/${entry.output.slice('public/'.length)}`;
+    const canonicalUrl = fileUrl.endsWith('/index.html') ? fileUrl.slice(0, -'index.html'.length) : fileUrl;
+    assert.equal(entry.url, canonicalUrl, `${entry.name} must use the canonical /tinymce route`);
     assert.doesNotMatch(entry.url, /^\/public\/tinymce\//);
   }
+  const imagePluginIndex = MANIFEST.assets.find((entry) => entry.output === 'public/tinymce/plugins/leaui_image/index.html');
+  assert.equal(imagePluginIndex?.url, '/tinymce/plugins/leaui_image/');
   for (const name of ['tinymce-oxide-skin-min-css', 'tinymce-oxide-content-min-css', 'tinymce-oxide-inline-min-css']) {
     assert.equal(tinyMceAssets.get(name)?.transform, 'copy');
     assert.equal(fs.statSync(path.join(ROOT, tinyMceAssets.get(name).output)).isFile(), true);

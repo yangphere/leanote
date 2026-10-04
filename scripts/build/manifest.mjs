@@ -115,7 +115,8 @@ function collectFirstPartyStaticFiles(relativeRoot) {
 const firstPartyStaticFiles = ['leaui_image', 'leaui_mindmap', 'leanote_nav', 'leanote_code']
   .flatMap((name) => collectFirstPartyStaticFiles(`public/tinymce/plugins/${name}`));
 function tinyMceRuntimeUrl(output) {
-  return `/${output.slice('public/'.length)}`;
+  const url = `/${output.slice('public/'.length)}`;
+  return url.endsWith('/index.html') ? url.slice(0, -'index.html'.length) : url;
 }
 const assets = [
   ...tinyMceAssets,

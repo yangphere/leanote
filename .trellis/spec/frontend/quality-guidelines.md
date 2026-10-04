@@ -34,8 +34,11 @@ No linter is configured — the gates are `npm ci && npm run build && npm test` 
   tests must never rename tracked production files in the checkout.
 - Manifest asset `output` is a filesystem path; `url` is the canonical HTTP
   route. TinyMCE `public/tinymce/...` outputs must use `/tinymce/...` URLs,
-  including plugin `index.html` resources. The no-redirect resource smoke
-  requires a direct 200; filesystem URLs can redirect and must not be used.
+  with `index.html` resources mapped to the containing directory URL and its
+  trailing slash. For example, `public/tinymce/plugins/leaui_image/index.html`
+  maps to `/tinymce/plugins/leaui_image/`. Go's static handler redirects an
+  explicit `index.html` to `./` even under the correct route prefix. The
+  no-redirect resource smoke requires a direct 200.
 - CI browser artifacts may contain only allowlisted sanitized summary fields;
   headers, cookies, tokens, page content, traces, screenshots, videos, and raw
   logs are prohibited.
