@@ -241,6 +241,29 @@ test('package smoke verifies reproducible archive output', async () => {
   assert.doesNotMatch(script, /wkhtmltopdf --quiet "\$PACKAGE_SMOKE_PDF_URL"/);
 });
 
+test('container smoke generates a parseable app.conf that selects Gotenberg', async () => {
+  const { execFileSync } = require('node:child_process');
+  const script = await fs.readFile(path.join(process.cwd(), 'scripts/container-smoke.sh'), 'utf8');
+  // Execute the real generation block (not a text match): a stray word such as a
+  // literal "\n" argument becomes a bare line and the app exits CONFIG_KEY_INVALID.
+  const block = script.match(/^printf '%s\\n' '\[prod\]'[\s\S]*?> "\$TMP_CONFIG"$/m);
+  assert.ok(block, 'config generation block');
+  const dir = await fs.mkdtemp(path.join(process.cwd(), 'tmp-smoke-conf-'));
+  try {
+    const target = path.join(dir, 'app.conf');
+    execFileSync('sh', ['-c', block[0]], { env: { ...process.env, TMP_CONFIG: target } });
+    const lines = (await fs.readFile(target, 'utf8')).split('\n').filter(Boolean);
+    for (const line of lines) {
+      assert.match(line, /^(\[prod\]|[A-Za-z0-9_.]+=.*)$/, `invalid generated config line: ${line}`);
+    }
+    assert.ok(lines.includes('pdf.renderer=gotenberg'));
+    assert.ok(lines.includes('pdf.gotenberg.url=http://gotenberg:3000'));
+    assert.ok(lines.includes('admin.backup.root=/var/lib/leanote/backup'));
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('container smoke keeps the retired PDF callback a stub and renders a real document', async () => {
   const script = await fs.readFile(path.join(process.cwd(), 'scripts/container-smoke.sh'), 'utf8');
   assert.match(script, /CONTAINER_SMOKE_PDF_URL/);

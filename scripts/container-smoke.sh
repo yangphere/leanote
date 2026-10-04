@@ -42,7 +42,12 @@ docker rm -f "$APP" "$GOTENBERG" "$MONGO" >/dev/null 2>&1 || true
 docker network create "$NETWORK" >/dev/null
 # The PDF network is internal: Gotenberg has no external egress and no host port.
 docker network create --internal "$PDF_NETWORK" >/dev/null
-docker run -d --name "$GOTENBERG" --network "$PDF_NETWORK" --network-alias gotenberg   --health-cmd 'curl -fsS http://127.0.0.1:3000/health'   --health-interval 2s --health-timeout 2s --health-retries 30   "$GOTENBERG_IMAGE" gotenberg --api-timeout=40s --libreoffice-disable-routes=true   --pdfengines-disable-routes=true --webhook-disable=true   '--chromium-deny-list=^(?!file:///tmp/|data:).*' >/dev/null
+docker run -d --name "$GOTENBERG" --network "$PDF_NETWORK" --network-alias gotenberg \
+  --health-cmd 'curl -fsS http://127.0.0.1:3000/health' \
+  --health-interval 2s --health-timeout 2s --health-retries 30 \
+  "$GOTENBERG_IMAGE" gotenberg --api-timeout=40s --libreoffice-disable-routes=true \
+  --pdfengines-disable-routes=true --webhook-disable=true \
+  '--chromium-deny-list=^(?!file:///tmp/|data:).*' >/dev/null
 docker run -d --name "$MONGO" --network "$NETWORK" \
   --health-cmd 'mongosh --quiet --eval "db.runCommand({ping:1}).ok"' \
   --health-interval 2s --health-timeout 2s --health-retries 30 \
@@ -64,7 +69,12 @@ printf '%s\n' '[prod]' 'db.urlEnv=${MONGODB_URL}' 'db.dbname=leanote' 'app.secre
   'content.public.data=/var/lib/leanote/public/upload' \
   'content.public.quarantine=/var/lib/leanote/public/quarantine' \
   'content.temporary=/var/lib/leanote/tmp' \
-  'admin.backup.root=/var/lib/leanote/backup' \n  'pdf.renderer=gotenberg' 'pdf.gotenberg.url=http://gotenberg:3000' > "$TMP_CONFIG"
+  'admin.backup.root=/var/lib/leanote/backup' \
+  'pdf.renderer=gotenberg' 'pdf.gotenberg.url=http://gotenberg:3000' > "$TMP_CONFIG"
+# Every generated line must be a section header or a key=value pair; a stray
+# word here makes the app exit with CONFIG_KEY_INVALID before /healthz.
+if grep -Evq '^(\[prod\]|[A-Za-z0-9_.]+=.*)$' "$TMP_CONFIG"; then echo 'generated app.conf has an invalid line' >&2; exit 1; fi
+grep -Fx 'pdf.renderer=gotenberg' "$TMP_CONFIG" >/dev/null
 chmod 0440 "$TMP_CONFIG"
 docker run -d --name "$APP" --user 10001:10001 --group-add "$(id -g)" --network "$NETWORK" -p 9000:9000 \
   -v "$TMP_CONFIG:/etc/leanote/app.conf:ro" \
