@@ -948,3 +948,42 @@ Compose 新增管理员邮箱/初始密码/ENV 恢复开关配置；启动 boots
 ### Next Steps
 
 - CONTEXT.md 与 10-04-compose-prod-dev-split 规划任务属于其他工作，保持未提交且不归档。
+
+
+## Session 36: 生产与开发 Compose 拆分及 GHCR 审查修复收尾
+<!-- trellis-session: v=2 fp=b38b64291c41824e -->
+
+**Date**: 2026-10-04
+**Task**: 生产与开发 Compose 拆分及 GHCR 审查修复收尾
+**Branch**: `dev`
+
+### Summary
+
+完成生产/dev Compose 拆分及 GHCR latest、等待队列、首发建包许可修复，按用户授权完成本地工作提交和任务归档，不推送。
+
+### Main Changes
+
+- 生产引用精确 GHCR 版本；dev 显式 override 本地构建；同步 README、环境模板、交付文档和规格。
+- 两条 latest 路径共用严格数值晋升规则；queue:max 保留最多 100 pending；普通发布关闭首次建包许可。
+- 归档至 .trellis/tasks/archive/2026-10/10-04-compose-prod-dev-split；归档提交 4aa7ba94；修正任务内 research 引用并验证 implement/check 各 5 项有效。
+- 用户 CONTEXT.md 的 8 行新增保留在工作区，未纳入任何收尾提交。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9322cfeb37fde8c2055d039603ada6d618339285` | fix(docker): 拆分生产与开发配置并加固 GHCR 发布 |
+
+### Testing
+
+- [OK] focused 50/50；完整 npm test 244 tests、243 passed、0 failed、1 skipped；四层复核无阻塞项。
+- [OK] 真实独立生产 Compose pull/up、healthz、非 root 和重建持久化通过；Skopeo 只读 JSON/CLI、YAML 1.2 和 12 个 shell block 语法通过。
+- [OK] 收尾 git diff --cached --check、git diff --check、归档 task.py validate 通过；当前任务指针已清空。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 真实 GitHub queue:max 排队、新 guard 远端晋升/缺 latest 初始化、actionlint、新 dev override build/up 继续 unrun；禁止向不含加固的历史提交补推版本 tag。
