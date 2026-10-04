@@ -903,3 +903,48 @@ Compose 新增管理员邮箱/初始密码/ENV 恢复开关配置；启动 boots
 ### Status
 
 [OK] **Completed**
+
+
+## Session 35: GHCR 2.0.1/latest 真实发布与任务归档
+<!-- trellis-session: v=2 fp=a376e0610bc1f065 -->
+
+**Date**: 2026-10-04
+**Task**: GHCR 2.0.1/latest 真实发布与任务归档
+**Branch**: `dev`
+
+### Summary
+
+完成 main 默认分支和 GHCR 数字版本/latest 发布，记录真实 CI、摘要及匿名拉取证据；按用户要求清理 worktree 并本地提交、归档、记录日志，本次收尾不推送。
+
+### Main Changes
+
+- 独立数字版本镜像工作流复用完整质量门，保留受保护 Release；版本固定 2.0.1，main 是默认与唯一版本来源。
+- 一次 Buildx 构建导出 loaded smoke 候选与 OCI archive，固定 Skopeo 保持 manifest 字节；现有 2.0.1 只通过 update_latest 晋升，未重建或覆盖版本。
+- GHCR 发布 worktree 已归档移除；Trellis 任务已归档为 completed，修复归档后 check.jsonl 的自引用路径。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e1b18995` | ci(ghcr): 新增版本镜像发布工作流 |
+| `41ffaebd` | ci(ghcr): 从 main 发布无前缀版本镜像并修复质量门禁 |
+| `9cca58c0` | fix(build): 使用 TinyMCE 目录 URL 避免 index 重定向 |
+| `213b3bc8` | fix(ghcr): 保留版本 tag 并恢复首次镜像发布 |
+| `a4e402d3` | ci(ghcr): 发布同摘要 latest 并保留原始镜像 manifest |
+| `bcc35812` | docs(ghcr): 记录 latest 真实发布与匿名拉取证据 |
+| `3cda6b5e` | docs(ghcr): 补齐发布任务本地收尾记录 |
+
+### Testing
+
+- [OK] 最终聚焦发布/Release 回归 47/47，无跳过；Actionlint v1.7.7、Node syntax、diff 与 Trellis 校验通过。
+- [OK] 真实 main CI 37177660541 和 latest 晋升 37177847779 整体成功，七个质量作业及汇总全绿；晋升 publish 完成 exact-digest pull、metadata、smoke、latest-only copy 和 raw read-back。
+- [OK] 匿名 raw manifest/header 与实际 pull 确认 2.0.1/latest 同 digest sha256:0b67446ea183a69aea3a35ede6dc187d85b5bb1e3e031ecd9cc0612c02a46c9a；config 为 sha256:99b11b4586b2ea0549b2264bd80bc736fd57216ea2b0a7a4e7cca5661b9ee6a8。
+- [UNRUN] 新版本 OCI archive 分支在 GHCR 上仍未运行；该分支已通过真实本地 registry 验证，本次未创建额外版本，历史失败运行仍保留真实 failure。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- CONTEXT.md 与 10-04-compose-prod-dev-split 规划任务属于其他工作，保持未提交且不归档。
