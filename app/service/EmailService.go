@@ -1,25 +1,36 @@
 package service
 
 import (
-	"crypto/tls"
-	"net"
 	"bytes"
+	"context"
+	"crypto/tls"
+	"errors"
 	"fmt"
-	"github.com/leanote/leanote/app/db"
-	"github.com/leanote/leanote/app/info"
-	. "github.com/leanote/leanote/app/lea"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/db"
+	"github.com/yangphere/leanote/app/info"
+	. "github.com/yangphere/leanote/app/lea"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"html"
 	"html/template"
+	"net"
 	"net/smtp"
+	"net/textproto"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 // 发送邮件
 
 type EmailService struct {
-	tpls map[string]*template.Template
+	tplMu sync.RWMutex
+	tpls  map[string]*template.Template
+	send  func(context.Context, string, string, string) error
+}
+
+func tokenTimeoutHours(tokenType int) string {
+	return strconv.Itoa(int(tokenTTL(tokenType).Hours()))
 }
 
 func NewEmailService() *EmailService {
@@ -43,62 +54,62 @@ func InitEmailFromDb() {
 	}
 }
 
-//return a smtp client
+// return a smtp client
 func dial(addr string) (*smtp.Client, error) {
-    conn, err := tls.Dial("tcp", addr, nil)
-    if err != nil {
-        LogW("Dialing Error:", err)
-        return nil, err
-    }
-    //分解主机端口字符串
-    host, _, _ := net.SplitHostPort(addr)
-    return smtp.NewClient(conn, host)
+	conn, err := tls.Dial("tcp", addr, nil)
+	if err != nil {
+		LogW("Dialing Error:", err)
+		return nil, err
+	}
+	//分解主机端口字符串
+	host, _, _ := net.SplitHostPort(addr)
+	return smtp.NewClient(conn, host)
 }
- 
-func SendEmailWithSSL (auth smtp.Auth, to []string, msg []byte) (err error) {
-    //create smtp client
-    c, err := dial(host + ":" + emailPort)
-    if err != nil {
-        LogW("Create smpt client error:", err)
-        return err
-    }
-    defer c.Close()
 
-    if auth != nil {
-        if ok, _ := c.Extension("AUTH"); ok {
-            if err = c.Auth(auth); err != nil {
-                LogW("Error during AUTH", err)
-                return err
-            }
-        }
-    }
- 
-    if err = c.Mail(username); err != nil {
-        return err
-    }
- 
-    for _, addr := range to {
-        if err = c.Rcpt(addr); err != nil {
-            return err
-        }
-    }
- 
-    w, err := c.Data()
-    if err != nil {
-        return err
-    }
- 
-    _, err = w.Write(msg)
-    if err != nil {
-        return err
-    }
- 
-    err = w.Close()
-    if err != nil {
-        return err
-    }
- 
-    return c.Quit()
+func SendEmailWithSSL(auth smtp.Auth, to []string, msg []byte) (err error) {
+	//create smtp client
+	c, err := dial(host + ":" + emailPort)
+	if err != nil {
+		LogW("Create smpt client error:", err)
+		return err
+	}
+	defer c.Close()
+
+	if auth != nil {
+		if ok, _ := c.Extension("AUTH"); ok {
+			if err = c.Auth(auth); err != nil {
+				LogW("Error during AUTH", err)
+				return err
+			}
+		}
+	}
+
+	if err = c.Mail(username); err != nil {
+		return err
+	}
+
+	for _, addr := range to {
+		if err = c.Rcpt(addr); err != nil {
+			return err
+		}
+	}
+
+	w, err := c.Data()
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write(msg)
+	if err != nil {
+		return err
+	}
+
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+
+	return c.Quit()
 }
 
 func (this *EmailService) SendEmail(to, subject, body string) (ok bool, e string) {
@@ -127,7 +138,7 @@ func (this *EmailService) SendEmail(to, subject, body string) (ok bool, e string
 		err = SendEmailWithSSL(auth, send_to, msg)
 	} else {
 		Log("no ssl")
-		err = smtp.SendMail(host + ":" + emailPort, auth, username, send_to, msg)
+		err = smtp.SendMail(host+":"+emailPort, auth, username, send_to, msg)
 	}
 
 	if err != nil {
@@ -136,6 +147,340 @@ func (this *EmailService) SendEmail(to, subject, body string) (ok bool, e string
 	}
 	ok = true
 	return
+}
+
+type smtpDeliveryConfig struct {
+	host     string
+	port     string
+	username string
+	password string
+	ssl      bool
+}
+
+func currentSMTPDeliveryConfig() (smtpDeliveryConfig, error) {
+	if configService == nil {
+		return smtpDeliveryConfig{}, errors.New("email configuration service is not initialized")
+	}
+	config := smtpDeliveryConfig{
+		host:     strings.TrimSpace(configService.GetGlobalStringConfig("emailHost")),
+		port:     strings.TrimSpace(configService.GetGlobalStringConfig("emailPort")),
+		username: strings.TrimSpace(configService.GetGlobalStringConfig("emailUsername")),
+		password: configService.GetGlobalStringConfig("emailPassword"),
+		ssl:      configService.GetGlobalStringConfig("emailSSL") == "1",
+	}
+	if config.host == "" || config.port == "" || config.username == "" || config.password == "" {
+		return smtpDeliveryConfig{}, errors.New("email transport configuration is incomplete")
+	}
+	return config, nil
+}
+
+// SendEmailContext is the cancellable SMTP boundary used by the outbox
+// worker. It preserves the existing direct-SMTP behavior while bounding dial
+// and protocol I/O by the worker context.
+func (this *EmailService) SendEmailContext(ctx context.Context, to, subject, body string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if strings.ContainsAny(to, "\r\n") || strings.ContainsAny(subject, "\r\n") {
+		return fmt.Errorf("%w: email header contains a line break", db.ErrOutboxTransportRejected)
+	}
+	config, err := currentSMTPDeliveryConfig()
+	if err != nil {
+		return fmt.Errorf("%w: %w", db.ErrOutboxTransportRejected, err)
+	}
+	recipients := strings.Split(to, ";")
+	for _, recipient := range recipients {
+		if !IsEmail(strings.TrimSpace(recipient)) {
+			return fmt.Errorf("%w: email recipient is invalid", db.ErrOutboxTransportRejected)
+		}
+	}
+	contentType := "Content-Type: text/html; charset=UTF-8"
+	message := []byte("To: " + to + "\r\nFrom: " + config.username + "<" + config.username + ">\r\nSubject: " + subject + "\r\n" + contentType + "\r\n\r\n" + body)
+	return sendSMTPContext(ctx, config, recipients, message)
+}
+
+func sendSMTPContext(ctx context.Context, config smtpDeliveryConfig, recipients []string, message []byte) error {
+	address := net.JoinHostPort(config.host, config.port)
+	dialer := &net.Dialer{}
+	var conn net.Conn
+	var err error
+	if config.ssl {
+		conn, err = (&tls.Dialer{NetDialer: dialer, Config: &tls.Config{ServerName: config.host}}).DialContext(ctx, "tcp", address)
+	} else {
+		conn, err = dialer.DialContext(ctx, "tcp", address)
+	}
+	if err != nil {
+		return fmt.Errorf("%w: dial SMTP: %w", db.ErrOutboxTransportRejected, err)
+	}
+	defer conn.Close()
+	if deadline, ok := ctx.Deadline(); ok {
+		if err := conn.SetDeadline(deadline); err != nil {
+			return fmt.Errorf("%w: set SMTP deadline: %w", db.ErrOutboxTransportRejected, err)
+		}
+	}
+	stopCancellation := context.AfterFunc(ctx, func() { _ = conn.SetDeadline(time.Now()) })
+	defer stopCancellation()
+
+	client, err := smtp.NewClient(conn, config.host)
+	if err != nil {
+		return fmt.Errorf("%w: create SMTP client: %w", db.ErrOutboxTransportRejected, err)
+	}
+	defer client.Close()
+	if !config.ssl {
+		if ok, _ := client.Extension("STARTTLS"); ok {
+			if err := client.StartTLS(&tls.Config{ServerName: config.host}); err != nil {
+				return fmt.Errorf("%w: start SMTP TLS: %w", db.ErrOutboxTransportRejected, err)
+			}
+		}
+	}
+	auth := smtp.PlainAuth("", config.username, config.password, config.host)
+	if ok, _ := client.Extension("AUTH"); ok {
+		if err := client.Auth(auth); err != nil {
+			return fmt.Errorf("%w: authenticate SMTP: %w", db.ErrOutboxTransportRejected, err)
+		}
+	}
+	if err := client.Mail(config.username); err != nil {
+		return fmt.Errorf("%w: set SMTP sender: %w", db.ErrOutboxTransportRejected, err)
+	}
+	for _, recipient := range recipients {
+		if err := client.Rcpt(strings.TrimSpace(recipient)); err != nil {
+			return fmt.Errorf("%w: set SMTP recipient: %w", db.ErrOutboxTransportRejected, err)
+		}
+	}
+	writer, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("%w: open SMTP body: %w", db.ErrOutboxTransportRejected, err)
+	}
+	if _, err := writer.Write(message); err != nil {
+		_ = writer.Close()
+		return fmt.Errorf("write SMTP body: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		var response *textproto.Error
+		if errors.As(err, &response) {
+			return fmt.Errorf("%w: close SMTP body: %w", db.ErrOutboxTransportRejected, err)
+		}
+		return fmt.Errorf("close SMTP body: %w", err)
+	}
+	_ = client.Quit()
+	return nil
+}
+
+// DeliverOutbox renders and sends a supported email event using the token
+// already committed in the event payload. It never issues or resolves a new
+// token while delivering a side effect.
+func (this *EmailService) DeliverOutbox(ctx context.Context, event db.OutboxEvent) error {
+	if this == nil {
+		if event.Kind == "comment" {
+			return fmt.Errorf("%w: email service is not initialized", db.ErrOutboxTransportRejected)
+		}
+		return errors.New("email service is not initialized")
+	}
+	if configService == nil {
+		if event.Kind == "comment" {
+			return fmt.Errorf("%w: email configuration service is not initialized", db.ErrOutboxTransportRejected)
+		}
+		return errors.New("email configuration service is not initialized")
+	}
+	email := ""
+	if event.Kind != "feedback" {
+		var err error
+		email, err = outboxPayloadString(event.Payload, "email")
+		if err != nil || !IsEmail(email) {
+			if event.Kind == "comment" {
+				return fmt.Errorf("%w: outbox email payload is invalid", db.ErrOutboxTransportRejected)
+			}
+			return errors.New("outbox email payload is invalid")
+		}
+	}
+	var subject, body string
+	var values map[string]interface{}
+	plainTextBody := false
+	switch event.Kind {
+	case "feedback":
+		recipients, ok := outboxPayloadStrings(event.Payload, "recipients")
+		if !ok || len(recipients) == 0 || len(recipients) > 20 {
+			return fmt.Errorf("%w: feedback recipients are invalid", db.ErrOutboxTransportRejected)
+		}
+		for _, recipient := range recipients {
+			if !IsEmail(recipient) || strings.ContainsAny(recipient, "\r\n") {
+				return fmt.Errorf("%w: feedback recipient is invalid", db.ErrOutboxTransportRejected)
+			}
+		}
+		subject, _ = event.Payload["subject"].(string)
+		if strings.TrimSpace(subject) == "" || strings.ContainsAny(subject, "\r\n") {
+			return fmt.Errorf("%w: feedback subject is invalid", db.ErrOutboxTransportRejected)
+		}
+		feedbackBody, _ := event.Payload["body"].(string)
+		if strings.TrimSpace(feedbackBody) == "" {
+			return fmt.Errorf("%w: feedback body is invalid", db.ErrOutboxTransportRejected)
+		}
+		addr, _ := event.Payload["addr"].(string)
+		body = "<p>Suggestion:</p><pre>" + html.EscapeString(feedbackBody) + "</pre>"
+		if addr != "" {
+			body += "<p>Contact: " + html.EscapeString(addr) + "</p>"
+		}
+		send := this.send
+		if send == nil {
+			send = this.SendEmailContext
+		}
+		if err := send(ctx, strings.Join(recipients, ";"), subject, body); err != nil {
+			return fmt.Errorf("send feedback email: %w", err)
+		}
+		return nil
+	case "broadcast":
+		var ok bool
+		subject, ok = event.Payload["subject"].(string)
+		if !ok || strings.TrimSpace(subject) == "" || strings.ContainsAny(subject, "\r\n") {
+			return fmt.Errorf("%w: broadcast subject is invalid", db.ErrOutboxTransportRejected)
+		}
+		body, ok = event.Payload["body"].(string)
+		if !ok || strings.TrimSpace(body) == "" {
+			return fmt.Errorf("%w: broadcast body is invalid", db.ErrOutboxTransportRejected)
+		}
+		send := this.send
+		if send == nil {
+			send = this.SendEmailContext
+		}
+		if err := send(ctx, email, subject, body); err != nil {
+			return fmt.Errorf("send broadcast email: %w", err)
+		}
+		return nil
+	case "comment":
+		comment, commentOK := event.Payload["content"].(string)
+		if !commentOK || strings.TrimSpace(comment) == "" {
+			return fmt.Errorf("%w: comment outbox content is invalid", db.ErrOutboxTransportRejected)
+		}
+		subject = "New blog comment"
+		body = "A new comment was posted on your blog:\n\n" + html.EscapeString(comment)
+		values = map[string]interface{}{}
+		plainTextBody = true
+	case "activate-email":
+		token, err := outboxPayloadString(event.Payload, "token")
+		if err != nil {
+			return err
+		}
+		tokenType, err := outboxPayloadInt(event.Payload, "tokenType")
+		if err != nil {
+			return err
+		}
+		if tokenType != info.TokenActiveEmail {
+			return errors.New("activation outbox token purpose is invalid")
+		}
+		userID, err := outboxPayloadString(event.Payload, "userId")
+		if err != nil || userID != event.AggregateID.Hex() {
+			return errors.New("activation outbox identity is invalid")
+		}
+		username, err := outboxPayloadString(event.Payload, "username")
+		if err != nil {
+			return err
+		}
+		subject = configService.GetGlobalStringConfig("emailTemplateRegisterSubject")
+		body = configService.GetGlobalStringConfig("emailTemplateRegister")
+		values = map[string]interface{}{
+			"tokenUrl":     configService.GetSiteUrl() + "/user/activeEmail?token=" + token,
+			"token":        token,
+			"tokenTimeout": tokenTimeoutHours(info.TokenActiveEmail),
+			"user": map[string]interface{}{
+				"userId": userID, "email": email, "username": username,
+			},
+		}
+	case "reset-password":
+		token, err := outboxPayloadString(event.Payload, "token")
+		if err != nil {
+			return err
+		}
+		tokenType, err := outboxPayloadInt(event.Payload, "tokenType")
+		if err != nil {
+			return err
+		}
+		if tokenType != info.TokenPwd {
+			return errors.New("password-reset outbox token purpose is invalid")
+		}
+		userID, err := outboxPayloadString(event.Payload, "userId")
+		if err != nil || userID != event.AggregateID.Hex() {
+			return errors.New("password-reset outbox identity is invalid")
+		}
+		subject = configService.GetGlobalStringConfig("emailTemplateFindPasswordSubject")
+		body = configService.GetGlobalStringConfig("emailTemplateFindPassword")
+		values = map[string]interface{}{
+			"tokenUrl":     configService.GetSiteUrl() + "/findPassword/" + token,
+			"token":        token,
+			"tokenTimeout": tokenTimeoutHours(info.TokenPwd),
+		}
+	default:
+		return errors.New("unsupported outbox event kind")
+	}
+	if strings.TrimSpace(body) == "" {
+		return errors.New("outbox email template is empty")
+	}
+	if plainTextBody {
+		send := this.send
+		if send == nil {
+			send = this.SendEmailContext
+		}
+		if err := send(ctx, email, subject, body); err != nil {
+			return fmt.Errorf("send outbox email: %w", err)
+		}
+		return nil
+	}
+	ok, message, renderedSubject, renderedBody := this.renderEmail(subject, body, values)
+	if !ok {
+		return fmt.Errorf("render outbox email: %s", message)
+	}
+	send := this.send
+	if send == nil {
+		send = this.SendEmailContext
+	}
+	if err := send(ctx, email, renderedSubject, renderedBody); err != nil {
+		return fmt.Errorf("send outbox email: %w", err)
+	}
+	return nil
+}
+
+func outboxPayloadString(payload map[string]any, key string) (string, error) {
+	value, ok := payload[key].(string)
+	value = strings.TrimSpace(value)
+	if !ok || value == "" {
+		return "", fmt.Errorf("outbox payload %s is invalid", key)
+	}
+	return value, nil
+}
+
+func outboxPayloadStrings(payload map[string]any, key string) ([]string, bool) {
+	value, ok := payload[key]
+	if !ok {
+		return nil, false
+	}
+	result := make([]string, 0)
+	switch values := value.(type) {
+	case []string:
+		result = append(result, values...)
+	case []any:
+		for _, item := range values {
+			text, ok := item.(string)
+			if !ok {
+				return nil, false
+			}
+			result = append(result, strings.TrimSpace(text))
+		}
+	default:
+		return nil, false
+	}
+	return result, true
+}
+
+func outboxPayloadInt(payload map[string]any, key string) (int, error) {
+	switch value := payload[key].(type) {
+	case int:
+		return value, nil
+	case int32:
+		return int(value), nil
+	case int64:
+		return int(value), nil
+	default:
+		return 0, fmt.Errorf("outbox payload %s is invalid", key)
+	}
 }
 
 // AddUser调用
@@ -155,7 +500,7 @@ func (this *EmailService) RegisterSendActiveEmail(userInfo info.User, email stri
 
 	tokenUrl := configService.GetSiteUrl() + "/user/activeEmail?token=" + token
 	// {siteUrl} {tokenUrl} {token} {tokenTimeout} {user.id} {user.email} {user.username}
-	token2Value := map[string]interface{}{"siteUrl": configService.GetSiteUrl(), "tokenUrl": tokenUrl, "token": token, "tokenTimeout": strconv.Itoa(int(tokenService.GetOverHours(info.TokenActiveEmail))),
+	token2Value := map[string]interface{}{"siteUrl": configService.GetSiteUrl(), "tokenUrl": tokenUrl, "token": token, "tokenTimeout": tokenTimeoutHours(info.TokenActiveEmail),
 		"user": map[string]interface{}{
 			"userId":   userInfo.UserId.Hex(),
 			"email":    userInfo.Email,
@@ -195,7 +540,7 @@ func (this *EmailService) UpdateEmailSendActiveEmail(userInfo info.User, email s
 	// 发送邮件
 	tokenUrl := configService.GetSiteUrl() + "/user/updateEmail?token=" + token
 	// {siteUrl} {tokenUrl} {token} {tokenTimeout} {user.userId} {user.email} {user.username}
-	token2Value := map[string]interface{}{"siteUrl": configService.GetSiteUrl(), "tokenUrl": tokenUrl, "token": token, "tokenTimeout": strconv.Itoa(int(tokenService.GetOverHours(info.TokenActiveEmail))),
+	token2Value := map[string]interface{}{"siteUrl": configService.GetSiteUrl(), "tokenUrl": tokenUrl, "token": token, "tokenTimeout": tokenTimeoutHours(info.TokenUpdateEmail),
 		"newEmail": email,
 		"user": map[string]interface{}{
 			"userId":   userInfo.UserId.Hex(),
@@ -222,7 +567,7 @@ func (this *EmailService) FindPwdSendEmail(token, email string) (ok bool, msg st
 	tokenUrl := configService.GetSiteUrl() + "/findPassword/" + token
 	// {siteUrl} {tokenUrl} {token} {tokenTimeout} {user.id} {user.email} {user.username}
 	token2Value := map[string]interface{}{"siteUrl": configService.GetSiteUrl(), "tokenUrl": tokenUrl,
-		"token": token, "tokenTimeout": strconv.Itoa(int(tokenService.GetOverHours(info.TokenActiveEmail)))}
+		"token": token, "tokenTimeout": tokenTimeoutHours(info.TokenPwd)}
 
 	ok, msg, subject, tpl = this.renderEmail(subject, tpl, token2Value)
 	if !ok {
@@ -286,7 +631,7 @@ func (this *EmailService) SendCommentEmail(note info.Note, comment info.BlogComm
 
 	toUserId := note.UserId.Hex()
 	// 表示回复回复的内容, 那么发送给之前回复的
-	if comment.CommentId != "" {
+	if !comment.CommentId.IsZero() {
 		toUserId = comment.UserId.Hex()
 	}
 	toUserInfo := userService.GetUserInfo(toUserId) // 被评论者
@@ -361,13 +706,22 @@ func (this *EmailService) getTpl(str string) (ok bool, msg string, tpl *template
 	var err error
 	var has bool
 
-	if tpl, has = this.tpls[str]; !has {
+	this.tplMu.RLock()
+	tpl, has = this.tpls[str]
+	this.tplMu.RUnlock()
+	if !has {
 		tpl, err = template.New("tpl name").Parse(str)
 		if err != nil {
 			msg = fmt.Sprint(err)
 			return
 		}
-		this.tpls[str] = tpl
+		this.tplMu.Lock()
+		if existing, exists := this.tpls[str]; exists {
+			tpl = existing
+		} else {
+			this.tpls[str] = tpl
+		}
+		this.tplMu.Unlock()
 	}
 	ok = true
 	return
@@ -441,30 +795,28 @@ func (this *EmailService) SendEmailToUsers(users []info.User, subject, body stri
 		return
 	}
 
-	go func() {
-		for _, user := range users {
-			LogJ(user)
-			m := map[string]interface{}{}
-			m["userId"] = user.UserId.Hex()
-			m["username"] = user.Username
-			m["email"] = user.Email
-			ok2, msg2, subject2, body2 := this.renderEmail(subject, body, m)
-			ok = ok2
-			msg = msg2
-			if ok2 {
-				sendOk, msg := this.SendEmail(user.Email, subject2, body2)
-				this.AddEmailLog(user.Email, subject, body, sendOk, msg) // 把模板记录下
-				// 记录到Email Log
-				if sendOk {
-					// Log("ok " + user.Email)
-				} else {
-					// Log("no " + user.Email)
-				}
+	for _, user := range users {
+		LogJ(user)
+		m := map[string]interface{}{}
+		m["userId"] = user.UserId.Hex()
+		m["username"] = user.Username
+		m["email"] = user.Email
+		ok2, msg2, subject2, body2 := this.renderEmail(subject, body, m)
+		ok = ok2
+		msg = msg2
+		if ok2 {
+			sendOk, msg := this.SendEmail(user.Email, subject2, body2)
+			this.AddEmailLog(user.Email, subject, body, sendOk, msg) // 把模板记录下
+			// 记录到Email Log
+			if sendOk {
+				// Log("ok " + user.Email)
 			} else {
-				// Log(msg);
+				// Log("no " + user.Email)
 			}
+		} else {
+			// Log(msg);
 		}
-	}()
+	}
 
 	return
 }
@@ -510,16 +862,30 @@ func (this *EmailService) SendEmailToEmails(emails []string, subject, body strin
 
 // 添加邮件日志
 func (this *EmailService) AddEmailLog(email, subject, body string, ok bool, msg string) {
-	log := info.EmailLog{LogId: bson.NewObjectId(), Email: email, Subject: subject, Body: body, Ok: ok, Msg: msg, CreatedTime: time.Now()}
+	log := info.EmailLog{LogId: db.NewObjectID(), Email: email, Subject: redactEmailSubject(subject), Body: "", Ok: ok, Msg: classifyEmailLogMessage(msg), CreatedTime: time.Now()}
 	db.Insert(db.EmailLogs, log)
+}
+
+func redactEmailSubject(subject string) string {
+	if len(subject) > 128 {
+		return subject[:128]
+	}
+	return subject
+}
+
+func classifyEmailLogMessage(msg string) string {
+	if msg == "" {
+		return ""
+	}
+	return "delivery_error"
 }
 
 // 展示邮件日志
 
 func (this *EmailService) DeleteEmails(ids []string) bool {
-	idsO := make([]bson.ObjectId, len(ids))
+	idsO := make([]ObjectID, len(ids))
 	for i, id := range ids {
-		idsO[i] = bson.ObjectIdHex(id)
+		idsO[i] = db.MustObjectIDFromHex(id)
 	}
 	db.DeleteAll(db.EmailLogs, bson.M{"_id": bson.M{"$in": idsO}})
 
@@ -530,7 +896,7 @@ func (this *EmailService) ListEmailLogs(pageNumber, pageSize int, sortField stri
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 	query := bson.M{}
 	if email != "" {
-		query["Email"] = bson.M{"$regex": bson.RegEx{".*?" + email + ".*", "i"}}
+		query["Email"] = bson.M{"$regex": bson.Regex{Pattern: ".*?" + email + ".*", Options: "i"}}
 	}
 	q := db.EmailLogs.Find(query)
 	// 总记录数

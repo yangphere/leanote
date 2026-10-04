@@ -1,0 +1,13 @@
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/prd.md", "reason": "父任务定义 G 的前置门禁、HTTP/USN 不变量和 G 阶段 MongoDB 5.0 fixture（已同步旧 mgo 驱动限制）。"}
+{"file": ".trellis/tasks/08-25-regression-baseline/design.md", "reason": "真实 HTTP harness、固定端口/site.url、字段路径限定归一化、闭合 header 集、record/replay 模式和 fixture 隔离设计。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/research/external-facts.md", "reason": "mgo 仅支持 legacy opcode（G 阶段钉 Mongo 5.0 的依据）与 ObjectID 24 字符小写 hex 事实。"}
+{"file": "conf/routes", "reason": "/api/* 全部经 catch-all `:controller/:action` 分发（无显式 /api 路由）；action 可分发性以 controller 源码为准。"}
+{"file": "app/controllers/api/ApiFileController.go", "reason": ":26-57 块注释关闭 CopyImage/GetImages/UpdateImageTitle/DeleteImage（API 层不可分发，覆盖移至 web FileController）；:88-113 GetAllAttachs 写 files/<note.Title>.tar.gz 副作用，且经 RenderBinary 带 Content-Disposition 与 Last-Modified=time.Now()。"}
+{"file": "app/controllers/api/ApiNoteController.go", "reason": ":553-563 GetHistories 被块注释关闭（API action 实为 29 个）；:195-211 GetNoteContent 下发 ApiNoteContent（ObjectId JSON 活契约）；:372-376 UpdateNote 冲突判断生效位置（NoteService 同判断已注释）；:608-623 ExportPdf 依赖 exportPdfBinPath/wkhtmltopdf、site.url 回调与硬编码 /bin/sh ⇒ Linux CI 为权威环境、Windows 显式不支持。"}
+{"file": "app/service/NotebookService.go", "reason": ":303-312 DeleteNotebookForce 校验 usn 后物理删除且不调 IncrUsn —— USN 映射表已知偏差，按现状钉住 + issue。"}
+{"file": "app/service/TagService.go", "reason": ":122-123 DeleteTagApi 取 toUsn=IncrUsn 返回但写库用传入旧 usn —— 已知偏差，按现状钉住 + issue。"}
+{"file": "app/service/UserService.go", "reason": ":15-16 IncrUsn 注释只约束 notebook/note/tag 域；auth/user profile/file mutation 不纳入 USN 断言。"}
+{"file": "app/init.go", "reason": ":423 服务端入口以 db.Init(\"\", \"\") 启动 ⇒ [test] section 的 db.dbname 覆盖生效路径。"}
+{"file": "app/db/Mgo.go", "reason": ":61-96 url→urlEnv→host/port 解析顺序；:107-109 dial 失败 panic ⇒ 跳过逻辑必须先于 db.Init 探测可达性。"}
+{"file": "conf/app.conf", "reason": ":17 DEFAULT 段 site.url=http://localhost:9000 —— [test] section 须以固定测试端口覆盖，否则 ExportPdf 回调失向。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/research/external-facts.md", "reason": "§4a Revel 1.0 响应 header 事实（Content-Disposition/Accept-Ranges/Last-Modified/filename 取值、[test] section 硬前提）；§4b wkhtmltopdf 0.12.6.1-3 deb 安装源与 /usr/local 路径——二进制端点闭合集与 record job 的依据。"}

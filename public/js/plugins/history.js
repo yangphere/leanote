@@ -12,20 +12,20 @@ define('history', [], function() {
                         '<h4 class="modal-title" class="modalTitle">' + + '</h4>',
                     '</div>',
                     '<div class="modal-body clearfix">',
-                        '<div class="history-list-wrap pull-left">',
+                        '<div class="history-list-wrap float-start">',
                             '<div class="history-list-header">' + getMsg('history') +' (<span class="history-num"></span>)</div>',
                             '<div class="history-list list-group"></div>',
                         '</div>',
-                        '<div class="history-content-wrap pull-left">',
+                        '<div class="history-content-wrap float-start">',
                             '<div class="history-content-header">',
                                 '<a class="btn btn-primary back">' + getMsg('restoreFromThisVersion') + '</a>',
-                                '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>',
+                        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="' + getMsg('close') + '"></button>',
                             '</div>',
                             '<div class="history-content"></div>',
                         '</div>',
                     '</div>',
                     '<div class="modal-footer hide">',
-                        '<button type="button" class="btn btn-default" data-dismiss="modal">' + getMsg('close') + '</button>',
+                        '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">' + getMsg('close') + '</button>',
                     '</div>',
                 '</div>',
             '</div>',
@@ -71,12 +71,12 @@ define('history', [], function() {
             this.renderContent(0);
             $historyNum.html(list.length);
             // show
-            $tpl.modal({show: true});
+            showBootstrapModal($tpl[0]);
         },
 
         bind: function () {
             var me = this;
-            $("#contentHistory").click(function() {
+            $("#contentHistory").on('click', function() {
                 me.getHistories();
             });
 
@@ -86,7 +86,7 @@ define('history', [], function() {
             });
 
             // 还原
-            $tpl.find('.back').click(function() {
+            $tpl.find('.back').on('click', function() {
                 if(confirm(getMsg("confirmBackup"))) {
                     // 保存当前版本
                     Note.curChangedSaveIt(true);
@@ -94,8 +94,12 @@ define('history', [], function() {
                     // 设置之
                     note = Note.cache[Note.curNoteId];
                     setEditorContent(me.list[me.curIndex].Content, note.IsMarkdown);
+					if (window.LeanoteEditorSession && typeof window.LeanoteEditorSession.markMutation === 'function') {
+						var restoredContent = getEditorContent(note.IsMarkdown);
+						window.LeanoteEditorSession.markMutation(isArray(restoredContent) ? restoredContent[0] : restoredContent);
+					}
 
-                    $tpl.modal('hide');
+                    hideBootstrapModal($tpl[0]);
                     // 保存
                     Note.curChangedSaveIt(true);
                 }
@@ -127,11 +131,11 @@ define('history', [], function() {
                     var content = re[i]
                     content.Ab = Note.genAbstract(content.Content, 200);
                     // 为什么不用tt(), 因为content可能含??
-                    str += '<tr><td seq="' +  i + '">#' + (i+1) +'<' + s + ' class="each-content">' + content.Ab + '</' + s + '> <div class="btns">' + getMsg("datetime") + ': <span class="label label-default">' + goNowToDatetime(content.UpdatedTime) + '</span> <button class="btn btn-default all">' + getMsg("unfold") + '</button> <button class="btn btn-primary back">' + getMsg('restoreFromThisVersion') + '</button></div></td></tr>';
+                    str += '<tr><td seq="' +  i + '">#' + (i+1) +'<' + s + ' class="each-content">' + content.Ab + '</' + s + '> <div class="btns">' + getMsg("datetime") + ': <span class="badge text-bg-secondary">' + goNowToDatetime(content.UpdatedTime) + '</span> <button class="btn btn-secondary all">' + getMsg("unfold") + '</button> <button class="btn btn-primary back">' + getMsg('restoreFromThisVersion') + '</button></div></td></tr>';
                 }
                 str += "</table></div>";
                 $content.html(str);
-                $("#historyList .all").click(function() {
+                $("#historyList .all").on('click', function() {
                     $p = $(this).parent().parent();
                     var seq = $p.attr("seq");
                     var $c = $p.find(".each-content");

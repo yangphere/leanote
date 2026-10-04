@@ -44,7 +44,7 @@ editorMode.prototype.init = function() {
 	this.$themeLink = $("#themeLink");
 	this.changeMode(this.isWritingMode);
 	var self = this;
-	$(".toggle-editor-mode").click(function(e) {
+	$(".toggle-editor-mode").on('click', function(e) {
 		e.preventDefault();
 		saveBookmark();
 		var $a = $(this).find("a");
@@ -91,7 +91,7 @@ editorMode.prototype.normalMode = function() {
 	*/
 
 	$("#noteItemListWrap, #notesAndSort").show();
-	$("#noteList").unbind("mouseenter").unbind("mouseleave"); 
+	$("#noteList").off("mouseenter").off("mouseleave");
 	
 	var theme = UserInfo.Theme || "default";
 	theme += ".css";
@@ -124,9 +124,9 @@ editorMode.prototype.writtingMode = function() {
 	*/
 		
 	$("#noteItemListWrap, #notesAndSort").fadeOut();
-	$("#noteList").hover(function() {
+	$("#noteList").on('mouseenter', function() {
 		$("#noteItemListWrap, #notesAndSort").fadeIn();
-	}, function() {
+	}).on('mouseleave', function() {
 		$("#noteItemListWrap, #notesAndSort").fadeOut();
 	});
 	
@@ -182,7 +182,7 @@ var Resize = {
 		var self = this;
 		
 		// 鼠标点下
-		$(".noteSplit").bind("mousedown", function(event) {
+		$(".noteSplit").on("mousedown", function(event) {
 			event.preventDefault(); // 防止选择文本
 			self.lineMove = true;
 			$(this).css("background-color", "#ccc");
@@ -192,7 +192,7 @@ var Resize = {
 		});
 		
 		// 鼠标点下
-		self.mdSplitter.bind("mousedown", function(event) {
+		self.mdSplitter.on("mousedown", function(event) {
 			event.preventDefault(); // 防止选择文本
 			if($(this).hasClass('open')) {
 				self.mdLineMove = true;
@@ -201,7 +201,7 @@ var Resize = {
 		});
 		
 		// 鼠标移动时
-		self.body.bind("mousemove", function(event) {
+		self.body.on("mousemove", function(event) {
 			if(self.lineMove) { // 如果没有这个if会导致不能选择文本
 				event.preventDefault();
 				self.resize3Columns(event);
@@ -212,7 +212,7 @@ var Resize = {
 		});	
 
 		// 鼠标放开, 结束
-		self.body.bind("mouseup", function(event) {
+		self.body.on("mouseup", function(event) {
 			self.stopResize();
 			// 取消遮罩
 			$("#noteMask").css("z-index", -1);
@@ -220,7 +220,7 @@ var Resize = {
 		
 		// 瞬间
 		var everLeftWidth;
-		$('.layout-toggler-preview').click(function() {
+		$('.layout-toggler-preview').on('click', function() {
 			var $t = $(this);
 			var $p = self.leftColumn.parent();
 			// 是开的
@@ -373,7 +373,7 @@ Mobile = {
 		// self.hashChange();
 		/*
 		$("#noteItemList").on("tap", ".item", function(event) {
-			$(this).click();
+			$(this).trigger('click');
 		});
 		$(document).on("swipeleft",function(e){
 			e.stopPropagation();
@@ -474,7 +474,7 @@ function initEditor() {
 	// editor
 	// toolbar 下拉扩展, 也要resizeEditor
 	var mceToobarEverHeight = 0;
-	$("#moreBtn").click(function() {
+	$("#moreBtn").on('click', function() {
 		saveBookmark();
 		var $editor = $('#editor');
 		if($editor.hasClass('all-tool')) {
@@ -487,20 +487,8 @@ function initEditor() {
 	});
 
 	// 初始化编辑器
-	tinymce.init({
-		inline: true,
-		theme: 'leanote',
-		valid_children: "+pre[div|#text|p|span|textarea|i|b|strong]", // ace
-		/*
-		protect: [
-	        /\<\/?(if|endif)\>/g, // Protect <if> & </endif>
-	        /\<xsl\:[^>]+\>/g, // Protect <xsl:...>
-	        // /<pre.*?>.*?<\/pre>/g, // Protect <pre ></pre>
-	        // /<p.*?>.*?<\/p>/g, // Protect <pre ></pre>
-	        // /<\?php.*?\?>/g // Protect php code
-	    ],
-	    */
-		setup: function(ed) {
+	var editorConfig = LeanoteTinyMCE.createNoteConfig({selector: '#editorContent', locale: LEA.locale});
+	editorConfig.setup = function(ed) {
 			ed.on('keydown', function(e) {
 				// 如果是readony, 则不能做任何操作
 				var num = e.which ? e.which : e.keyCode;
@@ -529,70 +517,26 @@ function initEditor() {
 					return;
 				}
 			});
-		},
-		
-		// fix TinyMCE Removes site base url
-		// http://stackoverflow.com/questions/3360084/tinymce-removes-site-base-urls
-		convert_urls: false, // true会将url变成../api/
-		relative_urls: true,
-		remove_script_host:false,
-		
-		selector : "#editorContent",
-		
-		// content_css 不再需要
-		// content_css : [LEA.sPath + "/css/editor/editor.css"], // .concat(em.getWritingCss()),
-		skin : "custom",
-		language: LEA.locale, // 语言
-		plugins : [
-				"autolink link leaui_image leaui_mindmap lists hr", "paste",
-				"searchreplace leanote_nav leanote_code tabfocus",
-				"table textcolor" ], // nonbreaking directionality charmap
-		toolbar1 : "formatselect | forecolor backcolor | bold italic underline strikethrough | leaui_image leaui_mindmap | leanote_code leanote_inline_code | bullist numlist | alignleft aligncenter alignright alignjustify",
-		toolbar2 : "outdent indent blockquote | link unlink | table | hr removeformat | subscript superscript | searchreplace | pastetext | leanote_ace_pre | fontselect fontsizeselect",
 
-		// 使用tab键: http://www.tinymce.com/wiki.php/Plugin3x:nonbreaking
-		// http://stackoverflow.com/questions/13543220/tiny-mce-how-to-allow-people-to-indent
-		// nonbreaking_force_tab : true,
-		
-		menubar : false,
-		toolbar_items_size : 'small',
-		statusbar : false,
-		url_converter: false,
-		font_formats : "Arial=arial,helvetica,sans-serif;"
-				+ "Arial Black=arial black,avant garde;"
-				+ "Times New Roman=times new roman,times;"
-				+ "Courier New=courier new,courier;"
-				+ "Tahoma=tahoma,arial,helvetica,sans-serif;"
-				+ "Verdana=verdana,geneva;" + "宋体=SimSun;"
-				+ "新宋体=NSimSun;" + "黑体=SimHei;"
-				+ "微软雅黑=Microsoft YaHei",
-		block_formats : "Header 1=h1;Header 2=h2;Header 3=h3;Header 4=h4;Paragraph=p",
-		/*
-		codemirror: {
-		    indentOnInit: true, // Whether or not to indent code on init. 
-		    path: 'CodeMirror', // Path to CodeMirror distribution
-		    config: {           // CodeMirror config object
-		       //mode: 'application/x-httpd-php',
-		       lineNumbers: true
-		    },
-		    jsFiles: [          // Additional JS files to load
-		       // 'mode/clike/clike.js',
-		       //'mode/php/php.js'
-		    ]
-		  },
-		  */
-		  // This option specifies whether data:url images (inline images) should be removed or not from the pasted contents. 
-		  // Setting this to "true" will allow the pasted images, and setting this to "false" will disallow pasted images.  
-		  // For example, Firefox enables you to paste images directly into any contentEditable field. This is normally not something people want, so this option is "false" by default.
-		  paste_data_images: true
-	});
+		ed.on('paste drop undo redo change input', function() {
+			if (window.LeanoteEditorSession) window.LeanoteEditorSession.markMutation(ed.getContent());
+		});
+		ed.on('init SetContent', function() {
+			if (window.LeaAce && typeof window.LeaAce.initAceFromContent === 'function') {
+				window.LeaAce.initAceFromContent(ed);
+			}
+		});
+	};
+	tinymce.init(editorConfig);
 	
-	// 刷新时保存 参考autosave插件
+	// Leaving must not start a request whose result this page cannot observe.
 	window.onbeforeunload = function(e) {
-		if (LEA.isLogout) {
-			return;
+		if (Note.mutations.hasUnresolved() || Object.keys(Note.savePool).length ||
+			(!Note.isReadOnly && Note.curNoteId && Note.curHasChanged(true))) {
+			e.preventDefault();
+			e.returnValue = '';
+			return '';
 		}
-    	Note.curChangedSaveIt(true, null, {refresh: true});
 	}
 
 	// 全局快捷键
@@ -629,14 +573,14 @@ function scrollTo(self, tagName, text) {
 	// 在nav是第几个
 	var navs = $('#leanoteNavContent [data-a="' + tagName + '-' + encodeURI(text) + '"]');
 //	alert('#leanoteNavContent [data-a="' + tagName + '-' + encodeURI(text) + '"]')
-	var len = navs.size();
+	var len = navs.length;
 	for(var i = 0; i < len; ++i) {
 		if(navs[i] == self) {
 			break;
 		}
 	}
 	
-	if (target.size() >= i+1) {
+	if (target.length >= i+1) {
 		target = target.eq(i);
 		// 之前插入, 防止多行定位不准
 		// log(target.scrollTop());
@@ -678,7 +622,7 @@ function hideMask () {
 	console.log('initing...');
 	
 	// 窗口缩放时
-	$(window).resize(function() {
+	$(window).on('resize', function() {
 		Mobile.isMobile();
 		resizeEditor();
 	});
@@ -687,7 +631,7 @@ function hideMask () {
 	initEditor();
 
 	// 左侧, folder 展开与关闭
-	$(".folderHeader").click(function() {
+	$(".folderHeader").on('click', function() {
 		var body = $(this).next();
 		var p = $(this).parent();
 		if (!body.is(":hidden")) {
@@ -714,16 +658,16 @@ function hideMask () {
 	});
 	
 	// 邮箱验证
-	$("#wrongEmail").click(function() {
+	$("#wrongEmail").on('click', function() {
 		openSetInfoDialog(1);
 	});
 	
-	$("#setTheme").click(function() {
+	$("#setTheme").on('click', function() {
 		showDialog2("#setThemeDialog", {title: "主题设置", postShow: function() {
 			if (!UserInfo.Theme) {
 				UserInfo.Theme = "default";
 			}
-			$("#themeForm input[value='" + UserInfo.Theme + "']").attr("checked", true);
+			$("#themeForm input[value='" + UserInfo.Theme + "']").prop("checked", true);
 		}});
 	});
 	
@@ -731,7 +675,7 @@ function hideMask () {
 	// 主题
 	$("#themeForm").on("click", "input", function(e) {
 		var val = $(this).val();
-		var preHref = $("#themeLink").attr("href"); // default.css?id=7
+		var preHref = $("#themeLink").attr("href"); // default.css?id=8
 		var arr = preHref.split('=');
 		var id = 1;
 		if (arr.length == 2) {
@@ -746,7 +690,7 @@ function hideMask () {
 	});
 
 	// 禁止双击选中文字
-	$("#notebook, #newMyNote, #myProfile, #topNav, #notesAndSort", "#leanoteNavTrigger").bind("selectstart", function(e) {
+	$("#notebook, #newMyNote, #myProfile, #topNav, #notesAndSort", "#leanoteNavTrigger").on("selectstart", function(e) {
 		e.preventDefault();
 		return false;
 	});
@@ -778,7 +722,7 @@ function hideMask () {
 	$("#leftSwitcher2").on('click', function() {
 		maxLeft(true);
 	});
-	$("#leftSwitcher").click('click', function() {
+	$("#leftSwitcher").on('click', function() {
 		if(Mobile.switchPage()) {
 			minLeft(true);
 		}
@@ -800,7 +744,7 @@ function hideMask () {
 	
 	// mini版
 	// 点击展开
-	$("#notebookMin div.minContainer").click(function() {
+	$("#notebookMin div.minContainer").on('click', function() {
 		var target = $(this).attr("target");
 		maxLeft(true);
 		if(target == "#notebookList") {
@@ -854,15 +798,15 @@ function hideMask () {
 	/*
 	//--------
 	// 建议
-	$("#yourSuggestions").click(function() {
+	$("#yourSuggestions").on('click', function() {
 		showDialog2("#suggestionsDialog");
 	});
-	$("#suggestionBtn").click(function(e) {
+	$("#suggestionBtn").on('click', function(e) {
 		e.preventDefault();
-		var suggestion = $.trim($("#suggestionTextarea").val());
+		var suggestion = ($("#suggestionTextarea").val() || "").trim();
 		if(!suggestion) {
 			$("#suggestionMsg").html("请输入您的建议, 谢谢!").show().addClass("alert-warning").removeClass("alert-success");
-			$("#suggestionTextarea").focus();
+			$("#suggestionTextarea").trigger('focus');
 			return;
 		}
 		$("#suggestionBtn").html("正在处理...").addClass("disabled");
@@ -1037,7 +981,7 @@ LeaAce = {
 			var preHtml = $pre.html();
 
 			$pre.removeClass('ace-to-pre');
-			$pre.attr("contenteditable", false); // ? 避免tinymce编辑
+			$pre.attr("contenteditable", "false"); // ? 避免tinymce编辑
 			var aceEditor = ace.edit(id);
 
 			aceEditor.container.style.lineHeight = 1.5;
@@ -1087,19 +1031,35 @@ LeaAce = {
 			    }
 			});
 			this._aceEditors[id] = aceEditor;
-			if(val) {
-				aceEditor.setValue(val);
-				// 不要选择代码
-				// TODO
-			} else {
+				if(val) {
+					aceEditor.setValue(val);
+					// 不要选择代码
+					// TODO
+				} else {
 				// 防止 <pre><div>xx</div></pre> 这里的<div>消失
 				// preHtml = preHtml.replace('/&nbsp;/g', ' '); // 以前是把' ' 全换成了&nbsp;
 				// aceEditor.setValue(preHtml);
 				// 全不选
-				// aceEditor.selection.clearSelection();
-			}
+					// aceEditor.selection.clearSelection();
+				}
 
-			// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+				// Ace edits happen outside TinyMCE's contenteditable surface.  Feed
+				// the normalized editor serialization into the shared state adapter
+				// so code-only edits participate in the normal save contract.
+				var aceLoadEpoch;
+				if (window.LeanoteEditorSession && typeof window.LeanoteEditorSession.snapshot === "function") {
+					aceLoadEpoch = window.LeanoteEditorSession.snapshot().loadEpoch;
+				}
+				if (aceEditor.session && typeof aceEditor.session.on === "function") {
+					aceEditor.session.on("change", function () {
+						if (Note.readOnly || !window.LeanoteEditorSession ||
+							typeof window.LeanoteEditorSession.markMutation !== "function" ||
+							typeof getEditorContent !== "function") return;
+						window.LeanoteEditorSession.markMutation(getEditorContent(false), aceLoadEpoch);
+					});
+				}
+
+				// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 			// "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 			me.resetAddHistory();
 			return aceEditor;
@@ -1107,7 +1067,7 @@ LeaAce = {
 			// 当有错误时, 会有XXXXX的形式, 此时不要ace, 直接原生的!!!
 			console.error('ace error!!!!');
 			console.error(e);
-			$pre.attr("contenteditable", true);
+			$pre.attr("contenteditable", "true");
 			$pre.removeClass('ace-tomorrow ace_editor ace-tm');
 			$pre.html(rawCode);
 			me.resetAddHistory();

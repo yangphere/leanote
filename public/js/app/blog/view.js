@@ -5,14 +5,14 @@ function scrollTo(self, tagName, text) {
 	// 找到是第几个
 	// 在nav是第几个
 	var navs = $('#blogNavContent [data-a="' + tagName + '-' + encodeURI(text) + '"]');
-	var len = navs.size();
+	var len = navs.length;
 	for(var i = 0; i < len; ++i) {
 		if(navs[i] == self) {
 			break;
 		}
 	}
 	
-	if (target.size() >= i+1) {
+	if (target.length >= i+1) {
 		target = target.eq(i);
 		// 之前插入, 防止多行定位不准
 		var top = target.offset().top;
@@ -69,7 +69,7 @@ function initNav() {
 	$("#blogNav").css("top", top).css("left", left);
 	$("#blogNav").show();
 	
-	$("#blogNavNav").click(function() {
+	$("#blogNavNav").on('click', function() {
 		var $o = $("#blogNavContent");
 		if($o.is(":hidden")) {
 			$o.show();
@@ -93,7 +93,7 @@ function initNav() {
 	    }
 	}
 	reNav();
-	$(window).scroll(reNav);
+	$(window).on('scroll', reNav);
 }
 
 var C = {
@@ -163,7 +163,7 @@ var C = {
 	},
 	initMoreComments: function() {
 		var self = this;
-		self.commentsMoreO.find("a").click(function(){ 
+self.commentsMoreO.find("a").on('click', function(){
 			if(self.info.pageInfo.TotalPage > self.info.pageInfo.CurPage) {
 				self.commentsMoreO.addClass("hide");
 				self.commentsLoadingO.removeClass("hide");
@@ -293,7 +293,7 @@ var C = {
 		var self = this;
 		
 		// like or not
-		self.likeBtnO.click(function() {
+		self.likeBtnO.on('click', function() {
 			if(!visitUserInfo.UserId) {
 				needLogin();
 				return;
@@ -323,7 +323,7 @@ var C = {
 			var form = $(this).closest("li").find("form");
 			if(form.is(":hidden")) {
 				form.show();
-				form.find("textarea").focus();
+				form.find("textarea").trigger('focus');
 			} else {
 				form.hide();
 			}
@@ -338,16 +338,16 @@ var C = {
 			var commentId = $(this).data("comment-id");
 			var $form = $(this).closest("form");
 			var $content = $form.find("textarea");
-			var content = $.trim($content.val());
+			var content = ($content.val() || "").trim();
 			if(!content) {
-				$content.focus();
+				$content.trigger('focus');
 				return;
 			}
 			var t = $(this);
-			t.button("loading");
+			setButtonLoading(t[0], true);
 			var data = {noteId: self.noteId, toCommentId: commentId, content: content};
 			ajaxPost(staticUrl + "/blog/comment", data, function(ret) {
-				t.button("reset");
+				setButtonLoading(t[0], false);
 				$content.val("");
 				self.bindCommentNum(1);
 				if(commentId) {
@@ -360,6 +360,9 @@ var C = {
 				
 				// 添加一个
 				self.addCommentRender(ret.Item);
+			}, function() {
+				setButtonLoading(t[0], false);
+				alert("leanote出现了错误!");
 			});
 		});
 		
@@ -453,10 +456,10 @@ var C = {
 	        });
 	        body = modal.getModalBody();
 	        input = body.find(".input-container");
-	        body.find("input[type='radio']").click(function(){ 
+body.find("input[type='radio']").on('click', function(){
 	        	if(!$(this).val()) {
 	        		input.show();
-	        		input.find("input").focus();
+								input.find("input").trigger('focus');
 	        	} else {
 	        		input.hide();
 	        	}
@@ -469,7 +472,7 @@ var C = {
 			var commentId = $(this).parent().data("comment-id");
 			report(commentId, self.noteId, getMsg("reportComment?"));
 		});
-		$("#reportBtn").click(function() {
+		$("#reportBtn").on('click', function() {
 			if(needLogin()) {
 				return;
 			}
@@ -481,7 +484,7 @@ var C = {
 	weixinQRCodeO: $("#weixinQRCode"),
 	initShare: function() {
 		var self = this;
-		$(".btn-weixin").click(function() {
+		$(".btn-weixin").on('click', function() {
 			if(!self.weixinQRCodeO.html()) {
 				self.weixinQRCodeO.qrcode(viewUrl + "/" + self.noteId);
 			}
@@ -491,7 +494,7 @@ var C = {
 	        });
 		});
 		
-		$(".btn-share").click(function() {
+		$(".btn-share").on('click', function() {
 			var $this = $(this);
 			var map = {"btn-weibo": shareSinaWeibo, "tencent-weibo": shareTencentWeibo, "qq": shareQQ, "renren": shareRenRen};
 			for(var i in map) {

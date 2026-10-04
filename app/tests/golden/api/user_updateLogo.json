@@ -1,0 +1,1 @@
+{"request":{"method":"POST","path":"/api/user/updateLogo","files":{"file":{"filename":"golden-logo.png","content_type":"image/png","body":"Z29sZGVuIGltYWdlIHBheWxvYWQ="}},"auth":"admin"},"response":{"status":200,"headers":{"Content-Type":"application/json; charset=utf-8"},"body":"{\"Logo\":\"LOGO_TOKEN\"}"}}

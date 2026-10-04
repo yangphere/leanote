@@ -1,149 +1,109 @@
-<nav class="nav-primary">
+<nav class="nav-primary member-sidebar-nav">
 	<ul class="nav" id="nav">
-	
-		<li class="active">
+		<li>
 			<a href="/member">
-				<i class="fa fa-dashboard icon">
-					<b class="bg-success">
-					</b>
-				</i>
-				<span class="nav-h1">
-					{{msg . "memberCenter"}}
-				</span>
+				<span class="nav-icon-box"><i class="fa fa-tachometer"></i></span>
+				<span class="nav-h1">{{msg . "memberCenter"}}</span>
 			</a>
 		</li>
 		
 		<li>
-			<a href="#">
-				<i class="fa fa-user icon">
-					<b class="bg-danger">
-					</b>
-				</i>
-				<span class="pull-right">
-					<i class="fa fa-angle-down text">
-					</i>
-					<i class="fa fa-angle-up text-active">
-					</i>
+			<a href="javascript:;" class="has-submenu">
+				<span class="nav-icon-box"><i class="fa fa-user"></i></span>
+				<span class="float-end nav-arrow">
+					<i class="fa fa-angle-down text"></i>
+					<i class="fa fa-angle-up text-active"></i>
 				</span>
-				<span class="nav-h1">
-					{{msg . "accountInfo"}}
-				</span>
+				<span class="nav-h1">{{msg . "accountInfo"}}</span>
 			</a>
 			<!-- 导航列表 -->
 			<ul class="nav lt">
 				<li>
 					<a href="/member/user/avatar">
-						<span>
-							{{msg . "Avatar"}}
-						</span>
+						<i class="fa fa-picture-o sub-nav-icon"></i>
+						<span>{{msg . "Avatar"}}</span>
 					</a>
 				</li>
-				
 				<li>
 					<a href="/member/user/username">
-						<span>
-							{{msg . "Username"}}
-						</span>
+						<i class="fa fa-id-badge sub-nav-icon"></i>
+						<span>{{msg . "Username"}}</span>
 					</a>
 				</li>
-				
 				<li>
 					<a href="/member/user/email">
-						<span>
-							{{msg . "Email"}}
-						</span>
+						<i class="fa fa-envelope-o sub-nav-icon"></i>
+						<span>{{msg . "Email"}}</span>
 					</a>
 				</li>
 				<li>
 					<a href="/member/user/password">
-						<span>
-							{{msg . "Password"}}
-						</span>
+						<i class="fa fa-lock sub-nav-icon"></i>
+						<span>{{msg . "Password"}}</span>
 					</a>
 				</li>
-				
 			</ul>
 		</li>
 		
 		<li id="adminEmailNav">
-			<a href="#layout">
-				<i class="fa fa-bold icon">
-					<b class="bg-warning">
-					</b>
-				</i>
-				<span class="pull-right">
-					<i class="fa fa-angle-down text">
-					</i>
-					<i class="fa fa-angle-up text-active">
-					</i>
+			<a href="javascript:;" class="has-submenu">
+				<span class="nav-icon-box"><i class="fa fa-rss"></i></span>
+				<span class="float-end nav-arrow">
+					<i class="fa fa-angle-down text"></i>
+					<i class="fa fa-angle-up text-active"></i>
 				</span>
-				<span class="nav-h1">
-					{{msg . "blog"}}
-				</span>
+				<span class="nav-h1">{{msg . "blog"}}</span>
 			</a>
 			<ul class="nav lt">
 				<li>
 					<a href="/member/blog/index">
-						<span>
-							{{msg . "Posts"}}
-						</span>
+						<i class="fa fa-file-text-o sub-nav-icon"></i>
+						<span>{{msg . "Posts"}}</span>
 					</a>
 				</li>
-				
 				<li>
 					<a href="/member/blog/base">
-						<span>
-							{{msg . "basicInfoSet"}}
-						</span>
+						<i class="fa fa-cog sub-nav-icon"></i>
+						<span>{{msg . "basicInfoSet"}}</span>
 					</a>
 				</li>
 				<li>
 					<a href="/member/blog/comment">
-						<span>
-							{{msg . "Comment"}}
-						</span>
+						<i class="fa fa-comments-o sub-nav-icon"></i>
+						<span>{{msg . "Comment"}}</span>
 					</a>
 				</li>
 				<li>
 					<a href="/member/blog/cate">
-						<span>
-							{{msg . "Category"}}
-						</span>
+						<i class="fa fa-folder-o sub-nav-icon"></i>
+						<span>{{msg . "Category"}}</span>
 					</a>
 				</li>
 				<li>
 					<a href="/member/blog/single">
-						<span>
-							{{msg . "Single"}}
-						</span>
+						<i class="fa fa-file-o sub-nav-icon"></i>
+						<span>{{msg . "Single"}}</span>
 					</a>
 				</li>
 				<li>
 					<a href="/member/blog/paging">
-						<span>
-							{{msg . "pagingAndSort"}}
-						</span>
+						<i class="fa fa-list-ol sub-nav-icon"></i>
+						<span>{{msg . "pagingAndSort"}}</span>
 					</a>
 				</li>
 				<li>
 					<a href="/member/blog/theme">
-						<span>
-							{{msg . "Theme"}}
-						</span>
+						<i class="fa fa-paint-brush sub-nav-icon"></i>
+						<span>{{msg . "Theme"}}</span>
 					</a>
 				</li>
 			</ul>
 		</li>
 		
-		<li class="active">
+		<li>
 			<a href="/member/group/index">
-				<i class="fa fa-users icon">
-					<b class="bg-success">
-					</b>
-				</i>
-				<span class="nav-h1">
-					{{msg . "group"}}
-				</span>
+				<span class="nav-icon-box"><i class="fa fa-users"></i></span>
+				<span class="nav-h1">{{msg . "group"}}</span>
 			</a>
 		</li>
 	</ul>

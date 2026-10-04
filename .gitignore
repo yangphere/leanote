@@ -19,6 +19,9 @@ app/tmp/main.go
 .project
 public/config.codekit
 files/
+/.content-private-quarantine/
+/.content-public-quarantine/
+/.content-temporary/
 /node_modules
 .idea
 *.iml
@@ -26,6 +29,16 @@ target/
 package/leanote.tar.gz
 package/leanote/
 leanote.log
+dist/
+ci-summaries/
+/.env
 
-# 排除所有以 . 开头的目录
-.*/
+# 排除根目录下所有以 . 开头的目录，但保留 .trellis 目录
+/.*/
+!/.trellis/
+!/.github/
+/.github/*
+!/.github/actionlint.yaml
+!/.github/workflows/
+/.github/workflows/*
+!/.github/workflows/*.yml

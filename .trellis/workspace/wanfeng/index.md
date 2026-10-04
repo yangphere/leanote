@@ -1,0 +1,74 @@
+# Workspace Index - wanfeng
+
+> Journal tracking for AI development sessions.
+
+---
+
+## Current Status
+
+<!-- @@@auto:current-status -->
+- **Active File**: `journal-1.md`
+- **Total Sessions**: 34
+- **Last Active**: 2026-10-02
+<!-- @@@/auto:current-status -->
+
+---
+
+## Active Documents
+
+<!-- @@@auto:active-documents -->
+| File | Lines | Status |
+|------|-------|--------|
+| `journal-1.md` | ~905 | Active |
+<!-- @@@/auto:active-documents -->
+
+---
+
+## Session History
+
+<!-- @@@auto:session-history -->
+| # | Date | Title | Commits | Branch |
+|---|------|-------|---------|--------|
+| 34 | 2026-10-02 | 完成管理后台与个人中心响应式样式修复 | `8a491c1e` | `dev` |
+| 33 | 2026-10-02 | 修复账号下拉菜单缓存 | `7cf21120` | `dev` |
+| 32 | 2026-10-02 | Docker 运行时博客与笔记修复 | `f8cfd6b1` | `dev` |
+| 31 | 2026-10-01 | 修复 Bootstrap 5 账号下拉菜单显示 | `5da23fcb` | `dev` |
+| 30 | 2026-09-30 | 修复博客发布及右键菜单参数绑定 | `7594760d` | `dev` |
+| 29 | 2026-09-30 | 修复新建笔记列表路由并归档 | `eb2f4836` | `dev` |
+| 28 | 2026-09-30 | 清理 public 无用前端库与未使用的视图、Go 包 | `7928927f`, `a8ab8850` | `dev` |
+| 27 | 2026-09-29 | Docker 管理员环境密码初始化与强制改密 | `3fb823fe` | `dev` |
+| 26 | 2026-09-29 | 添加 Docker Compose 启动配置 | `64d84dfd` | `dev` |
+| 25 | 2026-09-29 | 归档业务分层协调任务 | `cbef7035` | `dev` |
+| 24 | 2026-09-29 | 交付工具提交与任务归档 | `62b9e2caa26ec98a4b23cd672364ed7da613b59a` | `dev` |
+| 23 | 2026-09-28 | 呈现层请求意图与恢复修复提交归档 | `08bdfadb7d40c67d61f9c410846f3f2ccfb924d2` | `dev` |
+| 22 | 2026-09-28 | 完成接口适配层迁移并归档 | `f3354b46` | `dev` |
+| 21 | 2026-09-25 | 完成应用管理端修复并归档 | `65f1b5ee` | `dev` |
+| 20 | 2026-09-25 | 完成应用发布链路 | `0b2bd184` | `dev` |
+| 19 | 2026-09-24 | 身份会话边界修复与归档 | `7a6156d7` | `dev` |
+| 18 | 2026-09-18 | 收敛内容、文件与媒体业务边界 | `c50b14c9` | `dev` |
+| 17 | 2026-09-15 | 完成笔记工作区持久化与安全重试 | `58eb8929` | `dev` |
+| 16 | 2026-09-10 | 修复 Mongo 持久化一致性边界 | `008c306d` | `dev` |
+| 15 | 2026-09-09 | 完成 09-08-domain-contracts 规格审核修复并归档 | `50a0fa93` | `dev` |
+| 14 | 2026-09-01 | CI/CD 交付与发布收口 | `2dd4d18` | `dev` |
+| 13 | 2026-08-31 | 完成 TinyMCE 8 升级 | `05f2b400de28b7847fa26ee2e2815eea1a38e227` | `dev` |
+| 12 | 2026-08-30 | Bootstrap 5.3 升级收口 | `619b569` | `codex/bootstrap-5-3-upgrade` |
+| 11 | 2026-08-30 | jQuery 3.7 升级提交与归档 | `69eefae` | `dev` |
+| 10 | 2026-08-30 | Revel 迁移规划复核、提交与归档 | `4ae8578` | `dev` |
+| 9 | 2026-08-30 | C-b 需求规格审核：确认唯一 ready 叶并落盘规格修订 | `3bc0ff9` | `dev` |
+| 8 | 2026-08-29 | C-b revel-migration：规格审核三轮 + Task 1/2 实现与三轮四层评审 | `6f44a9c` | `dev` |
+| 7 | 2026-08-29 | B mongo-driver-migration：实现、双轴评审修复、验证与归档 | `c815b1e` | `dev` |
+| 6 | 2026-08-29 | Revel 1.1 upgrade closeout | `e4ba314`, `bd21965`, `318a1f0`, `810cf68` | `dev` |
+| 5 | 2026-08-28 | 完成 jQuery 3.7 升级复审修复 | `7500f20` | `dev` |
+| 4 | 2026-08-27 | Node 24 前端构建链迁移与验收 | `bddca23` | `dev` |
+| 3 | 2026-08-26 | 完成 Go 1.26 工具链与审核修复分层提交 | `d78e873`, `16c8c5e`, `72da8e9`, `c6ec8e9` | `dev` |
+| 2 | 2026-08-25 | 建立 HTTP Golden 回归基线并归档 | `2dc85af` | `dev` |
+| 1 | 2026-08-25 | 归档回归基线规划 | `5976a58` | `dev` |
+<!-- @@@/auto:session-history -->
+
+---
+
+## Notes
+
+- Sessions are appended to journal files
+- New journal file created when current exceeds 2000 lines
+- Use `add_session.py` to record sessions

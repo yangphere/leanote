@@ -1,0 +1,1 @@
+{"request":{"method":"GET","path":"/api/user/getSyncState","auth":"admin"},"response":{"status":405,"headers":{},"body":""}}

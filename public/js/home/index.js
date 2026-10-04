@@ -2,7 +2,7 @@
 
 $(function() {
     // 平滑滚动
-    $(".smooth-scroll").click(function(e) {
+    $(".smooth-scroll").on('click', function(e) {
         e.preventDefault();
         var t = $(this).data("target");
         var targetOffset = $(t).offset().top - 80;
@@ -29,7 +29,7 @@ $(function() {
         document.cookie = name + "="+ escape (value) + ";expires=" + exp.toGMTString();  
     }
     
-    $('#lang a').click(function() {
+    $('#lang a').on('click', function() {
         var lang = $(this).data('lang');
         setCookie('LEANOTE_LANG', lang);
         location.reload();

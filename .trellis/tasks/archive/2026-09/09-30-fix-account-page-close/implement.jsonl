@@ -1,0 +1,2 @@
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Account page behavior belongs to the legacy jQuery/Bootstrap frontend and must preserve view/source boundaries."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Follow frontend quality and verification requirements for the template-level behavior fix."}

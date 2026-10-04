@@ -96,7 +96,7 @@ var o = {
 			}
 		}
 		// rename
-		$("#renameAlbumBtn").click(function(){ 
+$("#renameAlbumBtn").on('click', function(){
 			curAlbum = $("#albumsForUpload").val();
 			if(!curAlbum) {
 				alert(getMsg("Cannot rename default album"));
@@ -104,26 +104,26 @@ var o = {
 			}
 			toggleAddAlbum();
 			$("#addOrUpdateAlbumBtn").html(getMsg("Rename Album"));
-			$("#albumName").val($("#albumsForUpload option:selected").html()).focus();
+			$("#albumName").val($("#albumsForUpload option:selected").html()).trigger('focus');
 			isAddAlbum = false;
 		});
 		// add album
-	    $("#addAlbumBtn").click(function() {
+	    $("#addAlbumBtn").on('click', function() {
 			toggleAddAlbum();
-			$("#addOrUpdateAlbumBtn").html(getMsg("Add Album"));
-    		$("#albumName").val("").focus();
-			isAddAlbum = true;
-		});
-		$("#cancelAlbumBtn").click(function() {
-			toggleAddAlbum();
-		});
-		// add or update album
-		$("#addOrUpdateAlbumBtn").click(function() {
-	    	var albumName = $("#albumName").val();
-	    	if(!albumName) {
-	    		$("#albumName").focus();
-	    		return;
-	    	}
+	$("#addOrUpdateAlbumBtn").html(getMsg("Add Album"));
+	$("#albumName").val("").trigger('focus');
+	isAddAlbum = true;
+});
+$("#cancelAlbumBtn").on('click', function() {
+	toggleAddAlbum();
+});
+// add or update album
+$("#addOrUpdateAlbumBtn").on('click', function() {
+		var albumName = $("#albumName").val();
+		if(!albumName) {
+		$("#albumName").trigger('focus');
+		return;
+		}
 	    	if(isAddAlbum) {
 		    	$.get("/album/addAlbum", {name: albumName}, function(ret) {
 		    		if(typeof ret == "object" && ret.AlbumId != "") {
@@ -137,6 +137,8 @@ var o = {
 		    		} else {
 		    			alert(getMsg("error"));
 		    		}
+}).fail(function() {
+alert(getMsg("error"));
 		    	});
 	    	} else {
 		    	$.get("/album/updateAlbum", {albumId: curAlbum, name: albumName}, function(ret) {
@@ -151,11 +153,13 @@ var o = {
 		    		} else {
 		    			alert(getMsg("error!"));
 		    		}
+}).fail(function() {
+alert(getMsg("error!"));
 		    	});
 	    	}
 	    })
 	    // delete album
-	    $("#deleteAlbumBtn").click(function() {
+	    $("#deleteAlbumBtn").on('click', function() {
 	    	var albumId = $("#albumsForUpload").val();
 	    	if(!albumId) {
 	    		alert(getMsg("Cannot delete default album"));
@@ -177,6 +181,8 @@ var o = {
 	    		} else {
 	    			alert(getMsg("This album has images, please delete it's images at first."));
 	    		}
+}).fail(function() {
+alert(getMsg("error!"));
 	    	});
 
 	    });
@@ -198,6 +204,8 @@ var o = {
 
 	    	var albumId = $("#albumsForList").val();
 		    self.renderImages(albumId, 1, true);
+}).fail(function() {
+alert(getMsg("error"));
     	});
     },
 
@@ -280,7 +288,7 @@ var o = {
 				html += '<li ' + classes + '>';
 				html += '<a title="" href="javascript:;" class="a-img"><img  alt="" src="' + src + '" data-original="' + src + '" ></a>';
 				// html += '<div class="tools"><a href="javascript:;" class="del" data-id="' + each.FileId + '"><span class="fa fa-trash"></span></a></div>';
-				html += '<div class="tools clearfix" data-id="' + each.FileId + '"><div class="file-title pull-left">' + each.Title + '</div><div class="pull-right"><a href="javascript:;" class="del" data-id="' + each.FileId + '"><span class="fa fa-trash"></span></a></div></div>';
+				html += '<div class="tools clearfix" data-id="' + each.FileId + '"><div class="file-title float-start">' + each.Title + '</div><div class="float-end"><a href="javascript:;" class="del" data-id="' + each.FileId + '"><span class="fa fa-trash"></span></a></div></div>';
 				html += "</li>";
 			}
 				
@@ -293,6 +301,9 @@ var o = {
 
     		// $("#imageList img").lazyload({effect : "fadeIn"});
     		// $("#imageList img").lazyload();
+}).fail(function() {
+self.noImages();
+alert(getMsg("error"));
     	});
     },
 
@@ -337,7 +348,7 @@ var o = {
 				// is add
 				// trigger click and set attrs
 				if(addSrc == src) {
-					target.click();
+					target.trigger('click');
 				}
 			}
 		}
@@ -409,7 +420,7 @@ var o = {
 		
 		self.processAlbum();
 
-		$("#albumsForList").change(function() {
+		$("#albumsForList").on('change', function() {
 			var albumId = $(this).val();
 			self.renderImages(albumId, 1, true);
 		});
@@ -441,6 +452,8 @@ var o = {
 						}
 						$(t).closest('li').remove();
 					}
+				}).fail(function() {
+					alert(getMsg("error"));
 				});
 			}	
 		});
@@ -457,18 +470,20 @@ var o = {
 			$(this).html('<input type="text" value="' + fileTitle + '" />');
 
 			var $input = $(this).find("input");
-			$input.focus();
-			$input.keydown(function(e){
+			$input.trigger('focus');
+			$input.on('keydown', function(e){
 				if(e.keyCode==13){
 					$(this).trigger("blur");
 				}
 			});
-			$input.blur(function() {
+			$input.on('blur', function() {
 				var title = $(this).val();
 				if(!title) {
 					title = fileTitle;
 				} else {
-					$.post("/file/updateImageTitle", {fileId: fileId, title: title});
+					$.post("/file/updateImageTitle", {fileId: fileId, title: title}).fail(function() {
+						alert(getMsg("error!"));
+					});
 				}
 				$(p).html(title);
 			});
@@ -491,16 +506,16 @@ var o = {
 		});
 
 		// 
-		$("#goAddImageBtn").click(function() {
+		$("#goAddImageBtn").on('click', function() {
 			$("#albumsForUpload").val($("#albumsForList").val());
-			$('#myTab li:eq(1) a').tab('show');
+			window.bootstrap.Tab.getOrCreateInstance($('#myTab li:eq(1) a')[0]).show();
 		});
 
 		// toggle tab
 		// refresh 
 		$('#myTab a').on('shown.bs.tab', function(e) {
 			e.preventDefault()
-			$(this).tab('show');
+			window.bootstrap.Tab.getOrCreateInstance(this).show();
 			var href = $(this).attr("href");
 
 			if(self.needRefresh && href == "#images") {
@@ -513,21 +528,21 @@ var o = {
 			}
 
 			if(href == "#url") {
-				$("#imageUrl").focus();
+				$("#imageUrl").trigger('focus');
 			}
 		});
-		$("#refresh").click(function() {
+		$("#refresh").on('click', function() {
 			var albumId = $("#albumsForList").val();
 			var key = $("#key").val();
 			self.renderImages(albumId, self.pageNum, false, key);
 		});
 
 		// add url
-		$("#addImageUrlBtn").click(function(e) {
+		$("#addImageUrlBtn").on('click', function(e) {
 			e.preventDefault();
-			var url = $.trim($("#imageUrl").val());
+			var url = ($("#imageUrl").val() || "").trim();
 			if(!url) {
-				$("#imageUrl").focus();
+				$("#imageUrl").trigger('focus');
 				return;
 			}
 
@@ -585,10 +600,10 @@ var o = {
 	// clear attrs and disable it
 	clearAttrs: function() {
 		var self = this;
-		self.attrTitleO.val("").attr("disabled", true);
-		self.attrHeightO.val("").attr("disabled", true);
-		self.attrWidthO.val("").attr("disabled", true);
-		self.attrConstrainO.prop("checked", false).attr("disabled", true);
+		self.attrTitleO.val("").prop("disabled", true);
+		self.attrHeightO.val("").prop("disabled", true);
+		self.attrWidthO.val("").prop("disabled", true);
+		self.attrConstrainO.prop("checked", false).prop("disabled", true);
 	},
 	scale: function(isWidth) {
 		var self = this;
@@ -672,10 +687,10 @@ var o = {
 		var attrs = self.imageAttrs[src];
 		function setAttr(attrs) {
 			attrs = attrs || {};
-			self.attrTitleO.val(attrs.title).attr("disabled", false);
-			self.attrWidthO.val(attrs.width).attr("disabled", false);
-			self.attrHeightO.val(attrs.height).attr("disabled", false);
-			self.attrConstrainO.attr("disabled", false);
+			self.attrTitleO.val(attrs.title).prop("disabled", false);
+			self.attrWidthO.val(attrs.width).prop("disabled", false);
+			self.attrHeightO.val(attrs.height).prop("disabled", false);
+			self.attrConstrainO.prop("disabled", false);
 
 			if(attrs.constrain) {
 				self.attrConstrainO.prop('checked', true);
@@ -722,9 +737,9 @@ var o = {
 		var self = this;
 		var ul = $('#upload ul');
 
-	    $('#drop a').click(function() {
+	    $('#drop a').on('click', function() {
 	        // trigger to show file select
-	        $(this).parent().find('input').click();
+	        $(this).parent().find('input').trigger('click');
 	    });
 	    // Initialize the jQuery File Upload plugin
 	    $('#upload').fileupload({
@@ -751,13 +766,13 @@ var o = {
 				var size = data.files[0].size;
 	            var maxFileSize = +parent.GlobalConfigs["uploadImageSize"] || 100;
 	            if(typeof size == 'number' && size > 1024 * 1024 * maxFileSize) {
-	                var tpl = $('<li><div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div></li>');
+	                var tpl = $('<li><div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	                tpl.find('div').append('<b>Warning:</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>] is bigger than ' + maxFileSize + 'M</small> ');
 	                tpl.appendTo(ul);
 	            	return;
 	            }
 	            
-	            var tpl = $('<li><div class="alert alert-info"><img class="loader" src="/public/album/images/ajax-loader.gif"> <a class="close" data-dismiss="alert">×</a></div></li>');
+	            var tpl = $('<li><div class="alert alert-info"><img class="loader" src="/public/album/images/ajax-loader.gif"> <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	            // Append the file name and file size
 	            tpl.find('div').append(data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small>');
 
@@ -781,7 +796,7 @@ var o = {
 	                self.uploadRefreshImageList();
 	            } else {
 	                data.context.empty();
-	                var tpl = $('<li><div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div></li>');
+	                var tpl = $('<li><div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	                tpl.find('div').append('<b>' + getMsg('Error') + ':</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.result.Msg);
 	                data.context.append(tpl);
 	                setTimeout((function(tpl) {
@@ -794,7 +809,7 @@ var o = {
 	        },
 	        fail: function(e, data) {
 	            data.context.empty();
-	            var tpl = $('<li><div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div></li>');
+	            var tpl = $('<li><div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	            tpl.find('div').append('<b>Error:</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.errorThrown);
 	            data.context.append(tpl);
 
@@ -822,7 +837,7 @@ var o = {
 	    }
 
 	    // drag css
-		$(document).bind('dragover', function (e) {
+		$(document).on('dragover', function (e) {
 		    var dropZone = $('#drop'),
 		        timeout = window.dropZoneTimeout;
 		    if (!timeout) {

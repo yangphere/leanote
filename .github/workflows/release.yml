@@ -1,0 +1,119 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.repository == 'yangphere/leanote'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: '${{ github.sha }}', fetch-depth: 0 }
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with: { node-version: '24.20.0' }
+      - run: npm ci
+      - env: { RELEASE_TAG: '${{ github.ref_name }}' }
+        run: node scripts/check-version.mjs
+      - name: Reject forced tag updates
+        env: { TAG_WAS_FORCED: '${{ github.event.forced }}' }
+        run: test "$TAG_WAS_FORCED" != true
+      - name: Verify annotated or lightweight tag points to checkout commit
+        run: test "$(git rev-parse "refs/tags/${GITHUB_REF_NAME}^{}")" = "$GITHUB_SHA"
+
+  quality-gate:
+    needs: [validate]
+    uses: ./.github/workflows/quality-gate.yml
+
+  browser-evidence:
+    needs: [validate, quality-gate]
+    uses: ./.github/workflows/browser-release-evidence.yml
+
+  delivery-evidence:
+    needs: [validate, quality-gate]
+    uses: ./.github/workflows/delivery-evidence.yml
+
+  publish:
+    needs: [validate, quality-gate, browser-evidence, delivery-evidence]
+    environment: release
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    permissions:
+      contents: write
+      packages: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_APPROVED_IDENTITY: ${{ vars.RELEASE_APPROVED_IDENTITY }}
+      RELEASE_RESULT_PATH: release-result.json
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: '${{ github.sha }}', fetch-depth: 0 }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: { name: leanote-release-inputs-v1, path: dist }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: { name: browser-release-matrix-v1, path: test-results }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: { name: leanote-delivery-evidence-v1, path: delivery-results }
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with: { node-version: '24.20.0' }
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e
+      - name: Validate release and browser handoff
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          GIT_COMMIT: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          export SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$GITHUB_SHA")
+          node scripts/validate-release-artifact.mjs dist
+          node scripts/validate-browser-artifact.mjs test-results
+      - name: Recheck remote tag immutability before publish
+        env: { TAG: '${{ github.ref_name }}' }
+        run: |
+          git fetch --force origin "refs/tags/${TAG}:refs/remotes/origin/tags/${TAG}"
+          test "$(git rev-parse "refs/remotes/origin/tags/${TAG}^{}")" = "$GITHUB_SHA"
+      - name: Validate all handoffs, approval and structured remote absence
+        run: node scripts/release-runner.mjs preflight
+      - name: Build candidate and compare immutable digest
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          GIT_COMMIT: ${{ github.sha }}
+        run: |
+          epoch=$(node -e "process.stdout.write(String(JSON.parse(require('fs').readFileSync('dist/release-inputs.json')).source_date_epoch))")
+          created=$(date -u -d "@$epoch" +%Y-%m-%dT%H:%M:%SZ)
+          docker buildx build --platform linux/amd64 --load --metadata-file "$RUNNER_TEMP/image-metadata.json" --build-arg VERSION="${RELEASE_TAG#v}" --build-arg REVISION="$GITHUB_SHA" --build-arg SOURCE_DATE_EPOCH="$epoch" --build-arg OCI_CREATED="$created" --provenance=false --sbom=false -t "ghcr.io/yangphere/leanote:${RELEASE_TAG}" .
+          test "$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/image-metadata.json'))['containerimage.digest'] || '')")" = "$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('dist/build-metadata.json')).image_digest)")"
+      - name: Push immutable image and verify registry digest
+        env: { GH_TOKEN: '${{ github.token }}', IMAGE: 'ghcr.io/yangphere/leanote:${{ github.ref_name }}' }
+        run: |
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/remotes/origin/tags/${GITHUB_REF_NAME}"
+          test "$(git rev-parse "refs/remotes/origin/tags/${GITHUB_REF_NAME}^{}")" = "$GITHUB_SHA"
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          node scripts/release-runner.mjs preflight
+          docker push "$IMAGE"
+          pushed=$(docker buildx imagetools inspect "$IMAGE" --format '{{.Manifest.Digest}}')
+          expected=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('dist/build-metadata.json')).image_digest)")
+          test "$pushed" = "$expected"
+      - name: Create GitHub Release and verify published asset bytes
+        run: node scripts/release-runner.mjs create
+      - name: Read-only reconciliation after failed publication
+        if: failure() || cancelled()
+        run: node scripts/release-runner.mjs reconcile
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-result-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-result.json
+          retention-days: 7
+          if-no-files-found: error

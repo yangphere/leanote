@@ -1,0 +1,39 @@
+{
+  "id": "delivery-verification",
+  "name": "delivery-verification",
+  "title": "交付层：集成验证与版本发布",
+  "description": "完成仓库内交付门禁、证据校验与受控发布恢复工具；2026-09-29 按用户决定排除需要真实环境验证的功能并本地提交归档，保留真实验收 unrun 事实。",
+  "status": "completed",
+  "dev_type": null,
+  "scope": "delivery layer / integration and release",
+  "package": null,
+  "priority": "P1",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-09-08",
+  "completedAt": "2026-09-29",
+  "branch": "dev",
+  "base_branch": "dev",
+  "worktree_path": null,
+  "commit": "62b9e2caa26ec98a4b23cd672364ed7da613b59a",
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "09-08-business-layer-architecture",
+  "relatedFiles": [],
+  "notes": "Accepts application-notes closure evidence without upgrading delegated work: Mongo 8.0.29 standalone server replay passed, while the auditable live action map is 21/38, not the 105/103 Go test event count. This task must cover the remaining 17 Web actions, first-party OperationId/ExpectedUsn generation and reuse, Mongo 7 standalone, Mongo 8 replica-set, kill/restart, Mongo failpoints, cross-host filesystem failpoints, browser and PDF artifacts. Record server-passed and delegated-unrun separately; any notes server defect reopens application-notes.",
+  "meta": {
+    "layer": "delivery",
+    "depends_on": [
+      "09-08-domain-contracts",
+      "09-08-application-identity",
+      "09-08-application-notes",
+      "09-08-application-content",
+      "09-08-application-publishing",
+      "09-08-application-admin",
+      "09-08-infrastructure-persistence",
+      "09-08-interface-http",
+      "09-08-presentation-frontend"
+    ]
+  }
+}

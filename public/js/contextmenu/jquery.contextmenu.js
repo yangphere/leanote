@@ -25,7 +25,7 @@ LEA.cmroot = 1;
                 this.disable = obj.disable;
                 this.className = "b-m-idisable";
             }
-            $(this).width(obj.width).click(function(){}).mousedown(returnfalse).appendTo($body);
+            $(this).width(obj.width).on('click', function(){}).on('mousedown', returnfalse).appendTo($body);
             
             obj = null;
             return this;
@@ -108,11 +108,11 @@ LEA.cmroot = 1;
                         // 点击item
                         // 用闭包来存储变量
                         (function(thisItem, tmp) {
-	                        $(tmp).click(function(e) {
+	                        $(tmp).on('click', function(e) {
 	                            if (!this.disable) {
 									// console.log(target);
 	                            	// 调用...
-	                                if ($.isFunction(actions[this.idx])) {
+	                                if (typeof actions[this.idx] === "function") {
 	                                    actions[this.idx].call(this, target, thisItem);
 	                                }
 	                                hideMenuPane();
@@ -126,7 +126,7 @@ LEA.cmroot = 1;
                         }(thisItem, tmp));
 
                     } //end if
-                    $(tmp).bind("contextmenu", returnfalse).hover(overItem, outItem);
+                    $(tmp).on("contextmenu", returnfalse).on("mouseenter", overItem).on("mouseleave", outItem);
                 }
                 groups[gidx].appendChild(tmp);
                 tmp = item = item.items = null;
@@ -246,9 +246,9 @@ LEA.cmroot = 1;
         }
         
         function onShowMenu(e) {
-            var bShowContext = (option.onContextMenu && $.isFunction(option.onContextMenu)) ? option.onContextMenu.call(this, e) : true;
+            var bShowContext = (option.onContextMenu && typeof option.onContextMenu === "function") ? option.onContextMenu.call(this, e) : true;
             if (bShowContext) {
-                if (option.onShow && $.isFunction(option.onShow)) {
+                if (option.onShow && typeof option.onShow === "function") {
                     option.onShow.call(this, root);
                 }
                 root.showMenu(e, this);
@@ -286,7 +286,7 @@ LEA.cmroot = 1;
         
         var out = {
         	destroy: function() {
-        		me.unbind("contextmenu");
+				me.off("contextmenu");
         	},
         	showMenu: function(e, target) {
         		onShowMenu.call(target, e);

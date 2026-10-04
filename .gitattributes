@@ -7,3 +7,8 @@
 # picking either side (task state lives in task.json, not index.md). See
 # .trellis/spec/cli/backend/directory-structure.md for details.
 .trellis/workspace/*/journal-*.md merge=union
+
+# Raw Go/Revel command captures retain terminal right-padding and an empty
+# separator line where they were emitted. Preserve them as audit evidence.
+.trellis/tasks/08-25-go-toolchain/research/env-snapshot.txt -whitespace
+.trellis/tasks/08-25-go-toolchain/research/linux-entrypoint-run3-all-pass.log -whitespace

@@ -1,220 +1,157 @@
-/**
- * leaui album image manager plugin
- * copyright leaui
- * leaui.com
- */
-var LEAUI_DATAS = [];
-tinymce.PluginManager.add('leaui_image', function(editor, url) {
-	//当url改变时, 得到图片的大小
-	function getImageSize(url, callback) {
-		var img = document.createElement('img');
-	
-		function done(width, height) {
-			img.parentNode.removeChild(img);
-			callback({width: width, height: height});
-		}
-	
-		img.onload = function() {
-			done(img.clientWidth, img.clientHeight);
-		};
-	
-		img.onerror = function() {
-			done();
-		};
-	
-		img.src = url;
-	
-		var style = img.style;
-		style.visibility = 'hidden';
-		style.position = 'fixed';
-		style.bottom = style.left = 0;
-		style.width = style.height = 'auto';
-	
-		document.body.appendChild(img);
-	}
+(function () {
+  function isReadOnly(editor) {
+    if (window.LEA && window.LEA.readOnly) return true;
+    if (window.Note && (window.Note.readOnly || window.Note.isReadOnly)) return true;
+    return Boolean(editor.mode && typeof editor.mode.isReadOnly === 'function' && editor.mode.isReadOnly());
+  }
 
-	function showDialog() {
-		var dom = editor.dom;
+  function markMutation(editor) {
+    var content = editor.getContent();
+    var callback = editor.leanoteMarkMutation;
+    if (!callback && editor.options && typeof editor.options.get === 'function') {
+      try { callback = editor.options.get('leanote_markMutation'); } catch (error) { callback = null; }
+    }
+    if (typeof callback === 'function') {
+      callback(content);
+      return;
+    }
+    if (window.LeanoteEditorSession && typeof window.LeanoteEditorSession.markMutation === 'function') {
+      window.LeanoteEditorSession.markMutation(content);
+    }
+  }
 
-		var content = editor.selection.getContent();
-		// get images and attrs
-		var p = /<img.*?\/>/g;
-		var images = content.match(p);
-		var newNode = document.createElement("p");
-		var datas = [];
-		for(var i in images) {
-			newNode.innerHTML = images[i];
-			var imgElm = newNode.firstChild;
-			if(imgElm && imgElm.nodeName == "IMG") {
-				var data = {};
-				data.src = dom.getAttrib(imgElm, 'data-src') || dom.getAttrib(imgElm, 'src');
-				data.width = dom.getAttrib(imgElm, 'width');
-				data.height = dom.getAttrib(imgElm, 'height');
-				data.title = dom.getAttrib(imgElm, 'title');
-				datas.push(data);
-			}
-		}
-		LEAUI_DATAS = datas;
+  function showError(editor, text) {
+    if (editor.notificationManager && typeof editor.notificationManager.open === 'function') {
+      editor.notificationManager.open({ text: text, type: 'error', timeout: 4000 });
+    }
+  }
 
-		function GetTheHtml(){
-			var html = '<iframe id="leauiIfr" src="/album/index'+ '?' + new Date().getTime() + '" frameborder="0"></iframe>';
-			return html;
-		}
+  function escapeAttribute(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
 
-		var w = $(document).width() - 10;
-		if(w > 805) {
-			w = 805;
-		}
-		var h = $(document).height() - 100;
-		if(h > 365) {
-			h = 365;
-		}
-		win = editor.windowManager.open({
-			title: "Image",
-			width : w,
-			height : h,
-			html: GetTheHtml(),
-			buttons: [
-				{
-					text: 'Cancel',
-					onclick: function() {
-						this.parent().parent().close();
-					}
-				},
-				{
-				text: 'Insert Image',
-				subtype: 'primary',
-				onclick: function(e) {
-					var _iframe = document.getElementById('leauiIfr').contentWindow;
-					var _div =_iframe.document.getElementById('preview');
-					var ii = _div.childNodes; 
-					//console.log(ii);
-					var datas = [];
-					for(var i = 0; i < ii.length; ++i) {
-						var e = ii[i]; 
-						//console.log(e);
-						// 有些没有image
-						if(e.firstChild && e.firstChild.nodeName == "IMG") {
-							var img = e.firstChild;
-							var d = {};
-							d.src = img.getAttribute("src");
-							d.width = img.getAttribute("data-width");
-							d.height = img.getAttribute("data-height");
-							d.title = img.getAttribute("data-title");
+  function getSelectedImage(editor) {
+    var node = editor.selection && editor.selection.getNode ? editor.selection.getNode() : null;
+    return node && node.nodeName === 'IMG' && !node.getAttribute('data-mind-json') ? node : null;
+  }
 
-							datas.push(d);
-						}
-					};
+  function imageDataFromNode(node) {
+    if (!node) return null;
+    return {
+      src: node.getAttribute('src') || node.getAttribute('data-src') || '',
+      alt: node.getAttribute('alt') || '',
+      title: node.getAttribute('title') || '',
+      width: node.getAttribute('width') || '',
+      height: node.getAttribute('height') || ''
+    };
+  }
 
-					for(var i in datas) {
-						var data = datas[i];
-						var src = data.src;
-						// the network image
-						var trueSrc = src;
-						data.src = src;
-						
-						var renderImage = function(data) {
-							// 这里, 如果图片宽度过大, 这里设置成500px
-							var back = (function(data2, i) {
-								var d = {};
-								var imgElm;
-								// 先显示loading...
-								d.id = '__mcenew' + i;
-								d.src = "/images/loading-24.gif";
-								imgElm = dom.createHTML('img', d);
-								editor.insertContent(imgElm);
-								imgElm = dom.get(d.id);
-								
-								return function(wh) {
-									if(wh && wh.width) {
-										if(wh.width > 600) {
-											wh.width = 600;
-										}
-										data2.width = wh.width;
-									}
-									dom.setAttrib(imgElm, 'src', data2.src);
-									// dom.setAttrib(imgElm, 'width', data2.width);
-									dom.setAttrib(imgElm, 'title', data2.title);
-									
-									dom.setAttrib(imgElm, 'id', null);
-								}
-							})(data, i);
-							getImageSize(data.src, back);
-						}
-						
-						// outputImage?fileId=123232323
-						var fileId = "";
-						fileIds = trueSrc.split("fileId=")
-						if(fileIds.length == 2 && fileIds[1].length == "53aecf8a8a039a43c8036282".length) {
-							fileId = fileIds[1];
-						}
-						if(fileId) {
-							// 得到fileId, 如果这个笔记不是我的, 那么肯定是协作的笔记, 那么需要将图片copy给原note owner
-							// 博客设置中不用没有Note
-							var curNote;
-							if(Note && Note.getCurNote) {
-								curNote = Note.getCurNote();
-							}
-							if(curNote && curNote.UserId != UserInfo.UserId) {
-								(function(data) {
-									ajaxPost("/file/copyImage", {userId: UserInfo.UserId, fileId: fileId, toUserId: curNote.UserId}, function(re) {
-										if(reIsOk(re) && re.Id) {
-											data.src = "/api/file/getImage?fileId=" + re.Id;
-										}
-										renderImage(data);
-									});
-								})(data);
-							} else {
-								renderImage(data);
-							}
-						} else {
-							renderImage(data);
-						}
-						
-					} // end for
-					
-					this.parent().parent().close();
-				}
-				}]
-		});
-	}
+  function normalizeImageData(value) {
+    if (!value || typeof value !== 'object') return null;
+    var src = typeof value.src === 'string' ? value.src.trim() : '';
+    if (!src) return null;
+    if (/^(?:javascript|vbscript|file):/i.test(src)) return null;
+    if (/^data:/i.test(src) && !/^data:image\//i.test(src)) return null;
+    return {
+      src: src,
+      alt: typeof value.alt === 'string' ? value.alt : '',
+      title: typeof value.title === 'string' ? value.title : '',
+      width: value.width == null ? '' : String(value.width),
+      height: value.height == null ? '' : String(value.height)
+    };
+  }
 
-	editor.addButton('leaui_image', {
-		icon: 'image',
-		tooltip: 'Insert/edit image',
-		onclick: showDialog,
-		stateSelector: 'img:not([data-mind-json])'
-	});
+  function imageDataFromHtml(html) {
+    if (typeof html !== 'string' || !html) return null;
+    var holder = document.createElement('div');
+    holder.innerHTML = html;
+    return normalizeImageData(imageDataFromNode(holder.querySelector('img')));
+  }
 
-	editor.addMenuItem('leaui_image', {
-		icon: 'image',
-		text: 'Insert image',
-		onclick: showDialog,
-		context: 'insert',
-		prependToContext: true
-	});
+  function imageHtml(data) {
+    var html = '<img src="' + escapeAttribute(data.src) + '"';
+    if (data.alt) html += ' alt="' + escapeAttribute(data.alt) + '"';
+    if (data.title) html += ' title="' + escapeAttribute(data.title) + '"';
+    if (/^\d+(?:\.\d+)?$/.test(data.width)) html += ' width="' + escapeAttribute(data.width) + '"';
+    if (/^\d+(?:\.\d+)?$/.test(data.height)) html += ' height="' + escapeAttribute(data.height) + '"';
+    return html + ' />';
+  }
 
-	// 为解决在editor里拖动图片问题
-	// 2014/7/8 21:43 浮躁的一天终有收获
-	// 2015/10/16
-	// TODO 如果把编辑器内的图片拖到外面去, 还是会出现drop images to here
-    var dragStart = false;
-    editor.on("dragstart", function(e) {
-    	// readonly时不让drag图片
-    	if (LEA.readOnly) {
-	    	e.preventDefault();
-	    	e.stopPropagation();
-    	}
-    	dragStart = true;
+  function updateImage(editor, node, data) {
+    if (!node || !data || isReadOnly(editor)) return false;
+    var dom = editor.dom;
+    var update = function () {
+      dom.setAttrib(node, 'src', data.src);
+      dom.setAttrib(node, 'alt', data.alt || null);
+      dom.setAttrib(node, 'title', data.title || null);
+      dom.setAttrib(node, 'width', /^\d+(?:\.\d+)?$/.test(data.width) ? data.width : null);
+      dom.setAttrib(node, 'height', /^\d+(?:\.\d+)?$/.test(data.height) ? data.height : null);
+    };
+    if (editor.undoManager && typeof editor.undoManager.transact === 'function') editor.undoManager.transact(update);
+    else update();
+    markMutation(editor);
+    return true;
+  }
+
+  tinymce.PluginManager.add('leaui_image', function (editor) {
+    function applyImage(data) {
+      data = normalizeImageData(data);
+      if (!data || isReadOnly(editor)) return false;
+      var selected = getSelectedImage(editor);
+      if (selected) return updateImage(editor, selected, data);
+      editor.insertContent(imageHtml(data));
+      markMutation(editor);
+      return true;
+    }
+
+    function openAlbum() {
+      if (isReadOnly(editor)) return;
+      var selected = imageDataFromNode(getSelectedImage(editor));
+      window.LEAUI_DATAS = selected ? [selected] : [];
+      var baseUrl = '/tinymce/plugins/leaui_image/index.html';
+      editor.windowManager.openUrl({
+        title: 'Image',
+        url: baseUrl + '?' + Date.now(),
+        width: Math.min(window.innerWidth - 10, 805),
+        height: Math.min(window.innerHeight - 100, 365),
+        buttons: [{ type: 'cancel', name: 'cancel', text: 'Cancel' }],
+        onMessage: function (api, details) {
+          if (!details || (details.mceAction !== 'insertImage' && details.mceAction !== 'insertContent')) return;
+          var data = details.data || details.image || null;
+          if (!data && details.mceAction === 'insertContent') data = imageDataFromHtml(details.content);
+          if (Array.isArray(details.images)) data = details.images[0];
+          if (applyImage(data)) api.close();
+          else showError(editor, 'Unable to insert image');
+        }
+      });
+    }
+
+    function setupEditable(api) {
+      var refresh = function () { api.setEnabled(!isReadOnly(editor)); };
+      editor.on('NodeChange ModeChange', refresh);
+      refresh();
+      return function () { editor.off('NodeChange ModeChange', refresh); };
+    }
+
+    editor.ui.registry.addButton('leaui_image', {
+      icon: 'image',
+      tooltip: 'Insert/edit image',
+      onAction: openAlbum,
+      onSetup: setupEditable
     });
-    editor.on("dragend", function(e) {
-    	dragStart = false;
+    editor.ui.registry.addMenuItem('leaui_image', {
+      icon: 'image',
+      text: 'Insert image',
+      onAction: openAlbum,
+      onSetup: setupEditable
     });
-	editor.on("dragover", function(e) {
-	    if(dragStart) {
-    		// 表示编辑器内在拖动图片, 则停止冒泡
-    		e.preventDefault();
-	    	e.stopPropagation();
-    	}
+    editor.on('dragstart', function (event) {
+      if (isReadOnly(editor)) event.preventDefault();
     });
-});
+    return { name: 'leaui_image', mutationAware: true, urlDialog: true };
+  });
+})();

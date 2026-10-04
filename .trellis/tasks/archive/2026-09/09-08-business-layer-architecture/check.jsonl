@@ -1,0 +1,4 @@
+{"file": "docs/adr/0001-stage-modernization-as-contract-first-dag.md", "reason": "核对任务 DAG、依赖和回滚原则"}
+{"file": "docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md", "reason": "核对持久化与 HTTP 边界决策"}
+{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "核对前端生成资源边界"}
+{"file": "docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md", "reason": "核对交付和发布边界"}

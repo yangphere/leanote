@@ -1,0 +1,5 @@
+{"file": ".trellis/tasks/09-01-frontend-libs-release-reconciliation/prd.md", "reason": "任务规格：D1-D5 缺陷定义、终局结论形态（门禁全绿+发布 blocked）与验收标准"}
+{"file": ".trellis/tasks/09-01-frontend-libs-release-reconciliation/research/spec-audit-2026-09-02.md", "reason": "三根因行级证据（package.sh:7/quality-gate 构建步骤/write-summary.mjs:104）与 F 冲突、D5 阻断推论"}
+{"file": ".trellis/tasks/09-01-frontend-libs-release-reconciliation/design.md", "reason": "三处修复机制、锁步测试设计、D4/D5 登记方案与执行序"}
+{"file": ".trellis/tasks/08-25-frontend-libs/acceptance/evidence-matrix.md", "reason": "AC-E8 F/summary 行与 Downstream reconciliation 段——D4 登记的落点（E 收口执行）"}
+{"file": ".trellis/tasks/archive/2026-09/09-01-frontend-libs-real-browser-matrix/acceptance/engineering-evidence.md", "reason": "D5 输入：8 槽缺口台账与恢复条件（B-E5）"}

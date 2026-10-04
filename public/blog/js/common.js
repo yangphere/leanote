@@ -5,7 +5,7 @@ function reIsOk(re) {
 function showAlert(id, msg, type, id2Focus) {
 	$(id).html(msg).removeClass("alert-danger").removeClass("alert-success").removeClass("alert-warning").addClass("alert-" + type).show();
 	if(id2Focus) {
-		$(id2Focus).focus();
+		$(id2Focus).trigger('focus');
 	}
 }
 function hideAlert(id, timeout) {
@@ -18,21 +18,25 @@ function hideAlert(id, timeout) {
 	}
 }
 function ajaxGet(url, param, func) {
-	$.get(url, param, func);
+	$.get(url, param, func).fail(function() {
+		alert("error!");
+	});
 }
 
 function ajaxPost(url, param, func) {
-	$.post(url, param, func);
+	$.post(url, param, func).fail(function() {
+		alert("error!");
+	});
 }
 //------
 // jsonp
 function ajaxGetP(url, param, callback) {
 	ajaxP("GET", url, param, callback)
 }
-function ajaxPostP(url, param, callback) {
-	ajaxP("POST", url, param, callback)
+function ajaxPostP(url, param, callback, failureCallback) {
+	ajaxP("POST", url, param, callback, failureCallback)
 }
-function ajaxP(method, url, param, callback) {
+function ajaxP(method, url, param, callback, failureCallback) {
 	param = param || {};
 	callback = callback || function() {};
 	$.ajax({ 
@@ -42,7 +46,8 @@ function ajaxP(method, url, param, callback) {
         data: param,
         jsonp: "callback",
 		jsonpCallback: "jsonpCallback",
-        success: callback
+        success: callback,
+		error: failureCallback
     });
 }
 
@@ -152,8 +157,8 @@ function getDateDiff(dateTimeStamp) {
 
 function weixin() {
 	var local=window.location.href;
-	var title = $.trim($(".title").text());
-	var desc = $.trim($("#desc").text());
+	var title = $(".title").text().trim();
+	var desc = $("#desc").text().trim();
 	var imgUrl = $("#content img").eq(0).attr('src');
 	window.shareData = { 
 	   "imgUrl": imgUrl, 
@@ -216,14 +221,14 @@ function scrollTo(self, tagName, text) {
 	// 找到是第几个
 	// 在nav是第几个
 	var navs = $('#blogNavContent [data-a="' + tagName + '-' + encodeURI(text) + '"]');
-	var len = navs.size();
+	var len = navs.length;
 	for(var i = 0; i < len; ++i) {
 		if(navs[i] == self) {
 			break;
 		}
 	}
 	
-	if (target.size() >= i+1) {
+	if (target.length >= i+1) {
 		target = target.eq(i);
 		// 之前插入, 防止多行定位不准
 		var top = target.offset().top;
@@ -280,7 +285,7 @@ function initNav() {
 	$("#blogNav").css("top", top).css("left", left);
 	$("#blogNav").show();
 	
-	$("#blogNavNav").click(function() {
+	$("#blogNavNav").on('click', function() {
 		var $o = $("#blogNavContent");
 		if($o.is(":hidden")) {
 			$o.show();
@@ -304,7 +309,7 @@ function initNav() {
 	    }
 	}
 	reNav();
-	$(window).scroll(reNav);
+	$(window).on('scroll', reNav);
 }
 
 //-----------
@@ -386,10 +391,28 @@ function getComments(noteId, page, callback) {
 function likePost(noteId, callback) {
 	ajaxPostP(getLeanoteUrl() + "/blog/likePost", {noteId: noteId}, callback)
 }
+function createCommentSubmissionId() {
+	var bytes = new Uint8Array(16);
+	if(!window.crypto || typeof window.crypto.getRandomValues !== "function") {
+		return null;
+	}
+	try {
+		window.crypto.getRandomValues(bytes);
+	} catch (error) {
+		return null;
+	}
+	return Array.prototype.map.call(bytes, function(byte) {
+		return byte.toString(16).padStart(2, "0");
+	}).join("");
+}
 // 提交评论
-function commentPost(noteId, commentId, content, callback) {
-	var data = {noteId: self.noteId, toCommentId: commentId, content: content};
-	ajaxPostP(getLeanoteUrl() + "/blog/commentPost", data, callback);
+function commentPost(noteId, commentId, content, submissionId, callback, failureCallback) {
+	if(!/^[0-9a-f]{32}$/.test(submissionId || "")) {
+		if(failureCallback) failureCallback();
+		return;
+	}
+	var data = {noteId: noteId, toCommentId: commentId, content: content, submissionId: submissionId};
+	ajaxPostP(getLeanoteUrl() + "/blog/commentPost", data, callback, failureCallback);
 }
 // 删除评论
 function deleteComment(noteId, commentId, callback) {

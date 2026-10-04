@@ -1,6 +1,58 @@
 // for editor.
 // drag image to editor
-define('editor_drop_paste', ['fileupload'], function() {
+define('editor_drop_paste', [], function() {
+	function isEditorReadOnly() {
+		return Boolean((window.LEA && window.LEA.readOnly) ||
+			(window.Note && (window.Note.readOnly || window.Note.isReadOnly)));
+	}
+
+	function clipboardImageFiles(event) {
+		var items = event && event.clipboardData && event.clipboardData.items;
+		if (!items || !items.length) return [];
+		var files = [];
+		for (var i = 0; i < items.length; i++) {
+			if (items[i].kind === 'file' && /^image\//i.test(items[i].type || '')) {
+				var file = items[i].getAsFile && items[i].getAsFile();
+				if (file) files.push(file);
+			}
+		}
+		return files;
+	}
+
+	function guardTinyMceImagePaste() {
+		var editorContent = $('#editorContent')[0];
+		if (!editorContent || typeof editorContent.addEventListener !== 'function') return;
+		editorContent.addEventListener('paste', function(event) {
+			var files = clipboardImageFiles(event);
+			if (!files.length) return;
+			event.preventDefault();
+			event.stopImmediatePropagation();
+			$('#editorContent').fileupload('add', {files: files});
+		}, true);
+	}
+
+	function currentEditorEpoch() {
+		if (window.LeanoteEditorSession && typeof window.LeanoteEditorSession.snapshot === 'function') {
+			return window.LeanoteEditorSession.snapshot().loadEpoch;
+		}
+		return undefined;
+	}
+
+	function markEditorMutation(editor, epoch) {
+		if (!editor || !window.LeanoteEditorSession || typeof window.LeanoteEditorSession.markMutation !== 'function') return;
+		window.LeanoteEditorSession.markMutation(editor.getContent(), epoch);
+	}
+
+	function canMutateEditor(editor, noteId, epoch) {
+		if (!editor || !noteId || isEditorReadOnly() || (window.Note && window.Note.curNoteId !== noteId)) return false;
+		return isCurrentEditorEpoch(epoch);
+	}
+
+	function isCurrentEditorEpoch(epoch) {
+		return epoch === undefined || !window.LeanoteEditorSession ||
+			typeof window.LeanoteEditorSession.isCurrentLoad !== 'function' ||
+			window.LeanoteEditorSession.isCurrentLoad(epoch);
+	}
 
 	// 在toggle成pre或ace时
 	// 最后没有元素, 或者元素不是p, 则在最后插入之
@@ -14,6 +66,9 @@ define('editor_drop_paste', ['fileupload'], function() {
 
 	// 粘贴图片的进度控制
 	function Process(editor) {
+		this.editor = editor;
+		this.noteId = window.Note && window.Note.curNoteId;
+		this.loadEpoch = currentEditorEpoch();
 		var id = '__mcenew' + (new Date()).getTime();
 		var str = '<div contenteditable="false" id="' + id + '" class="leanote-image-container">' + 
 			'<img class="loader" src="/images/ajax-loader.gif">' + 
@@ -46,7 +101,12 @@ define('editor_drop_paste', ['fileupload'], function() {
 	Process.prototype.replace = function(src) {
 		var me = this;
 		getImageSize(src, function() {
+			if (!canMutateEditor(me.editor, me.noteId, me.loadEpoch)) {
+				me.remove();
+				return;
+			}
 			$('#' + me.id).replaceWith('<img src="' + src + '" />');
+			markEditorMutation(me.editor, me.loadEpoch);
 		});
 	}
 	Process.prototype.remove = function() {
@@ -85,6 +145,9 @@ define('editor_drop_paste', ['fileupload'], function() {
 	var i = 1;
 	function insertImage(data) {
 		var editor = tinymce.activeEditor;
+		var noteId = window.Note && window.Note.curNoteId;
+		var loadEpoch = currentEditorEpoch();
+		if (!canMutateEditor(editor, noteId, loadEpoch)) return;
 		var dom = editor.dom;
 	
 		var renderImage = function(data2) {
@@ -95,10 +158,15 @@ define('editor_drop_paste', ['fileupload'], function() {
 			d.id = '__mcenew' + (i++);
 			d.src = "/images/loading-24.gif";
 			imgElm = dom.createHTML('img', d);
-			tinymce.activeEditor.insertContent(imgElm);
+			editor.insertContent(imgElm);
 			imgElm = dom.get(d.id);
 			
 			function callback (wh) {
+				if (!imgElm) return;
+				if (!canMutateEditor(editor, noteId, loadEpoch)) {
+					dom.remove(imgElm);
+					return;
+				}
 				dom.setAttrib(imgElm, 'src', data2.src);
 				// dom.setAttrib(imgElm, 'width', data2.width);
 				if(data2.title) {
@@ -106,6 +174,7 @@ define('editor_drop_paste', ['fileupload'], function() {
 				}
 				
 				dom.setAttrib(imgElm, 'id', null);
+				markEditorMutation(editor, loadEpoch);
 			};
 			getImageSize(data.src, callback);
 		}
@@ -113,7 +182,7 @@ define('editor_drop_paste', ['fileupload'], function() {
 		//-------------
 		// outputImage?fileId=123232323
 		var fileId = "";
-		fileIds = data.src.split("fileId=")
+		var fileIds = data.src.split("fileId=")
 		if(fileIds.length == 2 && fileIds[1].length == "53aecf8a8a039a43c8036282".length) {
 			fileId = fileIds[1];
 		}
@@ -140,9 +209,10 @@ define('editor_drop_paste', ['fileupload'], function() {
 	var initUploader =  function() {
 		var ul = $('#upload ul');
 	
-	    $('#drop a').click(function() {
+	    $('#drop a').on('click', function() {
+	        if (isEditorReadOnly()) return false;
 	        // trigger to show file select
-	        $(this).parent().find('input').click();
+	        $(this).parent().find('input').trigger('click');
 	    });
 	
 	    // Initialize the jQuery File Upload plugin
@@ -160,7 +230,10 @@ define('editor_drop_paste', ['fileupload'], function() {
 	        // This function is called when a file is added to the queue;
 	        // either via the browse button, or via drag/drop:
 	        add: function(e, data) {
-	            var tpl = $('<li><div class="alert alert-info"><img class="loader" src="/images/ajax-loader.gif"> <a class="close" data-dismiss="alert">×</a></div></li>');
+	            if (isEditorReadOnly()) return;
+	            data.leanoteNoteId = window.Note && window.Note.curNoteId;
+	            data.leanoteLoadEpoch = currentEditorEpoch();
+            var tpl = $('<li><div class="alert alert-info"><img class="loader" src="/images/ajax-loader.gif"> <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	
 	            // Append the file name and file size
 	            tpl.find('div').append(data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small>');
@@ -175,6 +248,12 @@ define('editor_drop_paste', ['fileupload'], function() {
 	        },
 	
 	        done: function(e, data) {
+	            if (isEditorReadOnly() || !data.leanoteNoteId ||
+	                Note.curNoteId !== data.leanoteNoteId ||
+	                !isCurrentEditorEpoch(data.leanoteLoadEpoch)) {
+	                data.context && data.context.remove();
+	                return;
+	            }
 	            if (data.result.Ok == true) {
 	                data.context.remove();
 	                // life
@@ -182,7 +261,7 @@ define('editor_drop_paste', ['fileupload'], function() {
 	                insertImage(data2);
 	            } else {
 	                data.context.empty();
-	                var tpl = $('<li><div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div></li>');
+                var tpl = $('<li><div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	                tpl.find('div').append('<b>' + getMsg('Error') + ':</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.result.Msg);
 	                data.context.append(tpl);
 	                setTimeout((function(tpl) {
@@ -195,7 +274,7 @@ define('editor_drop_paste', ['fileupload'], function() {
 	        },
 	        fail: function(e, data) {
 	            data.context.empty();
-	            var tpl = $('<li><div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div></li>');
+            var tpl = $('<li><div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	            tpl.find('div').append('<b>' + getMsg('Error') + ':</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.errorThrown);
 	            data.context.append(tpl);
 	            setTimeout((function(tpl) {
@@ -239,9 +318,14 @@ define('editor_drop_paste', ['fileupload'], function() {
 	    }
 
 	    // drag css
-		$(document).bind('dragover', function (e) {
+		$(document).on('dragover', function (e) {
 		    var dropZone = $('#drop'),
 		        timeout = window.dropZoneTimeout;
+		    if (isEditorReadOnly()) {
+		        dropZone.removeClass('in hover');
+		        hideUpload();
+		        return;
+		    }
 		    if (!timeout) {
 		        dropZone.addClass('in');
 		        showUpload();
@@ -261,11 +345,6 @@ define('editor_drop_paste', ['fileupload'], function() {
 		    if (found) {
 		        dropZone.addClass('hover');
 		        
-		        // 如果在只读状态, 转换之
-			    if (LEA.readOnly) {
-			    	LEA.toggleWriteable();
-			    }
-			    
 		    } else {
 		        dropZone.removeClass('hover');
 		    }
@@ -301,15 +380,16 @@ define('editor_drop_paste', ['fileupload'], function() {
 	        	var jqXHR = data.submit();
 	        },
 	        */
-	        progress: function(e, data) {
-	        	if(curNote && !curNote.IsMarkdown) {
-		        	data.process.update(data.loaded / data.total);
-	        	}
+        progress: function(e, data) {
+			if(data.leanoteNote && !data.leanoteNote.IsMarkdown) {
+				data.process.update(data.loaded / data.total);
+			}
 	        },
 
 	        // 调用了两次
 	        // 不知道为什么会触发两次
 	        add: function(e, data) {
+			if (isEditorReadOnly()) return;
 	        	// 防止两次
         		// console.trace(e);
 	        	var now = (new Date()).getTime();
@@ -319,8 +399,11 @@ define('editor_drop_paste', ['fileupload'], function() {
 	        	// console.log('nono');
 	        	lastTime = now;
 
-	        	var note = Note.getCurNote();
-	        	curNote = note;
+			var note = Note.getCurNote();
+			curNote = note;
+			data.leanoteNote = note;
+			data.leanoteNoteId = note && note.NoteId;
+			data.leanoteLoadEpoch = currentEditorEpoch();
 	        	if(!note || note.IsNew) {
 	        		// alert(getMsg("Please save note firstly!"));
 	        		// return;
@@ -328,8 +411,12 @@ define('editor_drop_paste', ['fileupload'], function() {
 	        	
 	        	// LEA.removePasteBin();
 	        	// 为什么要延迟? 为了让paste plugin先执行, 删除掉paste bin
-	        	setTimeout(function () {
-		        	// 先显示loading...
+			setTimeout(function () {
+				if (!note || isEditorReadOnly() || Note.curNoteId !== data.leanoteNoteId ||
+					(data.leanoteLoadEpoch !== undefined && window.LeanoteEditorSession &&
+						typeof window.LeanoteEditorSession.isCurrentLoad === 'function' &&
+						!window.LeanoteEditorSession.isCurrentLoad(data.leanoteLoadEpoch))) return;
+				// 先显示loading...
 					editor = tinymce.EditorManager.activeEditor; 
 					if(!note.IsMarkdown) {
 						var process = new Process(editor);
@@ -340,23 +427,29 @@ define('editor_drop_paste', ['fileupload'], function() {
 	        },
 	
 	        done: function(e, data) {
+			var note = data.leanoteNote || curNote;
+			if (isEditorReadOnly() || !note || Note.curNoteId !== data.leanoteNoteId ||
+				!isCurrentEditorEpoch(data.leanoteLoadEpoch)) {
+				data.process && data.process.remove();
+				return;
+			}
 	            if (data.result.Ok == true) {
 		    		// 这里, 如果图片宽度过大, 这里设置成500px
 		    		var re = data.result;
 					var src = "/api/file/getImage?fileId=" + re.Id;
 
-					if(curNote && !curNote.IsMarkdown) {
+					if(note && !note.IsMarkdown) {
 						data.process.replace(src);
 					} else {
 						MD && MD.insertLink(src, 'title', true);
 					}
 				
 	            } else {
-					data.process.remove();
+				data.process && data.process.remove();
 	            }
 	        },
 	        fail: function(e, data) {
-	        	if(curNote && !curNote.IsMarkdown) {
+				if(data.leanoteNote && !data.leanoteNote.IsMarkdown && data.process) {
 					data.process.remove();
 				}
 	        }
@@ -365,4 +458,5 @@ define('editor_drop_paste', ['fileupload'], function() {
 	
 	initUploader();
 	pasteImageInit();
+	guardTinyMceImagePaste();
 });

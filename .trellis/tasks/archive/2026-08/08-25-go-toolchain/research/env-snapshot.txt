@@ -1,0 +1,35 @@
+ M .trellis/tasks/08-25-go-toolchain/design.md
+ M .trellis/tasks/08-25-go-toolchain/implement.md
+ M .trellis/tasks/08-25-go-toolchain/prd.md
+ M app/info/AlbumInfo.go
+ M app/info/Api.go
+ M app/info/AttachInfo.go
+ M app/info/BlogInfo.go
+ M app/info/Configinfo.go
+ M app/info/EmailLogInfo.go
+ M app/info/FileInfo.go
+ M app/info/GroupInfo.go
+ M app/info/NoteInfo.go
+ M app/info/NotebookInfo.go
+ M app/info/ReportInfo.go
+ M app/info/SessionInfo.go
+ M app/info/ShareNotebookNoteInfo.go
+ M app/info/SuggestionInfo.go
+ M app/info/TagInfo.go
+ M app/info/ThemeInfo.go
+ M app/info/TokenInfo.go
+ M app/info/UserInfo.go
+ M go.mod
+ M go.sum
+?? .trellis/tasks/08-25-go-toolchain/research/
+?? app/cmd/flags_contract_test.go
+?? app/info/model_contract_generated_test.go
+?? app/info/model_contract_test.go
+?? app/lea/crypto_bcrypt_test.go
+?? app/lea/i18n/i18n_contract_test.go
+?? app/lea/util_substring_html_test.go
+?? app/tests/harness/generate_contract_test.go
+?? tools.go
+go1.27.0
+auto
+

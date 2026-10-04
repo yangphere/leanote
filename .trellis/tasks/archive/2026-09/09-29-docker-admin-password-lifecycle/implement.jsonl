@@ -1,0 +1,6 @@
+{"file":".trellis/spec/backend/index.md","reason":"后端目录、质量和层边界总规范。"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"Mongo 初始化、条件更新、幂等和 fixture 兼容约束。"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"启动失败、认证错误和 HTTP/API 稳定错误边界。"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"恢复开关告警与敏感信息脱敏要求。"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"后端实现质量和验证约束。"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"账户页强制改密入口的前端质量约束。"}

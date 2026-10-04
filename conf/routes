@@ -4,6 +4,9 @@
 
 # module:testrunner
 
+# test-mode-only E2E identity endpoint (404/503 fail-closed elsewhere)
+GET     /_test/e2e/identity                       TestE2e.Identity
+
 # Home is My Blog
 Get 	/											Index.Default
 GET     /note   	                                Note.Index

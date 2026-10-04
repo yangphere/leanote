@@ -7,7 +7,7 @@
 	word-wrap:break-word;/*支持IE，chrome，FF*/
 }
 </style>
-<section class="panel panel-default">
+<section class="card">
 	
 	<div class="row wrapper">
 		<div class="col-sm-5 m-b-xs">
@@ -47,7 +47,7 @@
 					</td>
 					<td>
 						<button href="#" class="btn btn-sm btn-danger restore-btn" data-id="{{$each.createdTime}}">Restore</button>
-						<a class="btn btn-sm btn-default download-attach" href="/adminData/download?createdTime={{$each.createdTime}}" target="_blank" title="Download"  data-id=""><i class="fa fa-download"></i></a>
+						<a class="btn btn-sm btn-secondary download-attach" href="/adminData/download?createdTime={{$each.createdTime}}" target="_blank" title="Download"  data-id=""><i class="fa fa-download"></i></a>
 						<button class="btn btn-sm btn-warning delete-btn" title="Delete" data-id="{{$each.createdTime}}"><i class="fa fa-trash-o"></i></button>
 					</td>
 				</tr>
@@ -61,7 +61,7 @@
 
 <script>
 $(function() {
-	$(".backup-btn").click(function(){ 
+	$(".backup-btn").on('click', function(){
 		ajaxGet("/adminData/backup", {}, function(ret) {
 			if(ret.Ok) {
 				art.tips("Success");
@@ -72,7 +72,7 @@ $(function() {
 		});
 	});
 	// 还原
-	$(".restore-btn").click(function() {
+	$(".restore-btn").on('click', function() {
 		var createdTime = $(this).data("id");
 		art.confirm("Are you sure? <br />Note. Leanote will do the following steps: <br />1)Backup the current database first. <br />2) And then delete the database. <br />3) Restore database from the selected version.", function() {
 			ajaxGet("/adminData/restore", {createdTime: createdTime}, function(ret) {
@@ -85,7 +85,7 @@ $(function() {
 			});
 		});
 	});
-	$(".delete-btn").click(function() {
+	$(".delete-btn").on('click', function() {
 		var createdTime = $(this).data("id");
 		art.confirm("Are you sure?", function() {
 			ajaxGet("/adminData/delete", {createdTime: createdTime}, function(ret) {
@@ -98,7 +98,7 @@ $(function() {
 			});
 		});
 	});
-	$(".remark").change(function() {
+	$(".remark").on('change', function() {
 		var createdTime = $(this).data("id");
 		var remark = $(this).val();
 		ajaxPost("/adminData/updateRemark", {createdTime: createdTime, remark: remark}, function(ret) {

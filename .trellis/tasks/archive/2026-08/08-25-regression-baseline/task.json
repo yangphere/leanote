@@ -1,0 +1,33 @@
+{
+  "id": "regression-baseline",
+  "name": "regression-baseline",
+  "title": "回归基线",
+  "description": "在旧实现上建立 HTTP Golden、USN、MongoDB 5.0 fixture 与页面 smoke。",
+  "status": "completed",
+  "dev_type": "test",
+  "scope": "app/tests and baseline CI",
+  "package": null,
+  "priority": "P0",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-08-25",
+  "completedAt": "2026-08-25",
+  "branch": null,
+  "base_branch": "dev",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-25-tech-stack-modernization",
+  "relatedFiles": [
+    "app/tests",
+    "conf/app.conf",
+    "mongodb_backup/leanote_install_data",
+    ".github/workflows"
+  ],
+  "notes": "整棵任务树的首个门禁；完成前不修改生产实现。",
+  "meta": {
+    "depends_on": []
+  }
+}

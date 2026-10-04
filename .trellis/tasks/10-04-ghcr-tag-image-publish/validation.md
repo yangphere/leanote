@@ -1,0 +1,83 @@
+# Validation
+
+## Initial candidate automated checks (historical)
+
+| Check | Result | Evidence |
+|---|---|---|
+| Red test before implementation | passed | `node --test tests/js/docker-image-workflow.test.js`: 0 passed, 7 failed because the workflow and helper did not exist |
+| Focused contract tests after review fixes | passed | `node --test tests/js/docker-image-workflow.test.js`: 10 passed, 0 failed |
+| Main-session final publication/release regressions | passed | With Git Bash on the test process PATH: `node --test tests/js/docker-image-workflow.test.js tests/js/release-contract.test.js`: 37 passed, 0 failed, 0 skipped |
+| Full Node suite before review fixes | passed | With `C:\Program Files\Git\bin` added to the test process PATH: `npm test`: 230 tests, 229 passed, 0 failed, 1 platform skip; duration 261537 ms. The final focused suites cover the subsequent local review fixes; the expensive existing build suite was not repeated. |
+| Initial full Node run | environment failure, superseded | Without Git Bash on PATH: 228 passed, 1 failed, 1 skipped; the existing `release-contract.test.js` failed only with `spawnSync sh ENOENT`. The corrected run above passed that test. |
+| Workflow parser/lint | passed | `go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck= .github/workflows/docker-image.yml`; actionlint v1.7.7, no findings |
+| Standalone PyYAML parse | unavailable | Local Python has no `yaml` module; actionlint performed the workflow YAML parse. No dependency was installed for this duplicate check. |
+| Diff whitespace | passed | `git diff --check`; only existing line-ending conversion warnings were printed |
+| Trellis context | passed | `python ./.trellis/scripts/task.py validate .trellis/tasks/10-04-ghcr-tag-image-publish`: implement 6 entries, check 5 entries |
+| Node syntax | passed | `node --check` on the helper and new test file |
+| Required existing files preserved | passed | `git diff --exit-code -- Dockerfile .github/workflows/release.yml .github/workflows/quality-gate.yml` |
+
+`shellcheck` is not installed, so actionlint was run with `-shellcheck=`. The
+focused Node tests exercise registry status/JSON/size/identity/network/timeout
+failure classification through injected `fetchImpl`; they do not contact GHCR.
+
+Independent Trellis review and four local fixes are recorded in
+[check-review.md](check-review.md). The main session verified the final 37-test
+publication/release suites and Actionlint result. No in-scope defect remains.
+
+## Spec sync and handoff
+
+- Added the seven-section executable infrastructure contract at
+  `.trellis/spec/backend/image-publishing.md`, linked the backend index and
+  curated both task context manifests.
+- Local implementation and quality checks are complete. Task status remains
+  `in_progress`; no commit or archive was requested or performed.
+- Existing `CONTEXT.md` changes and the Compose planning task were preserved.
+
+## Initial candidate external/runtime evidence (superseded version)
+
+| Gate | Status | Notes |
+|---|---|---|
+| Real `v1.0.0` tag push | `unrun` | No tag was created or pushed by this task |
+| GitHub Actions `docker-image.yml` execution | `unrun` | Requires the user-authorized remote tag push |
+| Real GHCR first-package `NAME_UNKNOWN` response compatibility | `unrun` | Static/helper tests fail closed on unknown shapes; actual GHCR response is not inferred |
+| Real image build and `container-smoke.sh` candidate run | `unrun` | The workflow was not executed locally or remotely |
+| GHCR push and manifest digest read-back | `unrun` | No remote write was attempted |
+| Package visibility changed to public | `unrun` | Manual, irreversible GitHub setting after first publication |
+| Anonymous `docker pull ghcr.io/yangphere/leanote:v1.0.0` | `unrun` | Must be performed after public visibility is confirmed |
+
+## Source verification
+
+GitHub documentation was read on 2026-10-04:
+
+- <https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry>
+- <https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility>
+
+It supports `GITHUB_TOKEN` publication from a repository workflow and states
+that first publication creates a private package. It does not document a
+stable `NAME_UNKNOWN.detail.name` field, so the helper treats that field as
+optional but rejects it when present and conflicting.
+
+## Revised main / 2.0.1 candidate
+
+The latest user instruction selects Git tag `2.0.1` and unprefixed registry
+tag `2.0.1`, with `main` as source/default branch. No `v1.0.0` was published.
+The earlier local checks do not establish that this revised candidate passes.
+Four actual remote-CI blockers are being repaired as documented in
+`remote-ci-preflight.md`; independent review, main CI, tag publication and
+registry read-back evidence will be recorded here and in `publication.md`.
+
+| Revised check | Result | Evidence |
+|---|---|---|
+| TinyMCE focused manifest regression | passed | 1/1; output remains `public/tinymce/...`, URL is `/tinymce/...` |
+| Manifest-driven build | passed | `npm run build` exit 0, no tracked generated-output drift |
+| Complete build-pipeline test file | passed | 37 tests, 36 passed, 0 failed, 1 Windows skip |
+| Local Chromium build smoke | unrun | Existing-service and E2E credential variables absent; main CI will exercise it |
+| Numeric image / protected release regressions | passed | 39/39 (`docker-image-workflow.test.js` + `release-contract.test.js`), Git Bash on PATH |
+| CI-like provenance negative regressions | passed | `GITHUB_WORKFLOW=CI` ambient environment, both intended negative cases pass (2/2) |
+| Real focused Mongo/HTTP harness | passed | `GOTOOLCHAIN=local go test ./app/tests/harness -run 'TestGoldenWebOwnershipControllers\|TestWebAdminMemberAndControllerSmoke' -count=1 -timeout 60s`: exit 0, 14.469s, 2 executed / 0 skipped. Fixture restore and native server requests execute; managed fixture cleanup explains absent container afterward. Exact Mongo provisioning mode was not captured. |
+| Numeric and protected tag modes | passed | Image `2.0.1` accepted; prefixed/mismatched image tags rejected; protected mode retains `vX.Y.Z` |
+| Shared package tag boundary | passed | 41/41 publication + Release focused tests; a real `refs/tags/2.0.1` `sh/package.sh` run with a fake Go compiler produced `leanote-v2.0.1-linux-amd64.tar.gz`; `v2.0.1` remains accepted and malformed/mismatched tags fail |
+| Revised workflow Actionlint | passed | v1.7.7, YAML parsed, shellcheck unavailable and explicitly disabled |
+
+Local runtime versions: Go 1.27.1 (Windows/amd64), Node 24.21.0, npm 11.19.0.
+GitHub CI will supply the pinned Linux toolchains and Chromium runtime evidence.

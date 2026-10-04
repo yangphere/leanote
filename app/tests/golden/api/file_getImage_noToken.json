@@ -1,0 +1,1 @@
+{"request":{"method":"GET","path":"/api/file/getImage","query":{"fileId":["OID_TOKEN"],"noteId":["OID_TOKEN"]}},"response":{"status":200,"headers":{"Content-Type":"text/plain; charset=utf-8"},"body":""}}

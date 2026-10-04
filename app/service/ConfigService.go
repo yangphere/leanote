@@ -1,16 +1,23 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"github.com/leanote/leanote/app/db"
-	"github.com/leanote/leanote/app/info"
-	. "github.com/leanote/leanote/app/lea"
-	"github.com/revel/revel"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/db"
+	"github.com/yangphere/leanote/app/domain"
+	"github.com/yangphere/leanote/app/info"
+	. "github.com/yangphere/leanote/app/lea"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"log"
+	"math"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -26,54 +33,267 @@ type ConfigService struct {
 	GlobalArrayConfigs  map[string][]string
 	GlobalMapConfigs    map[string]map[string]string
 	GlobalArrMapConfigs map[string][]map[string]string
+	findDemoUser        func(string) (info.User, error)
+	// findAdminUser/loadGlobalConfigs are same-package test seams; nil uses
+	// the UserService lookup and the Mongo configs collection.
+	findAdminUser         func(string) info.User
+	findAdminUserByID     func(string) (info.User, error)
+	findBootstrappedAdmin func() (info.User, error)
+	loadGlobalConfigs     func() ([]info.Config, error)
+	// snapshotLoaded is set only after InitGlobalConfigsWithError published a
+	// complete snapshot, so callers can tell "not loaded" from "not
+	// configured" (D-H9).
+	snapshotLoaded atomic.Bool
+}
+
+// AppConfigSource is the read-only first-party application configuration
+// view behind the global configuration snapshot. It only supplies the
+// non-secret keys adminUsername (default "admin"), adminEmail and site.url, and is
+// run-mode agnostic: cmd/leanote injects its validated *httpserver.Config and
+// the legacy entry used to inject a global config object. ConfigService now
+// reads only this first-party source for the snapshot.
+type AppConfigSource interface {
+	String(key string) (string, bool)
+}
+
+// appConfigSource is installed once during startup, before the registry is
+// wired and before any snapshot load or request can read it.
+var appConfigSource AppConfigSource
+
+var errConfigDependencies = errors.New("configuration dependencies are not initialized")
+
+// ErrGlobalConfigNotLoaded reports that no global configuration snapshot has
+// been published yet. It is distinct from "demo/admin not configured".
+var ErrGlobalConfigNotLoaded = errors.New("global configuration snapshot is not loaded")
+
+// SetAppConfigSource installs the first-party application configuration and
+// derives the site.url domain helpers (GetSchema/GetDefaultDomain/
+// GetUserUrl) from it. A nil source clears both.
+func SetAppConfigSource(source AppConfigSource) {
+	appConfigSource = source
+	siteURL := ""
+	if source != nil {
+		siteURL, _ = source.String("site.url")
+	}
+	applySiteURLDomain(siteURL)
+}
+
+var ErrDemoConfiguration = errors.New("demo configuration")
+
+type DemoAccount struct {
+	UserID domain.ObjectID
+	Login  string
 }
 
 // appStart时 将全局的配置从数据库中得到作为全局
 func (this *ConfigService) InitGlobalConfigs() bool {
-	this.GlobalAllConfigs = map[string]interface{}{}
-	this.GlobalStringConfigs = map[string]string{}
-	this.GlobalArrayConfigs = map[string][]string{}
-	this.GlobalMapConfigs = map[string]map[string]string{}
-	this.GlobalArrMapConfigs = map[string][]map[string]string{}
+	return this.InitGlobalConfigsWithError() == nil
+}
 
-	this.adminUsername, _ = revel.Config.String("adminUsername")
-	if this.adminUsername == "" {
-		this.adminUsername = "admin"
+// InitGlobalConfigsWithError loads a complete snapshot before publishing it.
+// A Mongo read or identity failure leaves the previous in-memory snapshot
+// untouched instead of silently falling back to empty/default settings.
+func (this *ConfigService) InitGlobalConfigsWithError() error {
+	if this == nil {
+		return errConfigDependencies
 	}
-	this.siteUrl, _ = revel.Config.String("site.url")
-
-	userInfo := userService.GetUserInfoByAny(this.adminUsername)
-	if userInfo.UserId == "" {
-		return false
+	findAdmin := this.findAdminUser
+	findAdminByID := this.findAdminUserByID
+	loadConfigs := this.loadGlobalConfigs
+	if loadConfigs == nil && db.Configs == nil {
+		return errConfigDependencies
 	}
-	this.adminUserId = userInfo.UserId.Hex()
-
-	configs := []info.Config{}
-	// db.ListByQ(db.Configs, bson.M{"UserId": userInfo.UserId}, &configs)
-	db.ListByQ(db.Configs, bson.M{}, &configs)
-
-	for _, config := range configs {
-		if config.IsArr {
-			this.GlobalArrayConfigs[config.Key] = config.ValueArr
-			this.GlobalAllConfigs[config.Key] = config.ValueArr
-		} else if config.IsMap {
-			this.GlobalMapConfigs[config.Key] = config.ValueMap
-			this.GlobalAllConfigs[config.Key] = config.ValueMap
-		} else if config.IsArrMap {
-			this.GlobalArrMapConfigs[config.Key] = config.ValueArrMap
-			this.GlobalAllConfigs[config.Key] = config.ValueArrMap
-		} else {
-			this.GlobalStringConfigs[config.Key] = config.ValueStr
-			this.GlobalAllConfigs[config.Key] = config.ValueStr
+	if findAdmin == nil && findAdminByID == nil && userService == nil {
+		return errConfigDependencies
+	}
+	if findAdmin == nil {
+		findAdmin = userService.GetUserInfoByAny
+	}
+	if loadConfigs == nil {
+		loadConfigs = loadGlobalConfigsFromDatabase
+	}
+	if findAdminByID == nil {
+		findAdminByID = func(userID string) (info.User, error) {
+			if !db.IsValidObjectIDHex(userID) || db.Users == nil {
+				return info.User{}, errConfigDependencies
+			}
+			var user info.User
+			err := db.Users.FindId(db.MustObjectIDFromHex(userID)).One(&user)
+			return user, err
 		}
 	}
-
-	// site URL
-	if s, ok := this.GlobalStringConfigs["siteUrl"]; !ok || s != "" {
-		this.GlobalStringConfigs["siteUrl"] = this.siteUrl
+	findBootstrapped := this.findBootstrappedAdmin
+	if findBootstrapped == nil {
+		findBootstrapped = func() (info.User, error) {
+			var markers []info.Config
+			if err := db.Configs.Find(bson.M{"Key": "adminBootstrapCompleted"}).All(&markers); err != nil {
+				return info.User{}, fmt.Errorf("load administrator bootstrap marker: %w", err)
+			}
+			if len(markers) != 1 {
+				return info.User{}, errors.New("administrator bootstrap marker is missing or not unique")
+			}
+			user, err := findAdminByID(markers[0].ValueStr)
+			if err != nil {
+				return info.User{}, fmt.Errorf("load bootstrapped administrator: %w", err)
+			}
+			return user, nil
+		}
 	}
+	source := appConfigSource
+	if source == nil {
+		return errors.New("application configuration source is not initialized")
+	}
+	adminUsername, _ := source.String("adminUsername")
+	adminEmail, _ := source.String("adminEmail")
+	adminEmail = strings.ToLower(strings.TrimSpace(adminEmail))
+	userInfo := info.User{}
+	if adminEmail != "" {
+		var err error
+		userInfo, err = findBootstrapped()
+		if err != nil {
+			return err
+		}
+		adminUsername = userInfo.Username
+	} else {
+		if adminUsername == "" {
+			adminUsername = "admin"
+		}
+		userInfo = findAdmin(adminUsername)
+	}
+	siteURL, _ := source.String("site.url")
+	if userInfo.UserId.IsZero() {
+		return errors.New("configured admin user does not exist")
+	}
+	configs, err := loadConfigs()
+	if err != nil {
+		return fmt.Errorf("load global configurations: %w", err)
+	}
+	all := map[string]interface{}{}
+	stringsConfig := map[string]string{}
+	arraysConfig := map[string][]string{}
+	mapsConfig := map[string]map[string]string{}
+	arrMapsConfig := map[string][]map[string]string{}
+	for _, config := range configs {
+		if strings.TrimSpace(config.Key) == "" {
+			return errors.New("global configuration contains a blank key")
+		}
+		if config.IsArr {
+			arraysConfig[config.Key] = append([]string(nil), config.ValueArr...)
+			all[config.Key] = arraysConfig[config.Key]
+		} else if config.IsMap {
+			mapsConfig[config.Key] = cloneStringMap(config.ValueMap)
+			all[config.Key] = mapsConfig[config.Key]
+		} else if config.IsArrMap {
+			arrMapsConfig[config.Key] = cloneArrMap(config.ValueArrMap)
+			all[config.Key] = arrMapsConfig[config.Key]
+		} else {
+			stringsConfig[config.Key] = config.ValueStr
+			all[config.Key] = config.ValueStr
+		}
+	}
+	if err := validateConfiguredSecurityArrays(arraysConfig); err != nil {
+		return err
+	}
+	if current, ok := stringsConfig["siteUrl"]; !ok || current != "" {
+		stringsConfig["siteUrl"] = siteURL
+		all["siteUrl"] = siteURL
+	}
+	this.adminUsername = adminUsername
+	this.siteUrl = siteURL
+	this.adminUserId = userInfo.UserId.Hex()
+	this.GlobalAllConfigs = all
+	this.GlobalStringConfigs = stringsConfig
+	this.GlobalArrayConfigs = arraysConfig
+	this.GlobalMapConfigs = mapsConfig
+	this.GlobalArrMapConfigs = arrMapsConfig
+	this.snapshotLoaded.Store(true)
+	return nil
+}
 
-	return true
+// GlobalSnapshotLoaded reports whether a complete global configuration
+// snapshot has been published by InitGlobalConfigsWithError.
+func (this *ConfigService) GlobalSnapshotLoaded() bool {
+	return this != nil && this.snapshotLoaded.Load()
+}
+
+func loadGlobalConfigsFromDatabase() ([]info.Config, error) {
+	configs := []info.Config{}
+	// The fixture and older installations can contain one pre-key migration
+	// document with empty StringConfigs/ArrayConfigs maps. Read keyed documents
+	// through the current model, then inspect only the keyless documents so a
+	// malformed record cannot disappear behind a broad query filter.
+	if err := db.Configs.FindContext(context.Background(), bson.M{"Key": bson.M{"$exists": true}}).All(&configs); err != nil {
+		return nil, err
+	}
+	var keyless []bson.Raw
+	if err := db.Configs.FindContext(context.Background(), bson.M{"Key": bson.M{"$exists": false}}).All(&keyless); err != nil {
+		return nil, err
+	}
+	for _, document := range keyless {
+		if !isLegacyEmptyConfigDocument(document) {
+			return nil, fmt.Errorf("global configuration document %s has no key", configDocumentID(document))
+		}
+		log.Printf("ignoring legacy empty global configuration document %s", configDocumentID(document))
+	}
+	return configs, nil
+}
+
+// isLegacyEmptyConfigDocument recognizes the one historical Config shape that
+// predates one-document-per-key storage. It is intentionally narrow: empty
+// legacy maps are a harmless migration placeholder, while non-empty maps or
+// any unknown fields remain startup errors instead of being silently dropped.
+func isLegacyEmptyConfigDocument(document bson.Raw) bool {
+	elements, err := document.Elements()
+	if err != nil {
+		return false
+	}
+	var hasStringConfigs, hasArrayConfigs bool
+	for _, element := range elements {
+		switch element.Key() {
+		case "_id", "UserId", "UpdatedTime":
+			// Historical metadata fields are allowed.
+		case "StringConfigs", "ArrayConfigs":
+			nested, ok := element.Value().DocumentOK()
+			if !ok {
+				return false
+			}
+			nestedElements, err := nested.Elements()
+			if err != nil || len(nestedElements) != 0 {
+				return false
+			}
+			if element.Key() == "StringConfigs" {
+				hasStringConfigs = true
+			} else {
+				hasArrayConfigs = true
+			}
+		default:
+			return false
+		}
+	}
+	return hasStringConfigs && hasArrayConfigs
+}
+
+func configDocumentID(document bson.Raw) string {
+	if id, ok := document.Lookup("_id").ObjectIDOK(); ok {
+		return id.Hex()
+	}
+	return "unknown"
+}
+
+func validateConfiguredSecurityArrays(arrays map[string][]string) error {
+	for _, key := range []string{"mongoExecutableAllowlist", "pdfExecutableAllowlist"} {
+		if values, configured := arrays[key]; configured {
+			if _, err := NormalizeExecutableAllowlist(values); err != nil {
+				return fmt.Errorf("validate %s: %w", key, err)
+			}
+		}
+	}
+	if values, configured := arrays["feedbackRecipients"]; configured {
+		if _, err := ValidateFeedbackRecipients(values); err != nil {
+			return fmt.Errorf("validate feedbackRecipients: %w", err)
+		}
+	}
+	return nil
 }
 
 func (this *ConfigService) GetSiteUrl() string {
@@ -93,58 +313,204 @@ func (this *ConfigService) GetAdminUserId() string {
 
 // 通用方法
 func (this *ConfigService) updateGlobalConfig(userId, key string, value interface{}, isArr, isMap, isArrMap bool) bool {
-	// 判断是否存在
-	if _, ok := this.GlobalAllConfigs[key]; !ok {
-		// 需要添加
-		config := info.Config{ConfigId: bson.NewObjectId(),
-			UserId:      bson.ObjectIdHex(userId), // 没用
-			Key:         key,
-			IsArr:       isArr,
-			IsMap:       isMap,
-			IsArrMap:    isArrMap,
-			UpdatedTime: time.Now(),
-		}
-		if isArr {
-			v, _ := value.([]string)
-			config.ValueArr = v
-			this.GlobalArrayConfigs[key] = v
-		} else if isMap {
-			v, _ := value.(map[string]string)
-			config.ValueMap = v
-			this.GlobalMapConfigs[key] = v
-		} else if isArrMap {
-			v, _ := value.([]map[string]string)
-			config.ValueArrMap = v
-			this.GlobalArrMapConfigs[key] = v
-		} else {
-			v, _ := value.(string)
-			config.ValueStr = v
-			this.GlobalStringConfigs[key] = v
-		}
-		return db.Insert(db.Configs, config)
-	} else {
-		i := bson.M{"UpdatedTime": time.Now()}
-		this.GlobalAllConfigs[key] = value
-		if isArr {
-			v, _ := value.([]string)
-			i["ValueArr"] = v
-			this.GlobalArrayConfigs[key] = v
-		} else if isMap {
-			v, _ := value.(map[string]string)
-			i["ValueMap"] = v
-			this.GlobalMapConfigs[key] = v
-		} else if isArrMap {
-			v, _ := value.([]map[string]string)
-			i["ValueArrMap"] = v
-			this.GlobalArrMapConfigs[key] = v
-		} else {
-			v, _ := value.(string)
-			i["ValueStr"] = v
-			this.GlobalStringConfigs[key] = v
-		}
-		// return db.UpdateByQMap(db.Configs, bson.M{"UserId": bson.ObjectIdHex(userId), "Key": key}, i)
-		return db.UpdateByQMap(db.Configs, bson.M{"Key": key}, i)
+	return this.updateGlobalConfigWithError(userId, key, value, isArr, isMap, isArrMap) == nil
+}
+
+func (this *ConfigService) updateGlobalConfigWithError(userId, key string, value interface{}, isArr, isMap, isArrMap bool) error {
+	if strings.TrimSpace(key) == "" || (isArr && (isMap || isArrMap)) || (isMap && isArrMap) {
+		return errors.New("invalid global configuration key or value kind")
 	}
+	if db.Configs == nil {
+		return db.ErrMongoClientNotInitialized
+	}
+	userID := domain.ObjectID{}
+	if strings.TrimSpace(userId) != "" {
+		parsed, err := domain.ParseObjectID(strings.TrimSpace(userId))
+		if err != nil {
+			return fmt.Errorf("invalid config actor: %w", err)
+		}
+		userID = parsed
+	}
+	config, err := buildConfigValue(db.NewObjectID(), userID, key, value, isArr, isMap, isArrMap)
+	if err != nil {
+		return err
+	}
+	var existing info.Config
+	findErr := db.Configs.FindContext(context.Background(), bson.M{"Key": key}).One(&existing)
+	if findErr != nil && !errors.Is(findErr, mongo.ErrNoDocuments) {
+		return fmt.Errorf("read config %s: %w", key, findErr)
+	}
+	if errors.Is(findErr, mongo.ErrNoDocuments) {
+		if err := db.Configs.InsertContext(context.Background(), config); err != nil {
+			return fmt.Errorf("insert config %s: %w", key, err)
+		}
+		existing = config
+	} else {
+		update := bson.M{"$set": bson.M{
+			"UserId": userID, "Key": key, "IsArr": isArr, "IsMap": isMap, "IsArrMap": isArrMap,
+			"UpdatedTime": config.UpdatedTime,
+		}}
+		setConfigValue(update["$set"].(bson.M), config)
+		unset := bson.M{}
+		for _, field := range []string{"ValueStr", "ValueArr", "ValueMap", "ValueArrMap"} {
+			if !isConfigValueField(field, config) {
+				unset[field] = ""
+			}
+		}
+		if len(unset) > 0 {
+			update["$unset"] = unset
+		}
+		if err := db.Configs.UpdateOneMatchedContext(context.Background(), bson.M{"_id": existing.ConfigId, "Key": key}, update); err != nil {
+			return fmt.Errorf("update config %s: %w", key, err)
+		}
+	}
+	var readBack info.Config
+	if err := db.Configs.FindContext(context.Background(), bson.M{"Key": key}).One(&readBack); err != nil {
+		return fmt.Errorf("read back config %s: %w", key, err)
+	}
+	if !configValuesEqual(readBack, config) {
+		return fmt.Errorf("read back config %s did not match requested value", key)
+	}
+	this.applyConfigCache(config)
+	return nil
+}
+
+func buildConfigValue(id, userID domain.ObjectID, key string, value interface{}, isArr, isMap, isArrMap bool) (info.Config, error) {
+	config := info.Config{ConfigId: id, UserId: userID, Key: key, IsArr: isArr, IsMap: isMap, IsArrMap: isArrMap, UpdatedTime: time.Now().UTC()}
+	if isArr {
+		v, ok := value.([]string)
+		if !ok {
+			return info.Config{}, errors.New("global array configuration requires []string")
+		}
+		config.ValueArr = append([]string(nil), v...)
+	} else if isMap {
+		v, ok := value.(map[string]string)
+		if !ok {
+			return info.Config{}, errors.New("global map configuration requires map[string]string")
+		}
+		config.ValueMap = cloneStringMap(v)
+	} else if isArrMap {
+		v, ok := value.([]map[string]string)
+		if !ok {
+			return info.Config{}, errors.New("global array-map configuration requires []map[string]string")
+		}
+		config.ValueArrMap = cloneArrMap(v)
+	} else {
+		v, ok := value.(string)
+		if !ok {
+			return info.Config{}, errors.New("global string configuration requires string")
+		}
+		config.ValueStr = v
+	}
+	return config, nil
+}
+
+func setConfigValue(target bson.M, config info.Config) {
+	target["ValueStr"] = config.ValueStr
+	target["ValueArr"] = config.ValueArr
+	target["ValueMap"] = config.ValueMap
+	target["ValueArrMap"] = config.ValueArrMap
+}
+
+func isConfigValueField(field string, config info.Config) bool {
+	switch field {
+	case "ValueStr":
+		return !config.IsArr && !config.IsMap && !config.IsArrMap
+	case "ValueArr":
+		return config.IsArr
+	case "ValueMap":
+		return config.IsMap
+	case "ValueArrMap":
+		return config.IsArrMap
+	default:
+		return false
+	}
+}
+
+func configValuesEqual(a, b info.Config) bool {
+	if a.Key != b.Key || a.IsArr != b.IsArr || a.IsMap != b.IsMap || a.IsArrMap != b.IsArrMap || a.ValueStr != b.ValueStr {
+		return false
+	}
+	if len(a.ValueArr) != len(b.ValueArr) || len(a.ValueArrMap) != len(b.ValueArrMap) || len(a.ValueMap) != len(b.ValueMap) {
+		return false
+	}
+	for i := range a.ValueArr {
+		if a.ValueArr[i] != b.ValueArr[i] {
+			return false
+		}
+	}
+	for key, value := range a.ValueMap {
+		if b.ValueMap[key] != value {
+			return false
+		}
+	}
+	for i := range a.ValueArrMap {
+		for key, value := range a.ValueArrMap[i] {
+			if b.ValueArrMap[i][key] != value {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (this *ConfigService) applyConfigCache(config info.Config) {
+	if this.GlobalAllConfigs == nil {
+		this.GlobalAllConfigs = map[string]interface{}{}
+	}
+	if this.GlobalStringConfigs == nil {
+		this.GlobalStringConfigs = map[string]string{}
+	}
+	if this.GlobalArrayConfigs == nil {
+		this.GlobalArrayConfigs = map[string][]string{}
+	}
+	if this.GlobalMapConfigs == nil {
+		this.GlobalMapConfigs = map[string]map[string]string{}
+	}
+	if this.GlobalArrMapConfigs == nil {
+		this.GlobalArrMapConfigs = map[string][]map[string]string{}
+	}
+	if config.IsArr {
+		delete(this.GlobalStringConfigs, config.Key)
+		delete(this.GlobalMapConfigs, config.Key)
+		delete(this.GlobalArrMapConfigs, config.Key)
+		this.GlobalArrayConfigs[config.Key] = append([]string(nil), config.ValueArr...)
+		this.GlobalAllConfigs[config.Key] = this.GlobalArrayConfigs[config.Key]
+	} else if config.IsMap {
+		delete(this.GlobalStringConfigs, config.Key)
+		delete(this.GlobalArrayConfigs, config.Key)
+		delete(this.GlobalArrMapConfigs, config.Key)
+		this.GlobalMapConfigs[config.Key] = cloneStringMap(config.ValueMap)
+		this.GlobalAllConfigs[config.Key] = this.GlobalMapConfigs[config.Key]
+	} else if config.IsArrMap {
+		delete(this.GlobalStringConfigs, config.Key)
+		delete(this.GlobalArrayConfigs, config.Key)
+		delete(this.GlobalMapConfigs, config.Key)
+		this.GlobalArrMapConfigs[config.Key] = cloneArrMap(config.ValueArrMap)
+		this.GlobalAllConfigs[config.Key] = this.GlobalArrMapConfigs[config.Key]
+	} else {
+		delete(this.GlobalArrayConfigs, config.Key)
+		delete(this.GlobalMapConfigs, config.Key)
+		delete(this.GlobalArrMapConfigs, config.Key)
+		this.GlobalStringConfigs[config.Key] = config.ValueStr
+		this.GlobalAllConfigs[config.Key] = config.ValueStr
+	}
+}
+
+func cloneStringMap(value map[string]string) map[string]string {
+	result := make(map[string]string, len(value))
+	for key, item := range value {
+		result[key] = item
+	}
+	return result
+}
+
+func cloneArrMap(value []map[string]string) []map[string]string {
+	result := make([]map[string]string, len(value))
+	for i, item := range value {
+		result[i] = cloneStringMap(item)
+	}
+	return result
 }
 
 // 更新用户配置
@@ -165,33 +531,78 @@ func (this *ConfigService) UpdateGlobalArrMapConfig(userId, key string, value []
 func (this *ConfigService) GetGlobalStringConfig(key string) string {
 	return this.GlobalStringConfigs[key]
 }
+
+// DemoAccount validates the complete demo identity configuration. demoUserId
+// is authoritative, while demoUsername must resolve to that same identity;
+// incomplete or inconsistent configuration never degrades into a username
+// guess or an unprotected non-demo result.
+func (this *ConfigService) DemoAccount() (DemoAccount, error) {
+	idValue := strings.TrimSpace(this.GetGlobalStringConfig("demoUserId"))
+	login := strings.ToLower(strings.TrimSpace(this.GetGlobalStringConfig("demoUsername")))
+	if idValue == "" || login == "" {
+		return DemoAccount{}, fmt.Errorf("%w: missing identity", ErrDemoConfiguration)
+	}
+	id, err := domain.ParseObjectID(idValue)
+	if err != nil || id.IsZero() {
+		return DemoAccount{}, fmt.Errorf("%w: invalid user id", ErrDemoConfiguration)
+	}
+	finder := this.findDemoUser
+	if finder == nil {
+		if userService == nil {
+			return DemoAccount{}, errors.New("demo user service is not initialized")
+		}
+		finder = userService.FindUserInfoByName
+	}
+	user, err := finder(login)
+	if err != nil {
+		return DemoAccount{}, fmt.Errorf("resolve demo username: %w", err)
+	}
+	if user.UserId.IsZero() || user.UserId != id {
+		return DemoAccount{}, fmt.Errorf("%w: username identity mismatch", ErrDemoConfiguration)
+	}
+	return DemoAccount{UserID: id, Login: login}, nil
+}
+
+// IsDemoUser compares an authenticated principal only after the shared demo
+// configuration has passed DemoAccount validation.
+func (this *ConfigService) IsDemoUser(userID string) (bool, error) {
+	account, err := this.DemoAccount()
+	if err != nil {
+		return false, err
+	}
+	id, err := domain.ParseObjectID(strings.TrimSpace(userID))
+	if err != nil || id.IsZero() {
+		return false, fmt.Errorf("validate demo principal: invalid user id")
+	}
+	return id == account.UserID, nil
+}
 func (this *ConfigService) GetGlobalArrayConfig(key string) []string {
 	arr := this.GlobalArrayConfigs[key]
 	if arr == nil {
 		return []string{}
 	}
-	return arr
+	return append([]string(nil), arr...)
 }
 func (this *ConfigService) GetGlobalMapConfig(key string) map[string]string {
 	m := this.GlobalMapConfigs[key]
 	if m == nil {
 		return map[string]string{}
 	}
-	return m
+	return cloneStringMap(m)
 }
 func (this *ConfigService) GetGlobalArrMapConfig(key string) []map[string]string {
 	m := this.GlobalArrMapConfigs[key]
 	if m == nil {
 		return []map[string]string{}
 	}
-	return m
+	return cloneArrMap(m)
 }
 
 func (this *ConfigService) IsOpenRegister() bool {
 	return this.GetGlobalStringConfig("openRegister") != ""
 }
 
-//-------
+// -------
 // 修改共享笔记的配置
 func (this *ConfigService) UpdateShareNoteConfig(registerSharedUserId string,
 	registerSharedNotebookPerms, registerSharedNotePerms []int,
@@ -212,7 +623,7 @@ func (this *ConfigService) UpdateShareNoteConfig(registerSharedUserId string,
 		return
 	} else {
 		user := userService.GetUserInfo(registerSharedUserId)
-		if user.UserId == "" {
+		if user.UserId.IsZero() {
 			ok = false
 			msg = "no such user: " + registerSharedUserId
 			return
@@ -231,7 +642,7 @@ func (this *ConfigService) UpdateShareNoteConfig(registerSharedUserId string,
 				continue
 			}
 			notebook := notebookService.GetNotebook(notebookId, registerSharedUserId)
-			if notebook.NotebookId == "" {
+			if notebook.NotebookId.IsZero() {
 				ok = false
 				msg = "The user has no such notebook: " + notebookId
 				return
@@ -256,7 +667,7 @@ func (this *ConfigService) UpdateShareNoteConfig(registerSharedUserId string,
 				continue
 			}
 			note := noteService.GetNote(noteId, registerSharedUserId)
-			if note.NoteId == "" {
+			if note.NoteId.IsZero() {
 				ok = false
 				msg = "The user has no such note: " + noteId
 				return
@@ -281,7 +692,7 @@ func (this *ConfigService) UpdateShareNoteConfig(registerSharedUserId string,
 				continue
 			}
 			note := noteService.GetNote(noteId, registerSharedUserId)
-			if note.NoteId == "" {
+			if note.NoteId.IsZero() {
 				ok = false
 				msg = "The user has no such note: " + noteId
 				return
@@ -298,11 +709,109 @@ func (this *ConfigService) UpdateShareNoteConfig(registerSharedUserId string,
 
 // 添加备份
 func (this *ConfigService) AddBackup(path, remark string) bool {
+	return this.addBackup(path, remark, "confirmed")
+}
+
+func (this *ConfigService) addBackup(path, remark, state string) (ok bool) {
+	return this.addBackupExcluding(path, remark, state, nil, nil, "")
+}
+
+func (this *ConfigService) addBackupExcluding(path, remark, state string, protectedPaths map[string]struct{}, identity *ConfiguredDatabaseIdentity, identityDigest string) (ok bool) {
+	if state != "confirmed" && state != "protected" {
+		return false
+	}
+	runtime := currentRuntimeConfig()
+	root := runtime.BackupRoot
+	if strings.TrimSpace(root) == "" {
+		return false
+	}
+	canonical, err := ValidateContainedPath(root, path)
+	if err != nil {
+		return false
+	}
+	// A failed registration or retention pass must not leave an unregistered
+	// dump behind for a later cleanup job to mistake as a usable backup.
+	_, existingPathErr := os.Lstat(canonical)
+	cleanup := existingPathErr != nil
+	defer func() {
+		if !ok && cleanup {
+			_ = os.RemoveAll(canonical)
+		}
+	}()
 	backups := this.GetGlobalArrMapConfig("backups") // [{}, {}]
+	backups = cloneArrMap(backups)
 	n := time.Now().Unix()
 	nstr := fmt.Sprintf("%v", n)
-	backups = append(backups, map[string]string{"createdTime": nstr, "path": path, "remark": remark})
-	return this.UpdateGlobalArrMapConfig(this.adminUserId, "backups", backups)
+	entry := map[string]string{"createdTime": nstr, "path": canonical, "remark": remark, "state": state}
+	if identity != nil {
+		entry["databaseScheme"] = identity.Scheme
+		entry["databaseClusterHost"] = identity.ClusterHost
+		entry["databaseClusterPort"] = identity.ClusterPort
+		entry["databaseName"] = identity.DatabaseName
+		entry["databaseAuthSource"] = identity.AuthSource
+		entry["databaseTLSMode"] = identity.TLSMode
+	}
+	if identityDigest != "" {
+		entry["databaseIdentityDigest"] = identityDigest
+	}
+	backups = append(backups, entry)
+	newSize, err := backupDirectorySize(canonical)
+	if err != nil {
+		return false
+	}
+	retainedBytes := int64(0)
+	for _, candidate := range backups {
+		if candidate["path"] == canonical {
+			retainedBytes += newSize
+			continue
+		}
+		if candidate["state"] == "orphan" {
+			continue
+		}
+		candidateSize, sizeErr := backupDirectorySize(candidate["path"])
+		if sizeErr != nil {
+			candidate["state"] = "orphan"
+			continue
+		}
+		retainedBytes += candidateSize
+	}
+	// Retention is evaluated from confirmed, non-protected metadata. An
+	// over-budget or orphaned entry remains visible for operator repair.
+	for len(backups) > DefaultBackupLimits.MaxCopies || retainedBytes > DefaultBackupLimits.MaxBytes {
+		removed := false
+		for index, candidate := range backups {
+			if candidate["state"] == "protected" || candidate["state"] == "running" || candidate["path"] == canonical {
+				continue
+			}
+			if _, protected := protectedPaths[candidate["path"]]; protected {
+				continue
+			}
+			if _, err := ValidateContainedPath(root, candidate["path"]); err != nil {
+				candidate["state"] = "orphan"
+				continue
+			}
+			candidateSize, sizeErr := backupDirectorySize(candidate["path"])
+			if sizeErr != nil {
+				candidate["state"] = "orphan"
+				continue
+			}
+			if removeErr := os.RemoveAll(candidate["path"]); removeErr != nil {
+				return false
+			}
+			backups = append(backups[:index], backups[index+1:]...)
+			retainedBytes -= candidateSize
+			removed = true
+			break
+		}
+		if !removed {
+			return false
+		}
+	}
+	if !this.UpdateGlobalArrMapConfig(this.adminUserId, "backups", backups) {
+		return false
+	}
+	cleanup = false
+	return true
 }
 
 func (this *ConfigService) getBackupDirname() string {
@@ -310,41 +819,58 @@ func (this *ConfigService) getBackupDirname() string {
 	y, m, d := n.Date()
 	return strconv.Itoa(y) + "_" + m.String() + "_" + strconv.Itoa(d) + "_" + fmt.Sprintf("%v", n.Unix())
 }
-func (this *ConfigService) Backup(remark string) (ok bool, msg string) {
-	binPath := configService.GetGlobalStringConfig("mongodumpPath")
-	config := revel.Config
-	dbname, _ := config.String("db.dbname")
-	host, _ := revel.Config.String("db.host")
-	port, _ := revel.Config.String("db.port")
-	username, _ := revel.Config.String("db.username")
-	password, _ := revel.Config.String("db.password")
-	// mongodump -h localhost -d leanote -o /root/mongodb_backup/leanote-9-22/ -u leanote -p nKFAkxKnWkEQy8Vv2LlM
-	binPath = binPath + " -h " + host + " -d " + dbname + " --port " + port
-	if username != "" {
-		binPath += " -u " + username + " -p " + password
-	}
-	// 保存的路径
-	dir := revel.BasePath + "/mongodb_backup/" + this.getBackupDirname()
-	binPath += " -o " + dir
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		ok = false
-		msg = fmt.Sprintf("%v", err)
-		return
-	}
 
-	cmd := exec.Command("/bin/sh", "-c", binPath)
-	Log(binPath)
-	b, err := cmd.Output()
-	if err != nil {
-		msg = fmt.Sprintf("%v", err)
-		ok = false
-		Log("error:......")
-		Log(string(b))
-		return
+func (this *ConfigService) validMongoExecutable(key string) (string, error) {
+	path := strings.TrimSpace(this.GetGlobalStringConfig(key))
+	allowlist := this.GetGlobalArrayConfig("mongoExecutableAllowlist")
+	if len(allowlist) == 0 {
+		allowlist = this.GetGlobalArrayConfig("backupExecutableAllowlist")
 	}
-	ok = configService.AddBackup(dir, remark)
-	return ok, msg
+	return ValidateExecutable(path, allowlist)
+}
+
+func configuredDatabaseIdentity() (ConfiguredDatabaseIdentity, string, error) {
+	identity := currentRuntimeConfig().DatabaseIdentity
+	if strings.TrimSpace(identity.DatabaseName) == "" {
+		return ConfiguredDatabaseIdentity{}, "", errors.New("database configuration is unavailable")
+	}
+	digest, err := identity.Digest()
+	if err != nil {
+		return ConfiguredDatabaseIdentity{}, "", err
+	}
+	return identity, digest, nil
+}
+
+func backupDirectorySize(root string) (int64, error) {
+	rootInfo, err := os.Stat(root)
+	if err != nil || !rootInfo.IsDir() {
+		return 0, fmt.Errorf("backup directory is unavailable")
+	}
+	var total int64
+	err = filepath.Walk(root, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if path == root || info.IsDir() {
+			return nil
+		}
+		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
+			return fmt.Errorf("backup tree contains a non-regular file")
+		}
+		if info.Size() > math.MaxInt64-total {
+			return fmt.Errorf("backup size overflows int64")
+		}
+		total += info.Size()
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (this *ConfigService) Backup(remark string) (ok bool, msg string) {
+	return this.backupWithState(remark, "confirmed")
 }
 
 // 还原
@@ -361,45 +887,145 @@ func (this *ConfigService) Restore(createdTime string) (ok bool, msg string) {
 		return false, "Backup Not Found"
 	}
 
-	// 先备份当前
-	ok, msg = this.Backup("Auto backup when restore from " + backup["createdTime"])
-	if !ok {
-		return
+	runtime := currentRuntimeConfig()
+	if strings.TrimSpace(runtime.BackupRoot) == "" || runtime.DatabaseProvider == nil {
+		return false, "restore configuration is unavailable"
 	}
-
-	// mongorestore -h localhost -d leanote --directoryperdb /home/user1/gopackage/src/github.com/leanote/leanote/mongodb_backup/leanote_install_data/
-	binPath := configService.GetGlobalStringConfig("mongorestorePath")
-	config := revel.Config
-	dbname, _ := config.String("db.dbname")
-	host, _ := revel.Config.String("db.host")
-	port, _ := revel.Config.String("db.port")
-	username, _ := revel.Config.String("db.username")
-	password, _ := revel.Config.String("db.password")
-	// mongorestore -h localhost -d leanote -o /root/mongodb_backup/leanote-9-22/ -u leanote -p nKFAkxKnWkEQy8Vv2LlM
-	binPath = binPath + " --drop -h " + host + " -d " + dbname + " --port " + port
-	if username != "" {
-		binPath += " -u " + username + " -p " + password
+	connection, connectionErr := runtime.DatabaseProvider.ResolveDatabaseConnection()
+	if connectionErr != nil {
+		return false, "database connection unavailable"
 	}
-
-	path := backup["path"] + "/" + dbname
-	// 判断路径是否存在
-	if !IsDirExists(path) {
-		return false, path + " Is Not Exists"
+	dbname := connection.DatabaseName
+	host, port, username, password := connection.Host, connection.Port, connection.Username, connection.Password
+	_, identityDigest, identityErr := configuredDatabaseIdentity()
+	if identityErr != nil {
+		return false, "database identity unavailable"
 	}
-
-	binPath += " " + path
-
-	cmd := exec.Command("/bin/sh", "-c", binPath)
-	Log(binPath)
-	b, err := cmd.Output()
+	root := runtime.BackupRoot
+	registered, err := ValidateContainedPath(root, backup["path"])
 	if err != nil {
-		msg = fmt.Sprintf("%v", err)
-		ok = false
-		Log("error:......")
-		Log(string(b))
-		return
+		return false, "backup path validation failed"
 	}
+	path, err := ValidateContainedPath(root, filepath.Join(registered, dbname))
+	if err != nil {
+		return false, "backup database path validation failed"
+	}
+	if info, statErr := os.Stat(path); statErr != nil || !info.IsDir() {
+		return false, "registered backup data is unavailable"
+	}
+	storedIdentity := ConfiguredDatabaseIdentity{
+		Scheme:       backup["databaseScheme"],
+		ClusterHost:  backup["databaseClusterHost"],
+		ClusterPort:  backup["databaseClusterPort"],
+		DatabaseName: backup["databaseName"],
+		AuthSource:   backup["databaseAuthSource"],
+		TLSMode:      backup["databaseTLSMode"],
+	}
+	storedDigest, digestErr := storedIdentity.Digest()
+	if digestErr != nil || backup["databaseIdentityDigest"] == "" || storedDigest != backup["databaseIdentityDigest"] || backup["databaseIdentityDigest"] != identityDigest {
+		return false, "backup database identity does not match the configured database"
+	}
+	if _, _, scanErr := StableBackupPaths(path, DefaultBackupLimits); scanErr != nil {
+		return false, "backup manifest validation failed"
+	}
+	if protected, protectMsg := this.backupWithStateExcluding("Auto backup when restore from "+backup["createdTime"], "protected", map[string]struct{}{registered: {}}); !protected {
+		return false, "protect current database before restore: " + protectMsg
+	}
+	executable, err := this.validMongoExecutable("mongorestorePath")
+	if err != nil {
+		return false, "mongorestore executable validation failed"
+	}
+	args := BuildMongoRestoreArgs(executable, host, port, dbname, path, username)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	if password != "" {
+		cmd.Stdin = strings.NewReader(password + "\n")
+	}
+	if output, err := cmd.CombinedOutput(); err != nil {
+		_ = output
+		if ctx.Err() != nil {
+			return false, "mongorestore timed out"
+		}
+		return false, "mongorestore failed"
+	}
+	return true, ""
+}
 
+func (this *ConfigService) backupWithState(remark, state string) (bool, string) {
+	return this.backupWithStateExcluding(remark, state, nil)
+}
+
+func (this *ConfigService) backupWithStateExcluding(remark, state string, protectedPaths map[string]struct{}) (bool, string) {
+	runtime := currentRuntimeConfig()
+	if strings.TrimSpace(runtime.BackupRoot) == "" || runtime.DatabaseProvider == nil {
+		return false, "backup configuration is unavailable"
+	}
+	executable, err := this.validMongoExecutable("mongodumpPath")
+	if err != nil {
+		return false, "mongodump executable validation failed"
+	}
+	connection, connectionErr := runtime.DatabaseProvider.ResolveDatabaseConnection()
+	if connectionErr != nil {
+		return false, "database connection unavailable"
+	}
+	dbname := connection.DatabaseName
+	host, port, username, password := connection.Host, connection.Port, connection.Username, connection.Password
+	identity, identityDigest, identityErr := configuredDatabaseIdentity()
+	if identityErr != nil {
+		return false, "database identity unavailable"
+	}
+	if strings.TrimSpace(dbname) == "" || strings.TrimSpace(host) == "" || strings.TrimSpace(port) == "" {
+		return false, "database identity is incomplete"
+	}
+	root := runtime.BackupRoot
+	if err := os.MkdirAll(root, 0700); err != nil {
+		return false, "create backup root failed"
+	}
+	dir := filepath.Join(root, this.getBackupDirname())
+	if _, err := ValidateContainedPath(root, dir); err != nil {
+		return false, "backup path validation failed"
+	}
+	if err := os.Mkdir(dir, 0700); err != nil {
+		return false, "create backup directory failed"
+	}
+	registered := false
+	defer func() {
+		if !registered {
+			_ = os.RemoveAll(dir)
+		}
+	}()
+	args := BuildMongoDumpArgs(executable, host, port, dbname, dir, username)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	if password != "" {
+		cmd.Stdin = strings.NewReader(password + "\n")
+	}
+	if output, err := cmd.CombinedOutput(); err != nil {
+		_ = output
+		_ = os.RemoveAll(dir)
+		if ctx.Err() != nil {
+			return false, "mongodump timed out"
+		}
+		return false, "mongodump failed"
+	}
+	paths, total, err := StableBackupPaths(dir, DefaultBackupLimits)
+	if err != nil || len(paths) == 0 {
+		_ = os.RemoveAll(dir)
+		if err == nil {
+			err = errors.New("backup produced no regular files")
+		}
+		return false, "backup manifest validation failed"
+	}
+	if total > DefaultBackupLimits.MaxBytes {
+		_ = os.RemoveAll(dir)
+		return false, "backup retention byte budget exceeded"
+	}
+	if !this.addBackupExcluding(dir, remark, state, protectedPaths, &identity, identityDigest) {
+		return false, "backup metadata write failed"
+	}
+	registered = true
 	return true, ""
 }
 func (this *ConfigService) DeleteBackup(createdTime string) (bool, string) {
@@ -415,17 +1041,44 @@ func (this *ConfigService) DeleteBackup(createdTime string) (bool, string) {
 		return false, "Backup Not Found"
 	}
 
-	// 删除文件夹之
-	err := os.RemoveAll(backups[i]["path"])
+	runtime := currentRuntimeConfig()
+	if strings.TrimSpace(runtime.BackupRoot) == "" {
+		return false, "backup configuration is unavailable"
+	}
+	root := runtime.BackupRoot
+	path, err := ValidateContainedPath(root, backups[i]["path"])
+	if err != nil {
+		return false, "backup path validation failed"
+	}
+	info, statErr := os.Stat(path)
+	if statErr != nil {
+		if os.IsNotExist(statErr) {
+			return false, "backup directory is missing"
+		}
+		return false, "backup directory cannot be inspected"
+	}
+	if !info.IsDir() {
+		return false, "registered backup path is not a directory"
+	}
+	// Delete only the registered directory after containment and symlink checks.
+	err = os.RemoveAll(path)
 	if err != nil {
 		return false, fmt.Sprintf("%v", err)
+	}
+	if _, statErr := os.Lstat(path); statErr == nil {
+		return false, "backup directory still exists after deletion"
+	} else if !os.IsNotExist(statErr) {
+		return false, "backup directory deletion could not be verified"
 	}
 
 	// 删除之
 	backups = append(backups[0:i], backups[i+1:]...)
 
 	ok := this.UpdateGlobalArrMapConfig(this.adminUserId, "backups", backups)
-	return ok, ""
+	if !ok {
+		return false, "backup metadata delete failed after filesystem deletion"
+	}
+	return true, ""
 }
 
 func (this *ConfigService) UpdateBackupRemark(createdTime, remark string) (bool, string) {
@@ -462,43 +1115,34 @@ func (this *ConfigService) GetBackup(createdTime string) (map[string]string, boo
 	return backup, true
 }
 
-//--------------
+// --------------
 // sub domain
 var defaultDomain string
 var schema = "http://"
 var port string
 
-func init() {
-	revel.OnAppStart(func() {
-		/*
-			不用配置的, 因为最终通过命令可以改, 而且有的使用nginx代理
-			port  = strconv.Itoa(revel.HttpPort)
-			if port != "80" {
-				port = ":" + port
-			} else {
-				port = "";
-			}
-		*/
+// applySiteURLDomain derives the sub-domain helpers from site.url exactly
+// as the former startup hook did (including its port quirks); it
+// resets first so repeated installation is idempotent.
+func applySiteURLDomain(siteUrl string) {
+	defaultDomain, schema, port = "", "http://", ""
+	if strings.HasPrefix(siteUrl, "http://") {
+		defaultDomain = siteUrl[len("http://"):]
+	} else if strings.HasPrefix(siteUrl, "https://") {
+		defaultDomain = siteUrl[len("https://"):]
+		schema = "https://"
+	}
 
-		siteUrl, _ := revel.Config.String("site.url") // 已包含:9000, http, 去掉成 leanote.com
-		if strings.HasPrefix(siteUrl, "http://") {
-			defaultDomain = siteUrl[len("http://"):]
-		} else if strings.HasPrefix(siteUrl, "https://") {
-			defaultDomain = siteUrl[len("https://"):]
-			schema = "https://"
-		}
-
-		// port localhost:9000
-		ports := strings.Split(defaultDomain, ":")
-		if len(ports) == 2 {
-			port = ports[1]
-		}
-		if port == "80" {
-			port = ""
-		} else {
-			port = ":" + port
-		}
-	})
+	// port localhost:9000
+	ports := strings.Split(defaultDomain, ":")
+	if len(ports) == 2 {
+		port = ports[1]
+	}
+	if port == "80" {
+		port = ""
+	} else {
+		port = ":" + port
+	}
 }
 
 func (this *ConfigService) GetSchema() string {
@@ -572,6 +1216,27 @@ func (this *ConfigService) GetUploadSize(key string) float64 {
 	f, _ := strconv.ParseFloat(this.GetGlobalStringConfig(key), 64)
 	return f
 }
+
+// GetUploadLimitBytes is the fail-closed upload configuration boundary used
+// by content commands.  The legacy float-only getter remains for display
+// compatibility, but upload paths must not turn malformed values into an
+// implicit 1000 MB allowance.
+func (this *ConfigService) GetUploadLimitBytes(key string) (int64, error) {
+	value := strings.TrimSpace(this.GetGlobalStringConfig(key))
+	megabytes, err := strconv.ParseFloat(value, 64)
+	if err != nil || math.IsNaN(megabytes) || math.IsInf(megabytes, 0) || megabytes <= 0 {
+		return 0, fmt.Errorf("invalid upload size configuration for %s", key)
+	}
+	const bytesPerMegabyte = 1024 * 1024
+	if megabytes > float64(math.MaxInt64)/bytesPerMegabyte {
+		return 0, fmt.Errorf("upload size configuration overflows for %s", key)
+	}
+	limit := int64(megabytes * bytesPerMegabyte)
+	if limit <= 0 {
+		return 0, fmt.Errorf("upload size configuration is below one byte for %s", key)
+	}
+	return limit, nil
+}
 func (this *ConfigService) GetInt64(key string) int64 {
 	f, _ := strconv.ParseInt(this.GetGlobalStringConfig(key), 10, 64)
 	return f
@@ -606,5 +1271,5 @@ func (this *ConfigService) HomePageIsAdminsBlog() bool {
 }
 
 func (this *ConfigService) GetVersion() string {
-	return "2.6.1"
+	return BuildVersion
 }

@@ -40,6 +40,7 @@ Loading...
     <div id="kityminder" onselectstart="return false">
     </div>
 </div>
+<button type="button" id="insertMindMapBtn" style="position:fixed;right:12px;bottom:12px;z-index:200">Insert</button>
 </body>
 
 <script src="main.min.js?_=2" charset="utf-8"></script>
@@ -76,6 +77,19 @@ if (parent && parent.LEAUI_MIND) {
         } catch(e) {console.log(e)};
     }
 }
+
+document.getElementById('insertMindMapBtn').addEventListener('click', function () {
+    if (!window.km || typeof km.exportData !== 'function' || !window.parent || window.parent === window) return;
+    Promise.resolve(km.exportData('png')).then(function (src) {
+        window.parent.postMessage({
+            mceAction: 'insertMindMap',
+            src: src,
+            json: JSON.stringify(km.exportJson())
+        }, window.location.origin);
+    }).catch(function (error) {
+        if (window.console && console.error) console.error('Mind map export failed', error);
+    });
+});
 
 </script>
 </html>

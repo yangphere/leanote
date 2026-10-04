@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-25-mongo-driver-migration/prd.md", "reason": "逐条检查 MongoDB 7.0/8.0、ObjectID、BSON、查询结果与零迁移验收。"}
+{"file": ".trellis/tasks/08-25-mongo-driver-migration/design.md", "reason": "检查所有 mgo 实际操作是否有 wrapper 映射、timeout 是否有界、错误是否可见。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/prd.md", "reason": "核对 B 与 C-b 的顺序及 HTTP/API/USN 不变量。"}
+{"file": "docs/modernization-backlog.md", "reason": "确认 MOD-001 被明确标记为后续重构而非本任务完成项。"}

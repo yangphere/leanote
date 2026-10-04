@@ -1,0 +1,4 @@
+{"file":".trellis/spec/guides/index.md","reason":"共享代码复用、跨层数据流与 fail-closed 思考指南。"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"前端构建、诊断、静态契约和脱敏 artifact 的质量要求。"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"harness/HTTP 测试、真实边界和隔离 Mongo 的后端质量要求。"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"后端错误传播规范（当前文档为团队待填充基线）。"}

@@ -1,0 +1,2 @@
+{"file": ".trellis/tasks/09-01-frontend-libs-release-reconciliation/prd.md", "reason": "对照 AC 核查：三门禁全绿、summary 事实一致、tag 断言保留、双 arg、F 冲突登记、发布 blocked 结论"}
+{"file": ".trellis/tasks/09-01-frontend-libs-release-reconciliation/research/spec-audit-2026-09-02.md", "reason": "核查修复是否针对行级根因、无越权改动"}

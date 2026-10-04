@@ -1,0 +1,45 @@
+# C-a Task 3：v1.1 三路径验证（Linux 容器实跑，2026-08-28）
+
+环境：golang:1.26.7-bookworm（GOTOOLCHAIN=local，--network container:leanote-test-mongo，
+HEAD 源码 tar 副本 /work，sh 脚本 sed 去 CR），Mongo 5.0 fixture 恢复 leanote 库（499 docs）。
+
+## 测试二进制路径
+
+app/cmd（A 契约：go ≥1.26.7 fail-closed、GOTOOLCHAIN=local）生成 + `go build .../app/tmp`
+在 Go 1.26.7 与 1.27.0 双版本通过（零编译适配）；MongoDB 5.0 fixture 上
+`LEANOTE_GOLDEN=replay go test -p 1 ./app/tests/... -count=1` 双版本各一轮 exit 0，
+Golden 132 文件 SHA256 聚合恒为 f6ec2ec036b91340bbf44c6387282825ac1a94de（与 v1.0 基线逐字节一致）。
+
+## 开发路径（canonical sh/run.sh，CLI = 主模块图构建 v1.1.2）
+
+- CLI 溯源：`go version -m` → `mod github.com/revel/cmd v1.1.2` + `dep golang.org/x/tools v0.49.0`。
+- 引擎监听后五页面：/ 200、/login 200、/note 302、/blog 200、/demo 302 —— 与 v1.0 基线逐项一致。
+  （首击 / 的 502 为 dev watcher 重编译窗口瞬态，服务端请求日志 Index.Default status=200，v1.0 同样存在。）
+- dev 模式由 v1.1.2 CLI 自带生成器生成 app/tmp（与测试路径的 app/cmd 生成器相互独立）。
+
+## SIGTERM 优雅关停（AC-Ca5）
+
+- 源码依据（模块缓存 revel@v1.1.0/server_adapter_go.go:218-231）：服务进程订阅
+  SIGTERM/INT/KILL → 日志 → ENGINE_SHUTDOWN_REQUEST → `Server.Shutdown(ctx)`，
+  超时 `app.cancel.timeout` 默认 60 秒。
+- 打包 prod 二进制（生产代表性路径，canonical `run.sh -srcPath` 启动，端口 9006）：
+  SIGTERM 后 **约 1 秒进程终止（/proc state=Z）、exit_code=0（干净退出）、端口释放**；
+  prod.log 记录引擎 "listening on.. 0.0.0.0:9006" → "NOT listening on.. 0.0.0.0:9006"。
+  对照 v1.0 基线（默认信号杀死、dev 子进程孤儿化继续服务），v1.1 行为符合优雅关停契约。
+  验收上界 ≤30 秒满足（实测 1 秒；源码默认上限 60 秒，仅在有在途请求时生效）。
+- 教训记录：容器 init（sleep infinity）不收尸，进程退出判定必须读 /proc/<pid>/stat 的
+  state=Z 与 exit_code 字段，`kill -0` 会把僵尸误判为存活；`sh run.sh` 的 $! 是 sh 包装
+  进程而非 revel run，信号必须发给 pgrep 到的真实进程。
+
+## 生产包路径（canonical sh/package.sh）
+
+- tarball：/work/sh/leanote.tar.gz，27,453,086 bytes，2298 entries
+  （v1.0 同 HEAD 基线 27,445,709/2298——条目数一致，字节差来自框架版本，合理）；
+- 解包后以 tarball 自带 run.sh 规范启动（-srcPath 指向包内 src）：
+  GET /login → 200；POST /api/auth/login（错误凭据）→ 200（JSON 错误信封，与 v1.0 一致）。
+
+## 诊断（非验收路径）
+
+- 隔离图 `GOPATH=/tmp/isogopath go install github.com/revel/cmd/revel@v1.1.2`：
+  Go 1.26.7 下构建成功（exit 0）。v1.1.2 上游图（x/tools v0.1.10）不再触发 v1.0.3
+  隔离图（x/tools v0.0.0-20200219）的 Go ≥1.26 panic。canonical CLI 构建策略不变。

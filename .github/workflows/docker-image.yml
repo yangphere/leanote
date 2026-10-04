@@ -1,0 +1,92 @@
+name: Docker image
+
+on:
+  push:
+    tags: ['[0-9]+.[0-9]+.[0-9]+']
+
+concurrency:
+  group: docker-image-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.repository == 'yangphere/leanote'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: '${{ github.sha }}', fetch-depth: 0 }
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with: { node-version: '24.20.0' }
+      - run: npm ci
+      - name: Validate canonical release version
+        env: { RELEASE_TAG: '${{ github.ref_name }}' }
+        run: node scripts/check-version.mjs --image-tag
+      - name: Reject forced tag updates
+        env: { TAG_WAS_FORCED: '${{ github.event.forced }}' }
+        run: test "$TAG_WAS_FORCED" != true
+      - name: Verify immutable tag and main ancestry
+        env: { TAG: '${{ github.ref_name }}' }
+        run: |
+          set -eu
+          git fetch --force --no-tags origin \
+            "refs/tags/${TAG}:refs/remotes/origin/tags/${TAG}" \
+            "refs/heads/main:refs/remotes/origin/main"
+          test "$(git rev-parse "refs/remotes/origin/tags/${TAG}^{}")" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
+
+  quality-gate:
+    needs: [validate]
+    uses: ./.github/workflows/quality-gate.yml
+
+  publish:
+    needs: [validate, quality-gate]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      packages: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      IMAGE_REPOSITORY: ghcr.io/yangphere/leanote
+      GHCR_IMAGE: yangphere/leanote
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: '${{ github.sha }}', fetch-depth: 0 }
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with: { node-version: '24.20.0' }
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e
+      - name: Resolve the registry image tag
+        run: echo "IMAGE=${IMAGE_REPOSITORY}:${RELEASE_TAG}" >> "$GITHUB_ENV"
+      - name: Build the immutable candidate
+        run: |
+          set -eu
+          epoch=$(git show -s --format=%ct "$GITHUB_SHA")
+          created=$(date -u -d "@$epoch" +%Y-%m-%dT%H:%M:%SZ)
+          docker buildx build --platform linux/amd64 --load --metadata-file "$RUNNER_TEMP/image-metadata.json" --build-arg VERSION="$RELEASE_TAG" --build-arg REVISION="$GITHUB_SHA" --build-arg SOURCE_DATE_EPOCH="$epoch" --build-arg OCI_CREATED="$created" --provenance=false --sbom=false -t "$IMAGE" .
+          node -e "const m=require(process.env.RUNNER_TEMP + '/image-metadata.json'); const d=m['containerimage.digest']; if(!/^sha256:[0-9a-f]{64}$/.test(d || '')) throw new Error('candidate manifest digest missing')"
+      - name: Smoke the exact candidate
+        env:
+          CONTAINER_SMOKE_PDF_URL: http://127.0.0.1:9000/note/toPdf?noteId=5483207cf4e87203a4000001&appKey=container-smoke-secret-012345678901234567890
+        run: scripts/container-smoke.sh "$IMAGE"
+      - name: Push once and verify registry manifest digest
+        env:
+          GH_TOKEN: '${{ github.token }}'
+          TAG: '${{ github.ref_name }}'
+          ALLOW_INITIAL_PACKAGE_CREATE: 'true'
+        run: |
+          set -eu
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          node scripts/check-ghcr-tag-absent.mjs
+          git fetch --force --no-tags origin \
+            "refs/tags/${TAG}:refs/remotes/origin/tags/${TAG}" \
+            "refs/heads/main:refs/remotes/origin/main"
+          test "$(git rev-parse "refs/remotes/origin/tags/${TAG}^{}")" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
+          docker push "$IMAGE"
+          expected=$(node -e "process.stdout.write(require(process.env.RUNNER_TEMP + '/image-metadata.json')['containerimage.digest'])")
+          pushed=$(docker buildx imagetools inspect "$IMAGE" --format '{{.Manifest.Digest}}')
+          test "$pushed" = "$expected"

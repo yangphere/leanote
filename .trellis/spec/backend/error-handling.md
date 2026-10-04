@@ -1,0 +1,47 @@
+# Error Handling
+
+> How errors are handled in this project.
+
+---
+
+## Overview
+
+- Go error convention throughout: return errors upward with `fmt.Errorf("...: %w", err)` wrapping; log once at the boundary that terminates handling (`cmd/leanote/main.go`); never log-and-return at every layer.
+- Lower-layer errors are returned to the caller with context; handlers must not convert database initialization or query failures into successful empty data.
+- HTTP test-only identity endpoints use an explicit status matrix: requests outside test mode or loopback return `404`; marker, database, token digest, or time-boundary validation failures return `503` without sensitive details.
+- Boundary checks are inclusive at the documented limit. The e2e marker future skew accepts exactly `validationNow + 60s` and rejects any later timestamp.
+
+## Error Types
+
+- `httpserver.ConfigError{Code, Key}` (`app/httpserver/production_config.go`) — stable, redacted production config failures (`CONFIG_PATH_INVALID`, `CONFIG_FILE_MISSING`, `CONFIG_MONGO_INVALID`, ...). Create with `configError(code, key)`; render via `logConfigError`. Never include file contents or credential fragments in these.
+- Plain `error` for service/db layers; sentinel messages like `"mongo client is not initialized"` are asserted by tests — keep the wording stable.
+- Shell scripts use exit codes: config misuse exits `78` (packaged binary), smoke scripts exit non-zero with a one-line reason on stderr plus failure dumps (app log tail / pdf headers / docker logs — see `logging-guidelines.md`).
+
+## Propagation
+
+- Controller → service → db: each layer wraps with context; only the outermost handler decides the HTTP response.
+- Startup degradation: `initDatabase` failure in `cmd/leanote/main.go` logs one notice and keeps serving so `/healthz` can answer 503 — the process stays up for diagnostics (this is the documented pattern, do not turn it into a hard exit).
+- JSON controllers: transport 200 does not imply business success; the envelope carries the verdict (below).
+
+## API Error Responses
+
+### Note Save Envelope
+
+`POST /note/updateNoteOrContent` preserves the existing `info.Re` fields. For an existing-note request with a nonempty `OperationId`, success additionally returns top-level integer `Usn`, taken directly from this `SaveNote` result, including receipt replay. Requests without `OperationId`, new-note requests, and failures retain their previous field shape. New-note success still returns the created note in `Item`. Failures have `Ok:false` and a nonempty `Msg`; HTTP 200 does not imply business success.
+
+The mapper must not re-read the latest note or calculate `oldUsn + 1`. A later write may exist when an older receipt is replayed. Do not embed `info.Re` directly into the extended DTO: its promoted `MarshalJSON` would drop the added `Usn`. `workspaceWebSaveResponse` uses a method-free local envelope type. Its serialization regression checks the six legacy fields, the protected success revision, and unchanged failure shape. See the frontend state-management spec's protected mutation contract for consumer and recovery rules.
+
+The controller must inspect every `UpdateNote` and `UpdateNoteContent` result before setting `Ok`. A missing note/content record, permission failure, database insert/update failure, conflict, or a metadata-success/content-failure partial write must return `Ok:false`; the frontend may confirm its save revision and show success only after `Ok:true`.
+
+## Common Mistakes
+
+- Returning a zero-value note or a bare boolean as a successful save response.
+- Ignoring one service result when the request updates both metadata and content, which masks a partial write.
+- Treating transport status 200 as the business success signal.
+- Table-driven tests must keep covering the 404/503 matrix, including the exact future-skew boundary and the smallest representable value beyond it.
+
+## HTTP Session and Principal Boundaries
+
+- `httpserver.Context` is the application-facing `SessionReader` and `SessionWriter`; `Get`, `Set`, `Delete`, and `Commit` must delegate to injected boundaries when present and return their errors. First-party adapters must not read `Context.Session` directly.
+- Session mutations commit before the action result writes response headers. A commit failure returns the stable `session_commit` envelope only when the action did not already return an `Ok:false` envelope; action-specific failures such as `logout_cleanup_failed` and `registered_relogin_required` remain authoritative.
+- `PrincipalPolicy` derives `member`/`admin` and the demo flag from canonical configuration. An absent demo configuration means no principal is classified as demo; a partial, inconsistent, or storage-failing configured demo identity fails closed and preserves the `configuration` versus `storage` error classification.

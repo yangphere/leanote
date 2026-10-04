@@ -1,188 +1,178 @@
 # Leanote
 
-[![Build Status](https://travis-ci.org/leanote/leanote.svg)](https://travis-ci.org/leanote/leanote)
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/leanote/leanote?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+Leanote 是一个开源的个人知识管理和笔记应用，支持富文本、Markdown、标签、笔记本、分享、博客和 PDF 导出。本仓库包含 Leanote Web 服务端、模板、前端资源和 Docker 部署配置。
 
-## 1. Introduction
+## 当前项目结构
 
-Leanote, not just a notepad!
-![leanote.png](leanote.png "")
+- `cmd/leanote`：Go 服务入口。
+- `app/httpserver`：HTTP 服务、路由、会话和 `/healthz`。
+- `app/controllers`、`app/service`、`app/application`：请求适配器和业务服务。
+- `app/views`、`public`、`messages`：模板、浏览器资源和语言包。
+- `docker-compose.yml`、`Dockerfile`：本地 Docker Compose 部署。
+- `docs/`：CI/CD、生产配置和交付约定。
 
-**Highlighted Features**
+生产镜像使用 Go 1.26 和 Node.js 24 构建，当前 Compose 部署目标为 `linux/amd64`。MongoDB 使用 Compose 中固定版本的 MongoDB 8.0 镜像。
 
-* Note-taking made easy: Leanote incorporates a clean and intuitive interface, the `tinymce` rich-text editor and a dedicated *markdown* editor, making your writing/typing more efficient and enjoyable. For more advanced users, we even offer `Vim` and `Emacs` writing modes to help boost your writing speed to another level. 
-* Knowledge management: The flexible and versatile notebook-note-tagging system of Leanote makes it an ideal tool for knowledge management.
-* Sharing: Share your knowledge, thoughts and experiences with friends via Leanote. Invite your friends to join your notepad in the cloud.
-* Cooperating: Collaborate with colleagues to improve skills, fertilize ideas and brainstorm on the fly.
-* Blogging: Publish your work and make Leanote your personal blog.
+## 使用 Docker Compose 部署
 
-**Other Features**
+### 首次部署
 
-* Markdown syntax support
-* Distraction-free writing mode
-* `Vim` and `Emacs` editing mode
-* Export notes to PDFs
-* Batch note operation
-* Customizable themes for blogging
+在仓库根目录执行：
 
-## 2. Why we create Leanote
+```powershell
+Copy-Item .env.example .env
+```
 
-We have been using the popular note-taking software/service `Evernote` as our knowledge management tool on a daily basis. Benefited from and inspired by `Evernote`, we decided to create a brand-new tool that provides everything `Evernote` has to offer, plus a bunch of new features that `Evernote` failed to deliver, such as:
+编辑 `.env`，至少替换以下值：
 
-* A more powerful editor: `Evernote`'s editor lacks the functionalities of **document navigation**, **syntax based code rendering** (as a programmer, syntax highlighted code rendering is a necessity), **image resizing** and so forth.
-* Everybody loves *markdown*, however `Evernote` simply wouldn't add it despite of years' of requests from users. So we will do the favor and bring a *markdown* enabled editor to you, guess what, it is also rendered in real-time!
-* If you a developer and miss the `Vim` or `Emacs` ways of writing, we offer you the choice of `Vim` and `Emacs` editing modes. Equipped with *markdown* syntax for text formatting, you will never need to touch your mouse while writing.
-* We love managing knowledge and thoughts as much as sharing them, so everybody has their own note account (`Evernote`, `Onenote`, `Google doc`, `Wiz note` etc.) and social media account (`Facebook`, `Wordpress`, blogs, etc.). But why can’t those two be one? Leanote makes this first step to bridge the private note-taking and public knowledge sharing seamlessly.
-* A complete and all-platform (sorry Windows phone) covering software suite: that includes Leanote Web & Server (this repository), [Desktop app](https://github.com/leanote/desktop-app), [iOS](https://github.com/leanote/leanote-ios), [Android](https://github.com/leanote/leanote-android). And they are all open source!
-* ......
+- `LEANOTE_APP_SECRET`：至少 32 字节的 ASCII 密钥，例如 `openssl rand -base64 48` 的输出。
+- `LEANOTE_ADMIN_EMAIL`：首次初始化管理员邮箱。
+- `LEANOTE_ADMIN_INITIAL_PASSWORD`：管理员初始密码。
 
-## 3. How to get Leanote
+其余配置项及允许值见 [`.env.example`](.env.example)。`.env` 包含凭据，不要提交到 Git。
 
-The Leanote software suite contains: Leanote Web & Server (this repository), [Desktop app](https://github.com/leanote/desktop-app), [iOS](https://github.com/leanote/leanote-ios), [Android](https://github.com/leanote/leanote-android). 
+首次启动完整 Compose 堆栈：
 
-Interested in our product and want to try it out from your web browser? Welcome to sign up on https://leanote.com. 
+```powershell
+docker compose config --quiet
+docker compose up -d --build --force-recreate
+docker compose ps
+Invoke-WebRequest http://127.0.0.1:9000/healthz
+```
 
-Feeling suspicious about how those note-taking companies treat your personal data? You can install Leanote on your server, and use Leanote App (Desktop, iOS, Android) to sync notes with your self-hosted server.
+这个项目是从当前源码重新构建本地镜像，镜像名固定为 `leanote:local`。修改程序后，在仓库根目录执行：
 
-More information about how to install Leanote please see:
+```powershell
+git pull
 
-* Leanote binary installation tutorial:
-    * [Windows](https://github.com/leanote/leanote/wiki/leanote-source-installation-on-Windows-(En))
-    * [Mac and Linux](https://github.com/leanote/leanote/wiki/leanote-binary-installation-on-Mac-and-Linux-(En))
-* Leanote source installation tutorial:
-    <!-- * [Windows](https://github.com/leanote/leanote/wiki/leanote-source-installation-on-Windows-(En)) -->
-    * [Mac and Linux](https://github.com/leanote/leanote/wiki/Leanote-source-installation-on-Mac-and-Linux-(En))
+docker compose config --quiet
+docker compose build leanote
+docker compose up -d --no-deps --force-recreate leanote
 
-## 4. Documentation
+docker compose ps
+Invoke-WebRequest http://127.0.0.1:9000/healthz
+```
 
-Please see [wiki](https://github.com/leanote/leanote/wiki) for detailed instruction on how to install Leanote on various platforms, trouble shooting and configuration explanations.
+也可以合并为：
 
+```powershell
+docker compose up -d --build --force-recreate leanote
+```
 
-## 5. How to develop Leanote
+如果基础镜像也需要更新：
 
-If you are a developer yourself and feel like to build on top of Leanote, please refer to [How-to-develop-leanote](https://github.com/leanote/leanote/wiki/How-to-develop-leanote-%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91leanote).
+```powershell
+docker compose build --pull leanote
+docker compose up -d --no-deps --force-recreate leanote
+```
 
+启动后默认通过 <http://127.0.0.1:9000> 访问。`/healthz` 在 HTTP 服务和 MongoDB 都就绪时返回 HTTP 200 及 `{"status":"ready"}`；初始化或 MongoDB 暂不可用时会返回 HTTP 503 及 `{"status":"not_ready"}`。
 
-## 6. Contributions
+### Compose 数据和重建规则
 
-Like or dislike Leanote, please leave your comments and suggestions to help us improve it.
-If you encounter any issue, we suggest you first search the issues section to see whether a solution already exists, or open up a new one otherwise.
+当前 Compose 使用 named volumes 保存数据：
 
-We’d like to acknowledge the contributions made by our [developers and contributors](https://github.com/leanote/leanote/graphs/contributors) to
-this project. Leanote won’t exist without your hard work. Your help is much appreciated.
+- `mongo-data`：MongoDB 数据库、用户和笔记数据。
+- `leanote-data`：Leanote 的私有文件、公开上传、备份和临时目录。
 
-## 7. Join us
+重新构建和重建 `leanote` 容器不会删除已有用户和笔记数据。`mongo-seed` 只在内置 MongoDB 还没有集合时恢复 `mongodb_backup/leanote_install_data`，不会在每次启动时覆盖已有数据。
 
-Please feel free to fork this repository and contribute back using [pull requests](https://github.com/leanote/leanote/pulls).
+注意：
 
-If you find any problems or have any good ideas, feature requests, please submit here [issues](https://github.com/leanote/leanote/issues).
+- 不要执行 `docker compose down -v`，否则会删除 MongoDB 和 Leanote 数据卷。
+- 修改 `.env` 后必须重新创建容器，单纯 `restart` 不会更新环境变量。
+- 修改 Go、模板或前端代码后必须重新 `build`，旧容器不会自动使用新代码。
+- 查看启动日志：
 
+  ```powershell
+  docker compose logs -f leanote
+  ```
 
-## 8. Donation
+如需停止服务，可以使用 `docker compose stop`；再次执行 `docker compose up -d` 即可启动已有容器和数据卷。
 
-If you like our product, consider supporting us via [donate us](http://leanote.org/#donate).
-We acknowledge the donations made by all the [donators](http://leanote.leanote.com/post/leanote-donation-list).
+### Compose 服务
 
-## 9. Related projects
+| 服务 | 作用 |
+| --- | --- |
+| `mongo` | MongoDB 8.0，数据写入 `mongo-data`，不向宿主机发布端口。 |
+| `mongo-seed` | 等待 MongoDB 健康后执行一次性安装数据恢复。 |
+| `leanote` | 从当前 `Dockerfile` 构建 `leanote:local`，容器内监听 9000。 |
 
-* [Leanote Desktop App](https://github.com/leanote/desktop-app), [Download](http://app.leanote.com)
-* [Leanote iOS](https://github.com/leanote/leanote-ios), [Download From App Store](https://itunes.apple.com/app/leanote/id1022302858)
-* [Leanote Android](https://github.com/leanote/leanote-android), development phase
+宿主机端口由 `LEANOTE_HTTP_PORT` 控制，默认是 `9000`；容器内部端口始终为 `9000`。如果修改了宿主机端口，访问健康端点时也要同步修改 URL。
 
-You are welcome to join us.
+## 本地开发
 
-## 10. Contacts
+### 环境要求
 
-* Email: leanote@leanote.com
-* [Leanote BBS](http://bbs.leanote.com)
-* [Leanote Google Group](https://groups.google.com/forum/#!forum/leanote)
-* QQ Groups: 326073529, 256076853, 158716820
+- Go 1.26。
+- Node.js `>=24 <25` 和 npm。
+- 本地 MongoDB，或先启动 Compose 中的 MongoDB 服务。
 
------------------------------------------------------------------------
+安装前端依赖并构建资源：
 
-# Leanote
+```powershell
+npm ci
+npm run build
+```
 
-## 1. 介绍
+使用仓库默认开发配置启动 Go 服务：
 
-Leanote, 不只是笔记!
+```powershell
+$env:GOTOOLCHAIN = "local"
+go run ./cmd/leanote -runMode dev
+```
 
-**特性**
+开发配置默认连接 `127.0.0.1:27017` 的 `leanote` 数据库，并监听 `9000`。生产模式使用 Docker 提供的 `/etc/leanote/app.conf` 和环境变量接口；不要把 `conf/app.conf` 中的开发默认密钥用于生产。
 
-* 高效笔记：Leanote 有易操作的界面, 包含一款富文本编辑器和Markdown编辑器，让您的笔记记录更轻松和高效。对高阶用户，我们还提供`Vim` 和`Emacs` 编辑模式，助推你的写作速度更上层楼。
-* 知识管理:  Leanote 灵活而强大的“笔记本-笔记-标签”系统，让它成为你个人知识管理的利器。
-* 分享: 你可以通过Leanote同好友分享知识、想法和经历, 邀请好友加入你的笔记簿，通过云端交流信息。
-* 协作: Leanote协助你与同事之间相互协作，激荡新思路，随时随地头脑风暴。
-* 博客: Leanote也可以作为你的个人博客, 把你的知识传播的更远!
+## 测试和检查
 
-**其它特性**
+常用检查命令：
 
-* 支持Markdown编辑
-* 写作模式
-* `Vim` 及 `Emacs` 编辑模式
-* 支持PDF导出
-* 支持批量操作
-* 博客自定义主题, 实现高度定制化
+```powershell
+$env:GOTOOLCHAIN = "local"
+go build ./...
+go vet ./...
+go test ./app/httpserver ./app/controllers/... ./app/service ./cmd/leanote
+npm test
+```
 
-## 2. 为什么我们要创建Leanote?
-我们都曾是`Evernote`的忠实粉丝, 一直以来`Evernote`都是我们日常知识管理的有效工具。于是我们决定重新创造一款工具，提供`Evernote`所能提供的功能，同时弥补`Evernote`的不足，比如：
-* 功能更强的文本编辑器：`Evernote`的编辑器不能满足我们的需求, 不能实现文档导航、不能贴代码(格式会乱掉, 作为程序员, 代码是我们的基本需求啊), 图片不能缩放等。
-* `Evernote` 不支持所有人都喜爱的markdown语法，于是我们为Leanote配备了一款可以实时渲染的markdown编辑器。
-* 如果你是一名开发者，觉得手指怀念`Vim` 或 `Emacs` 了，那么我们还提供给你`Vim` 和 `Emacs` 写作模式，配合*markdown*的格式编辑，写作的时候再也不用去碰鼠标了。
-* 知识积累和知识分享同样重要，因此大家都有自己的笔记账号和社交账号。但为什么这两者不能合二为一呢? Leanote 做到了将二者无缝衔接。
-* 一套完整的、全平台覆盖的软件套装，包括了web、桌面、安卓、IOS设备，而且全部开源！
-* 还有...
+需要 MongoDB 和独立 `leanote_test` 数据库的集成测试：
 
-## 3. 获取Leanote
+```powershell
+go test ./app/tests/...
+```
 
-Leanote云笔记产品包括: Leanote Web & Server(即本仓库), 桌面客户端, IOS, android. 4端全部开源! 
+构建或单元测试不能替代真实 Docker、MongoDB、浏览器和跨进程验收；需要这些证据时，应单独执行对应的运行环境检查。
 
-如果想试用我们的产品，欢迎在 https://leanote.com 上注册, Leanote团队为你提供稳定可靠的服务。
-担心服务厂商如何处理你的个人数据吗？你可以下载Leanote安装在自己的服务器上, 通过Leanote客户端连接与自建服务同步数据。
+## 生产配置和数据路径
 
-这里详细整理了Leanote二进版和Leanote开发版的安装教程, 请移步至:
+生产入口固定为：
 
-* Leanote二进制详细安装教程:
-    * [Windows](https://github.com/leanote/leanote/wiki/Leanote%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%89%88%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B---Windows)
-    * [Mac, Linux](https://github.com/leanote/leanote/wiki/leanote%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%89%88%E8%AF%A6%E7%BB%86%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B)
-* Leanote源码详细安装教程:
-    <!-- * [Windows](https://github.com/leanote/leanote/wiki/Leanote-%E6%BA%90%E7%A0%81%E7%89%88%E8%AF%A6%E7%BB%86%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B----Windows) -->
-    * [Mac, Linux](https://github.com/leanote/leanote/wiki/leanote%E5%BC%80%E5%8F%91%E7%89%88%E8%AF%A6%E7%BB%86%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B)
+```text
+/app/bin/leanote -conf /etc/leanote/app.conf -runMode prod
+```
 
-## 4. 相关文档
+生产配置通过 `MONGODB_URL` 和 `LEANOTE_APP_SECRET` 注入。应用数据路径为：
 
-更多详细的安装说明、问题处理和配置说明文档，请查看 [wiki](https://github.com/leanote/leanote/wiki)。
+```text
+/var/lib/leanote/private/files
+/var/lib/leanote/private/quarantine
+/var/lib/leanote/public/upload
+/var/lib/leanote/public/quarantine
+/var/lib/leanote/backup
+/var/lib/leanote/tmp
+```
 
-## 5. 如何对Leanote进行二次开发
+完整的生产配置、发布流程、卷迁移和支持矩阵见 [`docs/modernization/cicd-delivery.md`](docs/modernization/cicd-delivery.md)。
 
-如果您有兴趣基于Leanote二次开发，请查看 [How-to-develop-Leanote](https://github.com/leanote/leanote/wiki/How-to-develop-leanote-%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91leanote)。
+## 相关项目和文档
 
-## 6. 贡献者
+- [Leanote Desktop](https://github.com/leanote/desktop-app)
+- [Leanote iOS](https://github.com/leanote/leanote-ios)
+- [Leanote Android](https://github.com/leanote/leanote-android)
+- [项目 Wiki](https://github.com/yangphere/leanote/wiki)
+- [问题反馈](https://github.com/yangphere/leanote/issues)
 
-在此对向Leanote贡献力量的[贡献者们](https://github.com/leanote/leanote/graphs/contributors) 表示感谢。Leanote因有你们而更完美!
+## 贡献和许可证
 
-## 7. 加入我们
-
-欢迎提交[pull requests](https://github.com/leanote/leanote/pulls) 到Leanote。
-
-有任何问题或建议, 请先搜索[issue](https://github.com/leanote/leanote/issues)区是否已经有解决方法。如果没有，欢迎提交新issue。
-
-Leanote还有很多问题, 如果你喜欢它, 欢迎加入我们一起完善Leanote。
-
-## 8. 捐赠
-
-如果您喜欢我们的产品，请考虑支持我们, [捐赠Leanote](http://leanote.org/#donate)。
-
-感谢[这些捐赠者](http://leanote.leanote.com/post/leanote-donation-list), 谢谢你们的鼓励, Leanote会一直坚持!
-
-## 9. 其它相关项目
-* [Leanote Desktop App](https://github.com/leanote/desktop-app), [下载地址](http://app.leanote.com)
-* [Leanote iOS](https://github.com/leanote/leanote-ios), [从App Store下载](https://itunes.apple.com/zn/app/leanote/id1022302858?mt=8)
-* [Leanote Android](https://github.com/leanote/leanote-android), 开发阶段
-
-欢迎加入我们!
-
-## 联系&加入我们
-* Email: leanote@leanote.com
-* [Leanote 社区](http://bbs.leanote.com)
-* [QQ群](http://leanote.leanote.com/post/Leanote-groups)
-* [Leanote Google Group](https://groups.google.com/forum/#!forum/leanote)
+欢迎通过 [Pull Request](https://github.com/yangphere/leanote/pulls) 贡献代码或提交问题。项目采用 GPL v2 许可证，具体以仓库现有版权声明为准。

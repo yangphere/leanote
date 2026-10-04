@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "public/ 布局、生成物与源文件边界，决定哪些文件可删"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "构建链与 i18n 契约的 fail-closed 要求及提交前验证命令"}

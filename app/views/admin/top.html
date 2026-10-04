@@ -8,15 +8,10 @@
 	<meta name="description" content="leanote admin"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
 	<link href="/css/font-awesome-4.2.0/css/font-awesome.css" rel="stylesheet">
-	<link href="/public/admin/css/bootstrap.3.2.0.min.css" rel="stylesheet">
+	<link href="/css/bootstrap.css" rel="stylesheet">
 	<link href="/public/admin/css/admin.css" rel="stylesheet">
-	<!--[if lt IE 9]>
-		<script src="/public/admin/js/ie/html5shiv.js"></script>
-		<script src="/public/admin/js/ie/respond.min.js"></script>
-		<script src="/public/admin/js/ie/excanvas.js"></script>
-	<![endif]-->
 </head>
-<body class="lang-{{$.locale}}">
+<body class="lang-{{$.locale}} admin-shell">
 	<section class="vbox">
 		<header class="bg-dark dk header navbar navbar-fixed-top-xs">
 
@@ -27,23 +22,23 @@
 				</a>
 			</div>
 			
-			<ul class="nav navbar-nav navbar-right m-n hidden-xs nav-user">
-				<li class="hidden-xs">
+			<ul class="nav navbar-nav ms-auto m-n nav-user">
+				<li>
 					<a href="/" class="dk">
 						Home
 					</a>
 				</li>
-				<li class="hidden-xs">
+				<li>
 					<a href="/note" class="dk">
 						My Note
 					</a>
 				</li>
-				<li class="hidden-xs">
+				<li>
 					<a href="/blog" class="dk">
 						My Blog
 					</a>
 				</li>
-				<li class="hidden-xs">
+				<li>
 					<a href="/logout" class="dk">
 						Logout
 					</a>
@@ -53,7 +48,7 @@
 		<section>
 			<section class="hbox stretch">
 				<!-- .aside -->
-				<aside class="bg-light lter b-r aside-md hidden-print hidden-xs" id="nav">
+				<aside class="bg-light lter b-r aside-md hidden-print" id="nav">
 					<section class="vbox">
 						<!--
 						<header class="header bg-primary lter text-center clearfix">
@@ -75,11 +70,11 @@
 								<!-- / nav -->
 							</div>
 						</section>
-						<footer class="footer lt hidden-xs b-t b-light" style="min-height: initial;
+						<footer class="footer lt d-none d-sm-block b-t b-light" style="min-height: initial;
 padding: 10px 15px;text-align:center;">
 							© <a href="https://leanote.com" target="_blank">Leanote</a>
 							<!--
-							<a href="#nav" data-toggle="class:nav-xs" class="pull-right btn btn-sm btn-default btn-icon">
+							<a href="#nav" data-toggle="class:nav-xs" class="float-end btn btn-sm btn-secondary btn-icon">
 								<i class="fa fa-angle-left text">
 								</i>
 								<i class="fa fa-angle-right text-active">

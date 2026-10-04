@@ -1,0 +1,1 @@
+{"request":{"method":"GET","path":"/api/file/getAllAttachs","query":{"noteId":["OID_TOKEN"]},"auth":"admin","binary":true},"response":{"status":200,"headers":{"Accept-Ranges":"bytes","Content-Disposition":"attachment; filename=\"About Leanote.tar.gz\"","Content-Type":"application/x-compressed"},"body":"BINARY_BODY"}}

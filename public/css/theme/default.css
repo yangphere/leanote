@@ -1,14 +1,14 @@
 ::selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 ::-moz-selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 ::-webkit-selection {
-  background: #000000;
-  color: #ffffff;
+  background: #000;
+  color: #fff;
 }
 /*scroll*/
 /*
@@ -333,7 +333,7 @@ background-position:-1px -670px
   font-weight: 400;
   src: local('Open Sans Italic'), local('OpenSans-Italic'), url('../../fonts/open-sans2/xjAJXh38I15wypJXxuGMBobN6UDyHWBl620a-IRfuBk.woff') format('woff');
 }
-.close:focus {
+.btn-close:focus {
   outline: none;
 }
 .invisible {
@@ -382,21 +382,21 @@ background-position:-1px -670px
 .dropdown-submenu:hover > a:after {
   border-left-color: #fff;
 }
-.dropdown-submenu.pull-left {
+.dropdown-submenu.float-start {
   float: none;
 }
-.dropdown-submenu.pull-left > .dropdown-menu {
+.dropdown-submenu.float-start > .dropdown-menu {
   left: -100%;
   margin-left: 10px;
   -webkit-border-radius: 6px 0 6px 6px;
   -moz-border-radius: 6px 0 6px 6px;
   border-radius: 6px 0 6px 6px;
 }
-.open > .dropdown-menu,
+.dropdown-menu.show,
 .dropdown-submenu:hover > .dropdown-menu {
   visibility: visible;
-  -webkit-animation: pulldown .2s;
-  animation: pulldown .2s;
+  -webkit-animation: pulldown 0.2s;
+  animation: pulldown 0.2s;
   /*
   transform: scale(1, 1); 
   -webkit-transform: scale(1, 1);
@@ -483,7 +483,7 @@ background-position:-1px -670px
   line-height: 30px;
 }
 .dropdown-menu li > a {
-  color: #000000;
+  color: #000;
   display: block;
   padding-right: 20px;
 }
@@ -551,8 +551,6 @@ a.raw:hover {
   font-style: normal;
 }
 #logo,
-.mce-i-mind,
-.mce-i-ace-pre,
 .lea-icon {
   font-family: 'leanote' !important;
   speak: none;
@@ -565,12 +563,6 @@ a.raw:hover {
 }
 .icon-markdown:before {
   content: "\e604";
-}
-.mce-i-mind:before {
-  content: "\e602";
-}
-.mce-i-ace-pre:before {
-  content: "\e603";
 }
 #logo:before {
   content: "\e901";
@@ -622,17 +614,17 @@ a.raw:hover {
   margin-top: 10px;
 }
 .new-note {
-  background-color: #000000;
+  background-color: #000;
   border-radius: 3px;
   padding: 3px 5px;
   border: 1px solid #080303;
 }
 .new-note,
 .new-note a {
-  color: #ffffff;
+  color: #fff;
 }
 .new-note:hover {
-  background: #3d3b3b;
+  background: #3D3B3B;
   border-color: transparent;
 }
 .new-note:hover,
@@ -684,18 +676,18 @@ a.raw:hover {
   left: 30px !important;
 }
 a {
-  color: #000000;
+  color: #000;
   cursor: pointer;
 }
 a:hover {
   text-decoration: none !important;
-  color: #000000;
+  color: #000;
 }
 #header {
   height: 60px;
   background-color: #25313e;
   border-bottom: 1px solid #25313e;
-  color: #ffffff;
+  color: #fff;
   /* for app */
   webkit-user-select: none;
   /* 还不知 */
@@ -703,11 +695,11 @@ a:hover {
   /* -webkit-app-region: no-drag; */
 }
 #header a {
-  color: #cccccc;
+  color: #ccc;
 }
 #header li,
 #header li a {
-  color: #000000;
+  color: #000;
 }
 #logo {
   line-height: 50px;
@@ -754,10 +746,10 @@ a:hover {
 }
 #searchNote input {
   background-size: 18px 13px;
-  border-color: #ebeff2;
+  border-color: #EBEFF2;
   border: none;
-  color: #cccccc;
-  background-color: #000000;
+  color: #ccc;
+  background-color: #000;
   padding-left: 14px;
   border-radius: 5px;
   height: 30px;
@@ -790,15 +782,15 @@ a:hover {
   color: #999999;
 }
 .dropdown-menu li > a {
-  color: #000000;
+  color: #000;
 }
 .dropdown-menu li:hover,
 .dropdown-menu li:focus {
-  background-color: #ebeff2;
+  background-color: #EBEFF2;
 }
 .dropdown-menu li > a:hover,
 .dropdown-menu li > a:focus {
-  background-color: #ebeff2;
+  background-color: #EBEFF2;
 }
 #loading {
   display: inline-block;
@@ -893,9 +885,6 @@ a:hover {
 .mce-match-marker.mce-match-marker-selected {
   background: yellow;
 }
-#mce-modal-block {
-  display: none;
-}
 #editor,
 #mdEditor {
   position: absolute;
@@ -940,7 +929,7 @@ a:hover {
   opacity: 0.8;
 }
 .leanoteNav.unfolder h1 {
-  border-bottom: 1px dashed #ebeff2;
+  border-bottom: 1px dashed #EBEFF2;
 }
 .leanoteNav.unfolder span {
   display: inline;
@@ -1002,51 +991,56 @@ a:hover {
 /**
  * tinymce editor
  */
-/* 包裹iframe */
-#editor .mce-ifr {
+/* 包裹编辑区 iframe */
+#editor .tox-edit-area__iframe {
   border: none;
   overflow: hidden !important;
   /*不知道哪里设置了auto*/
 }
 /* 最顶层 */
-#editor .mce-tinymce {
+#editor .tox-tinymce {
   border: none;
 }
 /* 编辑器工具 需要important, 因为mce还要有js加载css, 肯定在此之后 */
 /*加高, 之前显得拥挤*/
-.mce-btn-small button {
+.tox .tox-tbtn {
   padding: 5px 5px !important;
   line-height: 20px !important;
 }
-.mce-foot .mce-btn {
+.tox .tox-dialog__footer .tox-button {
   border-radius: 3px;
 }
-.mce-menubtn.mce-btn-small span {
+.tox .tox-mbtn__select-label,
+.tox .tox-tbtn__select-label {
   line-height: 20px !important;
 }
-.mce-btn span {
+.tox .tox-tbtn,
+.tox .tox-mbtn,
+.tox .tox-collection__item-label {
   font-family: 'Open Sans', Helvetica, Tahoma, Arial, Hiragino Sans GB, "Microsoft YaHei", "微软雅黑", "Micro Hei", SimSun, "宋体", Heiti, "黑体", sans-serif !important;
 }
-.mce-primary button,
-.mce-primary button i {
+.tox .tox-button {
   text-shadow: none;
 }
-.mce-primary {
+.tox .tox-button:not(.tox-button--secondary) {
   background-color: #47a447 !important;
   border: none !important;
 }
-.mce-menu-item:hover,
-.mce-menu-item.mce-selected,
-.mce-menu-item:focus {
-  background-color: #ebeff2;
+.tox .tox-collection__item:hover,
+.tox .tox-collection__item:focus,
+.tox .tox-collection__item--active {
+  background-color: #EBEFF2;
 }
-.mce-menu-item:hover span,
-.mce-menu-item.mce-selected span,
-.mce-menu-item:focus span {
+.tox .tox-collection__item:hover .tox-collection__item-label,
+.tox .tox-collection__item:focus .tox-collection__item-label,
+.tox .tox-collection__item--active .tox-collection__item-label,
+.tox .tox-collection__item:hover .tox-collection__item-accessory,
+.tox .tox-collection__item:focus .tox-collection__item-accessory,
+.tox .tox-collection__item--active .tox-collection__item-accessory {
   color: #000 !important;
 }
-.mce-menu-item-normal.mce-active {
-  background-color: #ebeff2;
+.tox .tox-collection__item--enabled {
+  background-color: #EBEFF2;
 }
 .tool-split {
   display: inline-block;
@@ -1063,21 +1057,9 @@ a:hover {
 #moreBtn span {
   display: none;
 }
-.mce-colorbtn-trans div {
-  line-height: 11px;
-  text-align: center;
-}
-.mce-btn-small .mce-caret {
-  margin-top: 8px;
-}
-.mce-listbox.mce-btn-small .mce-caret {
-  margin-top: -2px;
-}
-.mce-btn i {
+.tox .tox-icon,
+.tox .tox-tbtn svg {
   text-shadow: none;
-}
-.mce-colorbutton.mce-btn-small .mce-preview {
-  width: 15px;
 }
 #editorContent {
   border: 1px solid #ccc;
@@ -1104,7 +1086,7 @@ a:hover {
 #editorContent * {
   font-family: inherit;
 }
-.mce-tinymce-inline {
+.tox.tox-tinymce-inline {
   border-width: 0 !important;
 }
 #editorContent a {
@@ -1144,7 +1126,8 @@ a:hover {
   margin: 0;
   width: 80px;
 }
-.mce-text {
+.tox .tox-tbtn__select-label,
+.tox .tox-mbtn__select-label {
   vertical-align: middle;
 }
 /**
@@ -1453,7 +1436,7 @@ textarea#wmd-input {
   padding-top: 5px;
 }
 #wmd-input.ace_editor {
-  color: #000000;
+  color: #000;
 }
 #wmd-input.ace-tm {
   background-color: #ffffff;
@@ -1471,7 +1454,7 @@ textarea#wmd-input {
   background: none;
 }
 #wmd-input.ace-tm .ace_markup.ace_heading {
-  color: #000000;
+  color: #000;
   font-weight: bold;
 }
 #wmd-input.ace-tm .ace_markup.ace_heading.ace_1,
@@ -1482,7 +1465,7 @@ textarea#wmd-input {
   color: #1d3e81;
 }
 #wmd-input.ace-tm .ace_markup.ace_list {
-  color: #000000;
+  color: #000;
 }
 #wmd-input.ace-tm .ace_constant.ace_language {
   color: #1d3e81;
@@ -1515,15 +1498,15 @@ textarea#wmd-input {
   background: inherit;
 }
 #wmd-input.ace-tm .ace_strong {
-  color: #000000;
+  color: #000;
   font-weight: bold;
 }
 #wmd-input.ace-tm .ace_emphasis {
-  color: #000000;
+  color: #000;
   font-style: italic;
 }
 #wmd-input.ace-tm .ace_blockquote {
-  color: #000000;
+  color: #000;
 }
 #wmd-input.ace-tm .ace_code {
   color: #1a2026;
@@ -1532,7 +1515,7 @@ textarea#wmd-input {
   color: #1a2026;
 }
 #wmd-input.ace-tm .ace_link {
-  color: #000000;
+  color: #000;
   background-color: transparent;
   text-decoration: underline;
 }
@@ -1581,7 +1564,7 @@ textarea#wmd-input {
 }
 #addNotebookPlus {
   padding-right: 10px;
-  color: #adbece;
+  color: #ADBECE;
 }
 #addNotebookPlus .fa {
   font-size: 16px;
@@ -1593,7 +1576,7 @@ textarea#wmd-input {
   padding-left: 3px;
   box-shadow: none;
   background: none;
-  color: #ffffff;
+  color: #fff;
 }
 #notebookList input:focus,
 #notebookListForSearch input:focus {
@@ -1613,7 +1596,7 @@ textarea#wmd-input {
 }
 #notebookMin div.minContainer i {
   font-size: 20px;
-  color: #ffffff;
+  color: #fff;
 }
 #notebookMin div.minContainer:hover i {
   color: #0fb264;
@@ -1669,7 +1652,7 @@ textarea#wmd-input {
 .folderHeader span {
   display: inline-block;
   line-height: 35px;
-  color: #ffffff;
+  color: #fff;
   font-size: 16px;
 }
 .folderHeader .fa-left,
@@ -1680,7 +1663,7 @@ textarea#wmd-input {
   width: 35px;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   text-align: center;
-  color: #ffffff;
+  color: #fff;
 }
 .friend-header {
   position: relative;
@@ -1710,7 +1693,7 @@ textarea#wmd-input {
 }
 .each-user div span {
   line-height: 35px;
-  color: #ffffff;
+  color: #fff;
   padding-left: 3px;
   font-size: 14px;
   display: block;
@@ -1815,9 +1798,9 @@ textarea#wmd-input {
   right: 3px;
   top: 7px;
   font-weight: normal;
-  background-color: #ffffff;
-  color: #000000;
-  border: 1px solid #ebeff2;
+  background-color: #fff;
+  color: #000;
+  border: 1px solid #EBEFF2;
 }
 /**
  * 笔记列表
@@ -1847,11 +1830,11 @@ textarea#wmd-input {
   padding-left: 5px;
   overflow-y: hidden;
   overflow-x: auto;
-  background-color: #ffffff;
+  background-color: #fff;
 }
 #notesAndSort {
-  background-color: #eeeeee;
-  border-bottom: 1px solid #ebeff2;
+  background-color: #eee;
+  border-bottom: 1px solid #EBEFF2;
   height: 36px;
 }
 #sortType {
@@ -1873,7 +1856,7 @@ textarea#wmd-input {
   background: #fff;
   text-align: center;
   padding-top: 60px;
-  opacity: .3;
+  opacity: 0.3;
   z-index: 500;
   display: none;
 }
@@ -1893,7 +1876,7 @@ textarea#wmd-input {
   height: 110px;
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid #ebeff2;
+  border: 1px solid #EBEFF2;
   border-radius: 3px;
   margin-top: 5px;
   background-color: #fff;
@@ -1969,8 +1952,8 @@ textarea#wmd-input {
   line-height: 20px;
   overflow: hidden;
   margin-bottom: 0px;
-  color: #000000;
-  border-bottom: dashed 1px #ebeff2;
+  color: #000;
+  border-bottom: dashed 1px #EBEFF2;
 }
 #noteItemList .item-desc {
   position: absolute;
@@ -2209,7 +2192,7 @@ textarea#wmd-input {
   right: 0;
   left: 200px;
 }
-.history-modal .modal-dialog .modal-content .modal-body .history-content-wrap .close {
+.history-modal .modal-dialog .modal-content .modal-body .history-content-wrap .btn-close {
   padding: 10px 15px;
 }
 .history-modal .modal-dialog .modal-content .modal-body .history-content-wrap .back {
@@ -2339,7 +2322,7 @@ textarea#wmd-input {
   padding: 0px 3px;
   width: 100%;
   border: none;
-  background-color: #ffffff;
+  background-color: #fff;
 }
 #noteTitle:focus {
   outline: none !important;
@@ -2369,7 +2352,7 @@ textarea#wmd-input {
 #notebookNavForNewNote li,
 #notebookNavForNewSharedNote > li {
   padding-left: 0;
-  border-bottom: 1px solid #ebeff2;
+  border-bottom: 1px solid #EBEFF2;
 }
 #notebookNavForNewNote > li:hover,
 #notebookNavForNewNote > li:focus,
@@ -2382,13 +2365,13 @@ textarea#wmd-input {
   width: 95px;
   overflow: hidden;
   white-space: nowrap;
-  border-right: 1px dashed #ebeff2;
+  border-right: 1px dashed #EBEFF2;
 }
 .new-note-left:hover {
-  background-color: #ebeff2;
+  background-color: #EBEFF2;
 }
 .new-note-right:hover {
-  background-color: #ebeff2;
+  background-color: #EBEFF2;
 }
 #historyList table {
   width: 100%;
@@ -2419,7 +2402,7 @@ textarea#wmd-input {
 #editorMask a {
   display: inline-block;
   border-radius: 3px;
-  border: 1px solid #ebeff2;
+  border: 1px solid #EBEFF2;
   padding: 10px;
 }
 #editorMask a:hover {
@@ -2438,7 +2421,7 @@ textarea#wmd-input {
   padding-top: 60px;
   background: #fff;
   text-align: center;
-  opacity: .3;
+  opacity: 0.3;
 }
 .info-toolbar {
   position: absolute;
@@ -2546,25 +2529,30 @@ textarea#wmd-input {
   display: none;
   padding: 0;
   border: none;
-  background-color: #ffffff;
+  background-color: #fff;
 }
 #addTagInput:focus {
   outline: none;
 }
 .label-default {
-  background-color: #464C5E;
+  background: transparent;
+  color: #475569;
 }
 .label-red {
-  background-color: #d9534f;
+  background: transparent;
+  color: #dc2626;
 }
 .label-yellow {
-  background-color: #f0ad4e;
+  background: transparent;
+  color: #d97706;
 }
 .label-blue {
-  background-color: #428bca;
+  background: transparent;
+  color: #2563eb;
 }
 .label-green {
-  background-color: #5cb85c;
+  background: transparent;
+  color: #16a34a;
 }
 .label {
   border-radius: 0;
@@ -2705,10 +2693,9 @@ h3 {
 .slimScrollDiv,
 #editorContent,
 #editorContent_ifr,
-.mce-edit-area,
-.mce-container-body,
-.mce-tinymce,
-#editor .mce-ifr,
+.tox-edit-area,
+.tox-tinymce,
+#editor .tox-edit-area__iframe,
 .wmd-input,
 #noteReadContent,
 #attachList,
@@ -2738,7 +2725,8 @@ h3 {
   box-shadow: none;
 }
 .label-default {
-  background-color: #191D2B;
+  background: transparent;
+  color: #475569;
 }
 #myShareNotebooks .folderBody {
   background: none;
@@ -2858,7 +2846,7 @@ h3 {
   #note #editor {
     visibility: hidden;
   }
-  #note .mce-tinymce {
+  #note .tox-tinymce {
     visibility: hidden !important;
   }
   #note.editor-show {
@@ -2868,7 +2856,7 @@ h3 {
   #note.editor-show #editor {
     visibility: visible;
   }
-  #note.editor-show .mce-tinymce {
+  #note.editor-show .tox-tinymce {
     visibility: visible !important;
   }
   #leftSwitcher {
@@ -2974,10 +2962,9 @@ h3 {
   #leftNotebook,
   .slimScrollDiv,
   #editorContent_ifr,
-  .mce-edit-area,
-  .mce-container-body,
-  .mce-tinymce,
-  #editor .mce-ifr,
+  .tox-edit-area,
+  .tox-tinymce,
+  #editor .tox-edit-area__iframe,
   .wmd-input,
   #noteReadContent,
   #attachList,
@@ -3052,10 +3039,9 @@ h3 {
   #leftNotebook,
   .slimScrollDiv,
   #editorContent_ifr,
-  .mce-edit-area,
-  .mce-container-body,
-  .mce-tinymce,
-  #editor .mce-ifr,
+  .tox-edit-area,
+  .tox-tinymce,
+  #editor .tox-edit-area__iframe,
   .wmd-input,
   #noteReadContent,
   #attachList,
@@ -3107,10 +3093,9 @@ h3 {
   #leftNotebook,
   .slimScrollDiv,
   #editorContent_ifr,
-  .mce-edit-area,
-  .mce-container-body,
-  .mce-tinymce,
-  #editor .mce-ifr,
+  .tox-edit-area,
+  .tox-tinymce,
+  #editor .tox-edit-area__iframe,
   .wmd-input,
   #noteReadContent,
   #attachList,
@@ -3321,3 +3306,1110 @@ h3 {
     border: none;
   }
 }
+
+/* ==========================================================================
+   Modern Note Workbench Polish (主页面现代化视觉重构)
+   ========================================================================== */
+
+/* 全局字体平滑 */
+.leanote-plugin body,
+.leanote-plugin #page {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 1. 顶栏 (Header) 现代化 */
+.leanote-plugin #header {
+  height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 16px !important;
+  z-index: 100 !important;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12) !important;
+}
+
+.leanote-plugin #mainContainer {
+  top: 48px !important;
+}
+
+/* Logo 与折叠按钮 */
+.leanote-plugin #logo {
+  height: 48px !important;
+  line-height: 48px !important;
+  margin-right: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.leanote-plugin #switcher {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-right: 12px !important;
+}
+
+.leanote-plugin #switcher i,
+.leanote-plugin #switcher span {
+  width: 28px !important;
+  height: 28px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  transition: all 0.15s ease !important;
+}
+
+.leanote-plugin #switcher #leftSwitcher {
+  display: inline-flex !important;
+}
+
+.leanote-plugin #switcher #leftSwitcher2 {
+  display: none !important;
+}
+
+.leanote-plugin.hide-left-nav #switcher #leftSwitcher {
+  display: none !important;
+}
+
+.leanote-plugin.hide-left-nav #switcher #leftSwitcher2 {
+  display: inline-flex !important;
+}
+
+.leanote-plugin #switcher i:hover,
+.leanote-plugin #switcher span:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 搜索框 */
+.leanote-plugin #searchWrap {
+  margin-right: 14px !important;
+}
+
+.leanote-plugin #searchNote {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.leanote-plugin #searchNoteInput {
+  height: 30px !important;
+  width: 170px !important;
+  border-radius: 15px !important;
+  font-size: 12.5px !important;
+  padding: 4px 12px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.leanote-plugin #searchNoteInput:focus {
+  width: 210px !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
+  outline: none !important;
+}
+
+/* 新建笔记按钮群组 */
+.leanote-plugin #newNoteWrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+}
+
+.leanote-plugin #newMyNote {
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.leanote-plugin .new-note {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 28px !important;
+  padding: 0 12px !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.leanote-plugin #newNoteBtn {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-radius: 6px 0 0 6px !important;
+  border: 1px solid #2563eb !important;
+}
+
+.leanote-plugin #newNoteBtn:hover {
+  background: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+}
+
+.leanote-plugin #newNoteMarkdownBtn {
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+  border-radius: 0 6px 6px 0 !important;
+  border: 1px solid #3b82f6 !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+.leanote-plugin #newNoteMarkdownBtn:hover {
+  background: #2563eb !important;
+}
+
+.leanote-plugin .new-split,
+.leanote-plugin .for-split {
+  display: none !important;
+}
+
+.leanote-plugin #curNotebookForNewNote {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-left: 10px !important;
+  padding: 3px 10px !important;
+  border-radius: 12px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+
+.leanote-plugin #curNotebookForNewNote:not(:empty)::before {
+  content: "\f07b";
+  font-family: FontAwesome;
+  margin-right: 5px;
+  color: #3b82f6;
+  font-size: 11px;
+}
+
+/* 右侧导航操作项：按视觉顺序排列：[探索] -> [我的博客] -> [写作模式] -> [账号] */
+.leanote-plugin .top-nav {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 48px !important;
+  line-height: 48px !important;
+  margin-left: 8px !important;
+}
+
+.leanote-plugin .lea-blog {
+  order: 50 !important;
+  margin-left: auto !important; /* 将右侧导航组推到顶栏最右侧 */
+}
+
+.leanote-plugin #myBlog {
+  order: 51 !important;
+}
+
+.leanote-plugin #toggleEditorMode {
+  order: 52 !important;
+}
+
+.leanote-plugin #demoRegister {
+  order: 53 !important;
+}
+
+.leanote-plugin .top-nav a {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease !important;
+}
+
+.leanote-plugin .top-nav a:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 账号入口：排在写作模式之后，位于最右侧 */
+.leanote-plugin #myProfile {
+  order: 60 !important;
+  margin-left: 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.leanote-plugin .profile-img {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 4px 10px !important;
+  border-radius: 20px !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.leanote-plugin .profile-img:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 消除 Bootstrap 5 原生多出来的实心黑三角，解决双箭头问题 */
+.leanote-plugin .profile-img::after {
+  display: none !important;
+}
+
+.leanote-plugin #myAvatar {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  margin: 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+}
+
+.leanote-plugin .profile-img .username {
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  max-width: 90px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.leanote-plugin .profile-img i.fa-angle-down {
+  font-size: 12px !important;
+  margin-left: 2px !important;
+  opacity: 0.8 !important;
+}
+
+/* 用户下拉菜单：现代卡片式微拟态浮层，消除下划线与粗大死板边框 */
+.leanote-plugin #myProfile .dropdown-menu {
+  min-width: 175px !important;
+  padding: 6px !important;
+  border-radius: 10px !important;
+  margin-top: 6px !important;
+}
+
+.leanote-plugin #myProfile .dropdown-menu::before,
+.leanote-plugin #myProfile .dropdown-menu::after {
+  display: none !important;
+}
+
+.leanote-plugin #myProfile .dropdown-menu li {
+  list-style: none !important;
+  margin: 1px 0 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+.leanote-plugin #myProfile .dropdown-menu li a,
+.leanote-plugin #myProfile .dropdown-menu li[onclick] {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  line-height: 1.4 !important;
+  height: auto !important;
+  border: none !important;
+}
+
+.leanote-plugin #myProfile .dropdown-menu li a:hover,
+.leanote-plugin #myProfile .dropdown-menu li[onclick]:hover {
+  text-decoration: none !important;
+}
+
+.leanote-plugin #myProfile .dropdown-menu li i.fa {
+  width: 16px !important;
+  font-size: 13.5px !important;
+  text-align: center !important;
+}
+
+.leanote-plugin #myProfile .dropdown-menu .dropdown-divider {
+  height: 1px !important;
+  margin: 4px 4px !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* 彻底隐藏被叠在下方的缩小版侧边栏，防止图标透出重叠 */
+.leanote-plugin #notebookMin {
+  display: none !important;
+}
+
+/* 2. 第一栏：笔记本与标签树 (#leftNotebook) */
+.leanote-plugin .folderHeader {
+  height: 38px !important;
+  line-height: 38px !important;
+  padding: 0 12px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.leanote-plugin .folderHeader i.fa-left {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 14px !important;
+  line-height: 20px !important;
+  margin-right: 8px !important;
+  border-right: none !important;
+  float: none !important;
+}
+
+.leanote-plugin .folderHeader span {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 38px !important;
+  float: none !important;
+}
+
+.leanote-plugin #addNotebookPlus {
+  margin-left: auto !important;
+  float: none !important;
+  margin-top: 0 !important;
+  width: 24px !important;
+  height: 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.leanote-plugin #addNotebookPlus:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #3b82f6 !important;
+}
+
+.leanote-plugin #searchNotebookForList {
+  margin: 6px 12px 10px !important;
+  width: calc(100% - 24px) !important;
+  height: 32px !important;
+  border-radius: 6px !important;
+  padding: 4px 10px !important;
+  font-size: 13px !important;
+  box-shadow: none !important;
+}
+
+.leanote-plugin #searchNotebookForList:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
+}
+
+/* 笔记本列表 zTree 节点：文字左对齐，数字右对齐 */
+.leanote-plugin .ztree {
+  padding: 4px 8px !important;
+}
+
+.leanote-plugin .ztree li {
+  line-height: 34px !important;
+  margin: 2px 0 !important;
+}
+
+.leanote-plugin .ztree li a {
+  height: 34px !important;
+  line-height: 34px !important;
+  padding: 0 10px !important;
+  font-size: 14px !important;
+  border-radius: 6px !important;
+  transition: all 0.15s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+}
+
+.leanote-plugin .ztree li a:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  text-decoration: none !important;
+}
+
+/* 选中的笔记本节点（柔和蓝替代老旧样式） */
+.leanote-plugin .ztree li a.curSelectedNode {
+  background: rgba(37, 99, 235, 0.25) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  border: none !important;
+  box-shadow: inset 3px 0 0 #3b82f6 !important;
+}
+
+/* 树节点左侧折叠箭头与图标 */
+.leanote-plugin .ztree li a span.button.switch {
+  order: 1 !important;
+  margin-right: 2px !important;
+  flex-shrink: 0 !important;
+}
+
+.leanote-plugin .ztree li a span.button.ico_open,
+.leanote-plugin .ztree li a span.button.ico_close,
+.leanote-plugin .ztree li a span.button.ico_docu {
+  order: 2 !important;
+  margin-right: 6px !important;
+  flex-shrink: 0 !important;
+}
+
+/* 笔记本名称：文字严格在左侧（order: 3），margin-right: auto 将其后元素推至右侧 */
+.leanote-plugin .ztree li a span.node_name {
+  order: 3 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  text-align: left !important;
+  margin-right: auto !important;
+  margin-left: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+/* 笔记本数字徽标：数字严格在右侧（order: 4） */
+.leanote-plugin .ztree li a .notebook-number-notes {
+  order: 4 !important;
+  margin-left: 8px !important;
+  margin-right: 0 !important;
+  position: static !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 20px !important;
+  height: 18px !important;
+  line-height: 18px !important;
+  padding: 0 6px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  border-radius: 9px !important;
+  text-align: center !important;
+}
+
+.leanote-plugin .ztree li a.curSelectedNode .notebook-number-notes {
+  background: rgba(37, 99, 235, 0.4) !important;
+  color: #ffffff !important;
+}
+
+/* 设置小齿轮：排在最右侧（order: 5） */
+.leanote-plugin .ztree li a .notebook-setting {
+  order: 5 !important;
+  margin-left: 6px !important;
+  flex-shrink: 0 !important;
+  position: static !important;
+  font-size: 12px !important;
+}
+
+/* 左侧标签列表 (#tagNav) 彻底去背景色，字体呈现设置颜色 */
+.leanote-plugin #tagNav {
+  padding: 4px 8px !important;
+}
+
+.leanote-plugin #tagNav li {
+  line-height: 32px !important;
+  margin: 2px 0 !important;
+  list-style: none !important;
+}
+
+.leanote-plugin #tagNav li a {
+  display: flex !important;
+  align-items: center !important;
+  padding: 3px 10px !important;
+  border-radius: 6px !important;
+  text-decoration: none !important;
+  background: transparent !important;
+  transition: all 0.15s ease !important;
+  font-size: 13.5px !important;
+}
+
+.leanote-plugin #tagNav li a:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  text-decoration: none !important;
+}
+
+.leanote-plugin #tagNav li a span.label {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  line-height: 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.leanote-plugin #tagNav li a span.label::before {
+  content: "#";
+  margin-right: 4px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.leanote-plugin #tagNav li a .tag-delete {
+  margin-left: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 16px !important;
+  height: 16px !important;
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+  cursor: pointer !important;
+  opacity: 0;
+  transition: all 0.15s ease !important;
+}
+
+.leanote-plugin #tagNav li a:hover .tag-delete {
+  opacity: 0.8 !important;
+}
+
+.leanote-plugin #tagNav li a .tag-delete:hover {
+  opacity: 1 !important;
+  color: #ef4444 !important;
+}
+
+.leanote-plugin #shareNotebooks li a {
+  font-size: 13.5px !important;
+}
+
+/* 分隔线拖拽条 */
+.leanote-plugin .noteSplit {
+  width: 4px !important;
+  background: transparent !important;
+  transition: background 0.15s ease !important;
+}
+
+.leanote-plugin .noteSplit:hover {
+  background: #3b82f6 !important;
+}
+
+/* 3. 第二栏：笔记列表 (#noteList) */
+.leanote-plugin #notesAndSort {
+  height: 38px !important;
+  line-height: 38px !important;
+  padding: 0 14px !important;
+}
+
+.leanote-plugin #curNotebookForListNote {
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+}
+
+.leanote-plugin #sortType a {
+  width: 26px !important;
+  height: 26px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 4px !important;
+  transition: all 0.15s ease !important;
+}
+
+/* 笔记卡片项 (#noteItemList li.item) */
+.leanote-plugin #noteItemList .item {
+  height: auto !important;
+  min-height: 68px !important;
+  padding: 11px 14px !important;
+  border-left: 3px solid transparent !important;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 选中笔记：彻底消除刺眼绿框！使用优雅蓝卡片 */
+.leanote-plugin #noteItemList .item.item-active,
+.leanote-plugin #noteItemList .item.item-active:hover {
+  background: rgba(37, 99, 235, 0.12) !important;
+  border-left: 3px solid #2563eb !important;
+}
+
+.leanote-plugin #noteItemList .item-title {
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  margin: 0 0 4px 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.leanote-plugin #noteItemList .item-info {
+  font-size: 11.5px !important;
+  margin: 0 0 3px 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  opacity: 0.75 !important;
+}
+
+.leanote-plugin #noteItemList .desc {
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  opacity: 0.8 !important;
+}
+
+/* 缩略图与破图优雅容错 */
+.leanote-plugin #noteItemList .item-thumb {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  right: 12px !important;
+  top: 10px !important;
+}
+
+.leanote-plugin #noteItemList .item-thumb img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+  position: relative !important;
+}
+
+/* 彻底隐匿原生破裂图片小图标并呈现优雅占位符 */
+.leanote-plugin #noteItemList .item-thumb img::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.05);
+  z-index: 1;
+}
+
+.leanote-plugin #noteItemList .item-thumb img::after {
+  content: "\f1c5";
+  font-family: FontAwesome;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  font-size: 18px;
+  color: #94a3b8;
+  background-color: rgba(0, 0, 0, 0.05);
+  z-index: 2;
+}
+
+/* 4. 第三栏：右侧编辑器与阅读区 (#note) 精确高度体系与防遮挡重构 */
+.leanote-plugin #noteTop {
+  height: 82px !important;
+  position: relative !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+/* 工具栏：固定 38px，包含左侧标签与右侧按钮 */
+.leanote-plugin #tool {
+  height: 38px !important;
+  line-height: 38px !important;
+  padding: 0 16px !important;
+  margin-left: 0 !important;
+  position: relative !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 标签容器定位：允许下拉菜单正常溢出展示 */
+.leanote-plugin #tag {
+  position: absolute !important;
+  left: 16px !important;
+  right: 280px !important;
+  top: 0 !important;
+  height: 38px !important;
+  line-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  overflow: visible !important;
+}
+
+/* 全局标签去背景色与文字着色规范 */
+.leanote-plugin .label,
+.label {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+.leanote-plugin .label-default,
+.label-default {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #475569 !important;
+  border-color: rgba(71, 85, 105, 0.3) !important;
+}
+
+.leanote-plugin .label-info,
+.label-info {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #0284c7 !important;
+  border-color: rgba(2, 132, 199, 0.3) !important;
+}
+
+.leanote-plugin .label-red,
+.label-red {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #dc2626 !important;
+  border-color: rgba(220, 38, 38, 0.35) !important;
+}
+
+.leanote-plugin .label-blue,
+.label-blue {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #2563eb !important;
+  border-color: rgba(37, 99, 235, 0.35) !important;
+}
+
+.leanote-plugin #tags .label-yellow,
+.leanote-plugin .label-yellow,
+.label-yellow {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #d97706 !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+}
+
+.leanote-plugin .label-green,
+.label-green {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #16a34a !important;
+  border-color: rgba(22, 163, 74, 0.35) !important;
+}
+
+/* 已添加标签的现代药丸样式（去背景色，字体与边框呈现设置颜色） */
+.leanote-plugin #tags {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.leanote-plugin #tags .label,
+.leanote-plugin #tags span[data-tag] {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 2px 8px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  border-radius: 12px !important;
+  line-height: 18px !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #475569;
+  border: 1px solid rgba(71, 85, 105, 0.25);
+  vertical-align: middle !important;
+  margin: 0 !important;
+  transition: all 0.15s ease !important;
+}
+
+.leanote-plugin #tags span[data-tag].label-default,
+.leanote-plugin #tags .label.label-default {
+  color: #475569 !important;
+  border-color: rgba(71, 85, 105, 0.25) !important;
+}
+
+.leanote-plugin #tags span[data-tag].label-info,
+.leanote-plugin #tags .label.label-info {
+  color: #0284c7 !important;
+  border-color: rgba(2, 132, 199, 0.3) !important;
+}
+
+.leanote-plugin #tags .label:hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+
+.leanote-plugin #tags .label i {
+  opacity: 0.6 !important;
+  margin-left: 5px !important;
+  cursor: pointer !important;
+  font-size: 11px !important;
+  font-style: normal !important;
+  color: inherit !important;
+}
+
+.leanote-plugin #tags .label i:hover {
+  opacity: 1 !important;
+  color: #ef4444 !important;
+}
+
+.leanote-plugin #tags span[data-tag].label-red,
+.leanote-plugin #tags .label.label-red,
+.leanote-plugin #tags .label-red {
+  background: transparent !important;
+  color: #dc2626 !important;
+  border-color: rgba(220, 38, 38, 0.35) !important;
+}
+
+.leanote-plugin #tags span[data-tag].label-blue,
+.leanote-plugin #tags .label.label-blue,
+.leanote-plugin #tags .label-blue {
+  background: transparent !important;
+  color: #2563eb !important;
+  border-color: rgba(37, 99, 235, 0.35) !important;
+}
+
+.leanote-plugin #tags span[data-tag].label-yellow,
+.leanote-plugin #tags .label.label-yellow,
+.leanote-plugin #tags .label-yellow {
+  background: transparent !important;
+  color: #d97706 !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+}
+
+.leanote-plugin #tags span[data-tag].label-green,
+.leanote-plugin #tags .label.label-green,
+.leanote-plugin #tags .label-green {
+  background: transparent !important;
+  color: #16a34a !important;
+  border-color: rgba(22, 163, 74, 0.35) !important;
+}
+
+/* 标签颜色选择下拉菜单 (#tagColor) 美化：去背景色，文字与指示点呈现对应颜色，支持绝对定位弹出 */
+.leanote-plugin #tagColor {
+  display: none;
+  position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  margin-top: 6px !important;
+  z-index: 1050 !important;
+  min-width: 110px !important;
+  padding: 6px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1) !important;
+  list-style: none !important;
+}
+
+/* 激活状态展示：同时兼容 .open 与 Bootstrap 5 的 .show */
+.leanote-plugin #tagDropdown.open #tagColor,
+.leanote-plugin #tagDropdown.show #tagColor,
+.leanote-plugin #tagDropdown .dropdown-menu.show,
+.leanote-plugin #tagColor.show {
+  display: block !important;
+}
+
+.leanote-plugin #tagColor li {
+  padding: 6px 10px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  list-style: none !important;
+  transition: all 0.15s ease !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.leanote-plugin #tagColor li:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+.leanote-plugin #tagColor li .label {
+  background: transparent !important;
+  background-color: transparent !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 0 !important;
+  border: none !important;
+  cursor: pointer !important;
+}
+
+.leanote-plugin #tagColor li .label::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* 只读模式标签 (#noteReadTags) */
+.leanote-plugin #noteReadTags .label {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 1px solid rgba(71, 85, 105, 0.25) !important;
+  padding: 2px 8px !important;
+  border-radius: 12px !important;
+  font-size: 12px !important;
+  margin-right: 4px !important;
+}
+
+/* 添加标签下拉区 */
+.leanote-plugin #tagDropdown {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+}
+
+.leanote-plugin #tagDropdown > i.fa {
+  display: none !important;
+}
+
+.leanote-plugin #tagDropdown #addTagTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px dashed rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 12px;
+  text-decoration: none;
+  line-height: 18px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.leanote-plugin #tagDropdown #addTagTrigger::before {
+  content: "\f02b";
+  font-family: FontAwesome;
+  font-size: 11px;
+}
+
+.leanote-plugin #tagDropdown #addTagInput {
+  display: none;
+  height: 24px;
+  line-height: 22px;
+  font-size: 12px;
+  padding: 0 8px;
+  border: 1px solid #3b82f6;
+  border-radius: 12px;
+  outline: none;
+  width: 90px;
+  background: transparent;
+}
+
+/* 编辑器右侧操作按钮组 */
+.leanote-plugin #editorTool {
+  float: right !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 38px !important;
+  list-style: none !important;
+}
+
+.leanote-plugin #editorTool li a {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease !important;
+}
+
+.leanote-plugin #editorTool li a:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.leanote-plugin #editorTool #saveBtn:hover {
+  color: #3b82f6 !important;
+}
+
+/* 附件下拉菜单 (#attachMenu) 现代弹窗与文字折叠修复 */
+.leanote-plugin #attachMenu {
+  width: 380px !important;
+  padding: 16px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1) !important;
+}
+
+.leanote-plugin #dropAttach {
+  border: 2px dashed rgba(0, 0, 0, 0.2) !important;
+  border-radius: 8px !important;
+  padding: 14px 10px !important;
+  text-align: center !important;
+}
+
+.leanote-plugin #dropAttach .btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+  padding: 6px 14px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  margin: 4px 6px !important;
+  height: auto !important;
+  line-height: 1.4 !important;
+}
+
+/* 标题输入框：高度固定 44px，位置清爽独立 */
+.leanote-plugin #noteTitleDiv {
+  height: 44px !important;
+  line-height: 44px !important;
+  padding: 0 16px !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+.leanote-plugin #noteTitle {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  border: none !important;
+  outline: none !important;
+  width: 100% !important;
+  height: 44px !important;
+  line-height: 44px !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+/* 【核心防遮挡】编辑器绝对定位与高度自适应：
+   普通模式下 top: 82px（避开 38px + 44px 的 noteTop），彻底消除工具栏遮挡标题！
+   只读模式下 top: 60px（避开 noteReadTop） */
+.leanote-plugin #note:not(.read-only) #editor,
+.leanote-plugin #note:not(.read-only) #mdEditor {
+  top: 82px !important;
+}
+
+.leanote-plugin #note.read-only #editor,
+.leanote-plugin #note.read-only #mdEditor {
+  top: 60px !important;
+}
+
+/* 富文本与 Markdown 工具栏贴合无缝 */
+.leanote-plugin #editor .tox-tinymce {
+  border: none !important;
+}
+
+.leanote-plugin #mdEditor .navbar {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  min-height: 36px !important;
+}
+
+/* 只读模式下标题与信息栏 */
+.leanote-plugin #noteReadTop {
+  height: 60px !important;
+  padding: 6px 16px !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.leanote-plugin #noteReadTitle {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  margin: 2px 0 4px !important;
+}
+
+.leanote-plugin #noteReadInfo {
+  font-size: 12px !important;
+  opacity: 0.75 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+

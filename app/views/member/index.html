@@ -1,80 +1,289 @@
 {{template "member/top.html" .}}
-	<div class="m-b-md"> <h3 class="m-b-none">{{.userInfo.Username}}, {{msg . "welcomeToLeanote"}}.</h3></div>
-	
-	<section class="panel panel-default"> 
-		<div class="row m-l-none m-r-none bg-light lter"> 
-			<div class="col-sm-6 col-md-3 padder-v b-r b-light"> 
-				<span class="fa-stack fa-2x pull-left m-r-sm"> 
-					<i class="fa fa-circle fa-stack-2x text-warning"></i> 
-					<i class="fa fa-file-o fa-stack-1x text-white"></i> 
-				</span> 
-				<a class="clear" href="javascript:;"> 
-					<span class="h3 block m-t-xs"><strong>{{.countNote}}</strong></span> 
-					<small class="text-muted text-uc">{{msg . "note"}}</small> 
-				</a> 
+
+<div class="member-dashboard">
+	<!-- 欢迎横幅 -->
+	<div class="member-hero-card">
+		<div class="hero-left">
+			<div class="hero-avatar-box">
+				<img src="{{if .userInfo.Logo}}{{.userInfo.Logo}}{{else}}/images/blog/default_avatar.png{{end}}" alt="{{.userInfo.Username}}" class="hero-avatar">
 			</div>
-			
-			<div class="col-sm-6 col-md-3 padder-v b-r b-light"> 
-				<span class="fa-stack fa-2x pull-left m-r-sm"> 
-					<i class="fa fa-circle fa-stack-2x text-info"></i> 
-					<i class="fa fa-bold fa-stack-1x text-white"></i> 
-				</span> 
-				<a class="clear" href="javascript:;"> 
-					<span class="h3 block m-t-xs"><strong>{{.countBlog}}</strong></span> 
-					<small class="text-muted text-uc">{{msg . "blog"}}</small> 
-				</a> 
-			</div> 
+			<div class="hero-text">
+				<h2 class="hero-title"><span id="greetingPrefix">欢迎回来</span>，{{.userInfo.Username}}！</h2>
+				<p class="hero-desc">整理您的知识网络，记录灵感与生活，随时探索与分享。</p>
+			</div>
 		</div>
-	</section>
-	<!-- 最新动态 -->
-	<section class="panel panel-default">
-		<h4 class="font-thin padder">
-			{{msg . "leanoteEvents"}}
-		</h4>
-		<ul class="list-group" id="eventsList"></ul>
-	</section>
-	
-	<!--
-	<section class="panel panel-default">
-		<form>
-			<textarea class="form-control no-border" rows="3" placeholder="Suggestions to leanote"></textarea>
-		</form>
-		<footer class="panel-footer bg-light lter">
-			<button class="btn btn-info pull-right btn-sm">
-				POST
-			</button>
-			<ul class="nav nav-pills nav-sm">
-		</footer>
-	</section>	
-	-->
-	
+		<div class="hero-right">
+			<a href="/note" class="hero-action-btn hero-primary-btn">
+				<i class="fa fa-pencil-square-o"></i>
+				<span>开始写笔记</span>
+			</a>
+			<a href="/blog/{{if $.session.Username}}{{$.session.Username}}{{else}}{{.userInfo.Username}}{{end}}" target="_blank" class="hero-action-btn hero-secondary-btn">
+				<i class="fa fa-globe"></i>
+				<span>访问我的博客</span>
+			</a>
+		</div>
+	</div>
+
+	<!-- 核心数据看板 -->
+	<div class="member-stats-grid">
+		<a href="/note" class="stat-card stat-notes">
+			<div class="stat-icon-wrapper">
+				<i class="fa fa-file-text-o"></i>
+			</div>
+			<div class="stat-details">
+				<div class="stat-value">{{if .countNote}}{{.countNote}}{{else}}0{{end}}</div>
+				<div class="stat-label">{{msg . "note"}}</div>
+			</div>
+			<div class="stat-arrow"><i class="fa fa-angle-right"></i></div>
+		</a>
+
+		<a href="/member/blog/index" class="stat-card stat-blogs">
+			<div class="stat-icon-wrapper">
+				<i class="fa fa-rss"></i>
+			</div>
+			<div class="stat-details">
+				<div class="stat-value">{{if .countBlog}}{{.countBlog}}{{else}}0{{end}}</div>
+				<div class="stat-label">{{msg . "blog"}}</div>
+			</div>
+			<div class="stat-arrow"><i class="fa fa-angle-right"></i></div>
+		</a>
+
+		<a href="/note" class="stat-card stat-notebooks">
+			<div class="stat-icon-wrapper">
+				<i class="fa fa-book"></i>
+			</div>
+			<div class="stat-details">
+				<div class="stat-value">{{if .countNotebook}}{{.countNotebook}}{{else}}0{{end}}</div>
+				<div class="stat-label">笔记本</div>
+			</div>
+			<div class="stat-arrow"><i class="fa fa-angle-right"></i></div>
+		</a>
+
+		<a href="/member/group/index" class="stat-card stat-groups">
+			<div class="stat-icon-wrapper">
+				<i class="fa fa-users"></i>
+			</div>
+			<div class="stat-details">
+				<div class="stat-value">{{if .countGroup}}{{.countGroup}}{{else}}0{{end}}</div>
+				<div class="stat-label">{{msg . "group"}}</div>
+			</div>
+			<div class="stat-arrow"><i class="fa fa-angle-right"></i></div>
+		</a>
+	</div>
+
+	<!-- 主区域双栏布局 -->
+	<div class="member-layout-row">
+		<!-- 左侧：工作台与最近笔记 -->
+		<div class="member-layout-main">
+			<!-- 常用快捷操作 -->
+			<div class="member-panel">
+				<div class="member-panel-header">
+					<h3 class="panel-title"><i class="fa fa-th-large text-primary"></i> 快捷功能</h3>
+					<span class="panel-subtitle">常用管理操作与入口</span>
+				</div>
+				<div class="quick-action-grid">
+					<a href="/note" class="action-card">
+						<div class="action-card-icon icon-note"><i class="fa fa-edit"></i></div>
+						<div class="action-card-text">
+							<h4>写笔记</h4>
+							<p>进入全功能双栏编辑器</p>
+						</div>
+					</a>
+					<a href="/member/blog/index" class="action-card">
+						<div class="action-card-icon icon-blog"><i class="fa fa-file-text"></i></div>
+						<div class="action-card-text">
+							<h4>博文管理</h4>
+							<p>查看与维护公开博客文章</p>
+						</div>
+					</a>
+					<a href="/member/blog/theme" class="action-card">
+						<div class="action-card-icon icon-theme"><i class="fa fa-paint-brush"></i></div>
+						<div class="action-card-text">
+							<h4>主题美化</h4>
+							<p>定制博客前台模板外观</p>
+						</div>
+					</a>
+					<a href="/member/user/password" class="action-card">
+						<div class="action-card-icon icon-security"><i class="fa fa-lock"></i></div>
+						<div class="action-card-text">
+							<h4>修改密码</h4>
+							<p>提升个人账户安全性</p>
+						</div>
+					</a>
+					<a href="/member/user/avatar" class="action-card">
+						<div class="action-card-icon icon-avatar"><i class="fa fa-user-circle"></i></div>
+						<div class="action-card-text">
+							<h4>更新头像</h4>
+							<p>上传或更换个性头像</p>
+						</div>
+					</a>
+					<a href="/member/group/index" class="action-card">
+						<div class="action-card-icon icon-group"><i class="fa fa-user-plus"></i></div>
+						<div class="action-card-text">
+							<h4>用户组协作</h4>
+							<p>管理成员与团队协同分享</p>
+						</div>
+					</a>
+				</div>
+			</div>
+
+			<!-- 最近编辑笔记 -->
+			<div class="member-panel">
+				<div class="member-panel-header">
+					<h3 class="panel-title"><i class="fa fa-history text-info"></i> 最近更新的笔记</h3>
+					<a href="/note" class="panel-action-link">查看全部 <i class="fa fa-angle-right"></i></a>
+				</div>
+				<div class="member-panel-body">
+					{{if .recentNotes}}
+					<div class="recent-notes-list">
+						{{range .recentNotes}}
+						<div class="recent-note-item">
+							<div class="note-item-left">
+								<span class="note-type-badge {{if .IsMarkdown}}badge-markdown{{else}}badge-rich{{end}}">
+									{{if .IsMarkdown}}MD{{else}}富文本{{end}}
+								</span>
+								<a href="/note" class="recent-note-title" title="{{.Title}}">
+									{{if .Title}}{{.Title}}{{else}}无标题笔记{{end}}
+								</a>
+								{{if .IsBlog}}
+								<span class="badge-blog" title="已发布至博客"><i class="fa fa-rss"></i> 博客</span>
+								{{end}}
+							</div>
+							<div class="note-item-right">
+								<span class="note-update-time" title="更新时间">
+									<i class="fa fa-clock-o"></i> {{.UpdatedTime.Format "2006-01-02 15:04"}}
+								</span>
+								<a href="/note" class="btn-note-edit">编辑</a>
+							</div>
+						</div>
+						{{end}}
+					</div>
+					{{else}}
+					<div class="empty-state">
+						<i class="fa fa-file-text-o empty-state-icon"></i>
+						<p class="empty-state-text">暂无最近更新的笔记</p>
+						<a href="/note" class="empty-state-btn"><i class="fa fa-plus"></i> 创建第一篇笔记</a>
+					</div>
+					{{end}}
+				</div>
+			</div>
+		</div>
+
+		<!-- 右侧：账户信息与系统动态 -->
+		<div class="member-layout-side">
+			<!-- 账户卡片 -->
+			<div class="member-panel account-overview-panel">
+				<div class="member-panel-header">
+					<h3 class="panel-title"><i class="fa fa-id-card-o text-success"></i> 账户概览</h3>
+					<a href="/member/user/username" class="panel-action-link"><i class="fa fa-cog"></i> 设置</a>
+				</div>
+				<div class="account-card-body">
+					<div class="account-user-card">
+						<img src="{{if .userInfo.Logo}}{{.userInfo.Logo}}{{else}}/images/blog/default_avatar.png{{end}}" alt="{{.userInfo.Username}}" class="account-card-avatar">
+						<div class="account-user-meta">
+							<div class="account-user-name">{{.userInfo.Username}}</div>
+							<div class="account-user-role">
+								<span class="role-badge"><i class="fa fa-shield"></i> {{if .isAdmin}}管理员{{else}}普通用户{{end}}</span>
+							</div>
+						</div>
+					</div>
+					<div class="account-info-rows">
+						<div class="account-info-row">
+							<span class="row-label"><i class="fa fa-envelope-o"></i> 邮箱</span>
+							<span class="row-value">{{if .userInfo.Email}}{{.userInfo.Email}}{{else}}未绑定邮箱{{end}}</span>
+						</div>
+						<div class="account-info-row">
+							<span class="row-label"><i class="fa fa-check-circle-o"></i> 状态</span>
+							<span class="row-value text-success"><i class="fa fa-circle status-dot"></i> 账号正常</span>
+						</div>
+					</div>
+					<div class="account-quick-links">
+						<a href="/member/user/email" class="account-link-item"><i class="fa fa-envelope"></i> 换绑邮箱</a>
+						<a href="/member/user/password" class="account-link-item"><i class="fa fa-key"></i> 修改密码</a>
+						<a href="/member/user/avatar" class="account-link-item"><i class="fa fa-camera"></i> 更换头像</a>
+					</div>
+				</div>
+			</div>
+
+			<!-- 官方动态资讯卡片（彻底解决重叠Bug） -->
+			<div class="member-panel events-panel">
+				<div class="member-panel-header">
+					<h3 class="panel-title"><i class="fa fa-bullhorn text-warning"></i> {{msg . "leanoteEvents"}}</h3>
+					<span class="panel-badge">官方资讯</span>
+				</div>
+				<div class="member-panel-body">
+					<ul class="clean-events-list" id="eventsList">
+						<li class="events-loading">
+							<i class="fa fa-spinner fa-spin"></i> 正在加载官方动态...
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
 {{template "member/footer.html" .}}
 <script>
 $(function() {
-	// leanote动态
+	// 根据当前时间显示问候语
+	var hour = new Date().getHours();
+	var greeting = "欢迎回来";
+	if (hour >= 5 && hour < 12) {
+		greeting = "早上好";
+	} else if (hour >= 12 && hour < 14) {
+		greeting = "中午好";
+	} else if (hour >= 14 && hour < 19) {
+		greeting = "下午好";
+	} else {
+		greeting = "晚上好";
+	}
+	$("#greetingPrefix").text(greeting);
+
+	// 官方动态加载与优雅渲染（带排版防重叠防护）
 	var url = "https://leanote.com/blog/listCateLatest/5446753cfacfaa4f56000000";
 	function renderItem(item) {
-		return '<li class="list-group-item"><p><a target="_blank" href="http://leanote.com/blog/post/' + item.NoteId + '">' + item.Title + '</a></p><small class="block text-muted"><i class="fa fa-clock-o"></i> ' + goNowToDatetime(item.PublicTime) + '</small></li>';
+		var timeStr = "";
+		if (typeof goNowToDatetime === "function") {
+			timeStr = goNowToDatetime(item.PublicTime);
+		} else {
+			timeStr = item.PublicTime ? item.PublicTime.substr(0, 10) : "";
+		}
+		return '<li class="event-item">' +
+			'<div class="event-title-line">' +
+				'<a target="_blank" href="https://leanote.com/blog/post/' + item.NoteId + '" class="event-link" title="' + item.Title + '">' +
+					item.Title +
+				'</a>' +
+			'</div>' +
+			'<div class="event-time-line">' +
+				'<i class="fa fa-clock-o"></i> ' + timeStr +
+			'</div>' +
+		'</li>';
 	}
+
 	$.ajax({ 
-        dataType: "jsonp",//跨域访问 dataType 必须是jsonp 类型。  
-        url: url,  
-        type: "GET",  
-        jsonp: "callback",
+		dataType: "jsonp",
+		url: url,  
+		type: "GET",  
+		jsonp: "callback",
 		jsonpCallback: "jsonpCallback",
-        success: function(data) { 
-        	if(typeof data == "object" && data.Ok) {
+		timeout: 4000,
+		success: function(data) { 
+			if (typeof data == "object" && data.Ok && data.List && data.List.length > 0) {
 				var list = data.List;
 				var html = "";
-				for(var i = 0; i < list.length; ++i) {
-					var item = list[i];
-					html += renderItem(item);
+				for (var i = 0; i < list.length; ++i) {
+					html += renderItem(list[i]);
 				}
 				$("#eventsList").html(html);
+			} else {
+				$("#eventsList").html('<li class="events-empty"><i class="fa fa-info-circle"></i> 暂无最新官方动态</li>');
 			}
-        }
-    });
+		},
+		error: function() {
+			$("#eventsList").html('<li class="events-empty"><i class="fa fa-info-circle"></i> 暂无更多动态更新</li>');
+		}
+	});
 });
-
 </script>
 {{template "member/end.html" .}}

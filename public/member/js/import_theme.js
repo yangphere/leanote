@@ -1,4 +1,4 @@
-define('import_theme', ['fileupload'], function(){
+define('import_theme', [], function(){
 	// Helper function that formats the file sizes
     function formatFileSize(bytes) {
         if (typeof bytes !== 'number') {
@@ -16,7 +16,7 @@ define('import_theme', ['fileupload'], function(){
     function setDropStyle(dropzoneId, formId) {
 	    // drag css
 	    var dropZone = $(dropzoneId);
-		$(formId).bind('dragover', function (e) {
+		$(formId).on('dragover', function (e) {
 			e.preventDefault();
 		    var timeout = window.dropZoneTimeoutAttach;
 		    if(timeout) {
@@ -47,8 +47,8 @@ define('import_theme', ['fileupload'], function(){
     setDropStyle("#dropAvatar", "#uploadAvatar");
     
 	var initUploader = function() {
-	    $('.dropzone .btn-choose-file').click(function() {
-	        $(this).parent().find('input').click();
+	    $('.dropzone .btn-choose-file').on('click', function() {
+	        $(this).parent().find('input').trigger('click');
 	    });
 	
 	    var $msg2 = $('#avatarUploadMsg');
@@ -56,7 +56,7 @@ define('import_theme', ['fileupload'], function(){
 	        dataType: 'json',
 	        dropZone: $('#dropAvatar'),
 	        add: function(e, data) {
-	            var tpl = $('<div class="alert alert-info"><img class="loader" src="/images/ajax-loader.gif"> <a class="close" data-dismiss="alert">×</a></div>');
+            var tpl = $('<div class="alert alert-info"><img class="loader" src="/images/ajax-loader.gif"> <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
 	
 	            // Append the file name and file size
 	            tpl.append(data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small>');
@@ -91,14 +91,14 @@ define('import_theme', ['fileupload'], function(){
 	            } else {
 	                var re = data.result;
 	                data.context.html("");
-	                var tpl = $('<div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div>');
+                var tpl = $('<div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
 	                tpl.append('<b>Error:</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.result.Msg);
 	                data.context.html(tpl);
 	            }
 	        },
 	        fail: function(e, data) {
                 data.context.html("");
-	            var tpl = $('<div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div>');
+                var tpl = $('<div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
 	            tpl.append('<b>Error:</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.errorThrown);
 	            data.context.html(tpl);
 	            setTimeout((function(tpl) {

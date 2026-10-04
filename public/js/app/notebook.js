@@ -267,11 +267,11 @@ Notebook.renderNotebooks = function(notebooks) {
 	
 	// 展开/折叠图标
 	var $notebookList = $("#notebookList");
-	$notebookList.hover(function () {
+	$notebookList.on('mouseenter', function () {
 		if(!$(this).hasClass("showIcon")) {
 			$(this).addClass("showIcon");
 		}
-	}, function() {
+	}).on('mouseleave', function() {
 		$(this).removeClass("showIcon");
 	});
 			
@@ -407,7 +407,7 @@ Notebook.getChangedNotebooks = function(notebooks) {
 		if(!isEmpty(notebook.Subs)) {
 			classes = "dropdown-submenu";
 		}
-		var eachForNew = tt('<li role="presentation" class="clearfix ?"><div class="new-note-left pull-left" title="为该笔记本新建笔记" href="#" notebookId="?">?</div><div title="为该笔记本新建markdown笔记" class="new-note-right pull-left" notebookId="?">M</div>', classes, notebook.NotebookId, notebook.Title, notebook.NotebookId);
+		var eachForNew = tt('<li role="presentation" class="clearfix ?"><div class="new-note-left float-start" title="为该笔记本新建笔记" href="#" notebookId="?">?</div><div title="为该笔记本新建markdown笔记" class="new-note-right float-start" notebookId="?">M</div>', classes, notebook.NotebookId, notebook.Title, notebook.NotebookId);
 		
 		if(!isEmpty(notebook.Subs)) {
 			eachForNew  += "<ul class='dropdown-menu'>";
@@ -599,7 +599,7 @@ Notebook.changeNotebook = function(notebookId, callback) {
 	// 2 先清空所有
 	Note.clearAll();
 	
-	var url = "/note/listNotes/";
+	var url = "/note/listNotes";
 	var param = {notebookId: notebookId};
 	
 	// 废纸篓
@@ -686,7 +686,7 @@ Notebook.changeNotebookForNewNote = function(notebookId) {
 	Notebook.changeNotebookNav(notebookId, true);
 	Notebook.curNotebookId = notebookId;
 	
-	var url = "/note/listNotes/";
+	var url = "/note/listNotes";
 	var param = {notebookId: notebookId};
 		
 	// 2 得到笔记本
@@ -701,6 +701,8 @@ Notebook.changeNotebookForNewNote = function(notebookId) {
 // 显示共享信息
 Notebook.listNotebookShareUserInfo = function(target) {
 	var notebookId = $(target).attr("notebookId");
+	Share.dialogIsNote = false;
+	Share.dialogNoteOrNotebookId = notebookId;
 	showDialogRemote("/share/listNotebookShareUserInfo", {notebookId: notebookId});
 }
 // 共享笔记本
@@ -708,7 +710,7 @@ Notebook.shareNotebooks= function(target) {
 	var title = $(target).text();
 	showDialog("dialogShareNote", {title: "分享笔记本给好友-" + title});
 	setTimeout(function() {
-		$("#friendsEmail").focus();
+		$("#friendsEmail").trigger('focus');
 	}, 500);
 	var notebookId = $(target).attr("notebookId");
 	
@@ -957,7 +959,7 @@ $(function() {
 	Notebook.contextmenuSearch = $("#notebookListForSearch li a").contextmenu(notebookListMenu2);
 	
 	// 添加笔记本
-	$("#addNotebookPlus").click(function(e) {
+	$("#addNotebookPlus").on('click', function(e) {
 		e.stopPropagation();
 		Notebook.addNotebook();
 	});

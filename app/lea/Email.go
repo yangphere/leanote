@@ -1,7 +1,6 @@
 package lea
 
 import (
-	"github.com/revel/revel"
 	"net/smtp"
 	"strings"
 )
@@ -12,12 +11,30 @@ var port = "25"
 var username = "noreply@leanote.com"
 var password = "---"
 
-func InitEmail() {
-	config := revel.Config
-	host, _ = config.String("email.host")
-	port, _ = config.String("email.port")
-	username, _ = config.String("email.username")
-	password, _ = config.String("email.password")
+type EmailConfigSource interface {
+	String(key string) (string, bool)
+}
+
+// InitEmail applies the validated first-party configuration seam. A missing
+// source keeps the safe package defaults, while an explicitly supplied blank
+// value is ignored so a partial config cannot silently erase them.
+func InitEmail(sources ...EmailConfigSource) {
+	if len(sources) == 0 || sources[0] == nil {
+		return
+	}
+	config := sources[0]
+	if value, ok := config.String("email.host"); ok && strings.TrimSpace(value) != "" {
+		host = value
+	}
+	if value, ok := config.String("email.port"); ok && strings.TrimSpace(value) != "" {
+		port = value
+	}
+	if value, ok := config.String("email.username"); ok && strings.TrimSpace(value) != "" {
+		username = value
+	}
+	if value, ok := config.String("email.password"); ok {
+		password = value
+	}
 }
 
 var bodyTpl = `

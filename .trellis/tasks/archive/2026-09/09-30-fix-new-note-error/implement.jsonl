@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "遵循前端目录、AJAX 与测试约定"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "笔记本切换请求必须通过现有 AJAX 包装器"}

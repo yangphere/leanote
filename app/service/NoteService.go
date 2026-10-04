@@ -1,17 +1,45 @@
 package service
 
 import (
-	"github.com/leanote/leanote/app/db"
-	"github.com/leanote/leanote/app/info"
-	. "github.com/leanote/leanote/app/lea"
-	"gopkg.in/mgo.v2/bson"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	applicationnotes "github.com/yangphere/leanote/app/application/notes"
+	"github.com/yangphere/leanote/app/db"
+	"github.com/yangphere/leanote/app/domain"
+	"github.com/yangphere/leanote/app/info"
+	. "github.com/yangphere/leanote/app/lea"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
 
 type NoteService struct {
 }
+
+func (this *NoteService) CanCreateNote(actorUserId, ownerUserId, notebookId string) bool {
+	if !db.IsValidObjectIDHex(actorUserId) || !db.IsValidObjectIDHex(ownerUserId) || !db.IsValidObjectIDHex(notebookId) {
+		return false
+	}
+	if actorUserId == ownerUserId {
+		return notebookService.IsMyNotebook(notebookId, ownerUserId)
+	}
+	return shareService.HasUpdateNotebookPerm(ownerUserId, actorUserId, notebookId)
+}
+
+const (
+	noteInsertFailed        = "noteInsertFailed"
+	noteContentInsertFailed = "noteContentInsertFailed"
+	noteSaveFailed          = "saveFailed"
+	noteContentSaveFailed   = "contentSaveFailed"
+)
 
 // 通过id, userId得到note
 func (this *NoteService) GetNote(noteId, userId string) (note info.Note) {
@@ -27,7 +55,7 @@ func (this *NoteService) GetNoteById(noteId string) (note info.Note) {
 	if noteId == "" {
 		return
 	}
-	db.GetByQ(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId), "IsDeleted": false}, &note)
+	db.GetByQ(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId), "IsDeleted": false}, &note)
 	return
 }
 func (this *NoteService) GetNoteByIdAndUserId(noteId, userId string) (note info.Note) {
@@ -35,7 +63,7 @@ func (this *NoteService) GetNoteByIdAndUserId(noteId, userId string) (note info.
 	if noteId == "" || userId == "" {
 		return
 	}
-	db.GetByQ(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId), "UserId": bson.ObjectIdHex(userId), "IsDeleted": false}, &note)
+	db.GetByQ(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId), "UserId": db.MustObjectIDFromHex(userId), "IsDeleted": false}, &note)
 	return
 }
 
@@ -43,7 +71,7 @@ func (this *NoteService) GetNoteByIdAndUserId(noteId, userId string) (note info.
 // 不要传userId, 因为是公开的
 func (this *NoteService) GetBlogNote(noteId string) (note info.Note) {
 	note = info.Note{}
-	db.GetByQ(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId),
+	db.GetByQ(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId),
 		"IsBlog": true, "IsTrash": false, "IsDeleted": false}, &note)
 	return
 }
@@ -59,7 +87,7 @@ func (this *NoteService) GetNoteContent(noteContentId, userId string) (noteConte
 func (this *NoteService) GetNoteAndContent(noteId, userId string) (noteAndContent info.NoteAndContent) {
 	note := this.GetNote(noteId, userId)
 	noteContent := this.GetNoteContent(noteId, userId)
-	return info.NoteAndContent{note, noteContent}
+	return info.NoteAndContent{Note: note, NoteContent: noteContent}
 }
 
 func (this *NoteService) GetNoteBySrc(src, userId string) (note info.Note) {
@@ -70,23 +98,23 @@ func (this *NoteService) GetNoteBySrc(src, userId string) (note info.Note) {
 
 	notes := []info.Note{}
 	q := db.Notes.Find(bson.M{
-		"UserId": bson.ObjectIdHex(userId),
+		"UserId": db.MustObjectIDFromHex(userId),
 		"Src":    src,
 	})
 	q.Sort("-Usn").Limit(1).All(&notes)
 	if len(notes) > 0 {
 		return notes[0]
 	}
-	// db.GetByQ(db.Notes, bson.M{"Src": src, "UserId": bson.ObjectIdHex(userId), "IsDeleted": false}, &note)
+	// db.GetByQ(db.Notes, bson.M{"Src": src, "UserId": db.MustObjectIDFromHex(userId), "IsDeleted": false}, &note)
 	return
 }
 
 func (this *NoteService) GetNoteAndContentBySrc(src, userId string) (noteId string, noteAndContent info.NoteAndContentSep) {
 	note := this.GetNoteBySrc(src, userId)
-	if (note.NoteId != "") {
+	if !note.NoteId.IsZero() {
 		noteId = note.NoteId.Hex()
 		noteContent := this.GetNoteContent(note.NoteId.Hex(), userId)
-		return noteId, info.NoteAndContentSep{note, noteContent}
+		return noteId, info.NoteAndContentSep{NoteInfo: note, NoteContentInfo: noteContent}
 	}
 	return
 }
@@ -96,7 +124,7 @@ func (this *NoteService) GetNoteAndContentBySrc(src, userId string) (noteId stri
 func (this *NoteService) GetSyncNotes(userId string, afterUsn, maxEntry int) []info.ApiNote {
 	notes := []info.Note{}
 	q := db.Notes.Find(bson.M{
-		"UserId": bson.ObjectIdHex(userId),
+		"UserId": db.MustObjectIDFromHex(userId),
 		"Usn":    bson.M{"$gt": afterUsn},
 	})
 	q.Sort("Usn").Limit(maxEntry).All(&notes)
@@ -109,7 +137,7 @@ func (this *NoteService) ToApiNotes(notes []info.Note) []info.ApiNote {
 	// 2, 得到所有图片, 附件信息
 	// 查images表, attachs表
 	if len(notes) > 0 {
-		noteIds := make([]bson.ObjectId, len(notes))
+		noteIds := make([]ObjectID, len(notes))
 		for i, note := range notes {
 			noteIds[i] = note.NoteId
 		}
@@ -153,7 +181,7 @@ func (this *NoteService) ToApiNote(note *info.Note, files []info.NoteFile) info.
 // 得到所有图片, 附件信息
 // 查images表, attachs表
 // [待测]
-func (this *NoteService) getFiles(noteIds []bson.ObjectId) map[string][]info.NoteFile {
+func (this *NoteService) getFiles(noteIds []ObjectID) map[string][]info.NoteFile {
 	noteImages := noteImageService.getImagesByNoteIds(noteIds)
 	noteAttachs := attachService.getAttachsByNoteIds(noteIds)
 
@@ -195,15 +223,18 @@ func (this *NoteService) getFiles(noteIds []bson.ObjectId) map[string][]info.Not
 func (this *NoteService) ListNotes(userId, notebookId string,
 	isTrash bool, pageNumber, pageSize int, sortField string, isAsc bool, isBlog bool) (count int, notes []info.Note) {
 	notes = []info.Note{}
+	if isBlog {
+		sortField = NormalizeBlogSortField(sortField)
+	}
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 
 	// 不是trash的
-	query := bson.M{"UserId": bson.ObjectIdHex(userId), "IsTrash": isTrash, "IsDeleted": false}
+	query := bson.M{"UserId": db.MustObjectIDFromHex(userId), "IsTrash": isTrash, "IsDeleted": false}
 	if isBlog {
 		query["IsBlog"] = true
 	}
 	if notebookId != "" {
-		query["NotebookId"] = bson.ObjectIdHex(notebookId)
+		query["NotebookId"] = db.MustObjectIDFromHex(notebookId)
 	}
 
 	q := db.Notes.Find(query)
@@ -211,32 +242,43 @@ func (this *NoteService) ListNotes(userId, notebookId string,
 	// 总记录数
 	count, _ = q.Count()
 
-	q.Sort(sortFieldR).
-		Skip(skipNum).
-		Limit(pageSize).
-		All(&notes)
+	if isBlog {
+		q.Sort(BlogSortFields(sortField, isAsc)...).
+			Skip(skipNum).
+			Limit(pageSize).
+			All(&notes)
+	} else {
+		q.Sort(sortFieldR).
+			Skip(skipNum).
+			Limit(pageSize).
+			All(&notes)
+	}
 	return
 }
 
 // 通过noteIds来查询
 // ShareService调用
-func (this *NoteService) ListNotesByNoteIdsWithPageSort(noteIds []bson.ObjectId, userId string,
+func (this *NoteService) ListNotesByNoteIdsWithPageSort(noteIds []ObjectID, userId string,
 	pageNumber, pageSize int, sortField string, isAsc bool, isBlog bool) (notes []info.Note) {
+	if isBlog {
+		sortField = NormalizeBlogSortField(sortField)
+	}
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 	notes = []info.Note{}
 
 	// 不是trash
-	db.Notes.
-		Find(bson.M{"_id": bson.M{"$in": noteIds}, "IsTrash": false}).
-		Sort(sortFieldR).
-		Skip(skipNum).
-		Limit(pageSize).
-		All(&notes)
+	q := db.Notes.Find(bson.M{"_id": bson.M{"$in": noteIds}, "IsTrash": false})
+	if isBlog {
+		q.Sort(BlogSortFields(sortField, isAsc)...)
+	} else {
+		q.Sort(sortFieldR)
+	}
+	q.Skip(skipNum).Limit(pageSize).All(&notes)
 	return
 }
 
 // shareService调用
-func (this *NoteService) ListNotesByNoteIds(noteIds []bson.ObjectId) (notes []info.Note) {
+func (this *NoteService) ListNotesByNoteIds(noteIds []ObjectID) (notes []info.Note) {
 	notes = []info.Note{}
 
 	db.Notes.
@@ -246,7 +288,7 @@ func (this *NoteService) ListNotesByNoteIds(noteIds []bson.ObjectId) (notes []in
 }
 
 // blog需要
-func (this *NoteService) ListNoteContentsByNoteIds(noteIds []bson.ObjectId) (notes []info.NoteContent) {
+func (this *NoteService) ListNoteContentsByNoteIds(noteIds []ObjectID) (notes []info.NoteContent) {
 	notes = []info.NoteContent{}
 
 	db.NoteContents.
@@ -256,12 +298,12 @@ func (this *NoteService) ListNoteContentsByNoteIds(noteIds []bson.ObjectId) (not
 }
 
 // 只得到abstract, 不需要content
-func (this *NoteService) ListNoteAbstractsByNoteIds(noteIds []bson.ObjectId) (notes []info.NoteContent) {
+func (this *NoteService) ListNoteAbstractsByNoteIds(noteIds []ObjectID) (notes []info.NoteContent) {
 	notes = []info.NoteContent{}
 	db.ListByQWithFields(db.NoteContents, bson.M{"_id": bson.M{"$in": noteIds}}, []string{"_id", "Abstract"}, &notes)
 	return
 }
-func (this *NoteService) ListNoteContentByNoteIds(noteIds []bson.ObjectId) (notes []info.NoteContent) {
+func (this *NoteService) ListNoteContentByNoteIds(noteIds []ObjectID) (notes []info.NoteContent) {
 	notes = []info.NoteContent{}
 	db.ListByQWithFields(db.NoteContents, bson.M{"_id": bson.M{"$in": noteIds}}, []string{"_id", "Abstract", "Content"}, &notes)
 	return
@@ -272,8 +314,13 @@ func (this *NoteService) ListNoteContentByNoteIds(noteIds []bson.ObjectId) (note
 // [ok]
 
 func (this *NoteService) AddNote(note info.Note, fromApi bool) info.Note {
+	note, _, _ = this.addNoteResult(note, fromApi, false)
+	return note
+}
+
+func (this *NoteService) addNoteResult(note info.Note, fromApi bool, strict bool) (info.Note, bool, string) {
 	if note.NoteId.Hex() == "" {
-		noteId := bson.NewObjectId()
+		noteId := db.NewObjectID()
 		note.NoteId = noteId
 	}
 
@@ -284,7 +331,11 @@ func (this *NoteService) AddNote(note info.Note, fromApi bool) info.Note {
 	note.IsTrash = false
 	note.UpdatedUserId = note.UserId
 	note.UrlTitle = GetUrTitle(note.UserId.Hex(), note.Title, "note", note.NoteId.Hex())
-	note.Usn = userService.IncrUsn(note.UserId.Hex())
+	usn, err := userService.AllocateUsn(context.Background(), note.UserId.Hex())
+	if err != nil {
+		return note, false, noteInsertFailed
+	}
+	note.Usn = usn
 
 	notebookId := note.NotebookId.Hex()
 
@@ -297,7 +348,10 @@ func (this *NoteService) AddNote(note info.Note, fromApi bool) info.Note {
 	note.PublicTime = note.UpdatedTime
 	//	}
 
-	db.Insert(db.Notes, note)
+	ok := db.Insert(db.Notes, note)
+	if strict && !ok {
+		return note, false, noteInsertFailed
+	}
 
 	// tag1
 	tagService.AddTags(note.UserId.Hex(), note.Tags)
@@ -305,11 +359,14 @@ func (this *NoteService) AddNote(note info.Note, fromApi bool) info.Note {
 	// recount notebooks' notes number
 	notebookService.ReCountNotebookNumberNotes(notebookId)
 
-	return note
+	if !ok {
+		return note, false, noteInsertFailed
+	}
+	return note, true, ""
 }
 
 // 添加共享d笔记
-func (this *NoteService) AddSharedNote(note info.Note, myUserId bson.ObjectId) info.Note {
+func (this *NoteService) AddSharedNote(note info.Note, myUserId ObjectID) info.Note {
 	// 判断我是否有权限添加
 	if shareService.HasUpdateNotebookPerm(note.UserId.Hex(), myUserId.Hex(), note.NotebookId.Hex()) {
 		note.CreatedUserId = myUserId // 是我给共享我的人创建的
@@ -321,25 +378,36 @@ func (this *NoteService) AddSharedNote(note info.Note, myUserId bson.ObjectId) i
 // 添加笔记本内容
 // [ok]
 func (this *NoteService) AddNoteContent(noteContent info.NoteContent) info.NoteContent {
+	noteContent, _, _ = this.addNoteContentResult(noteContent, false)
+	return noteContent
+}
+
+func (this *NoteService) addNoteContentResult(noteContent info.NoteContent, strict bool) (info.NoteContent, bool, string) {
 
 	noteContent.CreatedTime = FixUrlTime(noteContent.CreatedTime)
 	noteContent.UpdatedTime = FixUrlTime(noteContent.UpdatedTime)
 
 	noteContent.UpdatedUserId = noteContent.UserId
-	db.Insert(db.NoteContents, noteContent)
+	ok := db.Insert(db.NoteContents, noteContent)
+	if strict && !ok {
+		return noteContent, false, noteContentInsertFailed
+	}
 
 	// 更新笔记图片
 	noteImageService.UpdateNoteImages(noteContent.UserId.Hex(), noteContent.NoteId.Hex(), "", noteContent.Content)
 
-	return noteContent
+	if !ok {
+		return noteContent, false, noteContentInsertFailed
+	}
+	return noteContent, true, ""
 }
 
 // API, abstract, desc需要这里获取
 // 不需要
 /*
-func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.NoteContent, myUserId bson.ObjectId) info.Note {
+func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.NoteContent, myUserId ObjectID) info.Note {
 	if(note.NoteId.Hex() == "") {
-		noteId := bson.NewObjectId();
+		noteId := db.NewObjectID();
 		note.NoteId = noteId;
 	}
 	note.CreatedTime = time.Now()
@@ -380,182 +448,360 @@ func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.N
 // 添加笔记和内容
 // 这里使用 info.NoteAndContent 接收?
 func (this *NoteService) AddNoteAndContentForController(note info.Note, noteContent info.NoteContent, updatedUserId string) info.Note {
-	if note.UserId.Hex() != updatedUserId {
-		if !shareService.HasUpdateNotebookPerm(note.UserId.Hex(), updatedUserId, note.NotebookId.Hex()) {
-			Log("NO AUTH11")
-			return info.Note{}
-		} else {
-			Log("HAS AUTH -----------")
-		}
-	}
-	return this.AddNoteAndContent(note, noteContent, bson.ObjectIdHex(updatedUserId))
-}
-func (this *NoteService) AddNoteAndContent(note info.Note, noteContent info.NoteContent, myUserId bson.ObjectId) info.Note {
-	if note.NoteId.Hex() == "" {
-		noteId := bson.NewObjectId()
-		note.NoteId = noteId
-	}
-	noteContent.NoteId = note.NoteId
-	if note.UserId != myUserId {
-		note = this.AddSharedNote(note, myUserId)
-	} else {
-		note = this.AddNote(note, false)
-	}
-	if note.NoteId != "" {
-		this.AddNoteContent(noteContent)
-	}
+	note, _, _ = this.AddNoteAndContentForControllerResult(note, noteContent, updatedUserId)
 	return note
 }
 
-func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.NoteContent, myUserId bson.ObjectId) info.Note {
-	if note.NoteId.Hex() == "" {
-		noteId := bson.NewObjectId()
-		note.NoteId = noteId
-	}
-	noteContent.NoteId = note.NoteId
-	if note.UserId != myUserId {
-		note = this.AddSharedNote(note, myUserId)
-	} else {
-		note = this.AddNote(note, true)
-	}
-	if note.NoteId != "" {
-		this.AddNoteContent(noteContent)
-	}
-	return note
+// AddNoteAndContentForControllerResult is the controller-specific creation
+// boundary. It preserves service failure reasons so the HTTP endpoint cannot
+// mistake a zero-value note or partial write for success.
+func (this *NoteService) AddNoteAndContentForControllerResult(note info.Note, noteContent info.NoteContent, updatedUserId string) (info.Note, bool, string) {
+	return this.addNoteAndContentResult(note, noteContent, db.MustObjectIDFromHex(updatedUserId), false, true)
 }
-
-// 修改笔记
-// 这里没有判断usn
-func (this *NoteService) UpdateNote(updatedUserId, noteId string, needUpdate bson.M, usn int) (bool, string, int) {
-	// 是否存在
-	note := this.GetNoteById(noteId)
-	if note.NoteId == "" {
-		return false, "notExists", 0
-	}
-
-	userId := note.UserId.Hex()
-	// updatedUserId 要修改userId的note, 此时需要判断是否有修改权限
-	if userId != updatedUserId {
-		if !shareService.HasUpdatePerm(userId, updatedUserId, noteId) {
-			Log("NO AUTH2")
-			return false, "noAuth", 0
-		} else {
-			Log("HAS AUTH -----------")
-		}
-	}
-
-	/*
-	// 这里不再判断, 因为controller已经判断了, 删除附件会新增, 所以不用判断
-	if usn > 0 && note.Usn != usn {
-		Log("有冲突!!")
-		Log(note.Usn)
-		Log(usn)
-		return false, "conflict", 0
-	}
-	*/
-
-	// 是否已自定义
-	if note.IsBlog && note.HasSelfDefined {
-		delete(needUpdate, "ImgSrc")
-		delete(needUpdate, "Desc")
-	}
-
-	needUpdate["UpdatedUserId"] = bson.ObjectIdHex(updatedUserId)
-
-	// 可以将时间传过来
-	updatedTime, ok := needUpdate["UpdatedTime"].(time.Time)
-	if ok {
-		needUpdate["UpdatedTime"] = FixUrlTime(updatedTime)
-	} else {
-		needUpdate["UpdatedTime"] = time.Now()
-	}
-
-	afterUsn := userService.IncrUsn(userId)
-	needUpdate["Usn"] = afterUsn
-
-	needRecountTags := false
-
-	// 是否修改了isBlog
-	// 也要修改noteContents的IsBlog
-	if isBlog, ok := needUpdate["IsBlog"]; ok {
-		isBlog2 := isBlog.(bool)
-		if note.IsBlog != isBlog2 {
-			this.UpdateNoteContentIsBlog(noteId, userId, isBlog2)
-
-			// 重新发布成博客
-			if !note.IsBlog {
-				needUpdate["PublicTime"] = needUpdate["UpdatedTime"]
-			}
-
-			needRecountTags = true
-		}
-	}
-
-	// 添加tag2
-	// TODO 这个tag去掉, 添加tag另外添加, 不要这个
-	if tags, ok := needUpdate["Tags"]; ok {
-		tagService.AddTagsI(userId, tags)
-
-		// 如果是博客, 标签改了, 那么重新计算
-		if note.IsBlog {
-			needRecountTags = true
-		}
-	}
-
-	ok = db.UpdateByIdAndUserIdMap(db.Notes, noteId, userId, needUpdate)
+func (this *NoteService) AddNoteAndContent(note info.Note, noteContent info.NoteContent, myUserId ObjectID) info.Note {
+	var ok bool
+	note, ok, _ = this.addNoteAndContentResult(note, noteContent, myUserId, false, false)
 	if !ok {
-		return ok, "", 0
+		return info.Note{}
 	}
+	return note
+}
 
-	if needRecountTags {
-		// 重新计算tags
-		go (func() {
-			blogService.ReCountBlogTags(userId)
-		})()
+func (this *NoteService) addNoteAndContentResult(note info.Note, noteContent info.NoteContent, myUserId ObjectID, fromApi, strict bool) (info.Note, bool, string) {
+	return this.addNoteAndContentResultWithIdentity(note, noteContent, myUserId, fromApi, strict, "", "", nil, false)
+}
+
+func (this *NoteService) addNoteAndContentResultWithIdentity(note info.Note, noteContent info.NoteContent, myUserId ObjectID, fromApi, strict bool, forcedOperationID, forcedInputDigest string, assets []applicationnotes.OperationAsset, reconcileAssets bool) (info.Note, bool, string) {
+	if note.NoteId.IsZero() {
+		note.NoteId = db.NewObjectID()
 	}
+	if note.UserId == myUserId && !notebookService.IsMyNotebook(note.NotebookId.Hex(), note.UserId.Hex()) {
+		return info.Note{}, false, "notebookIdNotExists"
+	}
+	if note.UserId != myUserId {
+		if !shareService.HasUpdateNotebookPerm(note.UserId.Hex(), myUserId.Hex(), note.NotebookId.Hex()) {
+			return info.Note{}, false, "noAuth"
+		}
+		note.CreatedUserId = myUserId
+	}
+	note.CreatedTime = FixUrlTime(note.CreatedTime)
+	note.UpdatedTime = FixUrlTime(note.UpdatedTime)
+	note.IsTrash = false
+	note.UpdatedUserId = myUserId
+	note.UrlTitle = GetUrTitle(note.UserId.Hex(), note.Title, "note", note.NoteId.Hex())
+	if !fromApi {
+		note.IsBlog = notebookService.IsBlog(note.NotebookId.Hex())
+		noteContent.IsBlog = note.IsBlog
+	}
+	note.PublicTime = note.UpdatedTime
 
-	// 重新获取之
-	note = this.GetNoteById(noteId)
-
-	hasRecount := false
-
-	// 如果修改了notebookId, 则更新notebookId'count
-	// 两方的notebook也要修改
-	notebookIdI := needUpdate["NotebookId"]
-	if notebookIdI != nil {
-		notebookId := notebookIdI.(bson.ObjectId)
-		if notebookId != "" {
-			notebookService.ReCountNotebookNumberNotes(note.NotebookId.Hex())
-			notebookService.ReCountNotebookNumberNotes(notebookId.Hex())
-			hasRecount = true
+	noteContent.NoteId = note.NoteId
+	noteContent.UserId = note.UserId
+	noteContent.CreatedTime = FixUrlTime(noteContent.CreatedTime)
+	noteContent.UpdatedTime = FixUrlTime(noteContent.UpdatedTime)
+	noteContent.UpdatedUserId = myUserId
+	identityNote := note
+	identityNote.CreatedTime = time.Time{}
+	identityNote.UpdatedTime = time.Time{}
+	identityNote.PublicTime = time.Time{}
+	identityContent := noteContent
+	identityContent.CreatedTime = time.Time{}
+	identityContent.UpdatedTime = time.Time{}
+	operationID, inputDigest, _, identityErr := applicationnotes.NewOperationIdentity(
+		"note_create", note.UserId, note.NoteId, struct {
+			Note    info.Note
+			Content info.NoteContent
+		}{Note: identityNote, Content: identityContent},
+	)
+	if forcedOperationID != "" || forcedInputDigest != "" {
+		if forcedOperationID == "" || forcedInputDigest == "" {
+			return info.Note{}, false, noteSaveFailed
+		}
+		operationID = forcedOperationID
+		inputDigest = forcedInputDigest
+	}
+	desiredState, desiredErr := applicationnotes.CanonicalState(struct {
+		Note    info.Note
+		Content info.NoteContent
+	}{Note: note, Content: noteContent})
+	if identityErr != nil || desiredErr != nil {
+		return info.Note{}, false, noteSaveFailed
+	}
+	receipt, receiptErr := db.GetWorkspaceOperation(context.Background(), note.UserId, operationID)
+	hasReceipt := receiptErr == nil
+	if receiptErr != nil && !errors.Is(receiptErr, mongo.ErrNoDocuments) && !errors.Is(receiptErr, db.ErrMongoClientNotInitialized) {
+		return info.Note{}, false, noteSaveFailed
+	}
+	if hasReceipt {
+		if receipt.InputDigest != inputDigest {
+			return info.Note{}, false, string(WorkspaceConflict)
+		}
+		if receipt.Status == applicationnotes.OperationCommitted {
+			existing := this.GetNote(note.NoteId.Hex(), note.UserId.Hex())
+			if existing.NoteId.IsZero() {
+				return info.Note{}, false, string(WorkspacePartialWrite)
+			}
+			existingContent := this.GetNoteContent(note.NoteId.Hex(), note.UserId.Hex())
+			if !this.repairNoteCreationProjections(operationID, inputDigest, desiredState, existing, existingContent, reconcileAssets) {
+				return existing, false, string(WorkspaceSideEffect)
+			}
+			return existing, true, ""
 		}
 	}
-
-	// 不要多次更新, isTrash = false, = true都要重新统计
-	if isTrashI, ok := needUpdate["IsTrash"]; ok {
-		// 如果是垃圾, 则删除之共享
-		isTrash := isTrashI.(bool)
-		if isTrash {
-			shareService.DeleteShareNoteAll(noteId, userId)
+	if existing := this.GetNote(note.NoteId.Hex(), note.UserId.Hex()); !existing.NoteId.IsZero() && !hasReceipt {
+		existingContent := this.GetNoteContent(note.NoteId.Hex(), note.UserId.Hex())
+		if !existing.IsDeleted && sameNoteCreation(existing, existingContent, note, noteContent) {
+			if this.repairNoteCreationProjections(operationID, inputDigest, desiredState, existing, existingContent, reconcileAssets) {
+				return existing, true, ""
+			}
+			return existing, false, string(WorkspaceSideEffect)
 		}
-		if !hasRecount {
-			notebookService.ReCountNotebookNumberNotes(note.NotebookId.Hex())
-		}
+		return info.Note{}, false, noteInsertFailed
 	}
+	plan := db.WorkspaceMutationPlan{
+		OperationID:        operationID,
+		OwnerID:            note.UserId,
+		ResourceID:         note.NoteId,
+		Kind:               "note_create",
+		InputDigest:        inputDigest,
+		Assets:             append([]applicationnotes.OperationAsset(nil), assets...),
+		DesiredState:       desiredState,
+		AssignedUSN:        func() int { return note.Usn },
+		RestoreAssignedUSN: func(usn int) { note.Usn = usn },
+		RestoreDesiredState: func(payload []byte) error {
+			state := struct {
+				Note    info.Note
+				Content info.NoteContent
+			}{}
+			if err := json.Unmarshal(payload, &state); err != nil {
+				return err
+			}
+			note = state.Note
+			noteContent = state.Content
+			return nil
+		},
+		Steps: []db.WorkspaceMutationStep{
+			{
+				Name: "allocate_usn",
+				Apply: func(ctx context.Context) error {
+					usn, err := db.AllocateUserUSN(ctx, note.UserId)
+					if err != nil {
+						return err
+					}
+					note.Usn = usn
+					return nil
+				},
+				ReplaySafe: true,
+			},
+			{
+				Name: "note",
+				Apply: func(ctx context.Context) error {
+					return db.Notes.InsertContext(ctx, note)
+				},
+				Verify: func(ctx context.Context) (bool, error) {
+					var existing info.Note
+					err := db.Notes.FindContext(ctx, bson.M{"_id": note.NoteId, "UserId": note.UserId, "Usn": note.Usn}).One(&existing)
+					if errors.Is(err, mongo.ErrNoDocuments) {
+						return false, nil
+					}
+					return err == nil && sameNoteMetadataCreation(existing, note), err
+				},
+				Compensate: func(ctx context.Context) error {
+					return db.Notes.RemoveContext(ctx, bson.M{"_id": note.NoteId, "UserId": note.UserId, "Usn": note.Usn})
+				},
+			},
+			{
+				Name: "content",
+				Apply: func(ctx context.Context) error {
+					return db.NoteContents.InsertContext(ctx, noteContent)
+				},
+				Verify: func(ctx context.Context) (bool, error) {
+					var existing info.NoteContent
+					err := db.NoteContents.FindContext(ctx, bson.M{"_id": note.NoteId, "UserId": note.UserId}).One(&existing)
+					if errors.Is(err, mongo.ErrNoDocuments) {
+						return false, nil
+					}
+					return err == nil && sameNoteContentCreation(existing, noteContent), err
+				},
+				Compensate: func(ctx context.Context) error {
+					return db.NoteContents.RemoveContext(ctx, bson.M{
+						"_id": note.NoteId, "UserId": note.UserId,
+						"Content": noteContent.Content, "Abstract": noteContent.Abstract,
+						"IsBlog": noteContent.IsBlog, "UpdatedTime": noteContent.UpdatedTime,
+						"UpdatedUserId": noteContent.UpdatedUserId,
+					})
+				},
+			},
+		},
+	}
+	result, err := db.RunWorkspaceMutation(context.Background(), plan)
+	if err != nil || !result.Committed {
+		if result.PartialWrite || errors.Is(err, db.ErrPartialWrite) {
+			return info.Note{}, false, string(WorkspacePartialWrite)
+		}
+		if errors.Is(err, db.ErrDuplicateIdentity) {
+			return info.Note{}, false, string(WorkspaceDuplicate)
+		}
+		return info.Note{}, false, noteSaveFailed
+	}
+	// A committed retry may enter RunWorkspaceMutation through a terminal
+	// receipt.  Terminal receipts intentionally redact the desired payload, so
+	// the request-local note can still have a zero USN.  Return the durable
+	// document to keep the API idempotency response identical to the original
+	// successful response.
+	note = preferPersistedCreatedNote(note, this.GetNote(note.NoteId.Hex(), note.UserId.Hex()))
 
-	return true, "", afterUsn
+	// These are repairable projections outside the required note/content/USN
+	// commit. A failure remains observable and is never reported as a clean
+	// creation success.
+	if !this.repairNoteCreationProjections(operationID, inputDigest, desiredState, note, noteContent, reconcileAssets) {
+		return note, false, string(WorkspaceSideEffect)
+	}
+	return note, true, ""
+}
+
+func (this *NoteService) repairNoteCreationProjections(operationID, inputDigest string, desiredState []byte, note info.Note, noteContent info.NoteContent, reconcileAssets bool) bool {
+	if receipt, err := db.GetWorkspaceOperation(context.Background(), note.UserId, operationID+":projections"); err == nil {
+		if receipt.InputDigest != inputDigest {
+			return false
+		}
+		if receipt.Status == applicationnotes.OperationCommitted {
+			return true
+		}
+		if applicationnotes.IsTerminalOperation(receipt.Status) {
+			return false
+		}
+		// A projection failure intentionally leaves a resumable receipt. Re-enter
+		// the repair runner so it can verify the interrupted step and continue.
+	} else if !errors.Is(err, mongo.ErrNoDocuments) && !errors.Is(err, db.ErrMongoClientNotInitialized) {
+		return false
+	}
+	rootReceipt, err := db.GetWorkspaceOperation(context.Background(), note.UserId, operationID)
+	if err != nil {
+		return false
+	}
+	plan := db.WorkspaceMutationPlan{
+		OperationID: operationID + ":projections", OwnerID: note.UserId, ResourceID: note.NoteId,
+		Kind: "note_create_projections", InputDigest: inputDigest, DesiredState: desiredState,
+		Assets:        append([]applicationnotes.OperationAsset(nil), rootReceipt.Assets...),
+		FailurePolicy: applicationnotes.FailurePending,
+		Steps: []db.WorkspaceMutationStep{
+			{Name: "tags", ReplaySafe: true,
+				Apply:  func(ctx context.Context) error { return tagService.addTags(ctx, note.UserId, note.Tags) },
+				Verify: func(ctx context.Context) (bool, error) { return tagService.verifyTags(ctx, note.UserId, note.Tags) },
+			},
+			{Name: "notebook_count", ReplaySafe: true,
+				Apply: func(ctx context.Context) error {
+					return notebookService.reCountNotebookNumberNotes(ctx, note.NotebookId, note.UserId)
+				},
+				Verify: func(ctx context.Context) (bool, error) {
+					return notebookService.verifyNotebookNumberNotes(ctx, note.NotebookId, note.UserId)
+				},
+			},
+			{Name: "image_index", ReplaySafe: true,
+				Apply: func(ctx context.Context) error {
+					return noteImageService.updateNoteImages(ctx, note.UserId, note.NoteId, "", noteContent.Content)
+				},
+				Verify: func(ctx context.Context) (bool, error) {
+					return noteImageService.verifyNoteImages(ctx, note.UserId, note.NoteId, "", noteContent.Content)
+				},
+			},
+		},
+	}
+	if reconcileAssets && len(rootReceipt.Assets) > 0 {
+		command := applicationnotes.ReconcileNoteAssetsCommand{
+			OperationID: operationID, ActorID: note.UpdatedUserId, OwnerID: note.UserId, NoteID: note.NoteId, Generation: rootReceipt.AssignedUSN,
+		}
+		plan.Steps = append(plan.Steps, db.WorkspaceMutationStep{
+			Name: "assets", ReplaySafe: true,
+			Apply:  func(ctx context.Context) error { return ContentAssets.ReconcileNote(ctx, command) },
+			Verify: func(ctx context.Context) (bool, error) { return ContentAssets.VerifyReconcileNote(ctx, command) },
+		})
+	}
+	result, err := db.RunWorkspaceRepair(context.Background(), plan)
+	return err == nil && result.Committed
+}
+
+func sameNoteCreation(existing info.Note, existingContent info.NoteContent, desired info.Note, desiredContent info.NoteContent) bool {
+	return sameNoteMetadataCreation(existing, desired) && sameNoteContentCreation(existingContent, desiredContent)
+}
+
+func preferPersistedCreatedNote(request info.Note, persisted info.Note) info.Note {
+	if !persisted.NoteId.IsZero() {
+		return persisted
+	}
+	return request
+}
+
+func sameNoteMetadataCreation(existing info.Note, desired info.Note) bool {
+	return existing.UserId == desired.UserId &&
+		existing.CreatedUserId == desired.CreatedUserId &&
+		existing.NotebookId == desired.NotebookId &&
+		existing.Title == desired.Title &&
+		existing.Desc == desired.Desc &&
+		existing.Src == desired.Src &&
+		existing.ImgSrc == desired.ImgSrc &&
+		slices.Equal(existing.Tags, desired.Tags) &&
+		existing.IsBlog == desired.IsBlog &&
+		existing.IsMarkdown == desired.IsMarkdown &&
+		existing.AttachNum == desired.AttachNum
+}
+
+func sameNoteContentCreation(existingContent info.NoteContent, desiredContent info.NoteContent) bool {
+	return existingContent.NoteId == desiredContent.NoteId &&
+		existingContent.UserId == desiredContent.UserId &&
+		existingContent.IsBlog == desiredContent.IsBlog &&
+		existingContent.Content == desiredContent.Content &&
+		existingContent.Abstract == desiredContent.Abstract
+}
+
+func (this *NoteService) AddNoteAndContentApi(note info.Note, noteContent info.NoteContent, myUserId ObjectID) info.Note {
+	var ok bool
+	note, ok, _ = this.addNoteAndContentResult(note, noteContent, myUserId, true, false)
+	if !ok {
+		return info.Note{}
+	}
+	return note
+}
+
+func (this *NoteService) AddNoteAndContentApiResult(note info.Note, noteContent info.NoteContent, myUserId ObjectID) (info.Note, bool, string) {
+	return this.addNoteAndContentResult(note, noteContent, myUserId, true, true)
+}
+
+func (this *NoteService) AddNoteAndContentApiResultWithAssets(note info.Note, noteContent info.NoteContent, myUserId ObjectID, assets []applicationnotes.OperationAsset) (info.Note, bool, string) {
+	return this.addNoteAndContentResultWithIdentity(note, noteContent, myUserId, true, true, "", "", assets, true)
+}
+
+// AddNoteAndContentApiResultWithIdentity lets the API adapter pre-create a
+// durable operation before uploading assets. The identity is optional for
+// legacy callers; when supplied, it must be reused for the whole create flow.
+func (this *NoteService) AddNoteAndContentApiResultWithIdentity(note info.Note, noteContent info.NoteContent, myUserId ObjectID, operationID, inputDigest string, assets []applicationnotes.OperationAsset) (info.Note, bool, string) {
+	return this.addNoteAndContentResultWithIdentity(note, noteContent, myUserId, true, true, operationID, inputDigest, assets, true)
 }
 
 // 当设置/取消了笔记为博客
-func (this *NoteService) UpdateNoteContentIsBlog(noteId, userId string, isBlog bool) {
-	db.UpdateByIdAndUserIdMap(db.NoteContents, noteId, userId, bson.M{"IsBlog": isBlog})
+func (this *NoteService) UpdateNoteContentIsBlog(noteId, userId string, isBlog bool) bool {
+	if db.NoteContents == nil {
+		return false
+	}
+	return db.UpdateByIdAndUserIdMap(db.NoteContents, noteId, userId, bson.M{"IsBlog": isBlog})
 }
 
 // 附件修改, 增加noteIncr
 func (this *NoteService) IncrNoteUsn(noteId, userId string) int {
-	afterUsn := userService.IncrUsn(userId)
-	db.UpdateByIdAndUserIdMap(db.Notes, noteId, userId,
-		bson.M{"UpdatedTime": time.Now(), "Usn": afterUsn})
+	note := this.GetNote(noteId, userId)
+	if note.NoteId.IsZero() || note.IsDeleted {
+		return 0
+	}
+	afterUsn, err := userService.AllocateUsn(context.Background(), userId)
+	if err != nil {
+		return 0
+	}
+	filter := bson.M{"_id": note.NoteId, "UserId": note.UserId, "Usn": note.Usn, "IsDeleted": false}
+	db.AddWorkspaceNoteMutationLeaseFilter(filter, "", time.Now())
+	if err := db.Notes.UpdateOneMatchedContext(context.Background(), filter, bson.M{"$set": bson.M{"UpdatedTime": time.Now(), "Usn": afterUsn}}); err != nil {
+		return 0
+	}
 	return afterUsn
 }
 
@@ -569,9 +815,18 @@ func (this *NoteService) UpdateNoteTitle(userId, updatedUserId, noteId, title st
 			return false
 		}
 	}
+	note := this.GetNote(noteId, userId)
+	if note.NoteId.IsZero() || note.IsDeleted {
+		return false
+	}
 
-	return db.UpdateByIdAndUserIdMap(db.Notes, noteId, userId,
-		bson.M{"UpdatedUserId": bson.ObjectIdHex(updatedUserId), "Title": title, "UpdatedTime": time.Now(), "Usn": userService.IncrUsn(userId)})
+	usn, err := userService.AllocateUsn(context.Background(), userId)
+	if err != nil {
+		return false
+	}
+	filter := bson.M{"_id": note.NoteId, "UserId": note.UserId, "Usn": note.Usn, "IsDeleted": false}
+	db.AddWorkspaceNoteMutationLeaseFilter(filter, "", time.Now())
+	return db.Notes.UpdateOneMatchedContext(context.Background(), filter, bson.M{"$set": bson.M{"UpdatedUserId": db.MustObjectIDFromHex(updatedUserId), "Title": title, "UpdatedTime": time.Now(), "Usn": usn}}) == nil
 }
 
 // 修改笔记本内容
@@ -583,7 +838,7 @@ func (this *NoteService) UpdateNoteContent(updatedUserId, noteId, content, abstr
 	usn int, updatedTime time.Time) (bool, string, int) {
 	// 是否已自定义
 	note := this.GetNoteById(noteId)
-	if note.NoteId == "" {
+	if note.NoteId.IsZero() {
 		return false, "notExists", 0
 	}
 	userId := note.UserId.Hex()
@@ -594,11 +849,18 @@ func (this *NoteService) UpdateNoteContent(updatedUserId, noteId, content, abstr
 			return false, "noAuth", 0
 		}
 	}
+	noteContent := this.GetNoteContent(noteId, userId)
+	if noteContent.NoteId.IsZero() {
+		return false, "notExists", 0
+	}
+	if noteContent.Content == content && noteContent.Abstract == abstract {
+		return true, "", 0
+	}
 
 	updatedTime = FixUrlTime(updatedTime)
 
 	// abstract重置
-	data := bson.M{"UpdatedUserId": bson.ObjectIdHex(updatedUserId),
+	data := bson.M{"UpdatedUserId": db.MustObjectIDFromHex(updatedUserId),
 		"Content":     content,
 		"Abstract":    abstract,
 		"UpdatedTime": updatedTime}
@@ -615,14 +877,22 @@ func (this *NoteService) UpdateNoteContent(updatedUserId, noteId, content, abstr
 		if usn >= 0 && note.Usn != usn {
 			return false, "conflict", 0
 		}
-		afterUsn = userService.IncrUsn(userId)
-		db.UpdateByIdAndUserIdField(db.Notes, noteId, userId, "Usn", afterUsn)
+		var err error
+		afterUsn, err = userService.AllocateUsn(context.Background(), userId)
+		if err != nil {
+			return false, "storage", 0
+		}
+		filter := bson.M{"_id": note.NoteId, "UserId": note.UserId, "Usn": note.Usn, "IsDeleted": false}
+		db.AddWorkspaceNoteMutationLeaseFilter(filter, "", time.Now())
+		if err := db.Notes.UpdateOneMatchedContext(context.Background(), filter, bson.M{"$set": bson.M{"Usn": afterUsn}}); err != nil {
+			return false, noteSaveFailed, 0
+		}
 	}
 
 	if db.UpdateByIdAndUserIdMap(db.NoteContents, noteId, userId, data) {
 		// 这里, 添加历史记录
-		noteContentHistoryService.AddHistory(noteId, userId, info.EachHistory{UpdatedUserId: bson.ObjectIdHex(updatedUserId),
-			Content:     content,
+		noteContentHistoryService.AddHistory(noteId, userId, info.EachHistory{UpdatedUserId: db.MustObjectIDFromHex(updatedUserId),
+			Content:     noteContent.Content,
 			UpdatedTime: time.Now(),
 		})
 
@@ -631,7 +901,7 @@ func (this *NoteService) UpdateNoteContent(updatedUserId, noteId, content, abstr
 
 		return true, "", afterUsn
 	}
-	return false, "", 0
+	return false, noteContentSaveFailed, 0
 }
 
 // ?????
@@ -645,34 +915,21 @@ func (this *NoteService) updateNoteImages(noteId string, content string) bool {
 // 更新tags
 // [ok] [del]
 func (this *NoteService) UpdateTags(noteId string, userId string, tags []string) bool {
-	return db.UpdateByIdAndUserIdMap(db.Notes, noteId, userId, bson.M{"Tags": tags, "Usn": userService.IncrUsn(userId)})
+	note := this.GetNote(noteId, userId)
+	if note.NoteId.IsZero() || note.IsDeleted {
+		return false
+	}
+	usn, err := userService.AllocateUsn(context.Background(), userId)
+	if err != nil {
+		return false
+	}
+	filter := bson.M{"_id": note.NoteId, "UserId": note.UserId, "Usn": note.Usn, "IsDeleted": false}
+	db.AddWorkspaceNoteMutationLeaseFilter(filter, "", time.Now())
+	return db.Notes.UpdateOneMatchedContext(context.Background(), filter, bson.M{"$set": bson.M{"Tags": tags, "Usn": usn}}) == nil
 }
 
 func (this *NoteService) ToBlog(userId, noteId string, isBlog, isTop bool) bool {
-	noteUpdate := bson.M{}
-	if isTop {
-		isBlog = true
-	}
-	if !isBlog {
-		isTop = false
-	}
-	noteUpdate["IsBlog"] = isBlog
-	noteUpdate["IsTop"] = isTop
-	if isBlog {
-		noteUpdate["PublicTime"] = time.Now()
-	} else {
-		noteUpdate["HasSelfDefined"] = false
-	}
-	noteUpdate["Usn"] = userService.IncrUsn(userId)
-
-	ok := db.UpdateByIdAndUserIdMap(db.Notes, noteId, userId, noteUpdate)
-	// 重新计算tags
-	go (func() {
-		this.UpdateNoteContentIsBlog(noteId, userId, isBlog)
-
-		blogService.ReCountBlogTags(userId)
-	})()
-	return ok
+	return this.toBlogWithReceipt(userId, noteId, isBlog, isTop)
 }
 
 // 移动note
@@ -680,26 +937,89 @@ func (this *NoteService) ToBlog(userId, noteId string, isBlog, isTop bool) bool 
 // 1. 要检查下notebookId是否是自己的
 // 2. 要判断之前是否是blog, 如果不是, 那么notebook是否是blog?
 func (this *NoteService) MoveNote(noteId, notebookId, userId string) info.Note {
+	return this.MoveNoteWithOperation(noteId, notebookId, userId, "")
+}
+
+func restoreMoveRetryState(receipt applicationnotes.OperationReceipt) (int, time.Time, bool, error) {
+	var before struct {
+		Note info.Note `json:"Note"`
+	}
+	if len(receipt.BeforeState) == 0 || json.Unmarshal(receipt.BeforeState, &before) != nil || before.Note.NoteId.IsZero() {
+		return 0, time.Time{}, false, fmt.Errorf("restore move retry: invalid before state")
+	}
+	var desired struct {
+		Metadata map[string]json.RawMessage `json:"Metadata"`
+	}
+	if len(receipt.DesiredState) == 0 || json.Unmarshal(receipt.DesiredState, &desired) != nil {
+		return 0, time.Time{}, false, fmt.Errorf("restore move retry: invalid desired state")
+	}
+	var publicTime time.Time
+	raw, present := desired.Metadata["PublicTime"]
+	if present {
+		if err := json.Unmarshal(raw, &publicTime); err != nil {
+			return 0, time.Time{}, false, fmt.Errorf("restore move retry public time: %w", err)
+		}
+	}
+	return before.Note.Usn, publicTime, present, nil
+}
+
+func replayCommittedMoveNote(note info.Note, receipt applicationnotes.OperationReceipt) info.Note {
+	if receipt.AssignedUSN > 0 {
+		note.Usn = receipt.AssignedUSN
+	}
+	return note
+}
+
+func (this *NoteService) MoveNoteWithOperation(noteId, notebookId, userId, operationID string) info.Note {
+	if !db.IsValidObjectIDHex(noteId) || !db.IsValidObjectIDHex(notebookId) || !db.IsValidObjectIDHex(userId) {
+		return info.Note{}
+	}
 	if notebookService.IsMyNotebook(notebookId, userId) {
 		note := this.GetNote(noteId, userId)
-		preNotebookId := note.NotebookId.Hex()
-
-		re := db.UpdateByIdAndUserId(db.Notes, noteId, userId,
-			bson.M{"$set": bson.M{"IsTrash": false,
-				"NotebookId": bson.ObjectIdHex(notebookId),
-				"Usn":        userService.IncrUsn(userId),
-			}})
-
-		if re {
-			// 更新blog状态
-			this.updateToNotebookBlog(noteId, notebookId, userId)
-
-			// recount notebooks' notes number
-			notebookService.ReCountNotebookNumberNotes(notebookId)
-			// 之前不是trash才统计, trash本不在统计中的
-			if !note.IsTrash && preNotebookId != notebookId {
-				notebookService.ReCountNotebookNumberNotes(preNotebookId)
+		if note.NoteId.IsZero() || note.IsDeleted {
+			return info.Note{}
+		}
+		metadata := map[string]any{"IsTrash": false, "NotebookId": db.MustObjectIDFromHex(notebookId)}
+		expected := note.Usn
+		var frozenPublicTime time.Time
+		hasFrozenPublicTime := false
+		if operationID != "" {
+			normalizedID, err := applicationnotes.NewClientOperationIdentity("note_save", note.UserId, operationID)
+			if err != nil {
+				return info.Note{}
 			}
+			receipt, err := db.GetWorkspaceOperation(context.Background(), note.UserId, normalizedID)
+			if err == nil {
+				if receipt.ResourceID != note.NoteId {
+					return info.Note{}
+				}
+				if receipt.Status == applicationnotes.OperationCommitted {
+					return replayCommittedMoveNote(note, receipt)
+				}
+				if applicationnotes.IsTerminalOperation(receipt.Status) {
+					return info.Note{}
+				}
+				expected, frozenPublicTime, hasFrozenPublicTime, err = restoreMoveRetryState(receipt)
+				if err != nil {
+					return info.Note{}
+				}
+			} else if !errors.Is(err, mongo.ErrNoDocuments) {
+				return info.Note{}
+			}
+		}
+		if hasFrozenPublicTime {
+			metadata["IsBlog"] = true
+			metadata["PublicTime"] = frozenPublicTime
+		} else if !note.IsBlog && notebookService.IsBlog(notebookId) {
+			metadata["IsBlog"] = true
+			metadata["PublicTime"] = time.Now()
+		}
+		result := this.SaveNote(applicationnotes.SaveNoteCommand{
+			ActorUserID: userId, NoteID: noteId, OperationID: operationID, ExpectedUSN: &expected,
+			Metadata: metadata, UpdatedTime: time.Now(),
+		})
+		if !result.OK() {
+			return info.Note{}
 		}
 
 		return this.GetNote(noteId, userId)
@@ -716,7 +1036,9 @@ func (this *NoteService) updateToNotebookBlog(noteId, notebookId, userId string)
 		return true
 	}
 	if notebookService.IsBlog(notebookId) {
-		db.UpdateByIdAndUserId(db.Notes, noteId, userId,
+		filter := bson.M{"_id": db.MustObjectIDFromHex(noteId), "UserId": db.MustObjectIDFromHex(userId)}
+		db.AddWorkspaceNoteMutationLeaseFilter(filter, "", time.Now())
+		_ = db.Notes.UpdateOneMatchedContext(context.Background(), filter,
 			bson.M{"$set": bson.M{"IsBlog": true, "PublicTime": time.Now()}}) // life
 		return true
 	}
@@ -726,7 +1048,7 @@ func (this *NoteService) updateToNotebookBlog(noteId, notebookId, userId string)
 // 判断是否是blog
 func (this *NoteService) IsBlog(noteId string) bool {
 	note := info.Note{}
-	db.GetByQWithFields(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId)}, []string{"IsBlog"}, &note)
+	db.GetByQWithFields(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId)}, []string{"IsBlog"}, &note)
 	return note.IsBlog
 }
 
@@ -735,22 +1057,103 @@ func (this *NoteService) IsBlog(noteId string) bool {
 // 先查, 再新建
 // 要检查下notebookId是否是自己的
 func (this *NoteService) CopyNote(noteId, notebookId, userId string) info.Note {
+	return this.CopyNoteWithOperation(noteId, notebookId, userId, "")
+}
+
+func (this *NoteService) CopyNoteWithOperation(noteId, notebookId, userId, operationID string) info.Note {
+	if !db.IsValidObjectIDHex(noteId) || !db.IsValidObjectIDHex(notebookId) || !db.IsValidObjectIDHex(userId) {
+		return info.Note{}
+	}
 	if notebookService.IsMyNotebook(notebookId, userId) {
 		note := this.GetNote(noteId, userId)
 		noteContent := this.GetNoteContent(noteId, userId)
+		sourceContent := noteContent
+		var frozenAssets []applicationnotes.OperationAsset
 
-		// 重新生成noteId
-		note.NoteId = bson.NewObjectId()
-		note.NotebookId = bson.ObjectIdHex(notebookId)
+		// A client operation generation freezes the destination identity before
+		// the create side effects. Legacy calls retain the random destination and
+		// are intentionally not retry-safe.
+		if operationID == "" {
+			note.NoteId = db.NewObjectID()
+		} else {
+			note.NoteId = stableCopyNoteIDForOwner(operationID, noteId, userId)
+			copyID, digest, err := copyNoteOperationIdentity("note_copy", note.UserId, note.NoteId, noteId, notebookId, "", operationID)
+			if err != nil {
+				return info.Note{}
+			}
+			if existing := this.GetNote(note.NoteId.Hex(), userId); !existing.NoteId.IsZero() {
+				receipt, receiptErr := db.GetWorkspaceOperation(context.Background(), note.UserId, copyID)
+				if !copyReceiptCanResume(receipt, receiptErr, digest) {
+					return info.Note{}
+				}
+				frozenAssets = append(frozenAssets, receipt.Assets...)
+				note = existing
+				noteContent = this.GetNoteContent(note.NoteId.Hex(), userId)
+				sourceContent = noteContent
+				// Always re-enter the durable create path. A committed primary
+				// receipt may still have a missing projection receipt that must be
+				// repaired before this retry can report success.
+			} else {
+				frozenAssets, err = stableSharedCopyAssetManifest(noteId, userId, userId, operationID, sourceContent.Content)
+				if err != nil {
+					return info.Note{}
+				}
+			}
+		}
+		note.NotebookId = db.MustObjectIDFromHex(notebookId)
 
 		noteContent.NoteId = note.NoteId
-		note = this.AddNoteAndContent(note, noteContent, note.UserId)
+		if operationID == "" {
+			note = this.AddNoteAndContent(note, noteContent, note.UserId)
+		} else {
+			copyID, digest, err := copyNoteOperationIdentity("note_copy", note.UserId, note.NoteId, noteId, notebookId, "", operationID)
+			if err != nil {
+				return info.Note{}
+			}
+			var ok bool
+			note, ok, _ = this.addNoteAndContentResultWithIdentity(note, noteContent, note.UserId, false, true, copyID, digest, frozenAssets, false)
+			if !ok {
+				return info.Note{}
+			}
+			receipt, receiptErr := db.GetWorkspaceOperation(context.Background(), note.UserId, copyID)
+			if !copyReceiptCanResume(receipt, receiptErr, digest) {
+				return info.Note{}
+			}
+			frozenAssets = append([]applicationnotes.OperationAsset(nil), receipt.Assets...)
+			noteContent = this.GetNoteContent(note.NoteId.Hex(), userId)
+			copyCommand := applicationnotes.CopyNoteAssetsCommand{
+				OperationID: copyID, AssetOperationID: operationID, ActorID: note.UserId,
+				SourceOwnerID: note.UserId, DestinationOwnerID: note.UserId,
+				SourceNoteID: db.MustObjectIDFromHex(noteId), DestinationNoteID: note.NoteId,
+				Generation: receipt.AssignedUSN, Content: sourceContent.Content,
+			}
+			copied, copyErr := ContentAssets.CopyNote(context.Background(), copyCommand)
+			if copyErr != nil {
+				return info.Note{}
+			}
+			if copied.Content != noteContent.Content {
+				expected := note.Usn
+				content := copied.Content
+				abstract := noteContent.Abstract
+				updated := this.SaveNote(applicationnotes.SaveNoteCommand{
+					ActorUserID: userId, NoteID: note.NoteId.Hex(), OperationID: operationID + ":copied-content",
+					ExpectedUSN: &expected, Content: &content, Abstract: &abstract, UpdatedTime: time.Now(),
+				})
+				if !updated.OK() {
+					return info.Note{}
+				}
+				note = this.GetNote(note.NoteId.Hex(), userId)
+			}
+			if verified, verifyErr := ContentAssets.VerifyCopyNote(context.Background(), copyCommand); verifyErr != nil || !verified {
+				return info.Note{}
+			}
+		}
+		if note.NoteId.IsZero() {
+			return info.Note{}
+		}
 
 		// 更新blog状态
 		isBlog := this.updateToNotebookBlog(note.NoteId.Hex(), notebookId, userId)
-
-		// recount
-		notebookService.ReCountNotebookNumberNotes(notebookId)
 
 		note.IsBlog = isBlog
 
@@ -763,19 +1166,68 @@ func (this *NoteService) CopyNote(noteId, notebookId, userId string) info.Note {
 // 复制别人的共享笔记给我
 // 将别人可用的图片转为我的图片, 复制图片
 func (this *NoteService) CopySharedNote(noteId, notebookId, fromUserId, myUserId string) info.Note {
+	return this.CopySharedNoteWithOperation(noteId, notebookId, fromUserId, myUserId, "")
+}
+
+func (this *NoteService) CopySharedNoteWithOperation(noteId, notebookId, fromUserId, myUserId, operationID string) info.Note {
+	if !db.IsValidObjectIDHex(noteId) || !db.IsValidObjectIDHex(notebookId) || !db.IsValidObjectIDHex(fromUserId) || !db.IsValidObjectIDHex(myUserId) {
+		return info.Note{}
+	}
 	// 判断是否共享了给我
 	// Log(notebookService.IsMyNotebook(notebookId, myUserId))
 	if notebookService.IsMyNotebook(notebookId, myUserId) && shareService.HasReadPerm(fromUserId, myUserId, noteId) {
 		note := this.GetNote(noteId, fromUserId)
-		if note.NoteId == "" {
+		if note.NoteId.IsZero() {
 			return info.Note{}
 		}
 		noteContent := this.GetNoteContent(noteId, fromUserId)
+		sourceContent := noteContent
+		destinationExists := false
+		copyGeneration := 0
+		var frozenAssets []applicationnotes.OperationAsset
 
-		// 重新生成noteId
-		note.NoteId = bson.NewObjectId()
-		note.NotebookId = bson.ObjectIdHex(notebookId)
-		note.UserId = bson.ObjectIdHex(myUserId)
+		if operationID == "" {
+			note.NoteId = db.NewObjectID()
+		} else {
+			note.NoteId = stableCopyNoteIDForOwner(operationID, noteId, myUserId)
+			copyID, digest, err := copyNoteOperationIdentity("note_shared_copy", db.MustObjectIDFromHex(myUserId), note.NoteId, noteId, notebookId, fromUserId, operationID)
+			if err != nil {
+				return info.Note{}
+			}
+			receipt, receiptErr := db.GetWorkspaceOperation(context.Background(), db.MustObjectIDFromHex(myUserId), copyID)
+			if receiptErr == nil {
+				if !copyReceiptCanResume(receipt, nil, digest) {
+					return info.Note{}
+				}
+				frozenAssets = append([]applicationnotes.OperationAsset(nil), receipt.Assets...)
+				copyGeneration = receipt.AssignedUSN
+			} else if !errors.Is(receiptErr, mongo.ErrNoDocuments) {
+				return info.Note{}
+			} else {
+				frozenAssets, err = stableSharedCopyAssetManifest(noteId, fromUserId, myUserId, operationID, sourceContent.Content)
+				if err != nil {
+					return info.Note{}
+				}
+			}
+			if existing := this.GetNote(note.NoteId.Hex(), myUserId); !existing.NoteId.IsZero() {
+				if receiptErr == nil {
+					destinationExists = true
+				} else {
+					return info.Note{}
+				}
+			}
+		}
+		destination := this.GetNote(note.NoteId.Hex(), myUserId)
+		destinationExists = destinationExists || !destination.NoteId.IsZero()
+		if destinationExists {
+			note = destination
+			noteContent = this.GetNoteContent(note.NoteId.Hex(), myUserId)
+			// The committed destination content is the durable source snapshot for
+			// this operation. Never re-read later source edits into a retry.
+			sourceContent = noteContent
+		}
+		note.NotebookId = db.MustObjectIDFromHex(notebookId)
+		note.UserId = db.MustObjectIDFromHex(myUserId)
 		note.IsTop = false
 		note.IsBlog = false // 别人的可能是blog
 
@@ -784,21 +1236,83 @@ func (this *NoteService) CopySharedNote(noteId, notebookId, fromUserId, myUserId
 		// content
 		noteContent.NoteId = note.NoteId
 		noteContent.UserId = note.UserId
+		if operationID == "" {
+			// Preserve the legacy, non-retry-safe ordering and one-USN create
+			// boundary. Historically image/attachment copies happened before the
+			// destination note was inserted, and copy failures were not surfaced.
+			noteContent.Content = noteImageService.CopyNoteImages(noteId, fromUserId, note.NoteId.Hex(), noteContent.Content, myUserId)
+			attachService.CopyAttachs(noteId, note.NoteId.Hex(), myUserId)
+			note = this.AddNoteAndContent(note, noteContent, note.UserId)
+			if note.NoteId.IsZero() {
+				return info.Note{}
+			}
+			note.IsBlog = this.updateToNotebookBlog(note.NoteId.Hex(), notebookId, myUserId)
+			return note
+		}
 
-		// 复制图片, 把note的图片都copy给我, 且修改noteContent图片路径
-		noteContent.Content = noteImageService.CopyNoteImages(noteId, fromUserId, note.NoteId.Hex(), noteContent.Content, myUserId)
+		// 添加之. A stable destination can be read back on a retry; the
+		// operation receipt then supplies the original committed result.
+		if operationID != "" {
+			copyID, digest, err := copyNoteOperationIdentity("note_shared_copy", note.UserId, note.NoteId, noteId, notebookId, fromUserId, operationID)
+			if err != nil {
+				return info.Note{}
+			}
+			var ok bool
+			note, ok, _ = this.addNoteAndContentResultWithIdentity(note, noteContent, note.UserId, false, true, copyID, digest, frozenAssets, false)
+			if !ok {
+				return info.Note{}
+			}
+			receipt, receiptErr := db.GetWorkspaceOperation(context.Background(), note.UserId, copyID)
+			if !copyReceiptCanResume(receipt, receiptErr, digest) {
+				return info.Note{}
+			}
+			frozenAssets = append([]applicationnotes.OperationAsset(nil), receipt.Assets...)
+			copyGeneration = receipt.AssignedUSN
+			noteContent = this.GetNoteContent(note.NoteId.Hex(), myUserId)
+			sourceContent = noteContent
+		}
+		if note.NoteId.IsZero() {
+			return info.Note{}
+		}
 
-		// 复制附件
-		attachService.CopyAttachs(noteId, note.NoteId.Hex(), myUserId)
-
-		// 添加之
-		note = this.AddNoteAndContent(note, noteContent, note.UserId)
-
+		// Asset copies start only after the destination note/create receipt is
+		// durable. Retries reuse the destination and can safely finish the
+		// projection instead of returning the partially copied note early.
+		copyID, _, copyIdentityErr := copyNoteOperationIdentity("note_shared_copy", note.UserId, note.NoteId, noteId, notebookId, fromUserId, operationID)
+		if copyIdentityErr != nil {
+			return info.Note{}
+		}
+		copyAssetsCommand := applicationnotes.CopyNoteAssetsCommand{
+			OperationID: copyID, AssetOperationID: operationID, ActorID: db.MustObjectIDFromHex(myUserId),
+			SourceOwnerID: db.MustObjectIDFromHex(fromUserId), DestinationOwnerID: note.UserId,
+			SourceNoteID: db.MustObjectIDFromHex(noteId), DestinationNoteID: note.NoteId,
+			Generation: copyGeneration, Content: sourceContent.Content,
+		}
+		copied, copyErr := ContentAssets.CopyNote(context.Background(), copyAssetsCommand)
+		if copyErr != nil {
+			return info.Note{}
+		}
+		copiedContent := copied.Content
+		if copiedContent != noteContent.Content {
+			expected := note.Usn
+			content := copiedContent
+			abstract := noteContent.Abstract
+			contentOperationID := ""
+			if operationID != "" {
+				contentOperationID = operationID + ":copied-content"
+			}
+			updated := this.SaveNote(applicationnotes.SaveNoteCommand{ActorUserID: myUserId, NoteID: note.NoteId.Hex(), OperationID: contentOperationID, ExpectedUSN: &expected, Content: &content, Abstract: &abstract, UpdatedTime: time.Now()})
+			if !updated.OK() {
+				return info.Note{}
+			}
+			note = this.GetNote(note.NoteId.Hex(), myUserId)
+			noteContent = this.GetNoteContent(note.NoteId.Hex(), myUserId)
+		}
+		if verified, verifyErr := ContentAssets.VerifyCopyNote(context.Background(), copyAssetsCommand); verifyErr != nil || !verified {
+			return info.Note{}
+		}
 		// 更新blog状态
 		isBlog := this.updateToNotebookBlog(note.NoteId.Hex(), notebookId, myUserId)
-
-		// recount
-		notebookService.ReCountNotebookNumberNotes(notebookId)
 
 		note.IsBlog = isBlog
 		return note
@@ -807,30 +1321,123 @@ func (this *NoteService) CopySharedNote(noteId, notebookId, fromUserId, myUserId
 	return info.Note{}
 }
 
+func stableCopyNoteID(operationID, sourceNoteID string) domain.ObjectID {
+	return stableCopyNoteIDForOwner(operationID, sourceNoteID, "")
+}
+
+func copyNoteOperationIdentity(kind string, ownerID, destinationID domain.ObjectID, sourceNoteID, notebookID, sharedOwnerID, clientOperationID string) (string, string, error) {
+	operationID, digest, _, err := applicationnotes.NewOperationIdentity(kind, ownerID, destinationID, struct {
+		SourceNoteID  string
+		NotebookID    string
+		SharedOwnerID string
+		OperationID   string
+	}{SourceNoteID: sourceNoteID, NotebookID: notebookID, SharedOwnerID: sharedOwnerID, OperationID: clientOperationID})
+	return operationID, digest, err
+}
+
+func stableSharedCopyAssetManifest(sourceNoteID, sourceOwnerID, destinationOwnerID, operationID, content string) ([]applicationnotes.OperationAsset, error) {
+	if contentStore == nil || !db.IsValidObjectIDHex(sourceNoteID) || !db.IsValidObjectIDHex(sourceOwnerID) || !db.IsValidObjectIDHex(destinationOwnerID) {
+		return nil, fmt.Errorf("copy asset manifest: invalid runtime or identity")
+	}
+	destinationOwner := db.MustObjectIDFromHex(destinationOwnerID)
+	destinationNote := stableCopyNoteIDForOwner(operationID, sourceNoteID, destinationOwnerID)
+	assets := make([]applicationnotes.OperationAsset, 0)
+	for _, sourceImageID := range noteImageSourceFileIDs(content) {
+		imageOperationID := operationID + ":image:" + sourceImageID
+		var source info.File
+		if err := db.Files.FindContext(context.Background(), bson.M{
+			"_id": db.MustObjectIDFromHex(sourceImageID), "UserId": db.MustObjectIDFromHex(sourceOwnerID), "Type": "",
+		}).One(&source); err != nil {
+			return nil, err
+		}
+		data, err := readImageSource(context.Background(), source)
+		if err != nil || int64(len(data)) != source.Size {
+			return nil, errors.Join(err, fmt.Errorf("copy image source size mismatch"))
+		}
+		contentDigest := sha256.Sum256(data)
+		destination := copiedImageDestination(source, destinationOwner, imageOperationID)
+		recordDigest := contentCreateImageRecordDigest(destination)
+		assets = append(assets, applicationnotes.OperationAsset{
+			AssetID: destination.FileId.Hex(), LocalFileID: sourceImageID,
+			ContentSHA256: hex.EncodeToString(contentDigest[:]), RecordSHA256: hex.EncodeToString(recordDigest[:]), Index: len(assets),
+		})
+	}
+	var attachments []info.Attach
+	if err := db.Attachs.FindContext(context.Background(), bson.M{"NoteId": db.MustObjectIDFromHex(sourceNoteID)}).All(&attachments); err != nil {
+		return nil, err
+	}
+	slices.SortFunc(attachments, func(left, right info.Attach) int {
+		return strings.Compare(left.AttachId.Hex(), right.AttachId.Hex())
+	})
+	for _, attach := range attachments {
+		sourceAttachID := attach.AttachId.Hex()
+		data, err := readAttachmentSource(context.Background(), attach)
+		if err != nil || int64(len(data)) != attach.Size {
+			return nil, errors.Join(err, fmt.Errorf("copy attachment source size mismatch"))
+		}
+		contentDigest := sha256.Sum256(data)
+		destination, err := copiedAttachmentDestination(attach, destinationOwner, destinationNote, operationID)
+		if err != nil {
+			return nil, err
+		}
+		recordDigest := contentCreateAttachmentRecordDigest(destination)
+		assets = append(assets, applicationnotes.OperationAsset{
+			AssetID: destination.AttachId.Hex(), LocalFileID: sourceAttachID,
+			ContentSHA256: hex.EncodeToString(contentDigest[:]), RecordSHA256: hex.EncodeToString(recordDigest[:]),
+			Index: len(assets), IsAttach: true,
+		})
+	}
+	return assets, nil
+}
+
+func copyReceiptCanResume(receipt applicationnotes.OperationReceipt, receiptErr error, inputDigest string) bool {
+	if receiptErr != nil || receipt.InputDigest != inputDigest {
+		return false
+	}
+	return receipt.Status == applicationnotes.OperationCommitted || !applicationnotes.IsTerminalOperation(receipt.Status)
+}
+
+func stableCopyNoteIDForOwner(operationID, sourceNoteID, destinationOwnerID string) domain.ObjectID {
+	sum := sha256.Sum256([]byte("note-copy-destination\x00" + operationID + "\x00" + sourceNoteID + "\x00" + destinationOwnerID))
+	id, err := domain.ParseObjectID(hex.EncodeToString(sum[:12]))
+	if err != nil || id.IsZero() {
+		return db.NewObjectID()
+	}
+	return id
+}
+
 // 通过noteId得到notebookId
 // shareService call
 // [ok]
-func (this *NoteService) GetNotebookId(noteId string) bson.ObjectId {
+func (this *NoteService) GetNotebookId(noteId string) ObjectID {
 	note := info.Note{}
 	// db.Get(db.Notes, noteId, &note)
 	// LogJ(note)
-	db.GetByQWithFields(db.Notes, bson.M{"_id": bson.ObjectIdHex(noteId)}, []string{"NotebookId"}, &note)
+	db.GetByQWithFields(db.Notes, bson.M{"_id": db.MustObjectIDFromHex(noteId)}, []string{"NotebookId"}, &note)
 	return note.NotebookId
 }
 
-//------------------
+// ------------------
 // 搜索Note, 博客使用了
 func (this *NoteService) SearchNote(key, userId string, pageNumber, pageSize int, sortField string, isAsc, isBlog bool) (count int, notes []info.Note) {
 	notes = []info.Note{}
+	if isBlog {
+		var err error
+		key, err = NormalizeBlogText(key, MaxBlogKeywordsRunes, MaxBlogKeywordsBytes)
+		if err != nil {
+			return 0, nil
+		}
+		sortField = NormalizeBlogSortField(sortField)
+	}
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 
 	// 利用标题和desc, 不用content
 	orQ := []bson.M{
-		bson.M{"Title": bson.M{"$regex": bson.RegEx{".*?" + key + ".*", "i"}}},
-		bson.M{"Desc": bson.M{"$regex": bson.RegEx{".*?" + key + ".*", "i"}}},
+		bson.M{"Title": bson.M{"$regex": bson.Regex{Pattern: ".*?" + regexp.QuoteMeta(key) + ".*", Options: "i"}}},
+		bson.M{"Desc": bson.M{"$regex": bson.Regex{Pattern: ".*?" + regexp.QuoteMeta(key) + ".*", Options: "i"}}},
 	}
 	// 不是trash的
-	query := bson.M{"UserId": bson.ObjectIdHex(userId),
+	query := bson.M{"UserId": db.MustObjectIDFromHex(userId),
 		"IsTrash":   false,
 		"IsDeleted": false, // 不能搜索已删除了的
 		"$or":       orQ,
@@ -843,10 +1450,17 @@ func (this *NoteService) SearchNote(key, userId string, pageNumber, pageSize int
 	// 总记录数
 	count, _ = q.Count()
 
-	q.Sort(sortFieldR).
-		Skip(skipNum).
-		Limit(pageSize).
-		All(&notes)
+	if isBlog {
+		q.Sort(BlogSortFields(sortField, isAsc)...).
+			Skip(skipNum).
+			Limit(pageSize).
+			All(&notes)
+	} else {
+		q.Sort(sortFieldR).
+			Skip(skipNum).
+			Limit(pageSize).
+			All(&notes)
+	}
 
 	// 如果 < pageSize 那么搜索content, 且id不在这些id之间的
 	if len(notes) < pageSize {
@@ -858,15 +1472,15 @@ func (this *NoteService) SearchNote(key, userId string, pageNumber, pageSize int
 // 搜索noteContents, 补集pageSize个
 func (this *NoteService) searchNoteFromContent(notes []info.Note, userId, key string, pageSize int, sortField string, isBlog bool) []info.Note {
 	var remain = pageSize - len(notes)
-	noteIds := make([]bson.ObjectId, len(notes))
+	noteIds := make([]ObjectID, len(notes))
 	for i, note := range notes {
 		noteIds[i] = note.NoteId
 	}
 	noteContents := []info.NoteContent{}
 	query := bson.M{
 		"_id":     bson.M{"$nin": noteIds},
-		"UserId":  bson.ObjectIdHex(userId),
-		"Content": bson.M{"$regex": bson.RegEx{".*?" + key + ".*", "i"}},
+		"UserId":  db.MustObjectIDFromHex(userId),
+		"Content": bson.M{"$regex": bson.Regex{Pattern: ".*?" + regexp.QuoteMeta(key) + ".*", Options: "i"}},
 	}
 	if isBlog {
 		query["IsBlog"] = true
@@ -883,7 +1497,7 @@ func (this *NoteService) searchNoteFromContent(notes []info.Note, userId, key st
 	}
 
 	// 收集ids
-	noteIds2 := make([]bson.ObjectId, lenContent)
+	noteIds2 := make([]ObjectID, lenContent)
 	for i, content := range noteContents {
 		noteIds2[i] = content.NoteId
 	}
@@ -902,14 +1516,14 @@ func (this *NoteService) searchNoteFromContent(notes []info.Note, userId, key st
 	return notes
 }
 
-//----------------
+// ----------------
 // tag搜索
 func (this *NoteService) SearchNoteByTags(tags []string, userId string, pageNumber, pageSize int, sortField string, isAsc bool) (count int, notes []info.Note) {
 	notes = []info.Note{}
 	skipNum, sortFieldR := parsePageAndSort(pageNumber, pageSize, sortField, isAsc)
 
 	// 不是trash的
-	query := bson.M{"UserId": bson.ObjectIdHex(userId),
+	query := bson.M{"UserId": db.MustObjectIDFromHex(userId),
 		"IsTrash": false,
 		"Tags":    bson.M{"$all": tags}}
 
@@ -925,19 +1539,19 @@ func (this *NoteService) SearchNoteByTags(tags []string, userId string, pageNumb
 	return
 }
 
-//------------
+// ------------
 // 统计
 func (this *NoteService) CountNote(userId string) int {
 	q := bson.M{"IsTrash": false, "IsDeleted": false}
 	if userId != "" {
-		q["UserId"] = bson.ObjectIdHex(userId)
+		q["UserId"] = db.MustObjectIDFromHex(userId)
 	}
 	return db.Count(db.Notes, q)
 }
 func (this *NoteService) CountBlog(userId string) int {
 	q := bson.M{"IsBlog": true, "IsTrash": false, "IsDeleted": false}
 	if userId != "" {
-		q["UserId"] = bson.ObjectIdHex(userId)
+		q["UserId"] = db.MustObjectIDFromHex(userId)
 	}
 	return db.Count(db.Notes, q)
 }
@@ -947,7 +1561,7 @@ func (this *NoteService) CountNoteByTag(userId string, tag string) int {
 	if tag == "" {
 		return 0
 	}
-	query := bson.M{"UserId": bson.ObjectIdHex(userId),
+	query := bson.M{"UserId": db.MustObjectIDFromHex(userId),
 		//		"IsTrash": false,
 		"IsDeleted": false,
 		"Tags":      bson.M{"$in": []string{tag}}}
@@ -957,7 +1571,12 @@ func (this *NoteService) CountNoteByTag(userId string, tag string) int {
 // 删除tag
 // 返回所有note的Usn
 func (this *NoteService) UpdateNoteToDeleteTag(userId string, targetTag string) map[string]int {
-	query := bson.M{"UserId": bson.ObjectIdHex(userId),
+	items, _ := this.UpdateNoteToDeleteTagResult(userId, targetTag)
+	return items
+}
+
+func (this *NoteService) UpdateNoteToDeleteTagResult(userId string, targetTag string) (map[string]int, bool) {
+	query := bson.M{"UserId": db.MustObjectIDFromHex(userId),
 		"Tags": bson.M{"$in": []string{targetTag}}}
 	notes := []info.Note{}
 	db.ListByQ(db.Notes, query, &notes)
@@ -969,16 +1588,25 @@ func (this *NoteService) UpdateNoteToDeleteTag(userId string, targetTag string) 
 		}
 		for i, tag := range tags {
 			if tag == targetTag {
-				tags = tags
 				tags = append(tags[:i], tags[i+1:]...)
 				break
 			}
 		}
-		usn := userService.IncrUsn(userId)
-		db.UpdateByQMap(db.Notes, bson.M{"_id": note.NoteId}, bson.M{"Usn": usn, "Tags": tags})
+		usn, err := userService.AllocateUsn(context.Background(), userId)
+		if err != nil {
+			return ret, false
+		}
+		filter := bson.M{"_id": note.NoteId, "UserId": db.MustObjectIDFromHex(userId), "Usn": note.Usn, "IsDeleted": false}
+		db.AddWorkspaceNoteMutationLeaseFilter(filter, "", time.Now())
+		if err := db.Notes.UpdateOneMatchedContext(context.Background(),
+			filter,
+			bson.M{"$set": bson.M{"Usn": usn, "Tags": tags}},
+		); err != nil {
+			return ret, false
+		}
 		ret[note.NoteId.Hex()] = usn
 	}
-	return ret
+	return ret, true
 }
 
 // api
@@ -1079,7 +1707,7 @@ func (this *NoteService) FixContent(content string, isMarkdown bool) string {
 	patterns := []map[string]string{
 		map[string]string{"src": "src", "middle": "/api/file/getImage", "param": "fileId", "to": "getImage?fileId="},
 		map[string]string{"src": "src", "middle": "/file/outputImage", "param": "fileId", "to": "getImage?fileId="},
-		
+
 		map[string]string{"src": "href", "middle": "/attach/download", "param": "attachId", "to": "getAttach?fileId="},
 		map[string]string{"src": "href", "middle": "/api/file/getAtach", "param": "fileId", "to": "getAttach?fileId="},
 

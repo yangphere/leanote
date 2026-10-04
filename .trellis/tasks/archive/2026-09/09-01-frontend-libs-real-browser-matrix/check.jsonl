@@ -1,0 +1,2 @@
+{"file": ".trellis/tasks/09-01-frontend-libs-real-browser-matrix/prd.md", "reason": "对照 AC 核查：8 槽真实执行、validator precheck 全绿、无发布副作用或 blocked 登记完整"}
+{"file": ".trellis/tasks/09-01-frontend-libs-real-browser-matrix/design.md", "reason": "核查执行是否遵循序列与 marker 契约、失败未降级"}

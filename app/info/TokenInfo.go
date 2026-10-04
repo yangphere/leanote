@@ -1,7 +1,7 @@
 package info
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/domain"
 	"time"
 )
 
@@ -24,9 +24,9 @@ const (
 )
 
 type Token struct {
-	UserId      bson.ObjectId `bson:"_id"`
-	Email       string        `Email`
-	Token       string        `Token`
-	Type        int           `Type`
-	CreatedTime time.Time     `CreatedTime`
+	UserId      domain.ObjectID `bson:"_id"`
+	Email       string          `bson:"Email"`
+	Token       string          `bson:"Token"`
+	Type        int             `bson:"Type"`
+	CreatedTime time.Time       `bson:"CreatedTime"`
 }

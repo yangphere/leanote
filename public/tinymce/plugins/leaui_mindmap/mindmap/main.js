@@ -9246,7 +9246,7 @@ var define, requireModule, require, requirejs;
   };
 })();
 
-define("promise/all", 
+define("promise/all",
   ["./utils","exports"],
   function(__dependency1__, __exports__) {
     "use strict";
@@ -9343,7 +9343,7 @@ define("promise/all",
 
     __exports__.all = all;
   });
-define("promise/asap", 
+define("promise/asap",
   ["exports"],
   function(__exports__) {
     "use strict";
@@ -9408,7 +9408,7 @@ define("promise/asap",
 
     __exports__.asap = asap;
   });
-define("promise/config", 
+define("promise/config",
   ["exports"],
   function(__exports__) {
     "use strict";
@@ -9427,7 +9427,7 @@ define("promise/config",
     __exports__.config = config;
     __exports__.configure = configure;
   });
-define("promise/polyfill", 
+define("promise/polyfill",
   ["./promise","./utils","exports"],
   function(__dependency1__, __dependency2__, __exports__) {
     "use strict";
@@ -9446,7 +9446,7 @@ define("promise/polyfill",
         local = self;
       }
 
-      var es6PromiseSupport = 
+      var es6PromiseSupport =
         "Promise" in local &&
         // Some of these methods are missing from
         // Firefox/Chrome experimental implementations
@@ -9470,7 +9470,7 @@ define("promise/polyfill",
 
     __exports__.polyfill = polyfill;
   });
-define("promise/promise", 
+define("promise/promise",
   ["./config","./utils","./all","./race","./resolve","./reject","./asap","exports"],
   function(__dependency1__, __dependency2__, __dependency3__, __dependency4__, __dependency5__, __dependency6__, __dependency7__, __exports__) {
     "use strict";
@@ -9685,7 +9685,7 @@ define("promise/promise",
 
     __exports__.Promise = Promise;
   });
-define("promise/race", 
+define("promise/race",
   ["./utils","exports"],
   function(__dependency1__, __exports__) {
     "use strict";
@@ -9778,7 +9778,7 @@ define("promise/race",
 
     __exports__.race = race;
   });
-define("promise/reject", 
+define("promise/reject",
   ["exports"],
   function(__exports__) {
     "use strict";
@@ -9829,7 +9829,7 @@ define("promise/reject",
 
     __exports__.reject = reject;
   });
-define("promise/resolve", 
+define("promise/resolve",
   ["exports"],
   function(__exports__) {
     "use strict";
@@ -9848,7 +9848,7 @@ define("promise/resolve",
 
     __exports__.resolve = resolve;
   });
-define("promise/utils", 
+define("promise/utils",
   ["exports"],
   function(__exports__) {
     "use strict";
@@ -9892,14 +9892,14 @@ requireModule('promise/polyfill').polyfill();
 */
 // Avoid collisions
 ;if(window.jQuery) (function($){
- 
+
  // Add function to jQuery namespace
  $.extend({
-  
+
   // converts xml documents and xml text to json object
   xml2json: function(xml, extended) {
    if(!xml) return {}; // quick fail
-   
+
    //### PARSER LIBRARY
    // Core function
    function parseXML(node, simple){
@@ -9934,11 +9934,11 @@ requireModule('promise/polyfill').polyfill();
         obj = obj || {};
         if(obj[cnn]){
          /*DBG*/ //if(window.console) console.log(['x2j',nn,'node>f',cnn,'ARRAY']);
-         
+
 									// http://forum.jquery.com/topic/jquery-jquery-xml2json-problems-when-siblings-of-the-same-tagname-only-have-a-textnode-as-a-child
 									if(!obj[cnn].length) obj[cnn] = myArr(obj[cnn]);
 									obj[cnn] = myArr(obj[cnn]);
-         
+
 									obj[cnn][ obj[cnn].length ] = parseXML(cn, true/* simple */);
          obj[cnn].length = obj[cnn].length;
         }
@@ -9959,11 +9959,11 @@ requireModule('promise/polyfill').polyfill();
        att[atn] = atv;
        if(obj[atn]){
         /*DBG*/ //if(window.console) console.log(['x2j',nn,'attr>',atn,'ARRAY']);
-        
+
 								// http://forum.jquery.com/topic/jquery-jquery-xml2json-problems-when-siblings-of-the-same-tagname-only-have-a-textnode-as-a-child
 								//if(!obj[atn].length) obj[atn] = myArr(obj[atn]);//[ obj[ atn ] ];
         obj[cnn] = myArr(obj[cnn]);
-								
+
 								obj[atn][ obj[atn].length ] = atv;
         obj[atn].length = obj[atn].length;
        }
@@ -9995,7 +9995,7 @@ requireModule('promise/polyfill').polyfill();
    // Core Function End
    // Utility functions
    var jsVar = function(s){ return String(s || '').replace(/-/g,"_"); };
-   
+
 			// NEW isNum function: 01/09/2010
 			// Thanks to Emile Grau, GigaTecnologies S.L., www.gigatransfer.com, www.mygigamail.com
 			function isNum(s){
@@ -10010,44 +10010,44 @@ requireModule('promise/polyfill').polyfill();
 			};
 			// OLD isNum function: (for reference only)
 			//var isNum = function(s){ return (typeof s == "number") || String((s && typeof s == "string") ? s : '').test(/^((-)?([0-9]*)((\.{0,1})([0-9]+))?$)/); };
-																
+
    var myArr = function(o){
-    
+
 				// http://forum.jquery.com/topic/jquery-jquery-xml2json-problems-when-siblings-of-the-same-tagname-only-have-a-textnode-as-a-child
 				//if(!o.length) o = [ o ]; o.length=o.length;
     if(!$.isArray(o)) o = [ o ]; o.length=o.length;
-				
+
 				// here is where you can attach additional functionality, such as searching and sorting...
     return o;
    };
    // Utility functions End
    //### PARSER LIBRARY END
-   
+
    // Convert plain text to xml
    if(typeof xml=='string') xml = $.text2xml(xml);
-   
+
    // Quick fail if not xml (or if this is a node)
    if(!xml.nodeType) return;
    if(xml.nodeType == 3 || xml.nodeType == 4) return xml.nodeValue;
-   
+
    // Find xml root node
    var root = (xml.nodeType == 9) ? xml.documentElement : xml;
-   
+
    // Convert xml to json
    var out = parseXML(root, true /* simple */);
-   
+
    // Clean-up memory
    xml = null; root = null;
-   
+
    // Send output
    return out;
   },
-  
+
   // Convert text to XML DOM
   text2xml: function(str) {
    // NOTE: I'd like to use jQuery for this, but jQuery makes all tags uppercase
    //return $(xml)[0];
-   
+
    /* prior to jquery 1.9 */
    /*
    var out;
@@ -10065,7 +10065,7 @@ requireModule('promise/polyfill').polyfill();
    /* jquery 1.9+ */
    return $.parseXML(str);
   }
-		
+
  }); // extend $
 
 })(jQuery);
@@ -10180,7 +10180,7 @@ requireModule('promise/polyfill').polyfill();
 	try {
 		appendABViewSupported = new Blob([ getDataHelper(0).view ]).size == 0;
 	} catch (e) {
-	}	
+	}
 
 	function Crc32() {
 		var crc = -1, that = this;
@@ -11118,7 +11118,7 @@ requireModule('promise/polyfill').polyfill();
  * - Using the 'QRCode for Javascript library'
  * - Fixed dataset of 'QRCode for Javascript library' for support full-spec.
  * - this library has no dependencies.
- * 
+ *
  * @author davidshimjs
  * @see <a href="http://www.d-project.com/" target="_blank">http://www.d-project.com/</a>
  * @see <a href="http://jeromeetienne.github.com/jquery-qrcode/" target="_blank">http://jeromeetienne.github.com/jquery-qrcode/</a>
@@ -11135,7 +11135,7 @@ requireModule('promise/polyfill').polyfill();
 	// Licensed under the MIT license:
 	//   http://www.opensource.org/licenses/mit-license.php
 	//
-	// The word "QR Code" is registered trademark of 
+	// The word "QR Code" is registered trademark of
 	// DENSO WAVE INCORPORATED
 	//   http://www.denso-wave.com/qrcode/faqpatent-e.html
 	//
@@ -11264,28 +11264,28 @@ requireModule('promise/polyfill').polyfill();
 	QRBitBuffer.prototype={get:function(index){var bufIndex=Math.floor(index/8);return((this.buffer[bufIndex]>>>(7-index%8))&1)==1;},put:function(num,length){for(var i=0;i<length;i++){this.putBit(((num>>>(length-i-1))&1)==1);}},getLengthInBits:function(){return this.length;},putBit:function(bit){var bufIndex=Math.floor(this.length/8);if(this.buffer.length<=bufIndex){this.buffer.push(0);}
 	if(bit){this.buffer[bufIndex]|=(0x80>>>(this.length%8));}
 	this.length++;}};var QRCodeLimitLength=[[17,14,11,7],[32,26,20,14],[53,42,32,24],[78,62,46,34],[106,84,60,44],[134,106,74,58],[154,122,86,64],[192,152,108,84],[230,180,130,98],[271,213,151,119],[321,251,177,137],[367,287,203,155],[425,331,241,177],[458,362,258,194],[520,412,292,220],[586,450,322,250],[644,504,364,280],[718,560,394,310],[792,624,442,338],[858,666,482,382],[929,711,509,403],[1003,779,565,439],[1091,857,611,461],[1171,911,661,511],[1273,997,715,535],[1367,1059,751,593],[1465,1125,805,625],[1528,1190,868,658],[1628,1264,908,698],[1732,1370,982,742],[1840,1452,1030,790],[1952,1538,1112,842],[2068,1628,1168,898],[2188,1722,1228,958],[2303,1809,1283,983],[2431,1911,1351,1051],[2563,1989,1423,1093],[2699,2099,1499,1139],[2809,2213,1579,1219],[2953,2331,1663,1273]];
-	
+
 	function _isSupportCanvas() {
 		return typeof CanvasRenderingContext2D != "undefined";
 	}
-	
+
 	// android 2.x doesn't support Data-URI spec
 	function _getAndroid() {
 		var android = false;
 		var sAgent = navigator.userAgent;
-		
+
 		if (/android/i.test(sAgent)) { // android
 			android = true;
 			aMat = sAgent.toString().match(/android ([0-9]\.[0-9])/i);
-			
+
 			if (aMat && aMat[1]) {
 				android = parseFloat(aMat[1]);
 			}
 		}
-		
+
 		return android;
 	}
-	
+
 	var svgDrawer = (function() {
 
 		var Drawing = function (el, htOption) {
@@ -11340,10 +11340,10 @@ requireModule('promise/polyfill').polyfill();
 			this._el = el;
 			this._htOption = htOption;
 		};
-			
+
 		/**
 		 * Draw the QRCode
-		 * 
+		 *
 		 * @param {QRCode} oQRCode
 		 */
 		Drawing.prototype.draw = function (oQRCode) {
@@ -11353,50 +11353,50 @@ requireModule('promise/polyfill').polyfill();
 			var nWidth = Math.floor(_htOption.width / nCount);
 			var nHeight = Math.floor(_htOption.height / nCount);
 			var aHTML = ['<table style="border:0;border-collapse:collapse;">'];
-			
+
 			for (var row = 0; row < nCount; row++) {
 				aHTML.push('<tr>');
-				
+
 				for (var col = 0; col < nCount; col++) {
 					aHTML.push('<td style="border:0;border-collapse:collapse;padding:0;margin:0;width:' + nWidth + 'px;height:' + nHeight + 'px;background-color:' + (oQRCode.isDark(row, col) ? _htOption.colorDark : _htOption.colorLight) + ';"></td>');
 				}
-				
+
 				aHTML.push('</tr>');
 			}
-			
+
 			aHTML.push('</table>');
 			_el.innerHTML = aHTML.join('');
-			
+
 			// Fix the margin values as real size.
 			var elTable = _el.childNodes[0];
 			var nLeftMarginTable = (_htOption.width - elTable.offsetWidth) / 2;
 			var nTopMarginTable = (_htOption.height - elTable.offsetHeight) / 2;
-			
+
 			if (nLeftMarginTable > 0 && nTopMarginTable > 0) {
-				elTable.style.margin = nTopMarginTable + "px " + nLeftMarginTable + "px";	
+				elTable.style.margin = nTopMarginTable + "px " + nLeftMarginTable + "px";
 			}
 		};
-		
+
 		/**
 		 * Clear the QRCode
 		 */
 		Drawing.prototype.clear = function () {
 			this._el.innerHTML = '';
 		};
-		
+
 		return Drawing;
 	})() : (function () { // Drawing in Canvas
 		function _onMakeImage() {
 			this._elImage.src = this._elCanvas.toDataURL("image/png");
 			this._elImage.style.display = "block";
-			this._elCanvas.style.display = "none";			
+			this._elCanvas.style.display = "none";
 		}
-		
+
 		// Android 2.1 bug workaround
 		// http://code.google.com/p/android/issues/detail?id=5141
 		if (this._android && this._android <= 2.1) {
 	    	var factor = 1 / window.devicePixelRatio;
-	        var drawImage = CanvasRenderingContext2D.prototype.drawImage; 
+	        var drawImage = CanvasRenderingContext2D.prototype.drawImage;
 	    	CanvasRenderingContext2D.prototype.drawImage = function (image, sx, sy, sw, sh, dx, dy, dw, dh) {
 	    		if (("nodeName" in image) && /img/i.test(image.nodeName)) {
 		        	for (var i = arguments.length - 1; i >= 1; i--) {
@@ -11408,14 +11408,14 @@ requireModule('promise/polyfill').polyfill();
 	    			arguments[3] *= factor;
 	    			arguments[4] *= factor;
 	    		}
-	    		
+
 	        	drawImage.apply(this, arguments); 
 	    	};
 		}
-		
+
 		/**
 		 * Check whether the user's browser supports Data URI or not
-		 * 
+		 *
 		 * @private
 		 * @param {Function} fSuccess Occurs if it supports Data URI
 		 * @param {Function} fFail Occurs if it doesn't support Data URI
@@ -11454,18 +11454,18 @@ requireModule('promise/polyfill').polyfill();
                 self._fFail.call(self);
             }
 		};
-		
+
 		/**
 		 * Drawing QRCode by using canvas
-		 * 
+		 *
 		 * @constructor
 		 * @param {HTMLElement} el
-		 * @param {Object} htOption QRCode Options 
+		 * @param {Object} htOption QRCode Options
 		 */
 		var Drawing = function (el, htOption) {
     		this._bIsPainted = false;
     		this._android = _getAndroid();
-		
+
 			this._htOption = htOption;
 			this._elCanvas = document.createElement("canvas");
 			this._elCanvas.width = htOption.width;
@@ -11480,17 +11480,17 @@ requireModule('promise/polyfill').polyfill();
 			this._el.appendChild(this._elImage);
 			this._bSupportDataURI = null;
 		};
-			
+
 		/**
 		 * Draw the QRCode
-		 * 
-		 * @param {QRCode} oQRCode 
+		 *
+		 * @param {QRCode} oQRCode
 		 */
 		Drawing.prototype.draw = function (oQRCode) {
             var _elImage = this._elImage;
             var _oContext = this._oContext;
             var _htOption = this._htOption;
-            
+
 			var nCount = oQRCode.getModuleCount();
 			var nWidth = _htOption.width / nCount;
 			var nHeight = _htOption.height / nCount;
@@ -11499,7 +11499,7 @@ requireModule('promise/polyfill').polyfill();
 
 			_elImage.style.display = "none";
 			this.clear();
-			
+
 			for (var row = 0; row < nCount; row++) {
 				for (var col = 0; col < nCount; col++) {
 					var bIsDark = oQRCode.isDark(row, col);
@@ -11507,9 +11507,9 @@ requireModule('promise/polyfill').polyfill();
 					var nTop = row * nHeight;
 					_oContext.strokeStyle = bIsDark ? _htOption.colorDark : _htOption.colorLight;
 					_oContext.lineWidth = 1;
-					_oContext.fillStyle = bIsDark ? _htOption.colorDark : _htOption.colorLight;					
+					_oContext.fillStyle = bIsDark ? _htOption.colorDark : _htOption.colorLight;
 					_oContext.fillRect(nLeft, nTop, nWidth, nHeight);
-					
+
 					// 안티 앨리어싱 방지 처리
 					_oContext.strokeRect(
 						Math.floor(nLeft) + 0.5,
@@ -11517,7 +11517,7 @@ requireModule('promise/polyfill').polyfill();
 						nRoundedWidth,
 						nRoundedHeight
 					);
-					
+
 					_oContext.strokeRect(
 						Math.ceil(nLeft) - 0.5,
 						Math.ceil(nTop) - 0.5,
@@ -11526,10 +11526,10 @@ requireModule('promise/polyfill').polyfill();
 					);
 				}
 			}
-			
+
 			this._bIsPainted = true;
 		};
-			
+
 		/**
 		 * Make the image from Canvas if the browser supports Data URI.
 		 */
@@ -11538,16 +11538,16 @@ requireModule('promise/polyfill').polyfill();
 				_safeSetDataURI.call(this, _onMakeImage);
 			}
 		};
-			
+
 		/**
 		 * Return whether the QRCode is painted or not
-		 * 
+		 *
 		 * @return {Boolean}
 		 */
 		Drawing.prototype.isPainted = function () {
 			return this._bIsPainted;
 		};
-		
+
 		/**
 		 * Clear the QRCode
 		 */
@@ -11555,7 +11555,7 @@ requireModule('promise/polyfill').polyfill();
 			this._oContext.clearRect(0, 0, this._elCanvas.width, this._elCanvas.height);
 			this._bIsPainted = false;
 		};
-		
+
 		/**
 		 * @private
 		 * @param {Number} nNumber
@@ -11564,28 +11564,28 @@ requireModule('promise/polyfill').polyfill();
 			if (!nNumber) {
 				return nNumber;
 			}
-			
+
 			return Math.floor(nNumber * 1000) / 1000;
 		};
-		
+
 		return Drawing;
 	})();
-	
+
 	/**
 	 * Get the type by string length
-	 * 
+	 *
 	 * @private
 	 * @param {String} sText
 	 * @param {Number} nCorrectLevel
 	 * @return {Number} type
 	 */
-	function _getTypeNumber(sText, nCorrectLevel) {			
+	function _getTypeNumber(sText, nCorrectLevel) {
 		var nType = 1;
 		var length = _getUTF8Length(sText);
-		
+
 		for (var i = 0, len = QRCodeLimitLength.length; i <= len; i++) {
 			var nLimit = 0;
-			
+
 			switch (nCorrectLevel) {
 				case QRErrorCorrectLevel.L :
 					nLimit = QRCodeLimitLength[i][0];
@@ -11600,18 +11600,18 @@ requireModule('promise/polyfill').polyfill();
 					nLimit = QRCodeLimitLength[i][3];
 					break;
 			}
-			
+
 			if (length <= nLimit) {
 				break;
 			} else {
 				nType++;
 			}
 		}
-		
+
 		if (nType > QRCodeLimitLength.length) {
 			throw new Error("Too long data");
 		}
-		
+
 		return nType;
 	}
 
@@ -11619,11 +11619,11 @@ requireModule('promise/polyfill').polyfill();
 		var replacedText = encodeURI(sText).toString().replace(/\%[0-9a-fA-F]{2}/g, 'a');
 		return replacedText.length + (replacedText.length != sText ? 3 : 0);
 	}
-	
+
 	/**
 	 * @class QRCode
 	 * @constructor
-	 * @example 
+	 * @example
 	 * new QRCode(document.getElementById("test"), "http://jindo.dev.naver.com/collie");
 	 *
 	 * @example
@@ -11632,7 +11632,7 @@ requireModule('promise/polyfill').polyfill();
 	 *    width : 128,
 	 *    height : 128
 	 * });
-	 * 
+	 *
 	 * oQRCode.clear(); // Clear the QRCode.
 	 * oQRCode.makeCode("http://map.naver.com"); // Re-create the QRCode.
 	 *
@@ -11643,48 +11643,48 @@ requireModule('promise/polyfill').polyfill();
 	 * @param {Number} [vOption.height=256]
 	 * @param {String} [vOption.colorDark="#000000"]
 	 * @param {String} [vOption.colorLight="#ffffff"]
-	 * @param {QRCode.CorrectLevel} [vOption.correctLevel=QRCode.CorrectLevel.H] [L|M|Q|H] 
+	 * @param {QRCode.CorrectLevel} [vOption.correctLevel=QRCode.CorrectLevel.H] [L|M|Q|H]
 	 */
 	window.QRCode = function (el, vOption) {
 		this._htOption = {
-			width : 256, 
+			width : 256,
 			height : 256,
 			typeNumber : 4,
 			colorDark : "#000000",
 			colorLight : "#ffffff",
 			correctLevel : QRErrorCorrectLevel.H
 		};
-		
+
 		if (typeof vOption === 'string') {
 			vOption	= {
 				text : vOption
 			};
 		}
-		
+
 		// Overwrites options
 		if (vOption) {
 			for (var i in vOption) {
 				this._htOption[i] = vOption[i];
 			}
 		}
-		
+
 		if (typeof el == "string") {
 			el = document.getElementById(el);
 		}
-		
+
 		this._android = _getAndroid();
 		this._el = el;
 		this._oQRCode = null;
 		this._oDrawing = new Drawing(this._el, this._htOption);
-		
+
 		if (this._htOption.text) {
-			this.makeCode(this._htOption.text);	
+			this.makeCode(this._htOption.text);
 		}
 	};
-	
+
 	/**
 	 * Make the QRCode
-	 * 
+	 *
 	 * @param {String} sText link data
 	 */
 	QRCode.prototype.makeCode = function (sText) {
@@ -11692,15 +11692,15 @@ requireModule('promise/polyfill').polyfill();
 		this._oQRCode.addData(sText);
 		this._oQRCode.make();
 		this._el.title = sText;
-		this._oDrawing.draw(this._oQRCode);			
+		this._oDrawing.draw(this._oQRCode);
 		this.makeImage();
 	};
-	
+
 	/**
 	 * Make the Image from Canvas element
 	 * - It occurs automatically
 	 * - Android below 3 doesn't support Data-URI spec.
-	 * 
+	 *
 	 * @private
 	 */
 	QRCode.prototype.makeImage = function () {
@@ -11708,14 +11708,14 @@ requireModule('promise/polyfill').polyfill();
 			this._oDrawing.makeImage();
 		}
 	};
-	
+
 	/**
 	 * Clear the QRCode
 	 */
 	QRCode.prototype.clear = function () {
 		this._oDrawing.clear();
 	};
-	
+
 	/**
 	 * @name QRCode.CorrectLevel
 	 */
@@ -11727,7 +11727,7 @@ var jhtmls="undefined"==typeof exports?jhtmls||{}:exports;void function(e){"use 
  * ====================================================
  * Flex UI - v1.0.0 - 2015-01-12
  * https://github.com/fex-team/fui
- * GitHub: https://github.com/fex-team/fui.git 
+ * GitHub: https://github.com/fex-team/fui.git
  * Copyright (c) 2015 Baidu Kity Group; Licensed MIT
  * ====================================================
  */
@@ -28664,7 +28664,7 @@ CodeMirror.defineMode("gfm", function(config, modeConfig) {
  * ====================================================
  * kity - v2.0.0 - 2015-01-12
  * https://github.com/fex-team/kity
- * GitHub: https://github.com/fex-team/kity.git 
+ * GitHub: https://github.com/fex-team/kity.git
  * Copyright (c) 2015 Baidu FEX; Licensed BSD
  * ====================================================
  */
@@ -35296,7 +35296,7 @@ _p[50] = {
          * @constructor
          * @for kity.Point
          * @description 指定默认的 x 和 y 创建一个点
-         * 
+         *
          * @param  {Number} x 点的 x 坐标
          * @param  {Number} y 点的 y 坐标
          */
@@ -37807,12 +37807,12 @@ var Minder = KityMinder.Minder = kity.createClass('KityMinder', {
         // @see key.js
         // @see contextmenu.js
         // @see module.js
-        // @see data.js         
+        // @see data.js
         // @see readonly.js
         // @see layout.js
         // @see theme.js
         while (initQueue.length) initQueue.shift().call(this, options);
-        
+
         this.fire('ready');
     }
 });
@@ -38682,7 +38682,7 @@ Minder.registerInit(function() {
     this._initPaper();
 });
 kity.extendClass(Minder, {
-    
+
     _initPaper: function() {
 
         this._paper = new kity.Paper();
@@ -38933,7 +38933,7 @@ kity.extendClass(Minder, {
     _initShortcutKey: function() {
         this._bindShortcutKeys();
     },
-    
+
     _bindShortcutKeys: function() {
         var map = this._shortcutKeys = {};
         var has = 'hasOwnProperty';
@@ -38949,7 +38949,7 @@ kity.extendClass(Minder, {
             }
         });
     },
-    
+
     addShortcut: function(keys, fn) {
         var binds = this._shortcutKeys;
         keys.split(/\|\s*/).forEach(function(combine) {
@@ -39240,7 +39240,7 @@ kity.extendClass(Minder, {
         }
 
         if (!json) return;
-        
+
         this._fire(new MinderEvent('preimport', params, false));
 
         // 删除当前所有节点
@@ -39334,7 +39334,7 @@ kity.extendClass(Minder, {
 /**
  * @fileOverview
  *
- * 
+ *
  *
  * @author: techird
  * @copyright: Baidu FEX, 2014
@@ -40116,7 +40116,7 @@ Minder.registerInit(function() {
     this.setTheme();
 });
 Utils.extend(KityMinder, {
-    
+
     compatibility: function(json) {
 
         var version = json.version || '1.1.3';
@@ -41197,7 +41197,7 @@ KityMinder.registerLayout('fish-bone-master', kity.createClass('FishBoneMasterLa
 /**
  * @fileOverview
  *
- * 
+ *
  *
  * @author: techird
  * @copyright: Baidu FEX, 2014
@@ -41236,7 +41236,7 @@ KityMinder.registerLayout('fish-bone-slave', kity.createClass('FishBoneSlaveLayo
         this.stack(children, 'y');
         this.align(children, 'left');
         var xAdjust = 0, yAdjust = 0;
-        
+
         xAdjust += pout.x;
 
         if (parent.getLayoutVectorOut().y < 0) {
@@ -43472,7 +43472,7 @@ KityMinder.registerModule('PriorityModule', function() {
 
     // Designed by Akikonata
     // [MASK, BACK]
-    var PRIORITY_COLORS = [null, 
+    var PRIORITY_COLORS = [null,
         ['#FF1200', '#840023'], // 1 - red
         ['#0074FF', '#01467F'], // 2 - blue
         ['#00AF00', '#006300'], // 3 - green
@@ -43778,7 +43778,7 @@ KityMinder.registerModule('Resource', function() {
      * 在 Minder 上拓展一些关于资源的支持接口
      */
     kity.extendClass(Minder, {
-        
+
         /**
          * 获取字符串的哈希值
 		 *
@@ -44231,7 +44231,7 @@ var ViewDragger = kity.createClass("ViewDragger", {
 
         function dragEnd(e) {
             if (!lastPosition) return;
-            
+
             lastPosition = null;
 
             e.stopPropagation();
@@ -44468,7 +44468,7 @@ KityMinder.registerModule('View', function() {
                 if (focus.top < view.top) {
                     dy += view.top - focus.top + space;
                 }
-                
+
                 if (dx || dy) dragger.move(new kity.Point(dx, dy), 100);
             }
         }
@@ -44585,7 +44585,7 @@ var TreeDragger = kity.createClass('TreeDragger', {
             this._dragSources[i].setLayoutOffset(this._dragSources[i].getLayoutOffset().offset(movement));
             minder.applyLayoutResult(this._dragSources[i]);
         }
-        
+
         if (!this._dropTest()) {
             this._orderTest();
         } else {
@@ -44608,7 +44608,7 @@ var TreeDragger = kity.createClass('TreeDragger', {
             this._dragSources.forEach(function(source) {
                 source.setLayoutOffset(null);
             });
-            
+
             this._minder.layout(-1);
 
             this._minder.execCommand('movetoparent', this._dragSources, this._dropSucceedTarget);
@@ -46222,7 +46222,7 @@ Minder.Receiver = kity.createClass('Receiver', {
     getMinderNode:function(){
         return this.minderNode;
     },
-    
+
     updateIndex: function() {
         this.index = this.range.getStartOffset();
         return this;
@@ -46781,7 +46781,7 @@ KityMinder.registerModule("fontmodule", function() {
         var fontFamily = getNodeDataOrStyle(node, 'font-family');
         var fontSize = getNodeDataOrStyle(node, 'font-size');
         var fontHash = [fontFamily, fontSize].join('/');
-        
+
         textGroup.fill(foreColor);
         node.setTmpData('fore-color', foreColor.toString());
 
@@ -47614,7 +47614,7 @@ KityMinder.registerProtocol('xmind', function(minder) {
             }
 
             function getEntries(file, onend) {
-                return new Promise(function(resolve, reject) {                    
+                return new Promise(function(resolve, reject) {
                     zip.createReader(new zip.BlobReader(file), function(zipReader) {
                         zipReader.getEntries(resolve);
                     }, reject);
@@ -47646,7 +47646,7 @@ KityMinder.registerProtocol('xmind', function(minder) {
                             }
                         });
 
-                    } 
+                    }
 
                     // 找不到返回失败
                     else {
@@ -47817,7 +47817,7 @@ KityMinder.registerProtocol('freemind', function(minder) {
                 return new Promise(function(resolve, reject) {
                     var xhr = new XMLHttpRequest();
                     xhr.open('POST', url);
-                    
+
                     xhr.responseType = 'blob';
                     xhr.onload = resolve;
                     xhr.onerror = reject;
@@ -47968,7 +47968,7 @@ KityMinder.registerProtocol('mindmanager', function(minder) {
                     resolve(json);
                 });
 
-            } 
+            }
 
             // 找不到返回失败
             else {
@@ -48129,7 +48129,7 @@ KityMinder.registerProtocol('markdown', function() {
         var sharps = _generateHeaderSharp(level);
         lines.push(sharps + ' ' + node.data.text);
         lines.push(EMPTY_LINE);
-        
+
         var note = node.data.note;
         if (note) {
             var hasSharp = /^#/.test(note);
@@ -48411,15 +48411,15 @@ if (!kity.Browser.ie) {
                 if (typeof(window.canvg) != 'undefined') {
                     return new Promise(function(resolve) {
                         window.canvg(canvas, svgInfo.xml, {
-                            ignoreMouse: true, 
-                            ignoreAnimation: true, 
-                            ignoreDimensions: true, 
-                            ignoreClear: true, 
-                            offsetX: padding, 
+                            ignoreMouse: true,
+                            ignoreAnimation: true,
+                            ignoreDimensions: true,
+                            ignoreClear: true,
+                            offsetX: padding,
                             offsetY: padding,
                             renderCallback: function() {
                                 resolve(generateDataUrl(canvas));
-                            } 
+                            }
                         });
                     });
                 } else {
@@ -48623,13 +48623,13 @@ KityMinder.registerUI('eve', function(minder) {
     return {
         setup: function(obj) {
             var callbacks = {};
-            
+
             obj.on = function on(name, callback) {
                 var list = callbacks[name] || (callbacks[name] = []);
                 list.push(callback);
                 return this;
             };
-            
+
             obj.off = function off(name, callback) {
                 var list = callbacks[name];
                 if (list) {
@@ -48642,14 +48642,14 @@ KityMinder.registerUI('eve', function(minder) {
                 }
                 return this;
             };
-            
+
             obj.once = function once(name, callback) {
                 return this.on(name, function wrapped() {
                     callback.apply(obj, arguments);
                     obj.off(name, wrapped);
                 });
             };
-            
+
             obj.fire = function fire(name) {
                 var list = callbacks[name];
                 var args = [].slice.call(arguments, 1);
@@ -48830,7 +48830,7 @@ KityMinder.registerUI('widget/commandbuttonset', function(minder) {
 });
 /**
  * @fileOverview
- * 
+ *
  * 绑定到某个命令的下拉选框
  *
  */
@@ -49089,10 +49089,10 @@ KityMinder.registerUI('widget/notice', function(minder) {
                 return JSON.stringify(e, null, 4);
             };
         }
-        
+
         // jqXhr
         else if ('readyState' in e) {
-            
+
         } else {
             e.getDetail = function() {
                 return e.stack || new Error().stack;
@@ -49561,7 +49561,7 @@ KityMinder.registerUI('contextmenu', function(minder) {
         if (!e.isRightMB()) return;
 
         e = e.originEvent;
-        
+
         var d = distance(downPosition, [e.pageX, e.pageY]);
         if (isNaN(d) || d > 5) return;
 
@@ -49931,10 +49931,10 @@ KityMinder.registerUI('ribbon/tabs', function(minder) {
     $tab.idea = $tab.getPanel(0);
     $tab.appearence = $tab.getPanel(1);
     $tab.view = $tab.getPanel(2);
-    
+
     var rememberIndex = memory.get('ribbon-tab-index');
     var rememberCollapse = memory.get('ribbon-tab-collapsed');
-    
+
     muteRemember = true;
     $tab.select(rememberIndex || 0);
     muteRemember = false;
@@ -50178,10 +50178,10 @@ KityMinder.registerUI('ribbon/idea/note', function(minder) {
     var $title = $('<h2>' + minder.getLang('ui.note') + '</h2>').appendTo($notePanel);
     var $close = $('<a class="close"></a>').appendTo($notePanel).click(hide);
 
-    var $tab = $('<div class="tab">' + 
-        '<a class="edit-tab">' + minder.getLang('ui.edit') + '</a>' + 
-        '<a class="preview-tab">' + minder.getLang('ui.preview') + '</a>' + 
-        '<a class="help">'  + minder.getLang('ui.supportMD') + '</a>' + 
+    var $tab = $('<div class="tab">' +
+        '<a class="edit-tab">' + minder.getLang('ui.edit') + '</a>' +
+        '<a class="preview-tab">' + minder.getLang('ui.preview') + '</a>' +
+        '<a class="help">'  + minder.getLang('ui.supportMD') + '</a>' +
         '</div>').appendTo($notePanel);
 
     var $editTab = $tab.find('.edit-tab');
@@ -50201,11 +50201,11 @@ KityMinder.registerUI('ribbon/idea/note', function(minder) {
         lineWrapping: true,
         dragDrop: false
     });
-    
+
     minder.on('uiready', function() {
         editor.setSize('100%', '100%');
     });
-    
+
     var visible = false;
     var selectedNode = null;
 
@@ -50242,9 +50242,9 @@ KityMinder.registerUI('ribbon/idea/note', function(minder) {
     $noteButtonMenu.on('buttonclick', show);
     minder.on('editnoterequest', show);
     $('#kityminder').after($notePanel);
-    
+
     hide();
-    
+
     var activeTabClass = 'active-tab';
 
     function editMode() {

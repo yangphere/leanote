@@ -1,21 +1,21 @@
 package info
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/domain"
 	"time"
 )
 
 type File struct {
-	FileId         bson.ObjectId `bson:"_id,omitempty"` //
-	UserId         bson.ObjectId `bson:"UserId"`
-	AlbumId        bson.ObjectId `bson:"AlbumId"`
-	Name           string        `Name`  // file name
-	Title          string        `Title` // file name or user defined for search
-	Size           int64         `Size`  // file size (byte)
-	Type           string        `Type`  // file type, "" = image, "doc" = word
-	Path           string        `Path`  // the file path
-	IsDefaultAlbum bool          `IsDefaultAlbum`
-	CreatedTime    time.Time     `CreatedTime`
+	FileId         domain.ObjectID `bson:"_id,omitempty"` //
+	UserId         domain.ObjectID `bson:"UserId"`
+	AlbumId        domain.ObjectID `bson:"AlbumId"`
+	Name           string          `bson:"Name"`  // file name
+	Title          string          `bson:"Title"` // file name or user defined for search
+	Size           int64           `bson:"Size"`  // file size (byte)
+	Type           string          `bson:"Type"`  // file type, "" = image, "doc" = word
+	Path           string          `bson:"Path"`  // the file path
+	IsDefaultAlbum bool            `bson:"IsDefaultAlbum"`
+	CreatedTime    time.Time       `bson:"CreatedTime"`
 
-	FromFileId bson.ObjectId `bson:"FromFileId,omitempty"` // copy from fileId, for collaboration
+	FromFileId domain.ObjectID `bson:"FromFileId,omitempty"` // copy from fileId, for collaboration
 }

@@ -1,0 +1,3 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Controller must preserve fail-closed error handling and service ownership while adapting the legacy publish action."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Right-click menu source and generated bundle must follow frontend build and failure-handling conventions."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"The defect crosses browser parameter encoding, HTTP binding, and NoteService publishing receipts."}

@@ -1,0 +1,44 @@
+# C-a Task 1：v1.0 三路径基线（Linux 容器实跑，2026-08-28）
+
+环境：golang:1.26.7-bookworm（GOTOOLCHAIN=local，--network container:leanote-test-mongo，
+源码为 HEAD 的 tar 副本 /work，sh 脚本 sed 去 CR），Mongo 5.0 fixture 已恢复 leanote 库（499 docs）。
+CLI：主模块图构建 `go build -o /tmp/revel github.com/revel/cmd/revel`，
+`go version -m` 确认 dep golang.org/x/tools v0.49.0。
+
+## 开发路径（canonical sh/run.sh，Revel dev 模式真实编译 8.9s 后监听）
+
+首次就绪探测教训：revel run 的 9000 端口是 dev 代理，应用编译完成前代理返回 502，
+就绪判定必须以引擎监听或非 502 响应为准（run.log: "Revel engine is listening on.. 0.0.0.0:34943"）。
+
+| 请求 | 结果 |
+|---|---|
+| GET / | HTTP 200 |
+| GET /login | HTTP 200 |
+| GET /note | HTTP 302（匿名跳登录，符合预期） |
+| GET /blog | HTTP 200 |
+| GET /demo | HTTP 302 |
+
+## SIGTERM 观察（v1.0 基线，供 v1.1 优雅关停对比）
+
+- `kill -TERM` 于 `revel run` 进程：revel 进程立即死亡（kill -0 → NO）；
+- dev 编译出的应用子进程 `work -port=34943` **被孤儿化并继续服务**（34943 仍 200）；
+- 代理端口 9000 随 revel 死亡关闭（curl → 000）。
+- 结论：v1.0 的 `revel run` 无优雅关停、不回收子进程；v1.1 的 SIGTERM 优雅关停为行为差异点。
+
+## 生产包路径（canonical sh/package.sh）
+
+- 构建："Your application has been built in: /tmp/work1527105753"；
+- tarball：/work/sh/leanote.tar.gz，27,445,709 bytes，2298 entries（A 08-26 基线为 27,446,759/2303，
+  差异来自 HEAD 上的 jquery 模板/资源改动，与 Revel 版本无关）；
+- 结构：{run.sh, run.bat, src, work}；canonical 启动命令为 tarball 自带 run.sh：
+  `./work -importPath github.com/yangphere/leanote -srcPath <tarball>/src -runMode prod`
+  （注意：不带 -srcPath 直接运行 work 会在 Revel findSrcPaths 处 panic——go.mod 不存在于解包目录，
+  这是启动契约，不是缺陷；A 只验证到"可解包"，启动为本次新增基线）；
+- 启动后：GET /login → 200；POST /api/auth/login（错误凭据）→ 200（JSON 错误信封）；
+  GET /api/auth/login → 200；
+- 对打包二进制 SIGTERM：进程退出、9005 端口关闭（after_term=000）、无孤儿进程。
+
+## 容器清理
+
+容器 leanote-ca-baseline、卷 leanote-ca-gomod/leanote-ca-gobuild 用后即删；
+fixture 容器 env down；宿主工作树零残留（全部产物在容器 /work、/tmp 内）。

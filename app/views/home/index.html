@@ -7,16 +7,16 @@
 		<p>{{msg . "moto2"}}</p>
 		
 		<div>
-			<a class="btn btn-default btn-primary" href="/register">{{msg . "register"}}</a> 
+			<a class="btn btn-secondary btn-primary" href="/register">{{msg . "register"}}</a>
 			&nbsp;
 			&nbsp;
 			{{if not .userInfo.UserId}}
-				<a class="btn btn-default" href="/login">{{msg . "login"}}</a>
+				<a class="btn btn-secondary" href="/login">{{msg . "login"}}</a>
 				&nbsp;
 				&nbsp;
 			{{end}}
 			
-			<a class="btn btn-default" href="/demo">{{msg . "try"}}</a>
+			<a class="btn btn-secondary" href="/demo">{{msg . "try"}}</a>
 		</div>
 	</div>
 	

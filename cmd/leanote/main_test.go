@@ -1,0 +1,256 @@
+package main
+
+import (
+	"bytes"
+	"errors"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/yangphere/leanote/app/httpserver"
+	i18n "github.com/yangphere/leanote/app/lea/i18n"
+)
+
+func TestLogOutboxDeliveryErrorDoesNotExposeTransportDetails(t *testing.T) {
+	var output bytes.Buffer
+	savedWriter := log.Writer()
+	savedFlags := log.Flags()
+	log.SetOutput(&output)
+	log.SetFlags(0)
+	t.Cleanup(func() {
+		log.SetOutput(savedWriter)
+		log.SetFlags(savedFlags)
+	})
+
+	logOutboxDeliveryError(errors.New("smtp rejected user@example.test token=secret-token"))
+
+	got := output.String()
+	if strings.Contains(got, "user@example.test") || strings.Contains(got, "secret-token") {
+		t.Fatalf("outbox retry log exposed transport details: %q", got)
+	}
+	if !strings.Contains(got, "outbox delivery pending retry") {
+		t.Fatalf("outbox retry log = %q, want stable operational message", got)
+	}
+}
+
+func TestSetupPresentationRendersTemplatesWithConfiguredMessages(t *testing.T) {
+	root := t.TempDir()
+	viewsDir := filepath.Join(root, "app", "views", "home")
+	messagesDir := filepath.Join(root, "messages", "en-us")
+	if err := os.MkdirAll(viewsDir, 0o755); err != nil {
+		t.Fatalf("create views directory: %v", err)
+	}
+	if err := os.MkdirAll(messagesDir, 0o755); err != nil {
+		t.Fatalf("create messages directory: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(viewsDir, "login.html"), []byte("[{{leaMsg . \"greeting\"}} {{.Name}}]"), 0o644); err != nil {
+		t.Fatalf("write template: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(messagesDir, "messages.conf"), []byte("greeting=Hello\n"), 0o644); err != nil {
+		t.Fatalf("write messages: %v", err)
+	}
+
+	cfg, err := httpserver.ParseConfig([]byte("i18n.default_language=en-us\n"), "")
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	savedRenderer := httpserver.TemplateRenderer
+	savedDefaultLanguage := i18n.DefaultLanguage
+	t.Cleanup(func() {
+		httpserver.TemplateRenderer = savedRenderer
+		i18n.DefaultLanguage = savedDefaultLanguage
+	})
+
+	if err := setupPresentation(cfg, filepath.Dir(viewsDir), filepath.Dir(messagesDir)); err != nil {
+		t.Fatalf("setup presentation: %v", err)
+	}
+	rec := httptest.NewRecorder()
+	httpserver.TemplateResult(http.StatusOK, "home/login.html", map[string]interface{}{
+		"currentLocale": "fr-fr",
+		"Name":          "leanote",
+	}).Apply(rec, httptest.NewRequest(http.MethodGet, "/login", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("render status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Body.String(); got != "[Hello leanote]" {
+		t.Fatalf("rendered body = %q, want configured message and template data", got)
+	}
+}
+
+func TestApplicationBaseUsesConfigParentUnlessItIsConfDirectory(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		path string
+		want string
+	}{
+		{name: "conventional conf", path: filepath.Join("workspace", "conf", "app.conf"), want: filepath.Clean("workspace")},
+		{name: "uppercase conf on Windows", path: filepath.Join("workspace", "CONF", "app.conf"), want: filepath.Clean("workspace")},
+		{name: "custom config directory", path: filepath.Join("workspace", "config", "app.conf"), want: filepath.Clean(filepath.Join("workspace", "config"))},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := applicationBase(test.path); got != test.want {
+				t.Fatalf("applicationBase(%q) = %q, want %q", test.path, got, test.want)
+			}
+		})
+	}
+}
+
+func TestStaticAssetRootIsRelativeToApplicationBase(t *testing.T) {
+	root := filepath.Join("workspace", "release")
+	if got, want := staticAssetRoot(root, "public"), filepath.Join(root, "public"); got != want {
+		t.Fatalf("static asset root = %q, want %q", got, want)
+	}
+}
+
+func TestStaticHandlerServesExactFiles(t *testing.T) {
+	root := t.TempDir()
+	file := filepath.Join(root, "public", "images", "favicon.ico")
+	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+		t.Fatalf("create asset directory: %v", err)
+	}
+	if err := os.WriteFile(file, []byte("icon"), 0o644); err != nil {
+		t.Fatalf("write asset: %v", err)
+	}
+	handler := staticHandler(root, "public/images/favicon.ico")
+	req := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK || res.Body.String() != "icon" {
+		t.Fatalf("exact static file: status=%d body=%q", res.Code, res.Body.String())
+	}
+}
+
+func TestStaticHandlerWithContentRoutesUploadToConfiguredRoot(t *testing.T) {
+	appRoot := t.TempDir()
+	publicRoot := filepath.Join(appRoot, "public")
+	if err := os.MkdirAll(filepath.Join(publicRoot, "css"), 0o755); err != nil {
+		t.Fatalf("create public tree: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(publicRoot, "css", "app.css"), []byte("asset"), 0o644); err != nil {
+		t.Fatalf("write public asset: %v", err)
+	}
+	uploadRoot := filepath.Join(t.TempDir(), "upload")
+	if err := os.MkdirAll(uploadRoot, 0o755); err != nil {
+		t.Fatalf("create upload root: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(uploadRoot, "image.png"), []byte("upload"), 0o644); err != nil {
+		t.Fatalf("write upload asset: %v", err)
+	}
+	handler := staticHandlerWithContent(appRoot, "public", uploadRoot)
+	for _, test := range []struct {
+		path string
+		want string
+	}{
+		{path: "/upload/image.png", want: "upload"},
+		{path: "/css/app.css", want: "asset"},
+	} {
+		t.Run(test.path, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, test.path, nil))
+			if recorder.Code != http.StatusOK || recorder.Body.String() != test.want {
+				t.Fatalf("static response = status %d body %q, want 200/%q", recorder.Code, recorder.Body.String(), test.want)
+			}
+		})
+	}
+	uploadHandler := staticHandlerWithContent(appRoot, "public/upload", uploadRoot)
+	recorder := httptest.NewRecorder()
+	uploadHandler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/image.png", nil))
+	if recorder.Code != http.StatusOK || recorder.Body.String() != "upload" {
+		t.Fatalf("public/upload static response = status %d body %q, want 200/%q", recorder.Code, recorder.Body.String(), "upload")
+	}
+}
+
+func TestSetupPresentationRejectsMissingMessagesDirectory(t *testing.T) {
+	root := t.TempDir()
+	viewsDir := filepath.Join(root, "views")
+	if err := os.MkdirAll(viewsDir, 0o755); err != nil {
+		t.Fatalf("create views directory: %v", err)
+	}
+	cfg, err := httpserver.ParseConfig(nil, "")
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if err := setupPresentation(cfg, viewsDir, filepath.Join(root, "missing-messages")); err == nil {
+		t.Fatal("setupPresentation succeeded with a missing messages directory")
+	}
+}
+
+func TestSetupPresentationRejectsMalformedMessageFile(t *testing.T) {
+	root := t.TempDir()
+	viewsDir := filepath.Join(root, "views")
+	messagesDir := filepath.Join(root, "messages", "en-us")
+	if err := os.MkdirAll(viewsDir, 0o755); err != nil {
+		t.Fatalf("create views directory: %v", err)
+	}
+	if err := os.MkdirAll(messagesDir, 0o755); err != nil {
+		t.Fatalf("create messages directory: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(messagesDir, "broken.conf"), []byte("not a config entry\n"), 0o644); err != nil {
+		t.Fatalf("write malformed message file: %v", err)
+	}
+	cfg, err := httpserver.ParseConfig(nil, "")
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if err := setupPresentation(cfg, viewsDir, filepath.Join(root, "messages")); err == nil {
+		t.Fatal("setupPresentation succeeded with a malformed message file")
+	}
+}
+
+func TestValidateCLIOptionsAcceptsLocalModesWithoutExplicitConfig(t *testing.T) {
+	for _, mode := range []string{"dev", "test"} {
+		if err := validateCLIOptions(mode, true, false); err != nil {
+			t.Fatalf("validateCLIOptions(%q) = %v, want local mode accepted", mode, err)
+		}
+	}
+}
+
+func TestConfigPathForRunModeSeparatesProductionAndLocalSources(t *testing.T) {
+	if got, err := configPathForRunMode("", "test"); err != nil || got != filepath.Join("conf", "app.conf") {
+		t.Fatalf("default test config path = %q/%v, want repository conf/app.conf", got, err)
+	}
+	if _, err := configPathForRunMode(httpserver.CanonicalProductionConfigPath(), "test"); err == nil {
+		t.Fatal("test mode accepted canonical production config")
+	}
+	if got, err := configPathForRunMode(httpserver.CanonicalProductionConfigPath(), "prod"); err != nil || got != httpserver.CanonicalProductionConfigPath() {
+		t.Fatalf("production config path = %q/%v, want canonical path", got, err)
+	}
+}
+
+func TestDatabaseURLEscapesLocalCredentialsConsistently(t *testing.T) {
+	cfg, err := httpserver.ParseConfig([]byte("[dev]\n"+
+		"db.dbname=leanote_test\n"+
+		"db.host=127.0.0.1\n"+
+		"db.port=27017\n"+
+		"db.username=user@example\n"+
+		"db.password=p:a@ss\n"), "dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := databaseURL(cfg, "dev")
+	if err != nil {
+		t.Fatalf("databaseURL() error = %v", err)
+	}
+	want := "mongodb://user%40example:p%3Aa%40ss@127.0.0.1:27017/leanote_test"
+	if got != want {
+		t.Fatalf("databaseURL() = %q, want %q", got, want)
+	}
+}
+
+func TestValidateCLIOptionsRequiresExplicitCanonicalArguments(t *testing.T) {
+	if err := validateCLIOptions("", false, false); err == nil {
+		t.Fatal("validateCLIOptions() accepted missing production arguments")
+	} else if cfgErr, ok := err.(*httpserver.ConfigError); !ok || cfgErr.Code != "CONFIG_RUN_MODE_INVALID" {
+		t.Fatalf("missing run mode error = %v, want CONFIG_RUN_MODE_INVALID", err)
+	}
+	if err := validateCLIOptions("prod", true, false); err == nil {
+		t.Fatal("validateCLIOptions() accepted missing config path")
+	} else if cfgErr, ok := err.(*httpserver.ConfigError); !ok || cfgErr.Code != "CONFIG_PATH_INVALID" {
+		t.Fatalf("missing config path error = %v, want CONFIG_PATH_INVALID", err)
+	}
+}

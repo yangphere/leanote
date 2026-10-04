@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "按前端质量规范复核实现与构建"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "检查回归测试、构建与禁止静默 fallback"}

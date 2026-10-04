@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "tag/vet/bootstrap 修复横跨 model/service/controller/harness，需跨层一致性思考。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/research/external-facts.md", "reason": "Go 支持版本、mgo legacy opcode、MongoDB 5.0 边界与上游依赖证据。"}

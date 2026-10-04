@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-25-frontend-build-chain/prd.md", "reason": "Node 24、esbuild、manifest 和完整旧 Gulp 产物映射需求。"}
+{"file": ".trellis/tasks/08-25-frontend-build-chain/design.md", "reason": "源码到 JS/CSS/i18n/template 生成物的可复现设计。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/research/external-facts.md", "reason": "Node 24 LTS 与现有前端工具链事实。"}
+{"file": "docs/adr/0003-modernize-frontend-with-generated-asset-contract.md", "reason": "生成资产继续跟踪且 CI 零 diff 的架构决策。"}

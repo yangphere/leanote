@@ -1,0 +1,40 @@
+{
+  "id": "business-layer-architecture",
+  "name": "business-layer-architecture",
+  "title": "按业务逻辑分层的架构收敛",
+  "description": "按领域模型、应用服务、基础设施与接口适配、前端呈现和交付验证分层收敛 Leanote，保持外部 API、USN、所有权和数据语义兼容。",
+  "status": "completed",
+  "dev_type": null,
+  "scope": "repository / layered architecture coordination",
+  "package": null,
+  "priority": "P1",
+  "creator": "wanfeng",
+  "assignee": "wanfeng",
+  "createdAt": "2026-09-08",
+  "completedAt": "2026-09-29",
+  "branch": "dev",
+  "base_branch": "dev",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "09-08-domain-contracts",
+    "09-08-application-identity",
+    "09-08-application-notes",
+    "09-08-application-content",
+    "09-08-application-publishing",
+    "09-08-application-admin",
+    "09-08-infrastructure-persistence",
+    "09-08-interface-http",
+    "09-08-presentation-frontend",
+    "09-08-delivery-verification"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "2026-09-13 ownership correction: application-notes owns note-specific asset receipt/idempotency adapters; application-content owns generic file-root/path/publish/verify/download/album/PDF primitives; Suggestion/feedback belongs to application-admin. Pure application contracts stay free of app/db/BSON, while the existing app/service -> app/db compatibility boundary and internal BSON maps remain allowed; controllers must not hold Mongo collection/client or duplicate business state machines. Cross-topology/browser/PDF/failpoint evidence stays with receiving siblings and does not create a reverse dependency.",
+  "meta": {
+    "layer": "coordination",
+    "depends_on": []
+  }
+}

@@ -1,0 +1,5 @@
+{"file": ".trellis/tasks/09-01-frontend-libs-browser-coverage/prd.md", "reason": "任务规格：四套件结构、槽位摘要/JCS 契约、validator 双相位、预检入口与锁步测试要求"}
+{"file": ".trellis/tasks/09-01-frontend-libs-browser-coverage/research/spec-audit-2026-09-02.md", "reason": "现状盘点（producer/validator/workflow 逐行差距）、跨契约张力裁定（五文件措辞 vs 四 ID）、JCS 与预检入口设计依据"}
+{"file": ".trellis/tasks/09-01-frontend-libs-browser-coverage/design.md", "reason": "技术设计：迁移边界、marker 协议、JCS 规范化器、双相位、workflow_dispatch 约束"}
+{"file": ".trellis/tasks/archive/2026-09/08-25-cicd-delivery/research/release-matrix-contract.md", "reason": "字段级唯一来源：provenance/matrix JSON Schema、JCS 摘要输入、跨记录规则、保留期"}
+{"file": ".trellis/tasks/08-25-frontend-libs/design.md", "reason": "E design §3.3/§5：四稳定 coverage 定义、两阶段 artifact 生命周期与禁止事项"}

@@ -1,0 +1,132 @@
+#!/bin/sh
+set -eu
+
+ARCHIVE=${1:?usage: package-smoke.sh <tarball>}
+ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+VERSION=$(node "$ROOT/scripts/version.mjs")
+case "$ARCHIVE" in *"leanote-v${VERSION}-linux-amd64.tar.gz") ;; *) echo "unexpected tarball name" >&2; exit 1;; esac
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/leanote-package-smoke.XXXXXX")
+CONFIG_DIR=/etc/leanote
+CONFIG_FILE=$CONFIG_DIR/app.conf
+PID=
+CONFIG_CREATED=false
+CONFIG_DIR_CREATED=false
+cleanup() {
+  status=$?
+  set +e
+  if [ "$status" -ne 0 ]; then
+    if [ -s "$TMP/app.log" ]; then
+      echo '--- packaged app log (failure diagnostics) ---' >&2
+      tail -n 40 "$TMP/app.log" >&2
+    fi
+    if [ -s "$TMP/pdf.headers" ]; then
+      echo '--- pdf response headers (failure diagnostics) ---' >&2
+      cat "$TMP/pdf.headers" >&2
+      echo '--- pdf body first 200 bytes ---' >&2
+      head -c 200 "$TMP/pdf.html" >&2
+      echo >&2
+    fi
+  fi
+  if [ -n "$PID" ]; then kill "$PID" >/dev/null 2>&1; wait "$PID" >/dev/null 2>&1; fi
+  if [ "$CONFIG_CREATED" = true ]; then sudo rm -f "$CONFIG_FILE"; fi
+  if [ "$CONFIG_DIR_CREATED" = true ]; then sudo rmdir "$CONFIG_DIR" >/dev/null 2>&1 || status=1; fi
+  rm -rf "$TMP"
+  exit "$status"
+}
+trap cleanup EXIT INT TERM
+tar -xzf "$ARCHIVE" -C "$TMP"
+test -f "$TMP/bin/leanote"
+test "$(stat -c '%a' "$TMP/bin/leanote")" = 755
+test ! -e "$TMP/conf/app.conf"
+test ! -e "$TMP/mongodb_backup"
+test ! -e "$TMP/files"
+test ! -e "$TMP/public/upload"
+
+# Rebuild twice with the same commit timestamp and compare the complete
+# archive bytes. The caller may provide the tag timestamp explicitly when the
+# checkout is detached from its local Git metadata.
+: "${PACKAGE_SMOKE_SOURCE_DATE_EPOCH:=$(git -C "$ROOT" show -s --format=%ct HEAD)}"
+REBUILD_A="$TMP/rebuild-a"
+REBUILD_B="$TMP/rebuild-b"
+mkdir -p "$REBUILD_A" "$REBUILD_B"
+SOURCE_DATE_EPOCH="$PACKAGE_SMOKE_SOURCE_DATE_EPOCH" OUTPUT_DIR="$REBUILD_A" sh "$ROOT/sh/package.sh" >/dev/null
+SOURCE_DATE_EPOCH="$PACKAGE_SMOKE_SOURCE_DATE_EPOCH" OUTPUT_DIR="$REBUILD_B" sh "$ROOT/sh/package.sh" >/dev/null
+HASH_A=$(sha256sum "$REBUILD_A/leanote-v${VERSION}-linux-amd64.tar.gz" | awk '{print $1}')
+HASH_B=$(sha256sum "$REBUILD_B/leanote-v${VERSION}-linux-amd64.tar.gz" | awk '{print $1}')
+test "$HASH_A" = "$HASH_B"
+HASH_INPUT=$(sha256sum "$ARCHIVE" | awk '{print $1}')
+test "$HASH_INPUT" = "$HASH_A"
+
+set +e
+"$TMP/bin/leanote" -runMode prod >/dev/null 2>&1
+code=$?
+set -e
+test "$code" = 78
+set +e
+"$TMP/bin/leanote" -runMode dev -conf /etc/leanote/app.conf >/dev/null 2>&1
+code=$?
+set -e
+test "$code" = 78
+
+: "${PACKAGE_SMOKE_MONGODB_URL:?PACKAGE_SMOKE_MONGODB_URL is required}"
+: "${PACKAGE_SMOKE_APP_SECRET:?PACKAGE_SMOKE_APP_SECRET is required}"
+if [ -e "$CONFIG_FILE" ]; then echo 'refusing to overwrite an existing production config' >&2; exit 1; fi
+if [ ! -d "$CONFIG_DIR" ]; then sudo mkdir -p "$CONFIG_DIR"; CONFIG_DIR_CREATED=true; fi
+# The tarball intentionally ships no data roots (see docs/modernization/cicd-delivery.md).
+# Provision them in the smoke workspace instead of /var/lib/leanote so the
+# runner's real filesystem is never touched; one filesystem keeps data and
+# quarantine pairs rename-compatible.
+DATA_ROOT="$TMP/var-lib-leanote"
+mkdir -p "$DATA_ROOT/private/files" "$DATA_ROOT/private/quarantine" \
+  "$DATA_ROOT/public/upload" "$DATA_ROOT/public/quarantine" \
+  "$DATA_ROOT/backup" "$DATA_ROOT/tmp"
+chmod -R 0750 "$DATA_ROOT"
+printf '%s\n' '[prod]' 'db.urlEnv=${MONGODB_URL}' 'db.dbname=leanote' 'app.secret=${LEANOTE_APP_SECRET}' 'http.addr=127.0.0.1' 'http.port=19090' \
+  "content.private.data=$DATA_ROOT/private/files" \
+  "content.private.quarantine=$DATA_ROOT/private/quarantine" \
+  "content.public.data=$DATA_ROOT/public/upload" \
+  "content.public.quarantine=$DATA_ROOT/public/quarantine" \
+  "content.temporary=$DATA_ROOT/tmp" \
+  "admin.backup.root=$DATA_ROOT/backup" > "$TMP/app.conf"
+sudo install -o "$(id -u)" -g "$(id -g)" -m 0440 "$TMP/app.conf" "$CONFIG_FILE"
+CONFIG_CREATED=true
+MONGODB_URL="$PACKAGE_SMOKE_MONGODB_URL" LEANOTE_APP_SECRET="$PACKAGE_SMOKE_APP_SECRET" \
+  "$TMP/bin/leanote" -runMode prod -conf "$CONFIG_FILE" >"$TMP/app.log" 2>&1 &
+PID=$!
+# Cold CI runners need well over 60s for the packaged binary to load
+# templates and messages before the first listen; poll for real readiness.
+deadline=$(($(date +%s) + 180))
+while :; do
+  code=$(curl -sS -D "$TMP/healthz.headers" -o "$TMP/healthz" -w '%{http_code}' http://127.0.0.1:19090/healthz || true)
+  if [ "$code" = 200 ] && grep -Fx '{"status":"ready"}' "$TMP/healthz" >/dev/null; then break; fi
+  if [ "$code" = 503 ] && grep -Fx '{"status":"not_ready"}' "$TMP/healthz" >/dev/null; then
+    # A not_ready response during startup ramp is exactly what readiness
+    # polling is for: keep polling until the deadline. EXPECT_READY only
+    # decides the verdict once the deadline is reached.
+    test "${PACKAGE_SMOKE_EXPECT_READY:-false}" = true
+    continue
+  fi
+  [ "$(date +%s)" -lt "$deadline" ] || { echo 'healthz readiness timeout' >&2; exit 1; }
+  sleep 1
+done
+grep -Fi 'Content-Type: application/json; charset=utf-8' "$TMP/healthz.headers" >/dev/null
+printf '1\n' > "$TMP/test-marker"
+test -s "$TMP/test-marker"
+: "${PACKAGE_SMOKE_PDF_URL:?PACKAGE_SMOKE_PDF_URL is required}"
+case "$PACKAGE_SMOKE_PDF_URL" in
+  */note/toPdf\?*) ;;
+  *) echo 'PACKAGE_SMOKE_PDF_URL must target the legacy /note/toPdf route' >&2; exit 1 ;;
+esac
+# The legacy appKey callback was retired (158a6de): it must stay a stub and
+# never render or leak note content, even with the correct secret as appKey.
+curl -fsS -D "$TMP/pdf.headers" -o "$TMP/pdf.html" "$PACKAGE_SMOKE_PDF_URL"
+grep -Eiq '^Content-Type: text/plain(;|$)' "$TMP/pdf.headers"
+test "$(cat "$TMP/pdf.html")" = 'no note'
+if grep -Eiq 'About Leanote|not just a notepad' "$TMP/pdf.html"; then echo 'legacy /note/toPdf leaked note content' >&2; exit 1; fi
+# The packaged PDF runtime must render a real document (not about:blank).
+test -x "$(command -v wkhtmltopdf)"
+printf '%s\n' '<!doctype html><html><head><meta charset="utf-8"><title>Leanote PDF smoke</title></head>' \
+  '<body><h1>Leanote PDF smoke</h1><p>package runtime render check</p></body></html>' > "$TMP/smoke-render.html"
+wkhtmltopdf --quiet "$TMP/smoke-render.html" "$TMP/smoke.pdf"
+test -s "$TMP/smoke.pdf"
+test "$(dd if="$TMP/smoke.pdf" bs=1 count=5 2>/dev/null)" = '%PDF-'

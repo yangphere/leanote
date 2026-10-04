@@ -1,24 +1,22 @@
 package i18n
 
 import (
+	"bufio"
 	"fmt"
-	"github.com/revel/revel"
 	"github.com/robfig/config"
+	. "github.com/yangphere/leanote/app/lea"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-	. "github.com/leanote/leanote/app/lea"
+	"unicode"
 )
 
 const (
 	CurrentLocaleViewArg = "currentLocale" // The key for the current locale render arg value
 
-	messageFilesDirectory = "messages"
-	messageFilePattern    = `^\w+\.conf$`
-	unknownValueFormat    = "??? %s ???"
-	defaultLanguageOption = "i18n.default_language"
-	localeCookieConfigKey = "i18n.cookie"
+	messageFilePattern = `^\w+\.conf$`
+	unknownValueFormat = "??? %s ???"
 )
 
 var (
@@ -37,8 +35,7 @@ func HasLang(lang string) bool {
 }
 
 func GetDefaultLang() string {
-	lang, _ := revel.Config.String(defaultLanguageOption)
-	return lang
+	return DefaultLanguage
 }
 
 // Return all currently loaded message languages.
@@ -55,26 +52,28 @@ func MessageLanguages() []string {
 // Perform a message look-up for the given locale and message using the given arguments.
 //
 // When either an unknown locale or message is detected, a specially formatted string is returned.
+// DefaultLanguage is the fallback language when the requested locale has
+// no message; settable by plain-Go processes (the old runtime reads
+// i18n.default_language from app.conf).
+var DefaultLanguage = ""
+
 func Message(locale, message string, args ...interface{}) string {
 	language, region := parseLocale(locale)
 
 	langAndRegion := language + "-" + region
-	// revel.TRACE.Println(langAndRegion + " 怎么回事")
+	// Legacy runtime trace: langAndRegion + " 怎么回事"
 
 	messageConfig, knownLanguage := messages[langAndRegion]
 	if !knownLanguage {
-		// revel.TRACE.Printf("Unsupported language for locale '%s' and message '%s', trying default language", locale, message)
+		// The native entrypoint sets DefaultLanguage after validating its
+		// configuration; keep that as the only runtime config source.
+		defaultLanguage := DefaultLanguage
+		if defaultLanguage == "" {
+			return fmt.Sprintf(unknownValueFormat, message)
+		}
 
-		if defaultLanguage, found := revel.Config.String(defaultLanguageOption); found {
-			// revel.TRACE.Printf("Using default language '%s'", defaultLanguage)
-
-			messageConfig, knownLanguage = messages[defaultLanguage]
-			if !knownLanguage {
-				// WARN.Printf("Unsupported default language for locale '%s' and message '%s'", defaultLanguage, message)
-				return fmt.Sprintf(unknownValueFormat, message)
-			}
-		} else {
-			// WARN.Printf("Unable to find default language option (%s); messages for unsupported locales will never be translated", defaultLanguageOption)
+		messageConfig, knownLanguage = messages[defaultLanguage]
+		if !knownLanguage {
 			return fmt.Sprintf(unknownValueFormat, message)
 		}
 	}
@@ -88,7 +87,7 @@ func Message(locale, message string, args ...interface{}) string {
 	}
 
 	if len(args) > 0 {
-		// revel.TRACE.Printf("Arguments detected, formatting '%s' with %v", value, args)
+		// Legacy runtime trace: arguments detected, formatting the value.
 		value = fmt.Sprintf(value, args...)
 	}
 
@@ -105,16 +104,30 @@ func parseLocale(locale string) (language, region string) {
 }
 
 // Recursively read and cache all available messages from all message files on the given path.
-func loadMessages(path string) {
+func loadMessages(path string) error {
 	messages = make(map[string]*config.Config)
 
-	if error := filepath.Walk(path, loadEachMessageLang); error != nil && !os.IsNotExist(error) {
-		// ERROR.Println("Error reading messages files:", error)
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("messages directory %q: %w", path, err)
 	}
+	if !info.IsDir() {
+		return fmt.Errorf("messages path %q is not a directory", path)
+	}
+	if err := filepath.Walk(path, loadEachMessageLang); err != nil {
+		return fmt.Errorf("load messages from %q: %w", path, err)
+	}
+	return nil
 }
 
 // 加载每一个文件夹
 func loadEachMessageLang(parentPath string, parentInfo os.FileInfo, osError error) (err error) {
+	if osError != nil {
+		return osError
+	}
+	if parentInfo == nil {
+		return fmt.Errorf("message path %q has no file info", parentPath)
+	}
 	if !parentInfo.IsDir() {
 		return nil
 	}
@@ -122,16 +135,19 @@ func loadEachMessageLang(parentPath string, parentInfo os.FileInfo, osError erro
 	if err := filepath.Walk(parentPath, func(path string, info os.FileInfo, osError error) error {
 		return loadMessageFile(parentInfo.Name(), path, info, osError)
 
-	}); err != nil && !os.IsNotExist(err) {
-		// ERROR.Println("Error reading messages files:", error)
+	}); err != nil {
+		return err
 	}
-	return err
+	return nil
 }
 
 // Load a single message file
 func loadMessageFile(locale string, path string, info os.FileInfo, osError error) error {
 	if osError != nil {
 		return osError
+	}
+	if info == nil {
+		return fmt.Errorf("message file %q has no file info", path)
 	}
 	if info.IsDir() {
 		return nil
@@ -142,7 +158,7 @@ func loadMessageFile(locale string, path string, info os.FileInfo, osError error
 			return error
 		} else {
 			// locale := parseLocaleFromFileName(info.Name())
-			// revel.TRACE.Print(locale + "----locale")
+			// Legacy runtime trace: locale + "----locale"
 
 			// If we have already parsed a message file for this locale, merge both
 			if _, exists := messages[locale]; exists {
@@ -152,7 +168,7 @@ func loadMessageFile(locale string, path string, info os.FileInfo, osError error
 				messages[locale] = config
 			}
 
-			Logf("Successfully loaded messages from file", info.Name())
+			Logf("Successfully loaded messages from file: %s", info.Name())
 		}
 	} else {
 		Logf("Ignoring file %s because it did not have a valid extension", info.Name())
@@ -162,8 +178,55 @@ func loadMessageFile(locale string, path string, info os.FileInfo, osError error
 }
 
 func parseMessagesFile(path string) (messageConfig *config.Config, error error) {
+	if err := validateMessageSyntax(path); err != nil {
+		return nil, err
+	}
 	messageConfig, error = config.ReadDefault(path)
 	return
+}
+
+// validateMessageSyntax catches the parser errors from robfig/config before
+// it opens the file. The frozen dependency does not close its file handle on
+// parse errors, which is observable as an undeletable file on Windows.
+func validateMessageSyntax(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	section := ""
+	option := ""
+	for lineNumber := 1; scanner.Scan(); lineNumber++ {
+		line := strings.TrimRightFunc(stripMessageComments(scanner.Text()), unicode.IsSpace)
+		if len(line) == 0 || line[0] == '#' || line[0] == ';' {
+			continue
+		}
+		if line[0] == '[' && line[len(line)-1] == ']' {
+			section = strings.TrimSpace(line[1 : len(line)-1])
+			option = ""
+			continue
+		}
+		if section != "" && option != "" && (line[0] == ' ' || line[0] == '\t') {
+			continue
+		}
+		separator := strings.IndexAny(line, "=:")
+		if separator <= 0 || line[0] == ' ' || line[0] == '\t' {
+			return fmt.Errorf("could not parse line %d in %q: %s", lineNumber, path, line)
+		}
+		option = strings.TrimSpace(line[:separator])
+	}
+	return scanner.Err()
+}
+
+func stripMessageComments(line string) string {
+	for _, marker := range []string{" ;", "\t;", " #", "\t#"} {
+		if index := strings.Index(line, marker); index != -1 {
+			line = line[:index]
+		}
+	}
+	return line
 }
 
 func parseLocaleFromFileName(file string) string {
@@ -171,54 +234,8 @@ func parseLocaleFromFileName(file string) string {
 	return strings.ToLower(extension)
 }
 
-func init() {
-	revel.OnAppStart(func() {
-		loadMessages(filepath.Join(revel.BasePath, messageFilesDirectory))
-	})
-}
-
-func I18nFilter(c *revel.Controller, fc []revel.Filter) {
-	if foundCookie, cookieValue := hasLocaleCookie(c.Request); foundCookie {
-		// revel.TRACE.Printf("Found locale cookie value: %s", cookieValue)
-		setCurrentLocaleControllerArguments(c, cookieValue)
-	} else if foundHeader, headerValue := hasAcceptLanguageHeader(c.Request); foundHeader {
-		// revel.TRACE.Printf("Found Accept-Language header value: %s", headerValue)
-		setCurrentLocaleControllerArguments(c, headerValue)
-	} else {
-		// revel.TRACE.Println("Unable to find locale in cookie or header, using empty string")
-		setCurrentLocaleControllerArguments(c, "")
-	}
-	fc[0](c, fc[1:])
-}
-
-// Set the current locale controller argument (CurrentLocaleControllerArg) with the given locale.
-func setCurrentLocaleControllerArguments(c *revel.Controller, locale string) {
-	c.Request.Locale = locale
-	c.ViewArgs[CurrentLocaleViewArg] = locale
-}
-
-// Determine whether the given request has valid Accept-Language value.
-//
-// Assumes that the accept languages stored in the request are sorted according to quality, with top
-// quality first in the slice.
-func hasAcceptLanguageHeader(request *revel.Request) (bool, string) {
-	if request.AcceptLanguages != nil && len(request.AcceptLanguages) > 0 {
-		return true, request.AcceptLanguages[0].Language
-	}
-
-	return false, ""
-}
-
-// Determine whether the given request has a valid language cookie value.
-func hasLocaleCookie(request *revel.Request) (bool, string) {
-	if request != nil {
-		name := revel.Config.StringDefault(localeCookieConfigKey, revel.CookiePrefix+"_LANG")
-		if cookie, error := request.Cookie(name); error == nil {
-			return true, cookie.GetValue()
-		} else {
-			// revel.TRACE.Printf("Unable to read locale cookie with name '%s': %s", name, error.Error())
-		}
-	}
-
-	return false, ""
+// LoadMessages loads message files from the resolved messages root. The
+// caller owns configuration and resource-root validation.
+func LoadMessages(dir string) error {
+	return loadMessages(dir)
 }

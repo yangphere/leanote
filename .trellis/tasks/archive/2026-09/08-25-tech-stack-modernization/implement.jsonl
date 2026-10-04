@@ -1,0 +1,4 @@
+{"file": "CONTEXT.md", "reason": "父任务的规划上下文、已确认边界和延期重构入口。"}
+{"file": "docs/adr/0001-stage-modernization-as-contract-first-dag.md", "reason": "任务 DAG、契约优先和不可变不变量的架构决策。"}
+{"file": "docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md", "reason": "Mongo 与 HTTP 迁移的兼容边界及 context 技术债决策。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/research/external-facts.md", "reason": "规划期核验的 MongoDB、ObjectID、Revel 与 TinyMCE 外部事实。"}

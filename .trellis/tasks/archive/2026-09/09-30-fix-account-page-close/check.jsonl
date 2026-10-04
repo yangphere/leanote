@@ -1,0 +1,2 @@
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Use the frontend quality gates and avoid changing generated assets while checking the close behavior."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Verify the fix stays in the standalone account view boundary and does not duplicate shared dialog logic."}

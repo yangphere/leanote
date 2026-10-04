@@ -1,0 +1,5 @@
+{"file": ".trellis/tasks/09-01-frontend-libs-mongo-harness/prd.md", "reason": "任务规格：模式判定三态契约、隔离契约、fail-closed 清单与验收标准"}
+{"file": ".trellis/tasks/09-01-frontend-libs-mongo-harness/research/spec-audit-2026-09-02.md", "reason": "代码级根因链（Up() 无条件 docker run、12 处每测试恢复调用点、auth_test 门控语义）与 CI 失败证据，实现方案唯一依据"}
+{"file": ".trellis/tasks/08-25-frontend-libs/implement.md", "reason": "父任务 Task 3 的两模式 Mongo 契约与串行运行协议，B-E2 必须对齐"}
+{"file": ".trellis/tasks/08-25-frontend-libs/acceptance/evidence-matrix.md", "reason": "AC-E5 failed 证据与 retest 条件（run/job 见文档）"}
+{"file": ".trellis/tasks/09-01-frontend-libs-mongo-harness/design.md", "reason": "技术设计：三态判定机制、隔离恢复手段、fail-closed 次序、测试设计与取舍记录"}

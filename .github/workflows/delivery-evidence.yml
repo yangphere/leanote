@@ -1,0 +1,46 @@
+name: Protected delivery evidence
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+# The native fixture uses fixed container names and ports on this runner pool.
+concurrency:
+  group: protected-delivery-resources
+  cancel-in-progress: false
+
+jobs:
+  delivery-evidence:
+    runs-on: [self-hosted, protected-delivery]
+    environment: delivery-validation
+    timeout-minutes: 125
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: '${{ github.sha }}', fetch-depth: 0 }
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with: { node-version: '24.20.0' }
+      - run: npm ci
+      - name: Execute all protected delivery scenarios
+        # The runner administrator provisions this absolute config path and
+        # its executable. Missing scenarios/configuration fail closed.
+        env:
+          LEANOTE_DELIVERY_RUNNER_CONFIG: ${{ vars.LEANOTE_DELIVERY_RUNNER_CONFIG }}
+          DELIVERY_FAILURE_PATH: delivery-failure.json
+        run: node scripts/ci/delivery-evidence.mjs delivery-results
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: leanote-delivery-evidence-v1
+          path: |
+            delivery-results/catalog.json
+            delivery-results/delivery-evidence.json
+          retention-days: 7
+          if-no-files-found: error
+      - if: failure() || cancelled()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: delivery-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: delivery-failure.json
+          retention-days: 7
+          if-no-files-found: error

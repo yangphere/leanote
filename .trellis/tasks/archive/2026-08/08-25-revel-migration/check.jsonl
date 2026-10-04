@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-25-revel-migration/prd.md", "reason": "检查公开 URL/API、状态码、session、cookie 安全和任意反射禁用。"}
+{"file": ".trellis/tasks/08-25-revel-migration/design.md", "reason": "检查所有 catch-all 是否进入受限 registry，middleware 顺序与错误路径是否明确。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/prd.md", "reason": "核对 C-b 在 Mongo 迁移之后且允许一次 Web 重新登录。"}
+{"file": "docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md", "reason": "核对迁出边界、API token 不变量和生产 secret/cookie 默认值。"}

@@ -5455,7 +5455,7 @@ define('utils',[
     // Set checkbox state
     utils.setInputChecked = function(element, checked) {
         element = jqElt(element);
-        element.prop("checked", checked).change();
+        element.prop("checked", checked).trigger("change");
     };
 
     // Get radio button value
@@ -5465,18 +5465,18 @@ define('utils',[
 
     // Set radio button value
     utils.setInputRadio = function(name, value) {
-        $("input:radio[name=" + name + "][value=" + value + "]").prop("checked", true).change();
+        $("input:radio[name=" + name + "][value=" + value + "]").prop("checked", true).trigger("change");
     };
 
     // Reset input control in all modals
     utils.resetModalInputs = function() {
         $(".modal input[type=text]:not([disabled]), .modal input[type=password], .modal textarea").val("");
-        $(".modal input[type=checkbox]").prop("checked", false).change();
+        $(".modal input[type=checkbox]").prop("checked", false).trigger("change");
     };
 
     // Basic trim function
     utils.trim = function(str) {
-        return $.trim(str);
+        return str == null ? "" : String(str).trim();
     };
 
     // Slug function
@@ -13164,7 +13164,7 @@ define('extensions/scrollLink',[
         // This helper is used to measure sections height in light mode
         $textareaHelperElt = $('.textarea-helper');
 
-        $previewElt.scroll(function() {
+        $previewElt.on('scroll', function() {
             if(isPreviewMoving === false && scrollAdjust === false) {
                 isScrollPreview = true;
                 isScrollEditor = false;
@@ -13184,7 +13184,7 @@ define('extensions/scrollLink',[
         var timeout = isOnToggleMode ? 500 : 0;
         setTimeout(function () {
             if(window.lightMode) {
-                $textareaElt.scroll(handleEditorScroll);
+                $textareaElt.on('scroll', handleEditorScroll);
             }
             else {
                 aceEditor.session.on("changeScrollTop", handleEditorScroll);
@@ -13720,7 +13720,7 @@ define('extensions/htmlSanitizer',[
     };
 
     // Custom selector to find `img` elements that have a valid `src` attribute and have not already loaded.
-    $.expr[':'].uncached = function (obj) {
+    $.expr.pseudos.uncached = function (obj) {
         // Ensure we are dealing with an `img` element with a valid `src` attribute.
         if (!$(obj).is('img[src!=""]')) {
             return false;
@@ -13772,7 +13772,7 @@ define('extensions/htmlSanitizer',[
             if (waitForAll) {
 
                 // Get all elements (including the original), as any one of them could have a background image.
-                obj.find('*').andSelf().each(function () {
+                obj.find('*').addBack().each(function () {
                     var element = $(this);
 
                     // If an `img` element, add it. But keep iterating in case it has a background image too.
@@ -13825,7 +13825,7 @@ define('extensions/htmlSanitizer',[
                 var image = new Image();
 
                 // Handle the image loading and error with the same callback.
-                $(image).bind('load.' + eventNamespace + ' error.' + eventNamespace, function (event) {
+                $(image).on('load.' + eventNamespace + ' error.' + eventNamespace, function (event) {
                     allImgsLoaded++;
 
                     // If an error occurred with loading the image, set the third argument accordingly.
@@ -16820,10 +16820,10 @@ define('core',[
     window['MD'] = {'eventMgr': eventMgr};
 
     var insertLinkO = $('<div class="modal fade modal-insert-link"><div class="modal-dialog"><div class="modal-content">'
-            + '<div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>'
+            + '<div class="modal-header"><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="' + getMsg('close') + '"></button>'
             + '<h4 class="modal-title">' + getMsg('Hyperlink') + '</h4></div>'
             + '<div class="modal-body"><p>' + getMsg('Please provide the link URL and an optional title') + ':</p>'
-            + '<div class="input-group"><span class="input-group-addon"><i class="fa fa-link"></i></span><input id="input-insert-link" type="text" class="col-sm-5 form-control" placeholder="http://example.com  ' + getMsg('optional title') + '"></div></div><div class="modal-footer"><a href="#" class="btn btn-default" data-dismiss="modal">' + getMsg('Cancel') + '</a> <a href="#" class="btn btn-primary action-insert-link" data-dismiss="modal">' + getMsg('OK') + '</a></div></div></div></div>');
+            + '<div class="input-group"><span class="input-group-text"><i class="fa fa-link"></i></span><input id="input-insert-link" type="text" class="col-sm-5 form-control" placeholder="http://example.com  ' + getMsg('optional title') + '"></div></div><div class="modal-footer"><a href="#" class="btn btn-secondary" data-bs-dismiss="modal">' + getMsg('Cancel') + '</a> <a href="#" class="btn btn-primary action-insert-link" data-bs-dismiss="modal">' + getMsg('OK') + '</a></div></div></div></div>');
 
     var actionInsertLinkO = insertLinkO.find('.action-insert-link');
 
@@ -16966,7 +16966,7 @@ define('core',[
         editor.hooks.set("insertLinkDialog", function(callback) {
             core.insertLinkCallback = callback;
             utils.resetModalInputs();
-            insertLinkO.modal();
+            showBootstrapModal(insertLinkO[0]);
             return true;
         });
         // Custom insert image dialog
@@ -16980,7 +16980,7 @@ define('core',[
             if(!ifr.attr('src')) {
                 ifr.attr('src', '/album/index?md=1');
             }
-            $(".modal-insert-image").modal();
+            showBootstrapModal(document.querySelector('.modal-insert-image'));
             return true;
         });
 
@@ -16998,7 +16998,7 @@ define('core',[
         var offset = core._getTextareaCursorOffset(row, column);
 
         $('#wmd-input').get(0).setSelectionRange(offset, offset);
-        $('#wmd-input').focus();
+        $('#wmd-input').trigger('focus');
     };
 
     // 得到文本编辑器的位置
@@ -17090,7 +17090,7 @@ define('core',[
         MD.clearUndo();
         eventMgr.onToggleMode(editor);
         core._moveCursorTo(pos.row, pos.column);
-        $editorElt.focus();
+        $editorElt.trigger('focus');
         $('#wmd-input').scrollTop(scrollTop);
 
         // 设置API
@@ -17214,13 +17214,13 @@ define('core',[
         /*
         if(window.lightMode) {
             // Store editor scrollTop on scroll event
-            $editorElt.scroll(function() {
+            $editorElt.on('scroll', function() {
                 if(documentContent !== undefined) {
                     fileDesc.editorScrollTop = $(this).scrollTop();
                 }
             });
             // Store editor selection on change
-            $editorElt.bind("keyup mouseup", function() {
+            $editorElt.on("keyup mouseup", function() {
                 if(documentContent !== undefined) {
                     fileDesc.editorStart = this.selectionStart;
                     fileDesc.editorEnd = this.selectionEnd;
@@ -17245,7 +17245,7 @@ define('core',[
             aceEditor.session.selection.on('changeCursor', saveSelection);
         }
         // Store preview scrollTop on scroll event
-        $previewContainerElt.scroll(function() {
+        $previewContainerElt.on('scroll', function() {
             if(documentContent !== undefined) {
                 fileDesc.previewScrollTop = $previewContainerElt.scrollTop();
             }
@@ -17347,7 +17347,7 @@ define('core',[
         // MD.insertLink = editor.insertLink;
 
         MD.focus = function () {
-            !window.lightMode ? aceEditor.focus() : $('#wmd-input').focus();
+            !window.lightMode ? aceEditor.focus() : $('#wmd-input').trigger('focus');
         };
         MD.setContent = function (content) {
             var desc = {
@@ -17468,14 +17468,14 @@ define('core',[
         // 可以切换
         if (!window.lightModeForce) {
             $('.wmd-button-group4').html(['<div class="btn-group">',
-                    '<button type="button" class="wmd-button btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="' + getMsg('Edit mode') + '">',
+                    '<button type="button" class="wmd-button btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="' + getMsg('Edit mode') + '">',
                       '<i class="fa fa-gear"></i> <i id="md-keyboard-mode"></i>',
                     '</button>',
                     '<ul class="dropdown-menu wmd-mode">',
                       '<li><a href="#" data-mode="Normal"><i class="fa fa-check"></i> ' + getMsg('Normal mode') + '</a></li>',
                       '<li><a href="#" data-mode="Vim"><i class="fa"></i> ' + getMsg('Vim mode') + '</a></li>',
                       '<li><a href="#" data-mode="Emacs"><i class="fa"></i> ' + getMsg('Emacs mode') + '</a></li>',
-                      '<li role="separator" class="divider"></li>',
+                      '<li role="separator" class="dropdown-divider"></li>',
                       '<li><a href="#" data-mode="Light"><i class="fa"></i> ' + getMsg('Light editor') + '</a></li>',
                     '</ul>',
                   '</div>'].join(''));
@@ -17484,7 +17484,7 @@ define('core',[
             $mdKeyboardMode = $('#md-keyboard-mode');
             
             // 编辑模式选择
-            $('.wmd-mode a').click(function () {
+            $('.wmd-mode a').on('click', function () {
                 var $this = $(this);
                 var mode = $this.data('mode');
                 MD.changeAceKeyboardMode(mode.toLowerCase(), mode);
@@ -17582,11 +17582,11 @@ define('core',[
             var $elt = $(this);
             setTimeout(function() {
                 // When modal opens focus on the first button
-                $elt.find('.btn:first').focus();
+                $elt.find('.btn:first').trigger('focus');
                 // Or on the first link if any
-                $elt.find('button:first').focus();
+                $elt.find('button:first').trigger('focus');
                 // Or on the first input if any
-                $elt.find("input:enabled:visible:first").focus();
+                $elt.find("input:enabled:visible:first").trigger('focus');
             }, 50);
         }).on('hidden.bs.modal', '.modal', function() {
             // Focus on the editor when modal is gone
@@ -17596,12 +17596,12 @@ define('core',[
         }).on('keypress', '.modal', function(e) {
             // Handle enter key in modals
             if(e.which == 13 && !$(e.target).is("textarea")) {
-                $(this).find(".modal-footer a:last").click();
+                $(this).find(".modal-footer a:last").trigger('click');
             }
         });
        
         // Click events on "insert link" and "insert image" dialog buttons
-        actionInsertLinkO.click(function(e) {
+        actionInsertLinkO.on('click', function(e) {
             var value = utils.getInputTextValue($("#input-insert-link"), e);
             if(value !== undefined) {
                 var arr = value.split(' ');
@@ -17609,7 +17609,7 @@ define('core',[
                 var link = arr[0];
                 if (arr.length > 1) {
                     arr.shift();
-                    text = $.trim(arr.join(' '));
+                    text = arr.join(' ').trim();
                 }
                 if (link && link.indexOf('://') < 0) {
                     link = "http://" + link;
@@ -17619,10 +17619,10 @@ define('core',[
             }
         });
         // 插入图片
-        $(".action-insert-image").click(function() {
+        $(".action-insert-image").on('click', function() {
             // 得到图片链接或图片
             /*
-            https://github.com/leanote/leanote/issues/171
+            https://github.com/yangphere/leanote/issues/171
             同遇到了网页编辑markdown时不能添加图片的问题。
             可以上传图片，但是按下“插入图片”按钮之后，编辑器中没有加入![...](...)
             我的控制台有这样的错误： TypeError: document.mdImageManager is undefined
@@ -17645,7 +17645,7 @@ define('core',[
         });
 
         // Avoid dropdown panels to close on click
-        $("div.dropdown-menu").click(function(e) {
+        $("div.dropdown-menu").on('click', function(e) {
             e.stopPropagation();
         });
 

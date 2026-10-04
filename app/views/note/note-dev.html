@@ -12,7 +12,7 @@
 
 <link href="/css/bootstrap-min.css" rel="stylesheet" />
 <!-- 先加载, 没有样式, 宽度不定 -->
-<link rel="stylesheet" href="/css/tinymce/skin.min.css" rel="stylesheet"/>
+<link rel="stylesheet" href="/tinymce/skins/ui/oxide/skin.css" rel="stylesheet"/>
 <!-- leanote css -->
 <link href="/css/font-awesome-4.2.0/css/font-awesome-min.css" rel="stylesheet" />
 <link href="/css/zTreeStyle/zTreeStyle-min.css" rel="stylesheet" />
@@ -26,7 +26,7 @@ var hash = location.hash;
 if(hash.indexOf("writing") >= 0) {
 	var files = '<link rel="stylesheet" href="/css/theme/writting-overwrite.css?id=3" type="text/css" id="themeLink" />';
 } else {
-	var files ='<link rel="stylesheet" href="/css/theme/{{if .userInfo.Theme}}{{.userInfo.Theme}}{{else}}default{{end}}.css?id=7" type="text/css" id="themeLink" />';
+	var files ='<link rel="stylesheet" href="/css/theme/{{if .userInfo.Theme}}{{.userInfo.Theme}}{{else}}default{{end}}.css?id=8" type="text/css" id="themeLink" />';
 }
 document.write(files);
 </script>
@@ -47,20 +47,20 @@ function log(o) {
 			<!-- <div id="headerContainer"> -->
 			<div id="header">
 
-				<a id="logo" href="/" title="Leanote {{msg . "home"}}" class="pull-left"></a>
-				<div id="switcher" class="pull-left">
+				<a id="logo" href="/" title="Leanote {{msg . "home"}}" class="float-start"></a>
+				<div id="switcher" class="float-start">
 					 <i class="fa fa-dedent" id="leftSwitcher" title="{{msg . "leftHidden"}}"></i>
 					 <span id="leftSwitcher2" class="fa fa-indent" title="{{msg . "leftShow"}}"></span>
 				</div>
 				<!-- search -->
-				<div class="pull-left" id="searchWrap">
-					<form class="navbar-form form-inline col-lg-2" id="searchNote">
+				<div class="float-start" id="searchWrap">
+					<form class="d-flex col-lg-2" id="searchNote">
 						<input class="form-control" placeholder="{{msg . "SearchNote"}}" type="text" id="searchNoteInput">
 					</form>
 				</div>
 
 				<!-- 全局按钮 -->
-				<div class="pull-left" style="" id="newNoteWrap">
+				<div class="float-start" style="" id="newNoteWrap">
 					<!-- 新建笔记 -->
 					<div id="newMyNote">
 						<a class="new-note" id="newNoteBtn" title="{{msg . "newNote"}}">
@@ -80,7 +80,7 @@ function log(o) {
 						<!--
 						<div class="dropdown" style="display: inline-block">
 							<a class="ios7-a dropdown-toggle"
-								id="listNotebookDropdownMenu" data-toggle="dropdown"> 
+id="listNotebookDropdownMenu" data-bs-toggle="dropdown">
 								<i class="fa fa-angle-down"></i>
 							</a>
 							<div class="dropdown-menu dropdown-list" id="searchNotebookForAddDropdownList">
@@ -92,7 +92,7 @@ function log(o) {
 						-->
 
 					</div>
-					
+
 					<!-- 只为新建别人的笔记 -->
 					<div id="newSharedNote" style="display: none">
 						<a id="newSharedNoteBtn" class="new-note">
@@ -110,7 +110,7 @@ function log(o) {
 
 						<!--
 						<div class="dropdown" style="display: inline-block">
-							<a id="listShareNotebookDropdownMenu" class="ios7-a dropdown-toggle" data-toggle="dropdown"> 
+<a id="listShareNotebookDropdownMenu" class="ios7-a dropdown-toggle" data-bs-toggle="dropdown">
 								<i class="fa fa-angle-down"></i>
 							</a>
 							<div class="dropdown-menu dropdown-list" id="searchNotebookForAddShareDropdownList" >
@@ -118,19 +118,23 @@ function log(o) {
 							</div>
 						</div>
 						-->
-					</div>				
+</div>
 				</div>
-				
-				<div class="pull-left" id="leanoteMsg">
+
+				<div class="float-start" id="leanoteMsg">
+					<div id="noteMutationStatus" role="status" style="display:none">
+						<span id="noteMutationMessage"></span>
+						<button type="button" id="retryNoteMutations" class="btn btn-sm btn-warning" style="display:none"></button>
+					</div>
 					<span id="msg" style="display: inline-block;"></span>
 					<span id="loading">
 					</span>
 				</div>
-					
-				<div class="pull-right" id="myProfile">
+
+				<div class="float-end" id="myProfile">
 					<div class="dropdown">
-						<a class="dropdown-toggle profile-img" title="{{.userInfo.Username}}" data-toggle="dropdown"> 
-							<img alt="{{.userInfo.Username}}" title="{{.userInfo.Username}}" src="{{if .userInfo.Logo}}{{.userInfo.Logo}}{{else}}/images/blog/default_avatar.png{{end}}" id="myAvatar"/> 
+<a class="dropdown-toggle profile-img" title="{{.userInfo.Username}}" data-bs-toggle="dropdown">
+<img alt="{{.userInfo.Username}}" title="{{.userInfo.Username}}" src="{{if .userInfo.Logo}}{{.userInfo.Logo}}{{else}}/images/blog/default_avatar.png{{end}}" id="myAvatar"/>
 							<span class="username">
 								{{.userInfo.Username}}
 							</span>
@@ -139,86 +143,86 @@ function log(o) {
 						<ul class="dropdown-menu li-a" role="menu">
 							<li role="presentation">
 								<a href="/member" target="_blank">
-								<i class="fa fa-user"></i> 
+<i class="fa fa-user"></i>
 								{{msg . "memberCenter"}}
 								</a>
 							</li>
-							
+
 							<li role="presentation" id="setTheme">
 								<a>
-								<i class="fa fa-sun-o"></i> 
+<i class="fa fa-sun-o"></i>
 								{{leaMsg . "Theme"}}
 								</a>
 							</li>
-							
-							<li role="presentation" class="divider"></li>
+
+							<li role="presentation" class="dropdown-divider"></li>
 							<li role="presentation">
 								<a href="/member/blog/index" target="_blank">
-								<i class="fa fa-bold"></i> 
+<i class="fa fa-bold"></i>
 								{{msg . "blogSet"}}
 								</a>
 							</li>
-							
+
 							<li role="presentation" class="my-link" >
 								<a target="_blank" href="{{$.userInfo.BlogUrl}}">
 								<i class="fa fa-bold"></i>
 								{{msg . "myBlog"}}</a>
 							</li>
-							
-							<li role="presentation" class="divider my-link writing-mobile-hide"></li>
+
+							<li role="presentation" class="dropdown-divider my-link writing-mobile-hide"></li>
 							<li role="presentation" class="my-link toggle-editor-mode writing-mobile-hide" >
 								<a href="#writing" title="{{msg . "writingMode"}} ctrl/cmd+e"><i class="fa fa-rocket"></i>
 								{{msg . "writingMode"}}</a>
 							</li>
-							
+
 							{{if .isAdmin}}
-							<li role="presentation" class="divider"></li>
+							<li role="presentation" class="dropdown-divider"></li>
 							<li role="presentation">
 								<a target="_blank" title="{{msg . "admin"}}" href="/admin/index">
-									<i class="fa fa-dashboard"></i> 
+<i class="fa fa-dashboard"></i>
 									<span>{{msg . "admin"}}</span>
 								</a>
 							</li>
 							{{end}}
-							<li role="presentation" class="divider"></li>
+							<li role="presentation" class="dropdown-divider"></li>
 							<li role="presentation" onclick="logout()">
-								<i class="fa fa-sign-out"></i> 
+<i class="fa fa-sign-out"></i>
 								{{msg . "logout"}}
 							</li>
 						</ul>
 					</div>
 				</div>
 
-				<div class="pull-right top-nav writting-hide lea-blog">
-					<a target="_blank" href="http://lea.leanote.com"> 
+				<div class="float-end top-nav writting-hide lea-blog">
+<a target="_blank" href="http://lea.leanote.com">
 						{{msg . "Explore"}}
 					</a>
 				</div>
-				
-				<div class="pull-right top-nav writting-hide" id="myBlog">
-					<a target="_blank" href="{{$.blogUrl}}/{{.userInfo.Username}}"> 
+
+				<div class="float-end top-nav writting-hide" id="myBlog">
+<a target="_blank" href="{{$.blogUrl}}/{{.userInfo.Username}}">
 						{{msg . "myBlog"}}
 					</a>
 				</div>
 
-				<div class="pull-right toggle-editor-mode top-nav" id="toggleEditorMode">
+				<div class="float-end toggle-editor-mode top-nav" id="toggleEditorMode">
 					<a href="#writing"><span>{{msg . "writingMode"}}</span></a>
 				</div>
-				
+
 				{{if eq .userInfo.Email "demo@leanote.com"}}
-				{{if .openRegister}}					
-				<div class="pull-right top-nav" id="demoRegister">
+{{if .openRegister}}
+				<div class="float-end top-nav" id="demoRegister">
 					<span>
 						{{msg . "demoRegister"}}
 					</span>
 				</div>
 				{{end}}
 				{{end}}
-				
+
 				<!--
-				<ul id="setting" class="pull-right">
+				<ul id="setting" class="float-end">
 					<li class="dropdown messages">
-						<a class="dropdown-toggle" data-toggle="dropdown"> 
+<a class="dropdown-toggle" data-bs-toggle="dropdown">
 							<span aria-hidden="true" class="icon se7en-flag"></span>
 							<div class="sr-only">Messages</div>
 							<p class="counter">3</p>
@@ -230,7 +234,7 @@ function log(o) {
 					</li>
 
 					<li class="dropdown settings">
-						<a class="dropdown-toggle" data-toggle="dropdown"> 
+<a class="dropdown-toggle" data-bs-toggle="dropdown">
 							<span aria-hidden="true" class="icon se7en-gear"></span>
 							<div class="sr-only">Settings</div>
 						</a>
@@ -260,22 +264,22 @@ function log(o) {
 					<div id="notebook">
 						<div class="folderNote opened" id="myNotebooks">
 							<div class="folderHeader clearfix">
-								<i class="fa fa-book pull-left fa-left"></i> 
-								<span class="pull-left">
+<i class="fa fa-book float-start fa-left"></i>
+								<span class="float-start">
 									{{msg . "notebook"}}
 								</span>
-								<div class="pull-right" id="addNotebookPlus" title="{{msg . "addNotebook"}}">
+								<div class="float-end" id="addNotebookPlus" title="{{msg . "addNotebook"}}">
 									<i class="fa  fa-plus" title="{{msg . "addNotebook"}}"></i>
 								</div>
 							</div>
-							
+
 							<div class="folderBody">
-								<input type="text" class="form-control" id="searchNotebookForList" placeholder="{{msg . "SearchNotebook"}}"/>							
+<input type="text" class="form-control" id="searchNotebookForList" placeholder="{{msg . "SearchNotebook"}}"/>
 								<ul class="ztree" id="notebookList"></ul>
 								<ul class="ztree" id="notebookListForSearch"></ul>
 							</div>
 						</div>
-						
+
 						<div class="folderNote closed" id="myTag">
 							<div class="folderHeader">
 								<i class="fa fa-bookmark fa-left"></i>
@@ -283,7 +287,7 @@ function log(o) {
 									{{msg . "tag"}}
 								</span>
 							</div>
-	
+
 							<ul class="folderBody clearfix" id="tagNav">
 								<li data-tag="red"><a> <span class="label label-red">{{msg . "red"}}</span></a></li>
 								<li data-tag="blue"><a> <span class="label label-blue">{{msg . "blue"}}</span></a></li>
@@ -291,7 +295,7 @@ function log(o) {
 								<li data-tag="green"><a> <span class="label label-green">{{msg . "green"}}</span></a></li>
 							</ul>
 						</div>
-						
+
 						<div class="folderNote closed" id="myShareNotebooks">
 							<div class="folderHeader">
 								<i class="fa fa-user fa-left"></i>
@@ -299,14 +303,14 @@ function log(o) {
 									{{msg . "share"}}
 								</span>
 							</div>
-	
+
 							<ul class="folderBody" id="shareNotebooks">
-								
+
 							</ul>
 						</div>
-	
+
 					</div>
-					
+
 					<!-- 缩小版 todo 不要展示, 点击展开即可 -->
 					<div id="notebookMin">
 						<!-- 这里隐藏, 不要 -->
@@ -326,9 +330,9 @@ function log(o) {
 							</div>
 						</div>
 					</div>
-					
-					<!-- 
-					底下隐藏/展开 
+
+<!--
+底下隐藏/展开
 					<div id="notebookBottom">
 						<i class="fa fa-angle-left" id="leftSwitcher"></i>
 					</div>
@@ -336,7 +340,7 @@ function log(o) {
 				</div>
 
 				<div class="noteSplit" id="notebookSplitter"></div>
-				
+
 				<div id="noteAndEditor">
 					<div id="noteAndEditorMask">
 						<img src="/images/loading-24.gif"/>
@@ -346,14 +350,14 @@ function log(o) {
 					<div id="noteList">
 					<div class="clearfix" id="notesAndSort" style="position: relative">
 
-						<div class="pull-left">
+						<div class="float-start">
 							<!-- 我的笔记本 -->
 							<div class="dropdown" id="myNotebookNavForListNav">
 								<a class="ios7-a">
 									<span id="curNotebookForListNote">{{msg . "all"}}</span>
 								</a>
 							</div>
-							
+
 							<!-- 共享的笔记本 -->
 							<div class="dropdown" id="sharedNotebookNavForListNav" style="display: none">
 								<a class="ios7-a">
@@ -363,13 +367,13 @@ function log(o) {
 						</div>
 
 						<!-- tag search -->
-						<div class="pull-left" id="tagSearch"></div>
+						<div class="float-start" id="tagSearch"></div>
 
 						<!-- sort type -->
 						<div id="sortType">
 							<div class="dropdown">
 								<a class="ios7-a dropdown-toggle" id="dropdownMenu1"
-									data-toggle="dropdown"> 
+data-bs-toggle="dropdown">
 									</i><i class="fa fa-th-list"></i>
 								</a>
 								<ul class="dropdown-menu" role="menu"
@@ -384,7 +388,7 @@ function log(o) {
 										<i class="fa fa-check"></i>
 										{{leaMsg . "List View"}}
 									</a></li>
-									<li role="presentation" class="divider"></li>
+									<li role="presentation" class="dropdown-divider"></li>
 									<li role="presentation"><a data-sorter="dateCreatedASC" class="sorter-style sorter-dateCreatedASC" role="menuitem">
 										<i class="fa fa-check"></i>
 										{{leaMsg . "Date Created"}} <i class="fa fa-sort-alpha-asc"></i>
@@ -393,7 +397,7 @@ function log(o) {
 										<i class="fa fa-check"></i>
 										{{leaMsg . "Date Created"}} <i class="fa fa-sort-alpha-desc"></i>
 									</a></li>
-									<li role="presentation" class="divider"></li>
+									<li role="presentation" class="dropdown-divider"></li>
 									<li role="presentation"><a data-sorter="dateUpdatedASC" class="sorter-style sorter-dateUpdatedASC" role="menuitem">
 										<i class="fa fa-check"></i>
 										{{leaMsg . "Date Updated"}} <i class="fa fa-sort-alpha-asc"></i>
@@ -402,11 +406,11 @@ function log(o) {
 										<i class="fa fa-check"></i>
 										{{leaMsg . "Date Updated"}} <i class="fa fa-sort-alpha-desc"></i>
 									</a></li>
-									<li role="presentation" class="divider"></li>
+									<li role="presentation" class="dropdown-divider"></li>
 									<li role="presentation"><a data-sorter="titleASC" class="sorter-style sorter-titleASC" role="menuitem">
 										<i class="fa fa-check"></i>
 										{{leaMsg . "Title"}} <i class="fa fa-sort-alpha-asc"></i>
-										
+
 									</a></li>
 									<li role="presentation"><a data-sorter="titleDESC" class="sorter-style sorter-titleDESC" role="menuitem">
 										<i class="fa fa-check"></i>
@@ -424,21 +428,21 @@ function log(o) {
 						</ul>
 					</div>
 				</div>
-				
+
 					<div class="noteSplit" id="noteSplitter"></div>
-					
+
 					<div id="note" class="read-only-editor">
-					
+
 					<!-- 遮罩, 为了resize3Columns用 -->
 					<div id="noteMask" class="note-mask"></div>
 					<!-- for loading -->
-					<div id="noteMaskForLoading" class="note-mask"> <!-- z-index: 11 --> 
+<div id="noteMaskForLoading" class="note-mask"> <!-- z-index: 11 -->
 						<img src="/images/loading-24.gif"/>
 						<br />
 						loading...
 					</div>
 					<!-- for tips -->
-					<div id="editorMask"> <!-- z-index: 10 --> 
+<div id="editorMask"> <!-- z-index: 10 -->
 						{{msg . "noNoteNewNoteTips"}}
 						<br />
 						<br />
@@ -451,40 +455,40 @@ function log(o) {
 						</div>
 					</div>
 
-					<div id="batchMask" class="note-mask"> <!-- z-index: 99 --> 
+<div id="batchMask" class="note-mask"> <!-- z-index: 99 -->
 						<div class="batch-ctn" id="batchCtn"></div>
 						<div class="batch-info">
 							{{leaMsg . "<span></span> notes selected"}}
 							<p><i class="fa fa-cog"></i></p>
 						</div>
 					</div>
-					
+
 
 					<div id="noteTop">
 						<!-- 左侧放tag, 右侧放按钮, 比如save, info, move, delete -->
 						<div id="tool" class="clearfix">
 							<!-- tag可以参考 mac的文件tag, 预定义一些颜色, 用户也可以自己输入-->
-							
+
 							<!--
-							<div class="pull-left" id="noteTitleDiv">
+							<div class="float-start" id="noteTitleDiv">
 								<input name="noteTitle" id="noteTitle" value="" placeholder="无标题">
 							</div>
 							-->
-							
-							<div class="pull-left" id="tag">
+
+							<div class="float-start" id="tag">
 								<div id="tags" style="display: inline-block; line-height: 25px;">
 								</div>
 
 								<div class="dropdown" style="display: inline-block"
 									id="tagDropdown">
-									<i class="fa fa-bookmark-o"></i> 
+<i class="fa fa-bookmark-o"></i>
 									<a
-										class="metro-a dropdown-toggle" data-toggle="dropdown"
+										class="metro-a dropdown-toggle" data-bs-toggle="dropdown"
 										id="addTagTrigger" style="cursor: text; padding-left: 0">
 										<span class="add-tag-text">
 										{{msg . "clickAddTag"}}
 										</span>
-									</a> 
+</a>
 									<input type="text" id="addTagInput" />
 									<ul class="dropdown-menu" role="menu" id="tagColor">
 										<li role="presentation"><span class="label label-red">{{msg . "red"}}</span>
@@ -496,25 +500,25 @@ function log(o) {
 									</ul>
 								</div>
 							</div>
-							
-							<ul class="pull-right" id="editorTool">
+
+							<ul class="float-end" id="editorTool">
 								<li><a class="ios7-a " id="editBtn"
-									data-toggle="dropdown" title="ctrl/cmd+e {{leaMsg . "Toggle Modify with Readonly"}}">
+									title="ctrl/cmd+e {{leaMsg . "Toggle Modify with Readonly"}}">
 									<span class="fa"></span></a></li>
 
 								<li><a class="ios7-a " id="saveBtn"
-									data-toggle="dropdown" title="ctrl/cmd+s {{msg . "save"}}">
+									title="ctrl/cmd+s {{msg . "save"}}">
 									<span class="fa fa-save"></span></a></li>
 
 								<li class="dropdown" id="noteInfoDropdown">
-									<a class="ios7-a dropdown-toggle" data-toggle="dropdown" title="{{msg . "Information"}}">
+									<a class="ios7-a dropdown-toggle" data-bs-toggle="dropdown" title="{{msg . "Information"}}">
 										<span class="fa fa-info"></span>
 									</a>
 									<div class="dropdown-menu" id="noteInfo"></div>
 								</li>
 
 								<li class="dropdown" id="attachDropdown">
-									<a class="ios7-a dropdown-toggle" data-toggle="dropdown" id="showAttach" title="{{msg . "attachments"}}">
+									<a class="ios7-a dropdown-toggle" data-bs-toggle="dropdown" id="showAttach" title="{{msg . "attachments"}}">
 										<span class="fa fa-paperclip"></span>
 										<span id="attachNum"></span>
 									</a>
@@ -525,13 +529,13 @@ function log(o) {
 							                <div id="dropAttach" class="dropzone">
 							                    <a class="btn btn-success btn-choose-file">
 													<i class="fa fa-upload"></i>
-							                    	<span>{{msg . "Choose File"}}</span>
+<span>{{msg . "Choose File"}}</span>
 							                    </a>
-							                    <a class="btn btn-default" id="downloadAllBtn">
+							                    <a class="btn btn-secondary" id="downloadAllBtn">
 								                    <i class="fa fa-download"></i>
-							                    	<span>{{msg . "Download All"}}</span>
+<span>{{msg . "Download All"}}</span>
 							                    </a>
-							                    
+
 							                    <input type="file" name="file" multiple/>
 							                </div>
 							                <div id="attachUploadMsg">
@@ -539,12 +543,12 @@ function log(o) {
 							            </form>
 									</div>
 								</li>
-								
+
 								<li><a class="ios7-a " id="contentHistory"
-									data-toggle="dropdown" title="{{msg . "history"}}">
+									title="{{msg . "history"}}">
 									<span class="fa fa-history"></span></a></li>
 								<li><a class="ios7-a " id="tipsBtn"
-									data-toggle="dropdown" title="{{msg . "editorTips"}}">
+									title="{{msg . "editorTips"}}">
 									<span class="fa fa-question"></span></a></li>
 							</ul>
 						</div>
@@ -552,20 +556,20 @@ function log(o) {
 						<div id="noteTitleDiv">
 							<input name="noteTitle" id="noteTitle" value="" placeholder="{{msg . "unTitled"}}" tabindex="1" />
 						</div>
-						
+
 						<!-- 只读时 -->
 						<div id="noteReadTop">
 							<h2 id="noteReadTitle"></h2>
 							<div class="clearfix" id="noteReadInfo">
 								<i class="fa fa-bookmark-o"></i>
 								<span id="noteReadTags"></span>
-								
+
 								<!-- 修改时间 -->
-								<i class="fa fa-clock-o"></i> {{msg . "update"}} 
-								<span id="noteReadUpdatedTime"></span>  
-								
+<i class="fa fa-clock-o"></i> {{msg . "update"}}
+<span id="noteReadUpdatedTime"></span>
+
 								<!-- 修改时间 -->
-								<i class="fa fa-clock-o"></i> {{msg . "create"}} 
+<i class="fa fa-clock-o"></i> {{msg . "create"}}
 								<span id="noteReadCreatedTime"></span>
 							</div>
 						</div>
@@ -580,7 +584,7 @@ function log(o) {
 							</div>
 							<!-- 查看信息 -->
 							<div id="infoToolbar" class="info-toolbar invisible">
-				              
+
 				              <span class="lang">{{msg . "created"}}</span>: <span class="created-time"></span>
 				              <span class="lang">{{msg . "updated"}}</span>: <span class="updated-time"></span>
 				            </div>
@@ -594,7 +598,7 @@ function log(o) {
 							<div id="leanoteNavContent" class="leanoteNavContent">
 							</div>
 						</div>
-						
+
 						<!-- leaui image drop image to editor-->
 						<form id="upload" method="post" action="/file/uploadImageLeaui" enctype="multipart/form-data" style="margin-top: 5px;">
 			                <div id="drop">
@@ -604,22 +608,22 @@ function log(o) {
 			                <ul id="uploadMsg">
 			                </ul>
 			            </form>
-	            
+
 						<!-- 由此可以算高度 -->
 						<div id="editorContent" name="editorContent" tabindex="2" /></div>
 					</div>
-					
+
 					<div id="mdEditor" class="read-only">
 						<div class="layout-wrapper-l1">
 						    <div class="layout-wrapper-l2">
 						        <div class="navbar navbar-default">
-						            <div class="navbar-inner" id="wmd-button-bar">
-						            	<div id="mdInfoToolbar" class="info-toolbar invisible">
+						            <div class="navbar" id="wmd-button-bar">
+<div id="mdInfoToolbar" class="info-toolbar invisible">
 							              <span class="lang">{{msg . "created"}}</span>: <span class="created-time"></span>
 							              <span class="lang">{{msg . "updated"}}</span>: <span class="updated-time"></span>
 							            </div>
-						            	
-						            	<div class="wmd-button-bar-inner clearfix">
+
+<div class="wmd-button-bar-inner clearfix">
 							                <ul class="nav left-buttons">
 							                    <li class="wmd-button-group1 btn-group"></li>
 							                </ul>
@@ -635,12 +639,12 @@ function log(o) {
 							                <!-- 帮助 -->
 							                 <ul class="nav left-buttons">
 							                    <li class="wmd-button-group6 btn-group">
-							                    	<li class="wmd-button btn btn-success" id="wmd-help-button" title="{{msg . "Markdown syntax"}}" style="left: 0px; display: none;"><span style="display: none; background-position: 0px 0px;"></span><i class="fa fa-question-circle"></i></li>
+<li class="wmd-button btn btn-success" id="wmd-help-button" title="{{msg . "Markdown syntax"}}" style="left: 0px; display: none;"><span style="display: none; background-position: 0px 0px;"></span><i class="fa fa-question-circle"></i></li>
 							                    </li>
 							                </ul>
-							               
+
 							               <!--
-							                <ul class="nav pull-right right-buttons">
+							                <ul class="nav float-end right-buttons">
 							                    <li class="offline-status hide">
 							                        <div class="text-danger">
 							                            <i class="icon-attention-circled"></i>offline
@@ -648,7 +652,7 @@ function log(o) {
 							                    </li>
 							                    <li class="extension-buttons"></li>
 							                </ul>
-							                <ul class="nav pull-right title-container">
+							                <ul class="nav float-end title-container">
 							                    <li><div class="working-indicator"></div></li>
 							                    <li><a class="btn btn-success file-title-navbar" href="#"
 							                        title="Rename document"> </a></li>
@@ -662,7 +666,7 @@ function log(o) {
 						            <div class="editorBg"></div>
 						        </div>
 						        <div class="layout-wrapper-l3">
-						        	<div id="left-column">
+<div id="left-column">
 							            <pre id="wmd-input" class="form-control"><div class="editor-content mousetrap" contenteditable=true></div><div class="editor-margin"></div></pre>
 							            <!-- v2 markdown lightmode需要 -->
 							            <div class="textarea-helper"></div>
@@ -691,12 +695,12 @@ function log(o) {
 						        </div>
 						    </div>
 						    <div id="wmd-button-bar" class="hide"></div>
-						</div>	
-					
+</div>
+
 						<!--
 						<div id="wmd-button-bar" id="mdBar"></div>
 						<div class="editorBg"></div>
-	                    
+
 						<div class="clearfix" id="mdEditorPreview">
 							<div id="left-column">
 				                <div id="wmd-panel-editor" class="wmd-panel-editor">
@@ -713,26 +717,26 @@ function log(o) {
 	                    <textarea id="md-section-helper"></textarea>
 	                    -->
 					</div>
-				</div>	
+</div>
 			</div>
-			
+
 			<!-- mdEditor -->
 			<!-- 插入图片 -->
 			<div class="modal fade modal-insert-image">
 			    <div class="modal-dialog"  style="width: 840px;max-width:100%;">
 			        <div class="modal-content">
 			            <div class="modal-header">
-			                <button type="button" class="close" data-dismiss="modal"
-			                    aria-hidden="true">&times;</button>
+			                <button type="button" class="btn-close" data-bs-dismiss="modal"
+				                    aria-label="{{leaMsg . "close"}}"></button>
 			                <h4 class="modal-title">{{leaMsg . "Image"}}</h4>
 			            </div>
 			            <div class="modal-body" style="padding-top: 0; padding-bottom: 0">
-			            	<iframe name="mdImageManager" style="width: 100%; height: 350px" scrolling="no" id="leauiIfrForMD" src="" frameborder="0"></iframe>
+<iframe name="mdImageManager" style="width: 100%; height: 350px" scrolling="no" id="leauiIfrForMD" src="" frameborder="0"></iframe>
 			            </div>
 			            <div class="modal-footer">
-			                 <a href="#" class="btn btn-default"
-			                    data-dismiss="modal">{{leaMsg . "Cancel"}}</a> <a href="#"
-			                    class="btn btn-primary action-insert-image" data-dismiss="modal">{{leaMsg . "Insert Image"}}</a>
+			                 <a href="#" class="btn btn-secondary"
+			                    data-bs-dismiss="modal">{{leaMsg . "Cancel"}}</a> <a href="#"
+			                    class="btn btn-primary action-insert-image" data-bs-dismiss="modal">{{leaMsg . "Insert Image"}}</a>
 			            </div>
 			        </div>
 			    </div>
@@ -742,123 +746,123 @@ function log(o) {
 			<div class="modal fade bs-modal-sm" id="editorDialog" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
 				<div class="modal-dialog modal-sm">
 				    <div class="modal-content">
-				
+
 				      <div class="modal-header">
-				        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				        <h4 class="modal-title" id="editorDialog-title"></h4>
 				      </div>
 
 				      <div class="modal-body">
 							<p></p>
 							<div class="input-group">
-							  <span class="input-group-addon">
-							  	<i></i>
+							  <span class="input-group-text">
+<i></i>
 							  </span>
 							  <input type="text" class="form-control" placeholder="">
 							</div>
 				      </div>
-				      
+
 				      <div class="modal-footer">
-				        <button type="button" class="btn btn-default" data-dismiss="modal">{{msg . "cancel"}}</button>
+				        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{msg . "cancel"}}</button>
 				        <button type="button" class="btn btn-primary" id="editorDialog-confirm">{{msg . "confirm"}}</button>
 				      </div>
-				      
+
 				    </div><!-- /.modal-content -->
 				  </div><!-- /.modal-dialog -->
 			</div><!-- /.modal -->
 			<!-- 弹出框 模板 -->
 			<div class="modal fade bs-modal-sm" id="leanoteDialogRemote" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
 			</div>
-			
+
 			<div class="modal fade bs-modal-sm" id="leanoteDialog" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
 			  <div class="modal-dialog modal-sm">
 			    <div class="modal-content">
-			
+
 			      <div class="modal-header">
-			        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+			        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			        <h4 class="modal-title" id="modalTitle">操作</h4>
 			      </div>
-			      
+
 			      <div class="modal-body">
 					内容区
 			      </div>
-			      
+
 			      <div class="modal-footer">
-			        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 			        <button type="button" class="btn btn-primary">Save changes</button>
 			      </div>
-			      
+
 			    </div><!-- /.modal-content -->
 			  </div><!-- /.modal-dialog -->
 			</div><!-- /.modal -->
-			
+
 			<div class="modal fade bs-modal-sm" id="sendRegisterEmailDialog" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
 			  <div class="modal-dialog modal-sm">
 			    <div class="modal-content">
-			
+
 			      <div class="modal-header">
-			        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+			        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			        <h4 class="modal-title" class="modalTitle">邀请好友</h4>
 			      </div>
-			      
+
 				   <div class="modal-body">
 						<form role="form">
-						  <div class="form-group">
-						  	<div id="registerEmailMsg" class="alert alert-warning" style="display: none">
-						  	</div>
-						  	<input type="hidden" id="toEmail"/>
+						  <div class="mb-3">
+<div id="registerEmailMsg" class="alert alert-warning" style="display: none">
+</div>
+<input type="hidden" id="toEmail"/>
 						    <label for="emailContent">邮件内容</label>
 						    <textarea class="form-control" id="emailContent">Hi, 我是life, leanote非常好用, 快来注册吧.</textarea>
 						  </div>
 						</form>
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
 						<button type="button" class="btn btn-success" id="registerEmailBtn">发送</button>
 					</div>
-			      
+
 			    </div><!-- /.modal-content -->
 			  </div><!-- /.modal-dialog -->
 			</div><!-- /.modal -->
-			
+
 			<!-- theme -->
 			<div class="modal fade bs-modal-sm" id="setThemeDialog" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
 			  <div class="modal-dialog modal-sm">
 			    <div class="modal-content">
 				  <div class="modal-header">
-			        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+			        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			        <h4 class="modal-title" class="modalTitle">{{msg . "theme"}}</h4>
 			      </div>
 					<div class="modal-body">
-				  		<table id="themeForm">
-				  			<tr>
-				  				<td>
-				  					<label>
-				  					<img src="/images/slider/all.gif" height="100px"> 
-				  					<br />
-				  					<input type="radio" name="theme" value="default"> {{msg . "default"}}
-				  					</label>
-				  				</td>
-				  				<td>
-					  				<label> 
-				  					<img src="/images/slider/all-simple.gif" height="100px"> 
-				  					<br />
-				  					<input type="radio" name="theme" value="simple"> {{msg . "simple"}}
-				  					</label>
-				  				</td>
-				  			</tr>
-				  		</table>
+<table id="themeForm">
+<tr>
+<td>
+<label>
+<img src="/images/slider/all.gif" height="100px">
+<br />
+<input type="radio" name="theme" value="default"> {{msg . "default"}}
+</label>
+</td>
+<td>
+<label>
+<img src="/images/slider/all-simple.gif" height="100px">
+<br />
+<input type="radio" name="theme" value="simple"> {{msg . "simple"}}
+</label>
+</td>
+</tr>
+</table>
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal">{{msg . "close"}}</button>
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{msg . "close"}}</button>
 					</div>
 			    </div><!-- /.modal-content -->
 			  </div><!-- /.modal-dialog -->
 			</div><!-- /.modal -->
-			
+
 			<!-- 编辑器提示 -->
-			
-			
+
+
 			<!-- modal 静态区域 -->
 			<div class="display: hidden">
 			<div class="hide" id="copyDiv"></div>
@@ -896,6 +900,8 @@ var GlobalConfigs = {{.globalConfigs|jsonJs}};
 <script src="/js/object_id.js"></script>
 <!-- /dev -->
 
+<script src="/js/tinymce-config.js"></script>
+<script src="/js/editor-state.js"></script>
 <script src="/tinymce/tinymce.js"></script>
 
 <script src="/public/libs/ace/ace.js"></script>
@@ -905,6 +911,10 @@ var GlobalConfigs = {{.globalConfigs|jsonJs}};
 <script src="/js/contextmenu/jquery.contextmenu.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/bootstrap-min.js"></script>
+<script src="/js/plugins/libs-min/jquery.ui.widget.js"></script>
+<script src="/js/plugins/libs-min/jquery.iframe-transport.js"></script>
+<script src="/js/plugins/libs-min/jquery.fileupload.js"></script>
+<script src="/js/mutation-intents.js"></script>
 <script src="/js/app/note.js"></script>
 <script src="/js/app/tag.js"></script>
 <script src="/js/app/notebook.js"></script>
@@ -915,7 +925,7 @@ var GlobalConfigs = {{.globalConfigs|jsonJs}};
 <!-- pro_app_js -->
 <script>
 initPage();
-// 当tinymce.dev.js时, 请注释require
+// TinyMCE 8 使用自托管资源闭包
 window.require = {
     baseUrl: '/public',
 };

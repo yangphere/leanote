@@ -1,0 +1,6 @@
+{"file":".trellis/spec/backend/index.md","reason":"质量检查覆盖后端规范索引。"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"检查管理员 bootstrap、条件更新和持久化兼容性。"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"检查 fail-closed 和稳定错误响应。"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"检查恢复告警与密码/指纹日志脱敏。"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查代码质量、测试和验证证据。"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"检查账户页强制改密入口。"}

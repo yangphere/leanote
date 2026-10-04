@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "检查实现的安全、验证和错误暴露约束"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "检查配置事实来源和重复逻辑"}

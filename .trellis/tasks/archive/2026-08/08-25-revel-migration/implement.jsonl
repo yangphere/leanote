@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-25-revel-migration/prd.md", "reason": "标准库 HTTP、显式路由、受限 registry、session 安全与一次性重新登录边界。"}
+{"file": ".trellis/tasks/08-25-revel-migration/design.md", "reason": "HTTP server 装配、middleware 顺序、模板和静态资源迁移设计。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/research/external-facts.md", "reason": "Revel 路由与运行入口的已核验事实。"}
+{"file": "docs/adr/0002-replace-mgo-and-revel-behind-compatibility-boundaries.md", "reason": "迁出 Revel 的显式路由和安全边界决策。"}

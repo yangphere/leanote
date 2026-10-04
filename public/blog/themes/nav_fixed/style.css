@@ -147,7 +147,7 @@ ul.dropdown-menu {
   visibility: hidden;
   opacity: 0;
 }
-.open ul.dropdown-menu {
+ul.dropdown-menu.show {
   -webkit-animation: pulldown .2s;
   animation: pulldown .2s;
   visibility: visible;
@@ -408,9 +408,6 @@ a:hover {
 .tab-content {
   padding-bottom: 10px;
   border-bottom: 1px solid #ebeff2;
-}
-.mce-btn {
-  background: none !important;
 }
 @media screen and (max-width: 600px) {
   html,

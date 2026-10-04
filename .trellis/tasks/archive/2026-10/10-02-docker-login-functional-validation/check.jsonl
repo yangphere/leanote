@@ -1,0 +1,2 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"按项目质量指南复核运行证据、未运行门禁和敏感信息处理。"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"按前端质量指南复核真实浏览器验证范围，不把单一浏览器结果外推为发布矩阵。"}

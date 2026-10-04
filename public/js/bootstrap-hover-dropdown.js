@@ -4,7 +4,7 @@
  * Author: Cameron Spear
  * Version: v2.0.11
  * Contributors: Mattia Larentis
- * Dependencies: Bootstrap's Dropdown plugin, jQuery
+ * Dependencies: Bootstrap 5 Dropdown, jQuery
  * Description: A simple plugin to enable Bootstrap dropdowns to active on hover and provide a nice user experience.
  * License: MIT
  * Homepage: http://cameronspear.com/blog/bootstrap-dropdown-on-hover-plugin/
@@ -45,7 +45,7 @@
 
             $parent.hover(function (event) {
                 // so a neighbor can't open the dropdown
-                if(!$parent.hasClass('open') && !$this.is(event.target)) {
+                if(!$this.hasClass('show') && !$this.is(event.target)) {
                     // stop this event, stop executing any code
                     // in this callback but continue to propagate
                     return true;
@@ -54,8 +54,8 @@
                 openDropdown(event);
             }, function () {
                 timeout = window.setTimeout(function () {
-                    $parent.removeClass('open');
-                    $this.trigger(hideEvent);
+                    var instance = window.bootstrap && window.bootstrap.Dropdown.getInstance($this[0]);
+                    if (instance) instance.hide();
                 }, settings.delay);
             });
 
@@ -94,12 +94,18 @@
             function openDropdown(event) {
                 $allDropdowns.find(':focus').blur();
 
-                if(settings.instantlyCloseOthers === true)
-                    $allDropdowns.removeClass('open');
+                if(settings.instantlyCloseOthers === true) {
+                    $allDropdowns.each(function () {
+                        var toggle = $(this).find('.dropdown-toggle')[0];
+                        var instance = toggle && window.bootstrap && window.bootstrap.Dropdown.getInstance(toggle);
+                        if (instance) instance.hide();
+                    });
+                }
 
                 window.clearTimeout(timeout);
-                $parent.addClass('open');
-                $this.trigger(showEvent);
+                if (window.bootstrap && window.bootstrap.Dropdown) {
+                    window.bootstrap.Dropdown.getOrCreateInstance($this[0]).show();
+                }
             }
         });
     };

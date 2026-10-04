@@ -1,0 +1,17 @@
+{"file":"docs/modernization/cicd-delivery.md","reason":"检查 CI/CD 交付契约"}
+{"file":"docs/modernization-backlog.md","reason":"检查延期项登记和发布边界"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/research/browser-release-evidence.md","reason":"绑定 browser/release 权威执行入口"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"核对浏览器 artifact validator、JCS digest 和 release contract test 的权威入口"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"核对真实浏览器 artifact 的脱敏、失败关闭和质量门要求"}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"核对四个稳定 browser-smoke coverage ID"}
+{"file":".trellis/tasks/archive/2026-09/09-08-infrastructure-persistence/acceptance/evidence-matrix.md","reason":"汇合 persistence transaction/index/outbox/token 证据"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-identity/acceptance/evidence-matrix.md","reason":"汇合 identity principal/session/API Golden 交接证据"}
+{"file":".trellis/tasks/archive/2026-09/09-08-interface-http/prd.md","reason":"汇合 route/session/replay 和 production-config 证据"}
+{"file":".trellis/tasks/archive/2026-09/09-08-application-content/acceptance/evidence-matrix.md","reason":"汇合 quarantine restart 与 PDF sandbox/zero-outbound 交接证据"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"复核 native HTTP/数据库隔离/真实运行证据，禁止测试侧伪成功"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/research/spec-audit-2026-09-29.md","reason":"复核发现闭环、已确认发布恢复及审核阶段范围"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/acceptance/evidence-matrix.md","reason":"按九轨 13 行交付证据检查覆盖及真实状态"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/acceptance/notes-action-replay.md","reason":"核对 38 个 action、历史 21/17 与当前独立证据"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/acceptance/release-recovery.md","reason":"复核补建正负例、原 run/attempt 关联、未知/并发和零覆盖断言"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/acceptance/gate-integrity.md","reason":"复核 GI-01～GI-09 失败传播、当前执行身份、原候选版本和零远端写入"}
+{"file":".trellis/tasks/archive/2026-09/09-08-delivery-verification/research/implementation-2026-09-29.md","reason":"核对已授权工具实现、真实场景执行器缺口、API来源和交叉检查裁定"}

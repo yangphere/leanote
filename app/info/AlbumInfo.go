@@ -1,15 +1,15 @@
 package info
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/yangphere/leanote/app/domain"
 	"time"
 )
 
 type Album struct {
-	AlbumId     bson.ObjectId `bson:"_id,omitempty"` //
-	UserId      bson.ObjectId `bson:"UserId"`
-	Name        string        `Name` // album name
-	Type        int           `Type` // type, the default is image: 0
-	Seq         int           `Seq`
-	CreatedTime time.Time     `CreatedTime`
+	AlbumId     domain.ObjectID `bson:"_id,omitempty"` //
+	UserId      domain.ObjectID `bson:"UserId"`
+	Name        string          `bson:"Name"` // album name
+	Type        int             `bson:"Type"` // type, the default is image: 0
+	Seq         int             `bson:"Seq"`
+	CreatedTime time.Time       `bson:"CreatedTime"`
 }

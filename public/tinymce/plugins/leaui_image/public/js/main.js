@@ -44,7 +44,7 @@ function getImageSize(url, callback) {
 }
 
 var o = {
-	maxSelected: G.maxSelected, 
+	maxSelected: G.maxSelected,
 	selectedZoneO:$("#preview"),
 	previewO: $("#preview"),
 	selectedImages:[], // selected urls
@@ -93,7 +93,7 @@ var o = {
 			}
 		}
 		// rename
-		$("#renameAlbumBtn").click(function(){ 
+$("#renameAlbumBtn").on('click', function(){
 			curAlbum = $("#albumsForUpload").val();
 			if(!curAlbum) {
 				alert("Cannot rename default album");
@@ -101,39 +101,43 @@ var o = {
 			}
 			toggleAddAlbum();
 			$("#addOrUpdateAlbumBtn").html("Rename Album");
-			$("#albumName").val($("#albumsForUpload option:selected").html()).focus();
+			$("#albumName").val($("#albumsForUpload option:selected").html()).trigger('focus');
 			isAddAlbum = false;
 		});
 		// add album
-	    $("#addAlbumBtn").click(function() {
+	    $("#addAlbumBtn").on('click', function() {
 			toggleAddAlbum();
 			$("#addOrUpdateAlbumBtn").html("Add Album");
-    		$("#albumName").val("").focus();
+	$("#albumName").val("").trigger('focus');
 			isAddAlbum = true;
 		});
-		$("#cancelAlbumBtn").click(function() {
+		$("#cancelAlbumBtn").on('click', function() {
+
 			toggleAddAlbum();
 		});
 		// add or update album
-		$("#addOrUpdateAlbumBtn").click(function() {
+		$("#addOrUpdateAlbumBtn").on('click', function() {
 	    	var albumName = $("#albumName").val();
 	    	if(!albumName) {
-	    		$("#albumName").focus();
+		$("#albumName").trigger('focus');
 	    		return;
 	    	}
 	    	if(isAddAlbum) {
+
 		    	$.get("/album/addAlbum", {name: albumName}, function(ret) {
 		    		if(typeof ret == "object" && ret.AlbumId != "") {
 		    			$("#albumName").val("");
 		    			self.showMsg("Add Sucess!");
 		    			self.pageAddAlbum(ret);
-		    			
+
 						setTimeout(function() {
 							toggleAddAlbum();
 						}, 200);
 		    		} else {
 		    			alert("error");
 		    		}
+}).fail(function() {
+alert("error");
 		    	});
 	    	} else {
 		    	$.get("/album/updateAlbum", {albumId: curAlbum, name: albumName}, function(ret) {
@@ -141,18 +145,20 @@ var o = {
 		    			$("#albumName").val("");
 		    			self.showMsg("Rename Sucess!");
 		    			self.pageUpdateAlbum(curAlbum, albumName);
-		    			
+
 						setTimeout(function() {
 							toggleAddAlbum();
 						}, 200);
 		    		} else {
 		    			alert("error!");
 		    		}
+}).fail(function() {
+alert("error!");
 		    	});
 	    	}
 	    })
 	    // delete album
-	    $("#deleteAlbumBtn").click(function() {
+	    $("#deleteAlbumBtn").on('click', function() {
 	    	var albumId = $("#albumsForUpload").val();
 	    	if(!albumId) {
 	    		alert("Cannot delete default album");
@@ -174,6 +180,8 @@ var o = {
 	    		} else {
 	    			alert("This album has images, please delete it's images at first.");
 	    		}
+}).fail(function() {
+alert("error!");
 	    	});
 
 	    });
@@ -195,6 +203,8 @@ var o = {
 
 	    	var albumId = $("#albumsForList").val();
 		    self.renderImages(albumId, 1, true);
+}).fail(function() {
+alert("error");
     	});
     },
 
@@ -233,7 +243,7 @@ var o = {
 			});
 		});
 	},
-    
+
 	renderImages: function(albumId, page, needRenderPagination, key, needRender) {
 		var self = this;
 
@@ -277,10 +287,10 @@ var o = {
 				html += '<li ' + classes + '>';
 				html += '<a title="" href="javascript:;" class="a-img"><img  alt="" src="' + src + '" data-original="' + src + '" ></a>';
 				// html += '<div class="tools"><a href="javascript:;" class="del" data-id="' + each.FileId + '"><span class="glyphicon glyphicon-trash"></span></a></div>';
-				html += '<div class="tools clearfix" data-id="' + each.FileId + '"><div class="file-title pull-left">' + each.Title + '</div><div class="pull-right"><a href="javascript:;" class="del" data-id="' + each.FileId + '"><span class="glyphicon glyphicon-trash"></span></a></div></div>';
+				html += '<div class="tools clearfix" data-id="' + each.FileId + '"><div class="file-title float-start">' + each.Title + '</div><div class="float-end"><a href="javascript:;" class="del" data-id="' + each.FileId + '"><span class="fa fa-trash"></span></a></div></div>';
 				html += "</li>";
 			}
-				
+
     		// var html = $("#tImage").render(datas);
     		$("#imageList").html(html);
 
@@ -290,6 +300,9 @@ var o = {
 
     		// $("#imageList img").lazyload({effect : "fadeIn"});
     		// $("#imageList img").lazyload();
+}).fail(function() {
+self.noImages();
+alert("error");
     	});
     },
 
@@ -303,7 +316,7 @@ var o = {
 			self.previewO.append("<li>?</li>");
 		}
 	},
-		
+
 	reRenderSelectedImages: function(isRemove, addSrc) {
 		var self = this;
 
@@ -324,7 +337,7 @@ var o = {
 					if(data.title) attrs += ' data-title="' + data.title + '"';
 				}
 
-				target.html('<img ' + attrs + ' src="' + src + '" width="60"/><div class="tools"><a title="click to remove this image" href="javascript:;" class="del"><span class="glyphicon glyphicon-trash"></span></a></div>');
+				target.html('<img ' + attrs + ' src="' + src + '" width="60"/><div class="tools"><a title="click to remove this image" href="javascript:;" class="del"><span class="fa fa-trash"></span></a></div>');
 			}
 
 			// remove selected
@@ -334,7 +347,7 @@ var o = {
 				// is add
 				// trigger click and set attrs
 				if(addSrc == src) {
-					target.click();
+					target.trigger('click');
 				}
 			}
 		}
@@ -357,20 +370,20 @@ var o = {
 		if(this.maxSelected > 1 && this.maxSelected <= this.selectedImages.length) {
 			return false;
 		}
-		
+
 		// life 为了图片安全
 		if(typeof $li == "object") {
 			var src = $li.find("img").attr('src');
 		} else {
-			// 也有可能来自url
-			if($li.indexOf("http://") != -1 || $li.indexOf("https://") != -1) {
+			// 也有可能来自url (http(s) 与 data: 内联图直接作为源)
+			if($li.indexOf("http://") != -1 || $li.indexOf("https://") != -1 || $li.indexOf("data:") === 0) {
 				src = $li;
 			} else {
 				// 来自内部
 				src = urlPrefix + "/file/outputImage?fileId=" + $li;
 			}
 		}
-		
+
 		// 如果只允许选1个
 		if(this.maxSelected == 1) {
 			// 先把其它的去掉
@@ -379,9 +392,9 @@ var o = {
 		} else {
 			this.selectedImages.push(src);
 		}
-		
+
 		this.reRenderSelectedImages(false, src);
-	
+
 		return true;
 	},
 	initDataFromTinymce: function() {
@@ -401,25 +414,25 @@ var o = {
 		}
 	},
 
-	init: function() {	
+	init: function() {
 		var self = this;
-		
+
 		self.processAlbum();
 
-		$("#albumsForList").change(function() {
+		$("#albumsForList").on('change', function() {
 			var albumId = $(this).val();
 			self.renderImages(albumId, 1, true);
 		});
-		
+
 		$("#imageList").on("click", 'li', function() {
 			if($(this).hasClass("selected")) {
 				$(this).removeClass("selected");
 				self.removeSelectedImage($(this));
 			} else {
-				if(self.addSelectedImage($(this))){ 
+				if(self.addSelectedImage($(this))){
 					$(this).addClass("selected");
 				}
-			}	
+			}
 		});
 
 
@@ -438,8 +451,10 @@ var o = {
 						}
 						$(t).closest('li').remove();
 					}
+				}).fail(function() {
+					alert("error");
 				});
-			}	
+			}
 		});
 		// edit file title
 		$("#imageList").on("click", '.file-title', function(e) {
@@ -454,18 +469,20 @@ var o = {
 			$(this).html('<input type="text" value="' + fileTitle + '" />');
 
 			var $input = $(this).find("input");
-			$input.focus();
-			$input.keydown(function(e){
+			$input.trigger('focus');
+			$input.on('keydown', function(e){
 				if(e.keyCode==13){
 					$(this).trigger("blur");
 				}
 			});
-			$input.blur(function() {
+			$input.on('blur', function() {
 				var title = $(this).val();
 				if(!title) {
 					title = fileTitle;
 				} else {
-					$.post("/file/updateImageTitle", {fileId: fileId, title: title});
+					$.post("/file/updateImageTitle", {fileId: fileId, title: title}).fail(function() {
+						alert("error!");
+					});
 				}
 				$(p).html(title);
 			});
@@ -487,17 +504,17 @@ var o = {
 			});
 		});
 
-		// 
-		$("#goAddImageBtn").click(function() {
+		//
+		$("#goAddImageBtn").on('click', function() {
 			$("#albumsForUpload").val($("#albumsForList").val());
-			$('#myTab li:eq(1) a').tab('show');
+			showBootstrapTab($('#myTab li:eq(1) a')[0]);
 		});
 
 		// toggle tab
-		// refresh 
+		// refresh
 		$('#myTab a').on('shown.bs.tab', function(e) {
 			e.preventDefault()
-			$(this).tab('show');
+			showBootstrapTab(this);
 			var href = $(this).attr("href");
 
 			if(self.needRefresh && href == "#images") {
@@ -510,21 +527,21 @@ var o = {
 			}
 
 			if(href == "#url") {
-				$("#imageUrl").focus();
+				$("#imageUrl").trigger('focus');
 			}
 		});
-		$("#refresh").click(function() {
+		$("#refresh").on('click', function() {
 			var albumId = $("#albumsForList").val();
 			var key = $("#key").val();
 			self.renderImages(albumId, self.pageNum, false, key);
 		});
 
 		// add url
-		$("#addImageUrlBtn").click(function(e) {
+		$("#addImageUrlBtn").on('click', function(e) {
 			e.preventDefault();
-			var url = $.trim($("#imageUrl").val());
+			var url = ($("#imageUrl").val() || "").trim();
 			if(!url) {
-				$("#imageUrl").focus();
+				$("#imageUrl").trigger('focus');
 				return;
 			}
 
@@ -544,13 +561,13 @@ var o = {
 			if($(this).hasClass("selected")) {
 				// $(this).removeClass("selected");
 			} else {
-				if($(this).find("img").length){ 
+				if($(this).find("img").length){
 					$("#preview li").removeClass("selected");
 					$(this).addClass("selected");
 
 					self.initAttr($(this));
 				}
-			}	
+			}
 		});
 
 		$("#attrTitle, #attrWidth, #attrHeight").on("keyup", function(){
@@ -564,7 +581,7 @@ var o = {
 		self.search();
 
 		self.initSelectedZones();
-		
+
 		self.initDataFromTinymce();
 
 		self.renderAlbums();
@@ -599,7 +616,7 @@ var o = {
 		var curAttrs = self.getCurAttrs();
 		var preWidth = curAttrs.preWidth || curAttrs.width;
 		var preHeight = curAttrs.preHeight || curAttrs.height;
-		
+
 		if(autoScale && preWidth && preHeight) {
 			if(isWidth) {
 				height = parseInt((width/preWidth) * preHeight);
@@ -719,9 +736,9 @@ var o = {
 		var self = this;
 		var ul = $('#upload ul');
 
-	    $('#drop a').click(function() {
+	    $('#drop a').on('click', function() {
 	        // trigger to show file select
-	        $(this).parent().find('input').click();
+	        $(this).parent().find('input').trigger('click');
 	    });
 	    // Initialize the jQuery File Upload plugin
 	    $('#upload').fileupload({
@@ -748,13 +765,13 @@ var o = {
 				var size = data.files[0].size;
 	            var maxFileSize = +parent.GlobalConfigs["uploadImageSize"] || 100;
 	            if(typeof size == 'number' && size > 1024 * 1024 * maxFileSize) {
-	                var tpl = $('<li><div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div></li>');
+	                var tpl = $('<li><div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	                tpl.find('div').append('<b>Warning:</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>] is bigger than ' + maxFileSize + 'M</small> ');
 	                tpl.appendTo(ul);
 	            	return;
 	            }
-	            
-	            var tpl = $('<li><div class="alert alert-info"><img class="loader" src="public/images/ajax-loader.gif"> <a class="close" data-dismiss="alert">×</a></div></li>');
+
+	            var tpl = $('<li><div class="alert alert-info"><img class="loader" src="public/images/ajax-loader.gif"> <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	            // Append the file name and file size
 	            tpl.find('div').append(data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small>');
 
@@ -766,7 +783,7 @@ var o = {
 	            // Automatically upload the file once it is added to the queue
 	            var jqXHR = data.submit();
 	        },
-	        
+
 
 	        done: function(e, data) {
 	            if (data.result.Ok == true) {
@@ -778,7 +795,7 @@ var o = {
 	                self.uploadRefreshImageList();
 	            } else {
 	                data.context.empty();
-	                var tpl = $('<li><div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div></li>');
+	                var tpl = $('<li><div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	                tpl.find('div').append('<b>Error:</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.result.Msg);
 	                data.context.append(tpl);
 	                setTimeout((function(tpl) {
@@ -791,7 +808,7 @@ var o = {
 	        },
 	        fail: function(e, data) {
 	            data.context.empty();
-	            var tpl = $('<li><div class="alert alert-danger"><a class="close" data-dismiss="alert">×</a></div></li>');
+	            var tpl = $('<li><div class="alert alert-danger"><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div></li>');
 	            tpl.find('div').append('<b>Error:</b> ' + data.files[0].name + ' <small>[<i>' + formatFileSize(data.files[0].size) + '</i>]</small> ' + data.errorThrown);
 	            data.context.append(tpl);
 
@@ -819,7 +836,7 @@ var o = {
 	    }
 
 	    // drag css
-		$(document).bind('dragover', function (e) {
+		$(document).on('dragover', function (e) {
 		    var dropZone = $('#drop'),
 		        timeout = window.dropZoneTimeout;
 		    if (!timeout) {

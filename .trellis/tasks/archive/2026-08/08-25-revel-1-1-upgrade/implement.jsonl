@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-25-revel-1-1-upgrade/prd.md", "reason": "只升级 Revel 1.1 并保持现有三条执行路径的需求。"}
+{"file": ".trellis/tasks/08-25-revel-1-1-upgrade/design.md", "reason": "版本基线与启动、测试、打包验证设计。"}
+{"file": ".trellis/tasks/08-25-tech-stack-modernization/research/external-facts.md", "reason": "Revel 1.1 与 cmd 版本事实。"}
+{"file": "docs/adr/0001-stage-modernization-as-contract-first-dag.md", "reason": "Revel 版本基线先于 Mongo 与 HTTP 迁移。"}

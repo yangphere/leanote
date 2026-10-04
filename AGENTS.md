@@ -1,59 +1,60 @@
 # Repository Guidelines
 
-## 项目结构与模块组织
+Leanote is a Go 1.26 MongoDB monolith using the first-party `net/http` stack.
+`app/httpserver` owns the request pipeline and registry; `app/controllers`
+contains explicit web, API, admin and member adapters; `app/service` and
+`app/application` own business and content contracts. Templates are under
+`app/views`, browser assets under `public`, translations under `messages`, and
+routes/configuration under `conf`.
 
-Leanote 是 Go 1.15、Revel 1.0 与 MongoDB 构成的单体应用。`app/controllers/` 处理 Web、管理端、会员端和 `/api/*` 请求，`app/service/` 放业务逻辑，`app/db/` 负责 MongoDB 访问，`app/info/` 定义模型，`app/views/` 保存 Revel 模板。浏览器代码、样式和图片位于 `public/`，翻译位于 `messages/<locale>/`，路由与运行配置位于 `conf/`。Go 测试在 `app/tests/`，Node 测试在 `tests/js/`；`tests/apptest.go` 是未启用的旧 Revel 测试入口。
-
-## 构建、测试与本地开发
-
-本地运行需要 MongoDB 和 Revel CLI：
+## Build, test and local development
 
 ```bash
-go get github.com/revel/cmd/revel@v1.0.3
-mongorestore -h localhost -d leanote --dir ./mongodb_backup/leanote_install_data/
-cd sh && sh run.sh                 # 在 :9000 启动开发服务器
-go test ./app/tests/...            # 需要已运行且已初始化的 MongoDB
-npm test                           # 运行 tests/js/*.test.js
-cd sh && sh package.sh             # 生成 sh/leanote.tar.gz
+GOTOOLCHAIN=local go build ./...
+GOTOOLCHAIN=local go vet ./...
+go test ./app/httpserver ./app/controllers/... ./app/service ./cmd/leanote
+go run ./cmd/leanote -runMode dev
+go test ./app/tests/...                 # requires MongoDB and leanote_test
+npm ci && npm run build && npm test
 ```
 
-`npx gulp` 会运行旧版 Gulp 3 前端流水线；仅在兼容的 Node 环境及依赖完整时使用，并检查生成文件差异。
+The HTTP harness builds `./cmd/leanote` and starts `-runMode test`; it does not
+generate a second runtime. Test mode must select `leanote_test`. Production
+configuration is explicit and never falls back to repository configuration.
 
-## 编码风格与命名
+## Style and naming
 
-Go 代码提交前运行 `gofmt`；包名小写，导出标识符用 PascalCase，局部变量用 camelCase，并遵循相邻文件的历史命名。旧前端通常使用四空格缩进，Node 测试使用两空格；不要对 vendored 或压缩文件做无关格式化。`app/views/note/note-dev.html` 是编辑器页面源文件，相关修改需同步生成的 `note.html`。修改 TinyMCE 行为时，同步可读源码和所有生产 bundle。
+Run `gofmt` on changed Go files. Use lower-case package names, PascalCase
+exported identifiers and camelCase locals. Do not hand-edit generated frontend
+assets: `app/views/note/note-dev.html` and
+`scripts/build/manifest.mjs` are the sources of truth.
 
-## 测试准则
+## Tests and evidence
 
-Go 测试使用标准 `testing` 包，文件命名为 `*_test.go`、用例命名为 `TestXxx`；JavaScript 使用 `node:test` 和 `*.test.js`。仓库未配置数值覆盖率门槛，但每个修复应包含聚焦的回归用例。UI 或服务改动除自动化测试外，还应通过真实页面或请求验证。
+Go tests use `testing` and `*_test.go`; JavaScript tests use `node:test`.
+Every behavior fix needs a focused regression test where a deterministic test
+seam exists. Build/vet checks do not replace Mongo, real HTTP, browser,
+cross-process, failpoint or corpus evidence; leave those gates explicitly
+unrun until executed.
 
-## 提交与 Pull Request
+Downloads and backups must stream bounded readers to the response. Resolve
+stored `files/`, `upload/` and `public/upload/` paths only through
+`app/application/content.ParseStoredPath`; do not add a second path parser.
 
-历史提交多为简短祈使句，如 `fix duplicate pasted images`；也接受明确前缀，如 `fix:`、`chore:`。每个提交聚焦一个目的。PR 应说明问题、行为变化和验证命令，关联 issue；涉及 `app/views/` 或 `public/` 的可见变化应附截图，并注明更新过的生成资源。
+## Security and boundaries
 
-## 安全与 Agent 说明
-
-不要提交真实数据库、SMTP、Cookie 或 `app.secret` 凭据；以 `conf/app.conf-default` 为配置参考。用户数据、上传文件和本地生成物不得进入版本库。
+Do not commit credentials or generated user data. Validate external paths and
+command inputs at the boundary. Keep authorization, USN/receipt state and
+content lifecycle rules in services; adapters only bind parameters and map
+results. Anonymous published image/attachment reads are an intentional public
+whitelist and still pass through service authorization.
 
 <!-- TRELLIS:START -->
 # Trellis Instructions
 
-These instructions are for AI assistants working in this project.
-
-This project is managed by Trellis. The working knowledge you need lives under `.trellis/`:
-
-- `.trellis/workflow.md` — development phases, when to create tasks, skill routing
-- `.trellis/spec/` — package- and layer-scoped coding guidelines (read before writing code in a given layer)
-- `.trellis/workspace/` — per-developer journals and session traces
-- `.trellis/tasks/` — active and archived tasks (PRDs, research, jsonl context)
-
-If a Trellis command is available on your platform (e.g. `/trellis:finish-work`, `/trellis:continue`), prefer it over manual steps. Not every platform exposes every command.
-
-If you're using Codex or another agent-capable tool, additional project-scoped helpers may live in:
-- `.agents/skills/` — reusable Trellis skills
-- `.codex/agents/` — optional custom subagents
-
-Managed by Trellis. Edits outside this block are preserved; edits inside may be overwritten by a future `trellis update`.
+This project is managed by Trellis. Read `.trellis/workflow.md`, the active
+task's PRD/design, and the layer-specific documents under `.trellis/spec/`
+before changing code. Record implementation and validation evidence in the
+active task. Prefer the repository Trellis commands when available.
 
 <!-- TRELLIS:END -->
-
