@@ -987,3 +987,41 @@ Compose 新增管理员邮箱/初始密码/ENV 恢复开关配置；启动 boots
 ### Next Steps
 
 - 真实 GitHub queue:max 排队、新 guard 远端晋升/缺 latest 初始化、actionlint、新 dev override build/up 继续 unrun；禁止向不含加固的历史提交补推版本 tag。
+
+
+## Session 37: GHCR 真实补充验证证据收尾
+<!-- trellis-session: v=2 fp=6b3e57edd1948270 -->
+
+**Date**: 2026-10-04
+**Task**: GHCR 真实补充验证证据收尾
+**Branch**: `dev`
+
+### Summary
+
+提交已归档 Compose/GHCR 任务的真实排队、隔离远端晋升与 actionlint 证据；不新建或重新激活任务，本轮不推送。
+
+### Main Changes
+
+- 48 个证据及记录文件仅位于原归档任务；保留原实施 commit，新增证据提交单独记入本日志。
+- registry-evidence 禁用 Git 换行转换，34 个原始证据文件在 checkout filter 后仍逐字节一致。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1bf01768b64ed17a394bd23cb32fb84485065d4a` | docs(ghcr): 补齐真实排队晋升与 actionlint 验证证据 |
+
+### Testing
+
+- [OK] 真实 GitHub runs 37184573081、37184614263、37184617541 全部 success；两个 pending 同时保留，job 时间证明串行且无取消。
+- [OK] 隔离 GHCR fixture 的 latest 初始化、较新版本晋升、同版与旧版跳过通过；原 helper blob 与实施提交相同，生产镜像摘要未变。
+- [OK] 官方 actionlint v1.7.12 仅 queue schema 兼容性失败；固定上游 PR 654 的 644076a 构建版本对两个原文件通过，独立 ShellCheck/Pyflakes 未运行。
+- [OK] 本地证据重放、归档 task.py validate、git diff --cached --check 通过；完整加固生产工作流和新 Leanote 发布链仍 unrun。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 临时验证分支和测试包保留供复核；main 尚未合入加固，完整生产发布链仍需后续单独授权执行。
