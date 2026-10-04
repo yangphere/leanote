@@ -2,7 +2,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { qualityJobs, executionIdentity, assertExecutionIdentity } from './quality-contract.mjs';
 
-const expected = qualityJobs;
+const includeSummary = process.argv.includes('--include-summary');
+const expected = includeSummary ? [...qualityJobs, 'summary'] : qualityJobs;
 const statuses = new Set(['passed', 'failed', 'cancelled', 'not_run']);
 const readinessStates = new Set(['passed', 'failed', 'not_run', 'unknown']);
 const failureCategories = new Set([
@@ -70,8 +71,8 @@ function validateRecord(record, file) {
   if (record.status !== 'passed' && record.failure.category === 'none') throw new Error(`${file} non-pass has no failure category`);
 }
 
-const dir = process.argv[2] || 'ci-summaries';
-const files = (await fs.readdir(dir)).filter((name) => name.endsWith('.json') && name !== 'summary.json').sort();
+const dir = process.argv.find((value, index) => index > 1 && value !== '--include-summary') || 'ci-summaries';
+const files = (await fs.readdir(dir)).filter((name) => name.endsWith('.json') && (includeSummary || name !== 'summary.json')).sort();
 if (files.length !== expected.length) throw new Error('quality-gate summary count mismatch');
 const records = [];
 for (const file of files) {
@@ -79,7 +80,14 @@ for (const file of files) {
   validateRecord(record, file);
   records.push(record);
 }
-const currentExecution = executionIdentity(process.env);
+const sourceExecution = process.argv.includes('--source-execution');
+const currentExecution = executionIdentity(sourceExecution ? {
+  GITHUB_SHA: process.env.SOURCE_COMMIT,
+  GITHUB_REF: process.env.SOURCE_REF,
+  GITHUB_WORKFLOW: process.env.SOURCE_WORKFLOW,
+  GITHUB_RUN_ID: process.env.SOURCE_RUN_ID,
+  GITHUB_RUN_ATTEMPT: process.env.SOURCE_RUN_ATTEMPT,
+} : process.env);
 for (const record of records) {
   assertExecutionIdentity(record, currentExecution);
   if (record.status !== 'passed') throw new Error(`quality-gate job ${record.job} failed`);

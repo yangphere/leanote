@@ -98,3 +98,43 @@ Both `/tinymce/plugins/leaui_image/` and
 local service. Focused manifest regression passed 1/1; `npm run build` passed
 without tracked generated-output drift. Full Chromium evidence awaits the
 next real main CI.
+
+## Passing main candidate and real tag
+
+- [Main CI 37173341933](https://github.com/yangphere/leanote/actions/runs/37173341933)
+  at `dea2306c32f27e648d9438cbc8b67cec6151b6cc`: seven primary jobs and
+  summary **passed**, including real Chromium; protected `release-inputs`
+  correctly skipped.
+- Git tag `2.0.1` creation/push **passed**; remotely peeled tag matches the
+  reviewed main candidate. The old `v1.0.0` and `v2.0.1` proposals were not
+  created or pushed.
+- [Docker image 37173559882](https://github.com/yangphere/leanote/actions/runs/37173559882)
+  finished with publication failure before push. Seven quality jobs, summary,
+  immutable image build and candidate smoke passed. Manifest returned
+  structured `MANIFEST_UNKNOWN`; listing returned 404 but its body was not
+  parsed by the old helper. Do not infer its exact error code from status alone.
+
+## Fixed-tag recovery
+
+Preserve `2.0.1` at `dea2306c32f27e648d9438cbc8b67cec6151b6cc`.
+Recovery from main binds that candidate and source run `37173559882` attempt
+`1`; executor and source-candidate quality evidence are checked separately.
+Local recovery tests/review, executor main CI and actual dispatch publication
+are pending. GHCR push/read-back, public visibility and anonymous pull remain
+`unrun`; successful original build/smoke is not publication evidence.
+
+Recovery local evidence (2026-10-04):
+
+- Implementer full Node suite: 239 tests, 238 passed, 1 Windows skip, 0 failed
+  (227s), before the final small version-format seam; affected focused suites
+  were then rerun successfully.
+- Main-session final focused publication/Release suites: 45/45 passed, 0 skips,
+  6.3s; Git Bash on PATH. Node syntax and Actionlint v1.7.7 passed in implement
+  validation; shellcheck remains unavailable.
+- Main-session live read-only GitHub API verification of source run
+  `37173559882`, attempt `1`, passed. Eight real downloaded source summaries
+  passed shared schema/source-execution validation.
+- Final independent recovery review passed: 45/45 focused tests, Actionlint,
+  Node syntax, live source verifier, Trellis validation and diff checks. No
+  local merge blocker; see `check-review-recovery.md`. Remote executor
+  CI/publication remains pending.

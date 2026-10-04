@@ -55,6 +55,11 @@ function isBoundNameUnknown(value, image) {
     && value.errors.every((error) => error.detail?.name === undefined || error.detail.name === image);
 }
 
+function isBoundManifestUnknown(value, image) {
+  return hasErrors(value, 'MANIFEST_UNKNOWN')
+    && value.errors.every((error) => error.detail?.name === undefined || error.detail.name === image);
+}
+
 export async function checkGhcrTagAbsent({
   image,
   tag,
@@ -95,13 +100,19 @@ export async function checkGhcrTagAbsent({
   const manifestError = await json(manifestResponse, 'manifest absence');
 
   const tagsResponse = await request(fetchImpl, 'package listing', `${base}/tags/list?n=100`, { headers });
-  if (hasErrors(manifestError, 'MANIFEST_UNKNOWN')) {
-    check(tagsResponse.ok, `GHCR package listing failed with status ${tagsResponse.status}`);
-    const listing = await json(tagsResponse, 'package listing');
-    check(listing.name === image, 'GHCR package identity unconfirmed');
-    check(Array.isArray(listing.tags) && listing.tags.every((value) => typeof value === 'string'), 'GHCR package tag listing invalid');
-    check(!listing.tags.includes(tag), `GHCR tag already exists: ${image}:${tag}`);
-    return { initialPackage: false };
+  if (isBoundManifestUnknown(manifestError, image)) {
+    if (tagsResponse.ok) {
+      const listing = await json(tagsResponse, 'package listing');
+      check(listing.name === image, 'GHCR package identity unconfirmed');
+      check(Array.isArray(listing.tags) && listing.tags.every((value) => typeof value === 'string'), 'GHCR package tag listing invalid');
+      check(!listing.tags.includes(tag), `GHCR tag already exists: ${image}:${tag}`);
+      return { initialPackage: false };
+    }
+    check(tagsResponse.status === 404, `GHCR package listing failed with status ${tagsResponse.status}`);
+    const listingError = await json(tagsResponse, 'initial package absence');
+    check(isBoundNameUnknown(listingError, image), 'GHCR package absence response unknown');
+    check(allowInitialPackageCreate, 'GHCR initial package creation is disabled');
+    return { initialPackage: true };
   }
 
   check(isBoundNameUnknown(manifestError, image), 'GHCR manifest absence response unknown');

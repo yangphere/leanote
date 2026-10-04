@@ -10,7 +10,7 @@
 
 ## 已确认决策（grill 结论）
 
-1. **路径**：新增独立的轻量工作流 `.github/workflows/docker-image.yml`，推送无 `v` 的 `X.Y.Z` tag 时发布镜像到 GHCR；不修改 `release.yml`、不创建 GitHub Release、不发布 tarball。
+1. **路径**：新增独立的轻量工作流 `.github/workflows/docker-image.yml`，推送无 `v` 的 `X.Y.Z` tag 时发布镜像到 GHCR；已推送的固定 tag 若在写入前失败，可从 `main` 显式 dispatch 恢复，必须绑定原提交与原质量证据。不修改 `release.yml`、不创建 GitHub Release、不发布 tarball。
 2. **标签**：Git tag 和镜像 tag 均为 `X.Y.Z`，仅发布 `ghcr.io/yangphere/leanote:X.Y.Z`，不发 `latest` 或短版本标签。
 3. **发布前门禁**：复用 `scripts/version.mjs` 的严格版本规则校验无前缀 tag + 复用完整 `quality-gate.yml` 的七个质量作业与汇总。仅供受保护 Release 的 `release-inputs` 不在无前缀 tag 上生成。
 4. **同一镜像**：发布作业用 `release.yml` 相同的构建参数（`VERSION`、`REVISION`、`SOURCE_DATE_EPOCH`、`OCI_CREATED`，`linux/amd64`）构建一次，对该镜像运行 `scripts/container-smoke.sh`，通过后推送同一镜像并校验 registry digest。
@@ -26,11 +26,15 @@
 - 工作流中的第三方 action 使用与现有工作流一致的完整 SHA 固定。
 - 不自动部署任何生产环境（ADR-0004 保持有效）。
 - 不改 `Dockerfile`、不改 `release.yml` 与 `quality-gate.yml`。
+- 保留已推送的 `2.0.1` tag（指向 `dea2306c32f27e648d9438cbc8b67cec6151b6cc`）；恢复时不得移动 tag 或用 main 执行器提交代替镜像候选。
+- 恢复输入为 `tag`、`expected_commit`、`source_run_id`、`source_run_attempt`。验证原 Docker image push run 的仓库、工作流、tag、SHA、attempt，以及七个成功质量作业和汇总。原 run 可因 publish 失败整体为 failure；不能以执行器的质量结果替代候选证据。执行器仍须通过完整质量门。
 
 ## 验收标准
 
-- `docker-image.yml` 通过静态校验（YAML 解析、`actionlint` 若可用），触发器仅为无前缀版本 tag（glob 筛选后严格 `X.Y.Z` 校验），权限最小化（默认 `contents: read`，仅发布作业 `packages: write`）。
+- `docker-image.yml` 通过静态校验（YAML 解析、`actionlint` 若可用），接受无前缀版本 tag（glob 筛选后严格 `X.Y.Z` 校验）与 main 的显式恢复 dispatch；两种入口按目标 tag 串行化。权限最小化（默认 `contents: read`，仅来源证据验证作业 `actions: read`，仅发布作业 `packages: write`）。
 - 新增 JS 契约测试覆盖：触发器、精确标签、复用 `quality-gate.yml`、main 祖先校验、普通 CI 的 `dev`/`main` push 分支、smoke 在 push 之前、推送后 digest 校验、不含 `latest`；相关测试通过。
+- 首包响应分类明确：显式允许创建时，接受 manifest/listing 双 `NAME_UNKNOWN`，或 manifest `MANIFEST_UNKNOWN` + listing `NAME_UNKNOWN`；均须为结构化 404，若有 identity 必须匹配。现有包仍要求 `MANIFEST_UNKNOWN` + 精确 listing 200。单独 404、未知 JSON、身份冲突和权限/网络错误均拒绝。
+- 恢复验证覆盖 source-run 身份/attempt/质量失败、summary provenance 不匹配及 candidate/executor 分离；实际构建与版本/revision/epoch/smoke 都绑定固定候选，registry 检查使用修复执行器 helper。
 - ADR-0005 与 `docs/modernization/cicd-delivery.md` 更新（GHCR 包创建、public 设置、与 `release.yml` 并存的后果）。
 - 真实运行证据在任务记录中标为 `unrun`，直到真实推送 `2.0.1` tag、工作流发布成功并确认拉取 `ghcr.io/yangphere/leanote:2.0.1`；公开与匿名拉取单独记录。
 

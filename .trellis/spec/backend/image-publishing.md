@@ -10,6 +10,8 @@ tarball/GitHub Release gates. It does not authorize production deployment.
 
 ```text
 push tag X.Y.Z -> validate -> quality-gate.yml -> publish
+main workflow_dispatch(tag, expected_commit, source_run_id, source_run_attempt)
+  -> validate candidate/source evidence -> quality-gate.yml -> publish candidate
 RELEASE_TAG=2.0.1 node scripts/check-version.mjs --image-tag
 node scripts/version.mjs --package-tag <X.Y.Z-or-vX.Y.Z>
 node scripts/check-ghcr-tag-absent.mjs
@@ -39,12 +41,23 @@ it rejects. The CLI reports a stage-specific error and exits nonzero.
   `version.mjs --package-tag`. `assertPackageTag` dispatches to the existing
   strict image or release rule, rather than defining another version parser.
 - `RELEASE_TAG` matches the package/lock version; the remotely peeled tag
-  equals `GITHUB_SHA`, and that SHA is an ancestor of refreshed `origin/main`.
+  equals `CANDIDATE_SHA`, and that SHA is an ancestor of refreshed `origin/main`.
   Recheck tag and ancestry immediately before publication; reject forced tags.
-- The workflow lock is `docker-image-${{ github.ref }}`, with cancellation
+- Push candidates use `github.sha`. Recovery dispatch is restricted to main;
+  it uses the explicit original `expected_commit`, never the executor SHA.
+  Preserve an existing tag rather than moving it to repair publication tooling.
+  Verify the specified original Docker image push run/attempt through GitHub
+  API: repository, workflow path/name, tag, candidate SHA and attempt must match.
+  Required quality jobs and summary succeeded; original publish build/smoke
+  succeeded and push step failed, even though overall run conclusion is failure.
+  Reject attempt drift. Download its summaries and reuse the shared schema
+  validator with explicit source execution provenance, including summary.
+  Executor quality-gate success alone is not candidate quality evidence.
+- The workflow lock is `docker-image-<target-tag>` for both entries, with cancellation
   disabled. Sharing the protected Release workflow's whole-run lock would
   block this path while its unprovisioned delivery runner waits.
-- Default permissions are `contents: read`; only publish adds
+- Default permissions are `contents: read`; source verification adds
+  `actions: read` only in validate; only publish adds
   `packages: write`. Registry credentials are `GITHUB_ACTOR` and `GH_TOKEN`
   from `GITHUB_TOKEN`. Never print credentials or raw authorization responses.
 - The CLI uses `GHCR_IMAGE`, `RELEASE_TAG`, `GITHUB_ACTOR`, `GH_TOKEN`, and the
@@ -53,13 +66,16 @@ it rejects. The CLI reports a stage-specific error and exits nonzero.
 - Registry queries use authenticated GHCR token scope for the exact image,
   reject redirects, bound JSON responses to 64 KiB, and time out requests.
   For an existing package, require `MANIFEST_UNKNOWN` and a successful
-  identity-bound tag listing. First-package creation requires structured
-  `NAME_UNKNOWN` from both exact manifest and listing endpoints; reject any
+  identity-bound tag listing. Explicit first-package creation requires
+  structured 404 `NAME_UNKNOWN` from listing and either `NAME_UNKNOWN` or
+  `MANIFEST_UNKNOWN` from the exact manifest endpoint; reject any
   supplied repository identity that conflicts with the requested image.
 - Build once in publish with `VERSION`, `REVISION`, `SOURCE_DATE_EPOCH` and
   `OCI_CREATED`, without provenance/SBOM. Smoke this exact candidate before
   the only push. Compare registry manifest digest with Buildx metadata's
   `containerimage.digest`; a Docker image/config ID is a different identity.
+  Candidate checkout supplies build/smoke inputs; executor checkout supplies
+  the repaired registry helper. All revision/epoch metadata binds to candidate.
 - The first package is private. Public visibility and anonymous pull are
   separate manual evidence. The protected path retains its `v*.*.*` trigger
   and `vX.Y.Z` image tags; an unprefixed tag does not trigger it. All seven
@@ -77,6 +93,8 @@ it rejects. The CLI reports a stage-specific error and exits nonzero.
 | Manifest exists, or listing contains the target tag | Reject overwrite |
 | Missing manifest plus confirmed existing package listing | Allow one push |
 | Two confirmed unknown-name replies with explicit creation policy | Allow first-package push |
+| Manifest `MANIFEST_UNKNOWN` and listing `NAME_UNKNOWN`, both structured 404 with explicit creation policy | Allow first-package push |
+| Recovery source identity/attempt/gate/summary mismatch or non-main dispatch | Stop before publish |
 | Missing creation policy, conflicting identity, one-sided absence | Reject |
 | Missing credentials, auth/permission/rate-limit error, invalid/oversized JSON, redirect, timeout/network error | Reject; never infer absence |
 | Registry digest differs from build manifest digest | Fail after push; publication is unconfirmed |
@@ -92,9 +110,10 @@ it rejects. The CLI reports a stage-specific error and exits nonzero.
 
 ## 6. Tests Required
 
-- `tests/js/docker-image-workflow.test.js`: tag-only trigger, minimal
+- `tests/js/docker-image-workflow.test.js`: numeric push/main recovery triggers, minimal
   permissions, full reusable gate, fresh source checks, smoke-before-push,
-  exact tag and build-manifest comparison; exercise registry failure branches.
+  exact tag and build-manifest comparison; exercise registry failure branches
+  and recovery source execution/summary provenance and candidate separation.
 - `tests/js/release-contract.test.js`: packaging under numeric/v tag contexts
   succeeds; malformed or mismatched tags fail, while branch names never enter
   tag validation. The protected release version contract remains prefixed.
