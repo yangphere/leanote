@@ -35,9 +35,22 @@ func TestWebAdminMemberAndControllerSmoke(t *testing.T) {
 	assertJSONSmoke(t, web, RequestSpec{Method: http.MethodGet, Path: "/blog/getPostStat", Query: map[string][]string{"noteId": {fixtureActiveNoteID}}}, "Ok", "Item")
 	assertJSONSmoke(t, web, RequestSpec{Method: http.MethodPost, Path: "/adminSetting/exportPdf", Form: map[string][]string{"path": {""}}}, "Ok")
 	assertJSONSmoke(t, web, RequestSpec{Method: http.MethodPost, Path: "/memberGroup/addGroup", Form: map[string][]string{"title": {"Regression smoke group"}}}, "Ok")
+	demoWeb := NewClient(server.BaseURL)
+	loginWebSessionAs(t, demoWeb, "demo@leanote.com", "demo@leanote.com")
+	status, headers, body, err := demoWeb.doRaw(RequestSpec{
+		Method: http.MethodGet,
+		Path:   "/share/listShareNotes",
+		Query:  map[string][]string{"notebookId": {fixtureNotebookID}, "userId": {fixtureAdminID}},
+	})
+	if err != nil {
+		t.Fatalf("request unauthorized shared notebook: %v", err)
+	}
+	if status != http.StatusOK || !strings.HasPrefix(headers.Get("Content-Type"), "application/json") || strings.TrimSpace(string(body)) != "null" {
+		t.Fatalf("unauthorized shared notebook response = status %d content-type %q body %q, want 200 JSON null", status, headers.Get("Content-Type"), body)
+	}
 
 	anonymous := NewClient(server.BaseURL)
-	status, headers, _, err := anonymous.doRaw(RequestSpec{Method: http.MethodGet, Path: "/note"})
+	status, headers, _, err = anonymous.doRaw(RequestSpec{Method: http.MethodGet, Path: "/note"})
 	if err != nil {
 		t.Fatalf("request anonymous /note: %v", err)
 	}
@@ -50,7 +63,7 @@ func TestWebAdminMemberAndControllerSmoke(t *testing.T) {
 	assertHTMLPage(t, web, "/note", http.StatusOK)
 	assertHTMLPage(t, web, "/blog", http.StatusOK)
 	assertHTMLPage(t, web, "/index", http.StatusOK)
-	assertHTMLPage(t, web, "/preview", http.StatusNotFound)
+	assertPlainTextNotFound(t, web, "/preview")
 
 	demo := NewClient(server.BaseURL)
 	status, headers, _, err = demo.doRaw(RequestSpec{Method: http.MethodGet, Path: "/demo"})
@@ -59,6 +72,20 @@ func TestWebAdminMemberAndControllerSmoke(t *testing.T) {
 	}
 	if status != http.StatusFound || headers.Get("Location") != "/note" {
 		t.Fatalf("/demo = status %d location %q, want 302 /note", status, headers.Get("Location"))
+	}
+}
+
+func assertPlainTextNotFound(t testing.TB, client *Client, path string) {
+	t.Helper()
+	status, headers, body, err := client.doRaw(RequestSpec{Method: http.MethodGet, Path: path})
+	if err != nil {
+		t.Fatalf("request %s: %v", path, err)
+	}
+	if status != http.StatusNotFound || !strings.HasPrefix(headers.Get("Content-Type"), "text/plain") {
+		t.Fatalf("%s = status %d content-type %q, want 404 text/plain", path, status, headers.Get("Content-Type"))
+	}
+	if strings.Contains(strings.ToLower(string(body)), "<html") {
+		t.Fatalf("%s returned HTML for a plain-text 404", path)
 	}
 }
 

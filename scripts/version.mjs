@@ -23,10 +23,30 @@ export function assertReleaseTag(tag, version) {
   if (tag.slice(1) !== version) throw new Error('release tag does not match package version');
 }
 
+export function assertImageTag(tag, version) {
+  if (typeof tag !== 'string' || !semver.test(tag)) {
+    throw new Error(`image tag must match X.Y.Z: ${tag ?? ''}`);
+  }
+  if (tag !== version) throw new Error('image tag does not match package version');
+}
+
+export function assertPackageTag(tag, version) {
+  if (typeof tag === 'string' && tag.startsWith('v')) {
+    assertReleaseTag(tag, version);
+    return;
+  }
+  assertImageTag(tag, version);
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
   try {
     const version = readProjectVersion();
-    if (process.argv[2]) assertReleaseTag(process.argv[2], version);
+    if (process.argv[2] === '--package-tag') {
+      if (process.argv.length !== 4) throw new Error('package tag argument missing');
+      assertPackageTag(process.argv[3], version);
+    } else if (process.argv[2]) {
+      assertReleaseTag(process.argv[2], version);
+    }
     process.stdout.write(`${version}\n`);
   } catch (error) {
     console.error(error.message);

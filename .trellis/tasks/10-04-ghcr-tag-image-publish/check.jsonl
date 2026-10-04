@@ -3,3 +3,4 @@
 {"file":".trellis/spec/backend/image-publishing.md","reason":"Check exact-candidate publishing, registry failure matrix and evidence limits"}
 {"file":"docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md","reason":"Policy exception remains explicit and bounded"}
 {"file":"docs/modernization/cicd-delivery.md","reason":"Operational instructions match implemented behavior"}
+{"file": ".trellis/tasks/10-04-ghcr-tag-image-publish/remote-ci-preflight.md", "reason": "Real CI failure evidence and required release-blocker repairs"}

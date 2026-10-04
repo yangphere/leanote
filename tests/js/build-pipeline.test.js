@@ -63,6 +63,11 @@ test('manifest declares the complete TinyMCE-aware output contract', async () =>
   assert.equal(new Set(BUILD_OUTPUTS).size, expectedCount);
   assert.equal(MANIFEST.i18nDerivedInputExclusions.includes('public/md/main-v2.min.js'), true);
   const tinyMceAssets = new Map(MANIFEST.assets.map((entry) => [entry.name, entry]));
+  for (const entry of MANIFEST.assets) {
+    assert.match(entry.output, /^public\/tinymce\//, `${entry.name} must publish under public/tinymce`);
+    assert.equal(entry.url, `/${entry.output.slice('public/'.length)}`, `${entry.name} must use the canonical /tinymce route`);
+    assert.doesNotMatch(entry.url, /^\/public\/tinymce\//);
+  }
   for (const name of ['tinymce-oxide-skin-min-css', 'tinymce-oxide-content-min-css', 'tinymce-oxide-inline-min-css']) {
     assert.equal(tinyMceAssets.get(name)?.transform, 'copy');
     assert.equal(fs.statSync(path.join(ROOT, tinyMceAssets.get(name).output)).isFile(), true);

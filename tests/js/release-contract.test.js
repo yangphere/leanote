@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { execFileSync } = require('node:child_process');
 const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -36,9 +37,9 @@ test('release artifact validation rejects unknown metadata schema versions', asy
   const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   const epoch = execFileSync('git', ['show', '-s', '--format=%ct', commit], { encoding: 'utf8' }).trim();
   try {
-    await fs.writeFile(path.join(root, 'leanote-v1.0.0-linux-amd64.tar.gz'), 'tarball');
+    await fs.writeFile(path.join(root, 'leanote-v2.0.1-linux-amd64.tar.gz'), 'tarball');
     await buildReleaseInputs({ root: process.cwd(), outDir: root, env: {
-      RELEASE_TAG: 'v1.0.0', GIT_COMMIT: commit, GITHUB_REF: 'refs/tags/v1.0.0',
+      RELEASE_TAG: 'v2.0.1', GIT_COMMIT: commit, GITHUB_REF: 'refs/tags/v2.0.1',
       GITHUB_WORKFLOW: 'Quality gate', GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1', SOURCE_DATE_EPOCH: epoch,
       IMAGE_DIGEST: `sha256:${'b'.repeat(64)}`, BASE_IMAGE_DIGEST: `sha256:${'c'.repeat(64)}`,
       PROVENANCE: 'disabled', ATTESTATION: 'disabled', SBOM: 'disabled',
@@ -56,7 +57,7 @@ test('release artifact validation rejects unknown metadata schema versions', asy
       // Pin the run provenance to the fixture values so CI-injected
       // GITHUB_RUN_ID/GITHUB_RUN_ATTEMPT cannot trip the replay guard
       // before the schema path under test is reached.
-      cwd: process.cwd(), env: { ...process.env, RELEASE_TAG: 'v1.0.0', GIT_COMMIT: commit, GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1' },
+      cwd: process.cwd(), env: { ...process.env, RELEASE_TAG: 'v2.0.1', GIT_COMMIT: commit, GITHUB_WORKFLOW: 'Quality gate', GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1' },
       stdio: 'pipe',
     }), /schema version|metadata mismatch/i);
   } finally {
@@ -91,9 +92,9 @@ test('release artifact validation binds build metadata to the tarball bytes', as
   const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   const epoch = execFileSync('git', ['show', '-s', '--format=%ct', commit], { encoding: 'utf8' }).trim();
   try {
-    await fs.writeFile(path.join(root, 'leanote-v1.0.0-linux-amd64.tar.gz'), 'tarball');
+    await fs.writeFile(path.join(root, 'leanote-v2.0.1-linux-amd64.tar.gz'), 'tarball');
     await buildReleaseInputs({ root: process.cwd(), outDir: root, env: {
-      RELEASE_TAG: 'v1.0.0', GIT_COMMIT: commit, GITHUB_REF: 'refs/tags/v1.0.0',
+      RELEASE_TAG: 'v2.0.1', GIT_COMMIT: commit, GITHUB_REF: 'refs/tags/v2.0.1',
       GITHUB_WORKFLOW: 'Quality gate', GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1', SOURCE_DATE_EPOCH: epoch,
       IMAGE_DIGEST: `sha256:${'b'.repeat(64)}`, BASE_IMAGE_DIGEST: `sha256:${'c'.repeat(64)}`,
       PROVENANCE: 'disabled', ATTESTATION: 'disabled', SBOM: 'disabled',
@@ -108,7 +109,7 @@ test('release artifact validation binds build metadata to the tarball bytes', as
     await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     assert.throws(() => execFileSync(process.execPath, ['scripts/validate-release-artifact.mjs', root], {
       // Same fixture-pinned provenance as the schema rejection test above.
-      cwd: process.cwd(), env: { ...process.env, RELEASE_TAG: 'v1.0.0', GIT_COMMIT: commit, GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1' }, stdio: 'pipe',
+      cwd: process.cwd(), env: { ...process.env, RELEASE_TAG: 'v2.0.1', GIT_COMMIT: commit, GITHUB_WORKFLOW: 'Quality gate', GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '1' }, stdio: 'pipe',
     }), /build metadata tarball hash mismatch/);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
@@ -304,7 +305,67 @@ test('package tag assertion only applies to real tag contexts', async () => {
   // treated as release tags.
   assert.match(script, /case "\$\{GITHUB_REF:-\}" in/);
   assert.match(script, /refs\/tags\/\*\) TAG=/);
+  assert.match(script, /version\.mjs" --package-tag "\$TAG"/);
   assert.doesNotMatch(script, /RELEASE_TAG:-\$\{GITHUB_REF_NAME/);
+});
+
+test('package tag contract accepts image and protected tags without weakening release validation', async () => {
+  const { assertPackageTag } = await import('../../scripts/version.mjs');
+  assert.doesNotThrow(() => assertPackageTag('2.0.1', '2.0.1'));
+  assert.doesNotThrow(() => assertPackageTag('v2.0.1', '2.0.1'));
+  assert.throws(() => assertPackageTag('2.0.2', '2.0.1'), /does not match package version/);
+  assert.throws(() => assertPackageTag('v2.0.2', '2.0.1'), /does not match package version/);
+  assert.throws(() => assertPackageTag('release-2.0.1', '2.0.1'), /image tag must match X\.Y\.Z/);
+
+  assert.throws(() => execFileSync(process.execPath, ['scripts/version.mjs', '2.0.1'], {
+    cwd: process.cwd(), stdio: 'pipe',
+  }), /release tag must match vX\.Y\.Z/);
+});
+
+test('package script accepts the numeric image tag in a CI tag context', { timeout: 60_000 }, async () => {
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-package-tag-'));
+  const fakeBin = path.join(root, 'bin');
+  const output = path.join(root, 'dist');
+  const fakeGo = path.join(fakeBin, 'go');
+  try {
+    await fs.mkdir(fakeBin);
+    await fs.writeFile(fakeGo, `#!/bin/sh
+set -eu
+output=''
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = '-o' ]; then
+    shift
+    output=$1
+    break
+  fi
+  shift
+done
+test -n "$output"
+mkdir -p "$(dirname "$output")"
+printf '#!/bin/sh\\nexit 0\\n' > "$output"
+`);
+    await fs.chmod(fakeGo, 0o755);
+    const shell = process.platform === 'win32'
+      ? execFileSync('where.exe', ['sh'], { encoding: 'utf8' }).trim().split(/\r?\n/)[0]
+      : 'sh';
+    const shellPath = execFileSync(shell, ['-lc', 'printf %s "$PATH"'], { encoding: 'utf8' });
+    const fakeBinForShell = fakeBin.replaceAll('\\', '/');
+    execFileSync(shell, ['sh/package.sh'], {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        GITHUB_REF: 'refs/tags/2.0.1',
+        RELEASE_TAG: '',
+        OUTPUT_DIR: output,
+        SOURCE_DATE_EPOCH: '100',
+        PATH: `${fakeBinForShell}:${shellPath}`,
+      },
+      stdio: 'pipe',
+    });
+    await fs.access(path.join(output, 'leanote-v2.0.1-linux-amd64.tar.gz'));
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
 });
 
 test('container builds pass an integer epoch and a separate RFC3339 OCI label', async () => {

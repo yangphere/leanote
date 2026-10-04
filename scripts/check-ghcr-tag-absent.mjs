@@ -1,5 +1,5 @@
 import { pathToFileURL } from 'node:url';
-import { assertReleaseTag, readProjectVersion } from './version.mjs';
+import { assertImageTag, readProjectVersion } from './version.mjs';
 
 const MAX_RESPONSE_BYTES = 64 * 1024;
 const imagePattern = /^[a-z0-9]+(?:[._-][a-z0-9]+)*(?:\/[a-z0-9]+(?:[._-][a-z0-9]+)*)+$/;
@@ -64,7 +64,7 @@ export async function checkGhcrTagAbsent({
   fetchImpl = fetch,
 }) {
   check(imagePattern.test(image), 'invalid GHCR image path');
-  assertReleaseTag(tag, readProjectVersion());
+  assertImageTag(tag, readProjectVersion());
   check(typeof actor === 'string' && actor.length > 0 && typeof token === 'string' && token.length > 0, 'GHCR credentials missing');
   check(typeof allowInitialPackageCreate === 'boolean', 'invalid initial package creation policy');
 

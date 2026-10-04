@@ -32,6 +32,10 @@ No linter is configured — the gates are `npm ci && npm run build && npm test` 
   column (`path:line:column`) for dynamic or missing keys.
 - Build tests must use disposable roots for publication and rollback tests;
   tests must never rename tracked production files in the checkout.
+- Manifest asset `output` is a filesystem path; `url` is the canonical HTTP
+  route. TinyMCE `public/tinymce/...` outputs must use `/tinymce/...` URLs,
+  including plugin `index.html` resources. The no-redirect resource smoke
+  requires a direct 200; filesystem URLs can redirect and must not be used.
 - CI browser artifacts may contain only allowlisted sanitized summary fields;
   headers, cookies, tokens, page content, traces, screenshots, videos, and raw
   logs are prohibited.

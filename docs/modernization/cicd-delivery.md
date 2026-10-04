@@ -4,14 +4,14 @@ Leanote has two tag-triggered delivery paths. The lightweight image workflow
 publishes only a Linux/amd64 GHCR image after the complete quality gate and an
 exact-candidate container smoke. The protected release workflow publishes the
 tarball and GitHub Release only after its additional browser, delivery and
-approval gates. A strict `vX.Y.Z` tag maps to
-`ghcr.io/yangphere/leanote:vX.Y.Z`; neither path deploys production.
+approval gates. In the lightweight path, a strict Git tag `X.Y.Z` maps to
+`ghcr.io/yangphere/leanote:X.Y.Z`; neither path deploys production.
 
 ## Lightweight GHCR image delivery
 
-`.github/workflows/docker-image.yml` responds only to pushed `v*.*.*` tags. It
+`.github/workflows/docker-image.yml` responds only to pushed unprefixed `X.Y.Z` tags. It
 rejects forced updates, requires the peeled tag commit to be an ancestor of
-`origin/master`, reuses `quality-gate.yml`, and builds one `linux/amd64`
+`origin/main`, reuses `quality-gate.yml`, and builds one `linux/amd64`
 candidate with the same version, revision, epoch and OCI-created inputs as the
 protected release. It smokes that exact local image before the only registry
 push and compares the pushed manifest digest with Buildx's
@@ -35,25 +35,24 @@ After the first successful run, an administrator must open the `leanote`
 package settings and change visibility to public. GitHub documents that new
 packages are private by default and that changing a package to public is not
 reversible. Public visibility must then be verified by an anonymous
-`docker pull ghcr.io/yangphere/leanote:v1.0.0`; workflow success alone is not
+`docker pull ghcr.io/yangphere/leanote:2.0.1`; workflow success alone is not
 anonymous-pull evidence.
 
-`docker-image.yml` and `release.yml` are independent and do not have a shared
-atomic publication lock. The same tag triggers both. Once the lightweight path
-publishes the image, the protected path's immutable-absence gate correctly
-prevents that tag from later creating a GitHub Release. Before enabling the
-complete protected release path, disable the lightweight workflow and choose a
-new tag whose image and Release do not exist. Do not attempt both publication
-paths for the same tag.
+`docker-image.yml` uses unprefixed version tags; `release.yml` retains its
+`v*.*.*` trigger and `vX.Y.Z` image tags. Pushing `2.0.1` therefore triggers only
+image delivery. The reusable quality gate still runs all seven primary jobs
+and summary; its protected `release-inputs` handoff remains limited to `v` tags.
+Image-only delivery does not authorize a protected GitHub Release, which still
+requires every additional protected gate.
 
 First publication checklist:
 
-- [ ] Merge the reviewed `dev` commit into `master`.
+- [ ] Merge the reviewed `dev` commit into `main`.
 - [ ] Confirm `docker-image.yml` is the only intended publishing path for this tag.
-- [ ] Create and push `v1.0.0` on the selected `master` commit.
+- [ ] Set package/lock version to `2.0.1`, then create and push `2.0.1` on the selected `main` commit.
 - [ ] Confirm the workflow's registry digest read-back succeeds.
 - [ ] Change the new `leanote` package visibility to public in GitHub package settings.
-- [ ] From an unauthenticated client, pull `ghcr.io/yangphere/leanote:v1.0.0` and record the digest.
+- [ ] From an unauthenticated client, pull `ghcr.io/yangphere/leanote:2.0.1` and record the digest.
 
 ## Protected delivery gates and authorization
 

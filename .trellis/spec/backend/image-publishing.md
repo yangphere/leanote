@@ -9,8 +9,9 @@ tarball/GitHub Release gates. It does not authorize production deployment.
 ## 2. Signatures
 
 ```text
-push tag vX.Y.Z -> validate -> quality-gate.yml -> publish
-node scripts/check-version.mjs
+push tag X.Y.Z -> validate -> quality-gate.yml -> publish
+RELEASE_TAG=2.0.1 node scripts/check-version.mjs --image-tag
+node scripts/version.mjs --package-tag <X.Y.Z-or-vX.Y.Z>
 node scripts/check-ghcr-tag-absent.mjs
 scripts/container-smoke.sh <candidate-image>
 ```
@@ -22,10 +23,23 @@ it rejects. The CLI reports a stage-specific error and exits nonzero.
 
 ## 3. Contracts
 
-- Publish only `ghcr.io/yangphere/leanote:vX.Y.Z`, on `linux/amd64`.
-  Use `scripts/version.mjs` as the sole version/tag rule.
+- Git tag `X.Y.Z` publishes only `ghcr.io/yangphere/leanote:X.Y.Z`, on
+  `linux/amd64`. First publication uses Git tag and image tag `2.0.1`.
+  Use `scripts/version.mjs` as the sole version/tag rule; registry absence
+  checks and push must use the same unprefixed image tag.
+- `assertImageTag(tag, version)` accepts only strict unprefixed `X.Y.Z` equal
+  to the package version. `check-version.mjs --image-tag` selects that rule;
+  its default and `assertReleaseTag` retain the protected `vX.Y.Z` contract.
+  Workflow glob filtering is followed by strict validation; it is not the
+  validation boundary.
+- The reusable gate's `sh/package.sh` accepts either strict image or protected
+  release tag matching the project version in real tag contexts. Branch names
+  are never release tags. Keep the protected release CLI/metadata validators
+  strict; select the dual packaging contract explicitly with
+  `version.mjs --package-tag`. `assertPackageTag` dispatches to the existing
+  strict image or release rule, rather than defining another version parser.
 - `RELEASE_TAG` matches the package/lock version; the remotely peeled tag
-  equals `GITHUB_SHA`, and that SHA is an ancestor of refreshed `origin/master`.
+  equals `GITHUB_SHA`, and that SHA is an ancestor of refreshed `origin/main`.
   Recheck tag and ancestry immediately before publication; reject forced tags.
 - The workflow lock is `docker-image-${{ github.ref }}`, with cancellation
   disabled. Sharing the protected Release workflow's whole-run lock would
@@ -47,15 +61,18 @@ it rejects. The CLI reports a stage-specific error and exits nonzero.
   the only push. Compare registry manifest digest with Buildx metadata's
   `containerimage.digest`; a Docker image/config ID is a different identity.
 - The first package is private. Public visibility and anonymous pull are
-  separate manual evidence. Before enabling protected Release publication,
-  disable image-only publication and select a fresh tag; the two workflows
-  do not provide a shared atomic publication lock.
+  separate manual evidence. The protected path retains its `v*.*.*` trigger
+  and `vX.Y.Z` image tags; an unprefixed tag does not trigger it. All seven
+  reusable quality jobs and summary remain required. The protected handoff
+  `release-inputs` remains limited to `v` tags and is skipped for image-only
+  delivery. The two paths do not share a registry immutability lock.
 
 ## 4. Validation & Error Matrix
 
 | Condition | Result |
 |---|---|
-| Version mismatch, forced/moved tag, SHA outside master | Stop before push |
+| Version mismatch, forced/moved tag, SHA outside main | Stop before push |
+| Prefixed, malformed, or package-mismatched image tag | Stop before registry requests |
 | Quality gate or candidate smoke failure | Publish job blocked / no push |
 | Manifest exists, or listing contains the target tag | Reject overwrite |
 | Missing manifest plus confirmed existing package listing | Allow one push |
@@ -66,7 +83,7 @@ it rejects. The CLI reports a stage-specific error and exits nonzero.
 
 ## 5. Good / Base / Bad Cases
 
-- Good: a fresh master tag passes all gates, the exact candidate passes smoke,
+- Good: a fresh main tag passes all gates, the exact candidate passes smoke,
   absence is confirmed, and registry manifest read-back matches.
 - Base: injected `fetchImpl` proves all preflight branches without credentials
   or remote writes. Static checks verify job ordering and action pins.
@@ -78,6 +95,9 @@ it rejects. The CLI reports a stage-specific error and exits nonzero.
 - `tests/js/docker-image-workflow.test.js`: tag-only trigger, minimal
   permissions, full reusable gate, fresh source checks, smoke-before-push,
   exact tag and build-manifest comparison; exercise registry failure branches.
+- `tests/js/release-contract.test.js`: packaging under numeric/v tag contexts
+  succeeds; malformed or mismatched tags fail, while branch names never enter
+  tag validation. The protected release version contract remains prefixed.
 - Run focused tests, `npm test`, workflow YAML/Actionlint checks and
   `git diff --check`. Record tool versions and skipped external validators.
 - Real tag push, GitHub Actions execution, initial package creation, digest
@@ -92,4 +112,7 @@ Correct: accept only the explicit authenticated absence cases above.
 
 Wrong: local Docker image Id equals the registry manifest digest.
 Correct: Buildx containerimage.digest equals the registry manifest digest.
+
+Wrong: check registry v2.0.1, then push registry 2.0.1.
+Correct: accept canonical Git tag 2.0.1 and check/push registry 2.0.1.
 ```

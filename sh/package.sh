@@ -12,7 +12,7 @@ case "${GITHUB_REF:-}" in
   refs/tags/*) TAG=${TAG:-"${GITHUB_REF:-}"}; TAG=${TAG#refs/tags/} ;;
 esac
 if [ -n "$TAG" ]; then
-  node "$ROOT/scripts/version.mjs" "$TAG" >/dev/null
+  node "$ROOT/scripts/version.mjs" --package-tag "$TAG" >/dev/null
 fi
 if [ -n "${SOURCE_DATE_EPOCH:-}" ]; then EPOCH=$SOURCE_DATE_EPOCH; else EPOCH=$(git -C "$ROOT" show -s --format=%ct HEAD); fi
 case "$EPOCH" in *[!0-9]*|'') echo "SOURCE_DATE_EPOCH must be a non-negative integer" >&2; exit 1;; esac

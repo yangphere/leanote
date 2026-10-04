@@ -114,6 +114,9 @@ function collectFirstPartyStaticFiles(relativeRoot) {
 }
 const firstPartyStaticFiles = ['leaui_image', 'leaui_mindmap', 'leanote_nav', 'leanote_code']
   .flatMap((name) => collectFirstPartyStaticFiles(`public/tinymce/plugins/${name}`));
+function tinyMceRuntimeUrl(output) {
+  return `/${output.slice('public/'.length)}`;
+}
 const assets = [
   ...tinyMceAssets,
   ...tinyMcePlugins,
@@ -125,7 +128,7 @@ const assets = [
   transform: 'copy',
   inputs: [input],
   output,
-  url: `/${output.replaceAll('\\', '/')}`,
+  url: tinyMceRuntimeUrl(output.replaceAll('\\', '/')),
   normalizeTrailingWhitespace: /^node_modules\/tinymce\/.+\.(?:css|js)$/i.test(input),
 }));
 

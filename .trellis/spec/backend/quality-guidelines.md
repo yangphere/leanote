@@ -22,6 +22,12 @@ Go 1.26 monolith, standard `testing`, no linter beyond `gofmt`/`go vet` — the 
 - Fake-injection for environment-dependent tests: function fields (`run`, `now`, `sleep`, `lookPath`, `ping`, `verifyFixture`) on the environment struct with nil-guard defaults — see `app/tests/harness/environment.go` and its tests.
 - Windows-safe shell: `set -eu` scripts guard expansions (`${GITHUB_REF:-}`); MSYS path pitfalls handled with `MSYS_NO_PATHCONV` where needed.
 - Failure diagnostics preserved: smoke scripts dump app log tail / response headers / docker logs on failure (original-cause requirement).
+- Release fixture subprocesses pin their fixture `GITHUB_WORKFLOW` as well as
+  run ID/attempt; an ambient CI workflow must not intercept a negative test
+  before its intended assertion. For HTTP goldens, preserve explicit legacy
+  response envelopes and assert authorization separately. Missing-theme
+  `/preview` returns plain text 404; only successful page responses use HTML
+  assertions.
 
 ## Scenario: Note mutation and blog-publication parameter binding
 

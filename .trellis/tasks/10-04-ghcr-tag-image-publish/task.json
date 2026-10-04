@@ -2,7 +2,7 @@
   "id": "ghcr-tag-image-publish",
   "name": "ghcr-tag-image-publish",
   "title": "GHCR 版本 tag 镜像发布工作流",
-  "description": "新增轻量 docker-image.yml:推送 v*.*.* tag 时经 quality-gate 与 smoke 后把镜像发布到 GHCR,并以 ADR 记录与 ADR-0004/release.yml 的关系",
+  "description": "新增轻量 docker-image.yml:推送无前缀 X.Y.Z tag 时经 quality-gate 与 smoke 后把同名版本镜像发布到 GHCR,main 为默认与来源分支",
   "status": "in_progress",
   "dev_type": null,
   "scope": null,
@@ -13,7 +13,7 @@
   "createdAt": "2026-10-04",
   "completedAt": null,
   "branch": "dev",
-  "base_branch": "master",
+  "base_branch": "main",
   "worktree_path": null,
   "commit": null,
   "pr_url": null,
@@ -28,9 +28,20 @@
     "docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md",
     "docs/modernization/cicd-delivery.md",
     ".trellis/spec/backend/image-publishing.md",
-    ".trellis/spec/backend/index.md"
+    ".trellis/spec/backend/index.md",
+    ".github/workflows/ci.yml",
+    "package.json",
+    "package-lock.json",
+    "scripts/version.mjs",
+    "scripts/check-version.mjs",
+    "sh/package.sh",
+    "tests/js/release-contract.test.js",
+    "app/tests/golden/web/share_listShareNotes_demo.json",
+    "app/tests/harness/smoke_test.go",
+    "scripts/build/manifest.mjs",
+    "tests/js/build-pipeline.test.js"
   ],
-  "notes": "Local implementation and Trellis check complete; final publication/release regressions 37/37 passed. On 2026-10-04 the user authorized real GHCR publication. Preparing scoped commit and master integration for v1.0.0; see publication.md for remote execution evidence. Prior automated evidence remains in validation.md/check-review.md.",
+  "notes": "The user authorized real GHCR publication and main as default/source branch; latest selected Git tag and image tag are both 2.0.1, avoiding the protected v-tag Release trigger. Repairing four blockers reproduced in actual remote CI before dev-to-main integration and tag push. See publication.md and remote-ci-preflight.md; prior local evidence is historical until the revised candidate passes review and real CI.",
   "meta": {
     "depends_on": []
   }

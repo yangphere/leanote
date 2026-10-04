@@ -1,6 +1,6 @@
 # Validation
 
-## Automated checks
+## Initial candidate automated checks (historical)
 
 | Check | Result | Evidence |
 |---|---|---|
@@ -33,7 +33,7 @@ publication/release suites and Actionlint result. No in-scope defect remains.
   `in_progress`; no commit or archive was requested or performed.
 - Existing `CONTEXT.md` changes and the Compose planning task were preserved.
 
-## External/runtime evidence
+## Initial candidate external/runtime evidence (superseded version)
 
 | Gate | Status | Notes |
 |---|---|---|
@@ -56,3 +56,28 @@ It supports `GITHUB_TOKEN` publication from a repository workflow and states
 that first publication creates a private package. It does not document a
 stable `NAME_UNKNOWN.detail.name` field, so the helper treats that field as
 optional but rejects it when present and conflicting.
+
+## Revised main / 2.0.1 candidate
+
+The latest user instruction selects Git tag `2.0.1` and unprefixed registry
+tag `2.0.1`, with `main` as source/default branch. No `v1.0.0` was published.
+The earlier local checks do not establish that this revised candidate passes.
+Four actual remote-CI blockers are being repaired as documented in
+`remote-ci-preflight.md`; independent review, main CI, tag publication and
+registry read-back evidence will be recorded here and in `publication.md`.
+
+| Revised check | Result | Evidence |
+|---|---|---|
+| TinyMCE focused manifest regression | passed | 1/1; output remains `public/tinymce/...`, URL is `/tinymce/...` |
+| Manifest-driven build | passed | `npm run build` exit 0, no tracked generated-output drift |
+| Complete build-pipeline test file | passed | 37 tests, 36 passed, 0 failed, 1 Windows skip |
+| Local Chromium build smoke | unrun | Existing-service and E2E credential variables absent; main CI will exercise it |
+| Numeric image / protected release regressions | passed | 39/39 (`docker-image-workflow.test.js` + `release-contract.test.js`), Git Bash on PATH |
+| CI-like provenance negative regressions | passed | `GITHUB_WORKFLOW=CI` ambient environment, both intended negative cases pass (2/2) |
+| Real focused Mongo/HTTP harness | passed | `GOTOOLCHAIN=local go test ./app/tests/harness -run 'TestGoldenWebOwnershipControllers\|TestWebAdminMemberAndControllerSmoke' -count=1 -timeout 60s`: exit 0, 14.469s, 2 executed / 0 skipped. Fixture restore and native server requests execute; managed fixture cleanup explains absent container afterward. Exact Mongo provisioning mode was not captured. |
+| Numeric and protected tag modes | passed | Image `2.0.1` accepted; prefixed/mismatched image tags rejected; protected mode retains `vX.Y.Z` |
+| Shared package tag boundary | passed | 41/41 publication + Release focused tests; a real `refs/tags/2.0.1` `sh/package.sh` run with a fake Go compiler produced `leanote-v2.0.1-linux-amd64.tar.gz`; `v2.0.1` remains accepted and malformed/mismatched tags fail |
+| Revised workflow Actionlint | passed | v1.7.7, YAML parsed, shellcheck unavailable and explicitly disabled |
+
+Local runtime versions: Go 1.27.1 (Windows/amd64), Node 24.21.0, npm 11.19.0.
+GitHub CI will supply the pinned Linux toolchains and Chromium runtime evidence.
