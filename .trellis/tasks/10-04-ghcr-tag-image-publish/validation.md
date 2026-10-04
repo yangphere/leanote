@@ -137,4 +137,43 @@ Recovery local evidence (2026-10-04):
 - Final independent recovery review passed: 45/45 focused tests, Actionlint,
   Node syntax, live source verifier, Trellis validation and diff checks. No
   local merge blocker; see `check-review-recovery.md`. Remote executor
-  CI/publication remains pending.
+  CI `37175199730` subsequently passed all seven jobs and summary at
+  `30bf11451d96db9b0b4c178870a0d9b1918b0605`. Recovery dispatch
+  `37175408129` is in progress; GHCR/public/anonymous evidence is pending.
+
+## Real publication and digest boundary
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Recovery source API/artifacts | passed | Real Actions validate bound original run/attempt; downloaded and validated 8 summaries |
+| Recovery executor quality | passed | Seven primary jobs and summary in `37175408129` |
+| Actual candidate build/smoke | passed | Publish job `111357415300` succeeded before push |
+| First package preflight and docker push | passed | Explicit creation accepted, docker push returned `2.0.1` registry digest |
+| Workflow Buildx-manifest comparison | failed | Export digest `1550df70...` differs from Docker-pushed `0b67446e...`; run overall failure |
+| Independent registry bytes/header/push digest | passed | Anonymous exact-byte SHA256 is `0b67446e...`, matching content-digest header and push output |
+| Exact candidate config binding | passed | Registry config descriptor and pulled Id equal exported config `99b11b45...`; platform/version/revision labels match |
+| Anonymous real pull | passed | Empty isolated Docker config; 11 layers downloaded and checksum verified; RepoDigest matches |
+| Package publicly accessible | passed | Anonymous registry and pull succeeded; agent did not change visibility, actor/time unknown |
+
+The published manifest is Docker v2. Future manifest verification remains to
+be corrected after proving the build/export/load/push serialization boundary.
+The immutable `2.0.1` Git/image tag must remain unchanged; its latest alias
+is separately authorized by the user's subsequent request.
+
+## Latest and byte-preserving transport validation
+
+- User requested latest in addition to the immutable version. Implementation
+  adds one-build OCI archive publication and explicit existing-version promotion;
+  the version remains unchanged.
+- Real local registry reproduced BuildKit load/Engine push manifest
+  reserialization with stable config. Forcing Docker media types did not fix it.
+- A single Buildx invocation dual-exported loaded candidate and OCI archive.
+  Loaded Id matched archive/metadata config; pinned Skopeo 1.22.3 copy to both
+  version/latest preserved raw manifest SHA, registry header and config.
+- `inspect --raw` redirected file retained exact bytes and digest. Ubuntu 22.04
+  Skopeo 1.4.1 actually rejected `--preserve-digests`; workflow uses the tested
+  full-digest-pinned container instead. See `digest-diagnosis.md`.
+- Latest focused/lint checks and final independent review passed; see
+  `check-review-latest.md`. Main-session publication/Release regressions passed
+  47/47 with no skips. Trellis validation and scoped diff checks passed.
+  Integrated main CI and actual GHCR latest promotion remain pending.

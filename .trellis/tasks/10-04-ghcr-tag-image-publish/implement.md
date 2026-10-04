@@ -3,7 +3,7 @@
 - [x] 读取 `.trellis/spec/backend/index.md` 与 `.trellis/spec/guides/index.md`，确认 CI/发布相关约定。
 - [x] 新增 `.github/workflows/docker-image.yml`（按 design.md）。
 - [x] 新增 `scripts/check-ghcr-tag-absent.mjs`，把现有包缺 tag 与显式首次创建的 registry 响应分类收敛为可测试 fail-closed 边界。
-- [x] 新增 `tests/js/docker-image-workflow.test.js`（先写失败测试：触发器、标签、复用 quality-gate、来源分支祖先、smoke 先于 push、digest 校验、无 `latest` 及 registry 失败分类）。
+- [x] 新增 `tests/js/docker-image-workflow.test.js`（先写失败测试：触发器、标签、复用 quality-gate、来源分支祖先、smoke 先于 push、digest 校验及 registry 失败分类）；用户后续要求 latest，本轮同步更新标签契约回归。
 - [x] 新增 `docs/adr/0005-publish-ghcr-image-with-lightweight-gate.md`，并在 ADR-0004 加一行指向 ADR-0005 的说明。
 - [x] 更新 `docs/modernization/cicd-delivery.md`：GHCR 首次创建/public、与 `release.yml` 并存后果、人工步骤清单。
 - [x] 验证：`node --test tests/js/docker-image-workflow.test.js`、`npm test`、`git diff --check`；`actionlint`（若可用）。
@@ -16,6 +16,9 @@
 - [x] 独立复核后合入 main，设置默认分支，真实 main CI `37173341933` 全绿。
 - [x] 推送 2.0.1；原 Docker image run `37173559882` 的质量门、构建和 smoke 成功，但在 push 前 registry preflight 失败。
 - [x] 修复首包响应分类，增加固定候选/来源 run 的 main dispatch 恢复入口，复用 summary validator 并覆盖 provenance 负例；独立全范围复核通过，见 `check-review-recovery.md`。
-- [ ] 对恢复改动独立全范围复核，合入 main，验证执行器完整 CI。
-- [ ] dispatch `tag=2.0.1`、原候选 SHA、`source_run_id=37173559882`、`source_run_attempt=1`；确认真实 push/read-back，分别记录 public 与匿名拉取证据。
+- [x] 对恢复改动独立全范围复核，合入 main `30bf1145`，执行器完整 CI `37175199730` 通过。
+- [x] dispatch `tag=2.0.1`、原候选 SHA、`source_run_id=37173559882`、`source_run_attempt=1`；确认真实 push，并用独立证据完成 digest/config/public 与匿名拉取验证。
+- [x] 上述 dispatch 已实际发布 `2.0.1`；独立匿名 raw manifest hash/header、config 绑定与真实 pull 通过。运行最后的 Buildx/daemon manifest 比较失败，不能将运行标为全绿。
+- [x] 根据真实本地 registry 复现修复 BuildKit export/Engine push manifest 序列化边界，保留一次构建、同一候选 smoke 和不可覆盖版本；固定 Skopeo 工具与最终独立审查通过。
+- [ ] 按用户最新要求增加 latest 同 digest 别名、跨版本发布串行化与已存在版本的显式晋升；真实给现有 `2.0.1` 补 latest，不改版本 tag/manifest。
 - 回滚点：仅新增文件与文档追加，可整体 revert。

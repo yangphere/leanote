@@ -5,6 +5,12 @@ on:
     tags: ['[0-9]+.[0-9]+.[0-9]+']
   workflow_dispatch:
     inputs:
+      operation:
+        description: Recover an absent version tag or promote a verified version to latest
+        required: true
+        default: recover_version
+        type: choice
+        options: [recover_version, update_latest]
       tag:
         description: Existing immutable numeric image tag
         required: true
@@ -12,6 +18,14 @@ on:
       expected_commit:
         description: Commit currently referenced by the tag
         required: true
+        type: string
+      expected_registry_digest:
+        description: Required immutable version manifest digest for update_latest
+        required: false
+        type: string
+      expected_config_digest:
+        description: Required immutable version config digest for update_latest
+        required: false
         type: string
       source_run_id:
         description: Failed Docker image run whose quality evidence is reused
@@ -23,7 +37,7 @@ on:
         type: string
 
 concurrency:
-  group: docker-image-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  group: docker-image-latest
   cancel-in-progress: false
 
 permissions:
@@ -40,6 +54,9 @@ jobs:
     outputs:
       tag: ${{ steps.identity.outputs.tag }}
       candidate_sha: ${{ steps.identity.outputs.candidate_sha }}
+      operation: ${{ steps.identity.outputs.operation }}
+      expected_registry_digest: ${{ steps.identity.outputs.expected_registry_digest }}
+      expected_config_digest: ${{ steps.identity.outputs.expected_config_digest }}
     steps:
       - name: Check out the trusted executor
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -54,6 +71,9 @@ jobs:
           PUSH_SHA: ${{ github.sha }}
           INPUT_TAG: ${{ inputs.tag }}
           INPUT_COMMIT: ${{ inputs.expected_commit }}
+          INPUT_OPERATION: ${{ inputs.operation }}
+          INPUT_EXPECTED_REGISTRY_DIGEST: ${{ inputs.expected_registry_digest }}
+          INPUT_EXPECTED_CONFIG_DIGEST: ${{ inputs.expected_config_digest }}
           INPUT_SOURCE_RUN_ID: ${{ inputs.source_run_id }}
           INPUT_SOURCE_RUN_ATTEMPT: ${{ inputs.source_run_attempt }}
         run: |
@@ -62,16 +82,31 @@ jobs:
             test "$GITHUB_REF" = refs/heads/main
             TAG=$INPUT_TAG
             CANDIDATE_SHA=$INPUT_COMMIT
+            OPERATION=$INPUT_OPERATION
             test -n "$INPUT_SOURCE_RUN_ID"
             test -n "$INPUT_SOURCE_RUN_ATTEMPT"
+            case "$OPERATION" in
+              recover_version)
+                test -z "$INPUT_EXPECTED_REGISTRY_DIGEST"
+                test -z "$INPUT_EXPECTED_CONFIG_DIGEST"
+                ;;
+              update_latest)
+                EXPECTED_REGISTRY_DIGEST="$INPUT_EXPECTED_REGISTRY_DIGEST" EXPECTED_CONFIG_DIGEST="$INPUT_EXPECTED_CONFIG_DIGEST" node -e "const p=/^sha256:[0-9a-f]{64}$/; if(!p.test(process.env.EXPECTED_REGISTRY_DIGEST || '') || !p.test(process.env.EXPECTED_CONFIG_DIGEST || '')) process.exit(1)"
+                ;;
+              *) exit 1 ;;
+            esac
           else
             TAG=$PUSH_TAG
             CANDIDATE_SHA=$PUSH_SHA
+            OPERATION=publish
           fi
           RELEASE_TAG="$TAG" node --input-type=module -e "import { assertImageTagFormat } from './executor/scripts/version.mjs'; assertImageTagFormat(process.env.RELEASE_TAG)"
           CANDIDATE_SHA="$CANDIDATE_SHA" node -e "if (!/^(?!0{40}$)[0-9a-f]{40}$/.test(process.env.CANDIDATE_SHA || '')) process.exit(1)"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "candidate_sha=$CANDIDATE_SHA" >> "$GITHUB_OUTPUT"
+          echo "operation=$OPERATION" >> "$GITHUB_OUTPUT"
+          echo "expected_registry_digest=$INPUT_EXPECTED_REGISTRY_DIGEST" >> "$GITHUB_OUTPUT"
+          echo "expected_config_digest=$INPUT_EXPECTED_CONFIG_DIGEST" >> "$GITHUB_OUTPUT"
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
           echo "CANDIDATE_SHA=$CANDIDATE_SHA" >> "$GITHUB_ENV"
       - name: Check out the immutable candidate
@@ -135,8 +170,12 @@ jobs:
     env:
       RELEASE_TAG: ${{ needs.validate.outputs.tag }}
       CANDIDATE_SHA: ${{ needs.validate.outputs.candidate_sha }}
+      OPERATION: ${{ needs.validate.outputs.operation }}
+      EXPECTED_REGISTRY_DIGEST: ${{ needs.validate.outputs.expected_registry_digest }}
+      EXPECTED_CONFIG_DIGEST: ${{ needs.validate.outputs.expected_config_digest }}
       IMAGE_REPOSITORY: ghcr.io/yangphere/leanote
       GHCR_IMAGE: yangphere/leanote
+      SKOPEO_IMAGE: quay.io/skopeo/stable@sha256:249b92db7297e5c801e19172dbb3b56fde88094a49740a5ededac8c2958bf2c0
     steps:
       - name: Check out the trusted executor
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -147,22 +186,39 @@ jobs:
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with: { node-version: '24.20.0' }
       - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e
+        if: needs.validate.outputs.operation != 'update_latest'
+      - name: Load the digest-preserving image copy tool
+        run: |
+          set -eu
+          docker pull "$SKOPEO_IMAGE"
+          docker run --rm "$SKOPEO_IMAGE" --version
       - name: Resolve the registry image tag
-        run: echo "IMAGE=${IMAGE_REPOSITORY}:${RELEASE_TAG}" >> "$GITHUB_ENV"
+        run: |
+          echo "IMAGE=${IMAGE_REPOSITORY}:${RELEASE_TAG}" >> "$GITHUB_ENV"
+          echo "LATEST_IMAGE=${IMAGE_REPOSITORY}:latest" >> "$GITHUB_ENV"
       - name: Build the immutable candidate
+        if: needs.validate.outputs.operation != 'update_latest'
         working-directory: candidate
         run: |
           set -eu
           epoch=$(git show -s --format=%ct "$CANDIDATE_SHA")
           created=$(date -u -d "@$epoch" +%Y-%m-%dT%H:%M:%SZ)
-          docker buildx build --platform linux/amd64 --load --metadata-file "$RUNNER_TEMP/image-metadata.json" --build-arg VERSION="$RELEASE_TAG" --build-arg REVISION="$CANDIDATE_SHA" --build-arg SOURCE_DATE_EPOCH="$epoch" --build-arg OCI_CREATED="$created" --provenance=false --sbom=false -t "$IMAGE" .
-          node -e "const m=require(process.env.RUNNER_TEMP + '/image-metadata.json'); const d=m['containerimage.digest']; if(!/^sha256:[0-9a-f]{64}$/.test(d || '')) throw new Error('candidate manifest digest missing')"
+          docker buildx build --platform linux/amd64 --load --output type=oci,dest="$RUNNER_TEMP/candidate.oci.tar" --metadata-file "$RUNNER_TEMP/image-metadata.json" --build-arg VERSION="$RELEASE_TAG" --build-arg REVISION="$CANDIDATE_SHA" --build-arg SOURCE_DATE_EPOCH="$epoch" --build-arg OCI_CREATED="$created" --provenance=false --sbom=false -t "$IMAGE" .
+          expected_manifest=$(node -e "process.stdout.write(require(process.env.RUNNER_TEMP + '/image-metadata.json')['containerimage.digest'] || '')")
+          expected_config=$(node -e "process.stdout.write(require(process.env.RUNNER_TEMP + '/image-metadata.json')['containerimage.config.digest'] || '')")
+          local_config=$(docker image inspect "$IMAGE" --format '{{.Id}}')
+          skopeo() { docker run --rm --mount "type=bind,source=$RUNNER_TEMP,target=/work" "$SKOPEO_IMAGE" "$@"; }
+          skopeo inspect --raw oci-archive:/work/candidate.oci.tar > "$RUNNER_TEMP/archive-manifest.json"
+          archive_config=$(IMAGE_MANIFEST_PATH="$RUNNER_TEMP/archive-manifest.json" EXPECTED_MANIFEST_DIGEST="$expected_manifest" EXPECTED_CONFIG_DIGEST="$expected_config" node "$GITHUB_WORKSPACE/executor/scripts/verify-image-manifest.mjs")
+          test "$archive_config" = "$local_config"
       - name: Smoke the exact candidate
+        if: needs.validate.outputs.operation != 'update_latest'
         working-directory: candidate
         env:
           CONTAINER_SMOKE_PDF_URL: http://127.0.0.1:9000/note/toPdf?noteId=5483207cf4e87203a4000001&appKey=container-smoke-secret-012345678901234567890
         run: scripts/container-smoke.sh "$IMAGE"
       - name: Push once and verify registry manifest digest
+        if: needs.validate.outputs.operation != 'update_latest'
         working-directory: candidate
         env:
           GH_TOKEN: '${{ github.token }}'
@@ -171,13 +227,47 @@ jobs:
         run: |
           set -eu
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          skopeo() { docker run --rm --network host --mount "type=bind,source=$RUNNER_TEMP,target=/work" --mount "type=bind,source=$HOME/.docker,target=/root/.docker,readonly" "$SKOPEO_IMAGE" "$@"; }
           node "$GITHUB_WORKSPACE/executor/scripts/check-ghcr-tag-absent.mjs"
           git fetch --force --no-tags origin \
             "refs/tags/${TAG}:refs/remotes/origin/tags/${TAG}" \
             "refs/heads/main:refs/remotes/origin/main"
           test "$(git rev-parse "refs/remotes/origin/tags/${TAG}^{}")" = "$CANDIDATE_SHA"
           git merge-base --is-ancestor "$CANDIDATE_SHA" refs/remotes/origin/main
-          docker push "$IMAGE"
-          expected=$(node -e "process.stdout.write(require(process.env.RUNNER_TEMP + '/image-metadata.json')['containerimage.digest'])")
-          pushed=$(docker buildx imagetools inspect "$IMAGE" --format '{{.Manifest.Digest}}')
-          test "$pushed" = "$expected"
+          expected_manifest=$(node -e "process.stdout.write(require(process.env.RUNNER_TEMP + '/image-metadata.json')['containerimage.digest'])")
+          expected_config=$(node -e "process.stdout.write(require(process.env.RUNNER_TEMP + '/image-metadata.json')['containerimage.config.digest'])")
+          skopeo copy --preserve-digests --dest-authfile /root/.docker/config.json oci-archive:/work/candidate.oci.tar docker://"$IMAGE"
+          skopeo inspect --authfile /root/.docker/config.json --raw docker://"$IMAGE" > "$RUNNER_TEMP/version-manifest.json"
+          IMAGE_MANIFEST_PATH="$RUNNER_TEMP/version-manifest.json" EXPECTED_MANIFEST_DIGEST="$expected_manifest" EXPECTED_CONFIG_DIGEST="$expected_config" node "$GITHUB_WORKSPACE/executor/scripts/verify-image-manifest.mjs"
+          skopeo copy --preserve-digests --dest-authfile /root/.docker/config.json oci-archive:/work/candidate.oci.tar docker://"$LATEST_IMAGE"
+          skopeo inspect --authfile /root/.docker/config.json --raw docker://"$LATEST_IMAGE" > "$RUNNER_TEMP/latest-manifest.json"
+          IMAGE_MANIFEST_PATH="$RUNNER_TEMP/latest-manifest.json" EXPECTED_MANIFEST_DIGEST="$expected_manifest" EXPECTED_CONFIG_DIGEST="$expected_config" node "$GITHUB_WORKSPACE/executor/scripts/verify-image-manifest.mjs"
+      - name: Verify immutable version and update latest
+        if: needs.validate.outputs.operation == 'update_latest'
+        working-directory: candidate
+        env:
+          GH_TOKEN: '${{ github.token }}'
+          TAG: ${{ needs.validate.outputs.tag }}
+          CONTAINER_SMOKE_PDF_URL: http://127.0.0.1:9000/note/toPdf?noteId=5483207cf4e87203a4000001&appKey=container-smoke-secret-012345678901234567890
+        run: |
+          set -eu
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          skopeo() { docker run --rm --network host --mount "type=bind,source=$RUNNER_TEMP,target=/work" --mount "type=bind,source=$HOME/.docker,target=/root/.docker,readonly" "$SKOPEO_IMAGE" "$@"; }
+          VERSION_SOURCE="${IMAGE_REPOSITORY}@${EXPECTED_REGISTRY_DIGEST}"
+          skopeo inspect --authfile /root/.docker/config.json --raw docker://"$IMAGE" > "$RUNNER_TEMP/version-tag-manifest.json"
+          version_config=$(IMAGE_MANIFEST_PATH="$RUNNER_TEMP/version-tag-manifest.json" EXPECTED_MANIFEST_DIGEST="$EXPECTED_REGISTRY_DIGEST" EXPECTED_CONFIG_DIGEST="$EXPECTED_CONFIG_DIGEST" node "$GITHUB_WORKSPACE/executor/scripts/verify-image-manifest.mjs")
+          docker pull "$VERSION_SOURCE"
+          test "$(docker image inspect "$VERSION_SOURCE" --format '{{.Id}}')" = "$version_config"
+          test "$(docker image inspect "$VERSION_SOURCE" --format '{{.Os}}/{{.Architecture}}')" = linux/amd64
+          test "$(docker image inspect "$VERSION_SOURCE" --format '{{index .Config.Labels "org.opencontainers.image.version"}}')" = "$RELEASE_TAG"
+          test "$(docker image inspect "$VERSION_SOURCE" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" = "$CANDIDATE_SHA"
+          test "$(docker image inspect "$VERSION_SOURCE" --format '{{index .Config.Labels "org.opencontainers.image.source"}}')" = https://github.com/yangphere/leanote
+          scripts/container-smoke.sh "$VERSION_SOURCE"
+          git fetch --force --no-tags origin \
+            "refs/tags/${TAG}:refs/remotes/origin/tags/${TAG}" \
+            "refs/heads/main:refs/remotes/origin/main"
+          test "$(git rev-parse "refs/remotes/origin/tags/${TAG}^{}")" = "$CANDIDATE_SHA"
+          git merge-base --is-ancestor "$CANDIDATE_SHA" refs/remotes/origin/main
+          skopeo copy --preserve-digests --src-authfile /root/.docker/config.json --dest-authfile /root/.docker/config.json docker://"$VERSION_SOURCE" docker://"$LATEST_IMAGE"
+          skopeo inspect --authfile /root/.docker/config.json --raw docker://"$LATEST_IMAGE" > "$RUNNER_TEMP/latest-manifest.json"
+          IMAGE_MANIFEST_PATH="$RUNNER_TEMP/latest-manifest.json" EXPECTED_MANIFEST_DIGEST="$EXPECTED_REGISTRY_DIGEST" EXPECTED_CONFIG_DIGEST="$EXPECTED_CONFIG_DIGEST" node "$GITHUB_WORKSPACE/executor/scripts/verify-image-manifest.mjs"
