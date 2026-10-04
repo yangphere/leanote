@@ -1,0 +1,6 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"CI quality gates, deterministic regressions and runtime evidence boundaries"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"Fail-closed publication checks and explicit shell errors"}
+{"file":".trellis/spec/backend/image-publishing.md","reason":"Executable contract for image-only publishing and confirmed GHCR absence"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Reuse existing release identity/version contracts without copying protected-release orchestration"}
+{"file":"docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md","reason":"Existing release policy to qualify with ADR-0005"}
+{"file":"docs/modernization/cicd-delivery.md","reason":"Protected release constraints, GHCR bootstrap and recovery documentation"}

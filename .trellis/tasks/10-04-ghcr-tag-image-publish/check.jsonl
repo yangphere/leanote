@@ -1,0 +1,5 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Required verification and honest runtime evidence"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"Authentication/transport failures must block publication"}
+{"file":".trellis/spec/backend/image-publishing.md","reason":"Check exact-candidate publishing, registry failure matrix and evidence limits"}
+{"file":"docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md","reason":"Policy exception remains explicit and bounded"}
+{"file":"docs/modernization/cicd-delivery.md","reason":"Operational instructions match implemented behavior"}

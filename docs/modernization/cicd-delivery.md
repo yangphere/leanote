@@ -1,10 +1,59 @@
 # CI/CD delivery
 
-Leanote publishes Linux/amd64 release tarballs and the matching GHCR image. The
-release tag is strict `vX.Y.Z` and maps to
-`ghcr.io/yangphere/leanote:vX.Y.Z`. There is no automatic production deployment.
-The release workflow only creates the GitHub Release and pushes the immutable
-image tag after the quality gate passes.
+Leanote has two tag-triggered delivery paths. The lightweight image workflow
+publishes only a Linux/amd64 GHCR image after the complete quality gate and an
+exact-candidate container smoke. The protected release workflow publishes the
+tarball and GitHub Release only after its additional browser, delivery and
+approval gates. A strict `vX.Y.Z` tag maps to
+`ghcr.io/yangphere/leanote:vX.Y.Z`; neither path deploys production.
+
+## Lightweight GHCR image delivery
+
+`.github/workflows/docker-image.yml` responds only to pushed `v*.*.*` tags. It
+rejects forced updates, requires the peeled tag commit to be an ancestor of
+`origin/master`, reuses `quality-gate.yml`, and builds one `linux/amd64`
+candidate with the same version, revision, epoch and OCI-created inputs as the
+protected release. It smokes that exact local image before the only registry
+push and compares the pushed manifest digest with Buildx's
+`containerimage.digest`. It publishes the exact version tag only; it does not
+publish `latest`, major or major/minor aliases.
+
+The workflow uses `GITHUB_TOKEN` with `packages: write` only in the publish job.
+GitHub's [Container registry documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
+states that a repository workflow can publish an associated package with
+`GITHUB_TOKEN`, and that the first publication creates a private package. The
+Dockerfile's `org.opencontainers.image.source` label identifies this repository.
+No empty package must be created in advance. Initial creation is nevertheless
+an explicit workflow policy: authenticated queries to the exact
+`yangphere/leanote` manifest and tag-list endpoints must both return structured
+`NAME_UNKNOWN` errors; a returned `detail.name` must also match that image.
+Existing packages require `MANIFEST_UNKNOWN` plus a successful, identity-bound
+tag listing. Authentication, authorization, transport, malformed JSON and all
+other registry states block the push.
+
+After the first successful run, an administrator must open the `leanote`
+package settings and change visibility to public. GitHub documents that new
+packages are private by default and that changing a package to public is not
+reversible. Public visibility must then be verified by an anonymous
+`docker pull ghcr.io/yangphere/leanote:v1.0.0`; workflow success alone is not
+anonymous-pull evidence.
+
+`docker-image.yml` and `release.yml` are independent and do not have a shared
+atomic publication lock. The same tag triggers both. Once the lightweight path
+publishes the image, the protected path's immutable-absence gate correctly
+prevents that tag from later creating a GitHub Release. Before enabling the
+complete protected release path, disable the lightweight workflow and choose a
+new tag whose image and Release do not exist. Do not attempt both publication
+paths for the same tag.
+
+First publication checklist:
+
+- [ ] Merge the reviewed `dev` commit into `master`.
+- [ ] Confirm `docker-image.yml` is the only intended publishing path for this tag.
+- [ ] Create and push `v1.0.0` on the selected `master` commit.
+- [ ] Confirm the workflow's registry digest read-back succeeds.
+- [ ] Change the new `leanote` package visibility to public in GitHub package settings.
+- [ ] From an unauthenticated client, pull `ghcr.io/yangphere/leanote:v1.0.0` and record the digest.
 
 ## Protected delivery gates and authorization
 
@@ -64,12 +113,13 @@ yangphere/leanote@vX.Y.Z:<full-candidate-commit>. Scripts never construct an
 approval from workflow inputs. Administrators must prevent unreviewed
 overrides. Changing code is not release authorization.
 
-Normal publication rejects any existing image or Release. A typed GHCR
+Protected publication rejects any existing image or Release. A typed GHCR
 MANIFEST_UNKNOWN is trusted only after a successful authenticated listing
 of that exact package. NAME_UNKNOWN, denied access, rate limits, transport
-and JSON errors block writes. Initial package provisioning is an explicit
-administrator operation: this workflow does not infer permission or silently
-create an unverified package. Check this constraint before the first release.
+and JSON errors block writes. This protected workflow therefore requires an
+existing readable package and does not use the lightweight workflow's explicit
+first-package exception. Check this constraint before the first protected
+release.
 
 ## Recovering an interrupted release
 
