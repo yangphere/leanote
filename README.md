@@ -10,6 +10,7 @@ Leanote 是一个开源的个人知识管理和笔记应用，支持富文本、
 - `app/views`、`public`、`messages`：模板、浏览器资源和语言包。
 - `docker-compose.yml`：使用已发布镜像的生产 Compose 基础文件。
 - `docker-compose.dev.yml`、`Dockerfile`：从当前源码构建本地开发镜像。
+- `build-local-image.ps1`：PowerShell 本地镜像构建入口。
 - `docs/`：CI/CD、生产配置和交付约定。
 
 生产镜像使用 Go 1.26 和 Node.js 24 构建，当前 Compose 部署目标为 `linux/amd64`。MongoDB 使用 Compose 中固定版本的 MongoDB 8.0 镜像。
@@ -59,29 +60,73 @@ Invoke-WebRequest http://127.0.0.1:9000/healthz
 
 ### 从当前源码运行 dev Compose
 
-dev 使用显式 override 构建 `leanote:local`。Compose 会先分别插值两个文件再合并，因此 `.env` 仍须包含 `LEANOTE_IMAGE_TAG`；合并后的 `leanote` 服务不会拉取该生产镜像。首次启动执行：
+dev 使用 `docker-compose.yml` 和 `docker-compose.dev.yml` 构建、运行当前源码的 `leanote:local` 镜像。
+
+#### 使用 PowerShell 脚本构建本地镜像
+
+运行前准备：
+
+- 使用 Windows PowerShell 5.1 或 PowerShell 7。
+- 启动 Docker Desktop，切换到 Linux 容器模式，并确保 `docker compose version` 能正常执行。
+- 按上方步骤准备仓库根目录的 `.env`，保留模板中的必填配置。以下两个版本配置用途不同：
+
+  ```dotenv
+  LEANOTE_IMAGE_TAG=2.0.1
+  LEANOTE_VERSION=0.0.0
+  ```
+
+`LEANOTE_VERSION` 是构建时嵌入应用的版本，支持不带 `v` 的三段版本号，`0.0.0` 用于本地开发。`LEANOTE_IMAGE_TAG` 是生产镜像标签；Compose 在合并两个文件之前会分别插值，因此本地构建也必须提供这个值。dev 合并后使用的是 `leanote:local`。
+
+在仓库根目录打开 PowerShell，执行：
 
 ```powershell
-docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build --force-recreate
+.\build-local-image.ps1
+```
+
+脚本自动加载两份 Compose 配置和根目录的 `.env`，按 `linux/amd64` 构建 `leanote:local`，默认复用构建缓存。Go 和前端资源都在 Docker 内构建，宿主机无需安装 Go、Node.js 或 npm。
+
+| 参数 | 用途 |
+| --- | --- |
+| `-Pull` | 构建前拉取 Dockerfile 中固定版本和摘要的基础镜像。 |
+| `-NoCache` | 禁用构建缓存，重新执行各构建步骤。 |
+| `-EnvFile <路径>` | 指定 Compose 环境文件，默认 `.env`；相对路径以仓库根目录为基准，也支持绝对路径。 |
+
+例如：
+
+```powershell
+# 拉取基础镜像，并禁用构建缓存
+.\build-local-image.ps1 -Pull -NoCache
+
+# 仅构建时可使用模板配置，应用版本为 0.0.0
+.\build-local-image.ps1 -EnvFile .env.example
+```
+
+`.env.example` 可用于单独构建镜像；启动容器时应使用已替换密钥和管理员凭据的 `.env`。脚本只构建镜像，成功时输出 `Local image ready: leanote:local`；构建失败会保留 Docker 错误并终止。构建成功后，继续执行下方启动或更新命令，容器才会使用新镜像。
+
+#### 首次启动本地镜像
+
+在仓库根目录执行，首次启动需要同时启动 MongoDB、初始化服务和 Gotenberg：
+
+```powershell
+.\build-local-image.ps1
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --no-build --force-recreate
 docker compose -f docker-compose.yml -f docker-compose.dev.yml ps
 Invoke-WebRequest http://127.0.0.1:9000/healthz
 ```
 
-修改 Go、模板或前端代码后执行：
+#### 修改源码后更新已有容器
+
+MongoDB、Gotenberg 等依赖服务已经运行时，修改 Go、模板或前端代码后执行：
 
 ```powershell
-git pull
-
-docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
-docker compose -f docker-compose.yml -f docker-compose.dev.yml build leanote
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --no-deps --force-recreate leanote
+.\build-local-image.ps1
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --no-build --no-deps --force-recreate leanote
 
 docker compose -f docker-compose.yml -f docker-compose.dev.yml ps
 Invoke-WebRequest http://127.0.0.1:9000/healthz
 ```
 
-需要更新构建所用基础镜像时，将构建命令改为 `docker compose -f docker-compose.yml -f docker-compose.dev.yml build --pull leanote`。
+重建容器时也必须带上两份 Compose 文件；只运行默认的 `docker compose up` 会选择生产 GHCR 镜像。`--no-build` 使用脚本刚构建的镜像，`--no-deps` 只重建已运行堆栈中的应用服务。
 
 启动后默认通过 <http://127.0.0.1:9000> 访问。`/healthz` 在 HTTP 服务和 MongoDB 都就绪时返回 HTTP 200 及 `{"status":"ready"}`；初始化或 MongoDB 暂不可用时会返回 HTTP 503 及 `{"status":"not_ready"}`。
 
