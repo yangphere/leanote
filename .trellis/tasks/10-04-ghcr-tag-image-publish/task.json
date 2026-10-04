@@ -15,7 +15,7 @@
   "branch": "dev",
   "base_branch": "main",
   "worktree_path": null,
-  "commit": null,
+  "commit": "bcc3581259dc39c6e99799530bec2ecba8038d88",
   "pr_url": null,
   "subtasks": [],
   "children": [],
@@ -44,7 +44,7 @@
     "scripts/build/manifest.mjs",
     "tests/js/build-pipeline.test.js"
   ],
-  "notes": "Implementation and real publication complete: main/default confirmed, immutable Git tag 2.0.1 remains at dea2306c. Version was actually pushed by historical failed recovery 37175408129; its failure is preserved. Reviewed latest work a4e402d3 merged as 5e4452a8, main CI 37177660541 and latest promotion 37177847779 both succeeded. Independent anonymous raw manifest/header/config and actual pulls prove 2.0.1/latest share manifest 0b67446e and config 99b11b45. No version overwrite, visibility change, production deployment or archive. Future fresh-version OCI transport has real local registry evidence, GHCR branch unrun. See publication.md, digest-diagnosis.md and validation.md.",
+  "notes": "Implementation and real publication complete: main/default confirmed, immutable Git tag 2.0.1 remains at dea2306c. Version was actually pushed by historical failed recovery 37175408129; its failure is preserved. Reviewed latest work a4e402d3 merged as 5e4452a8, main CI 37177660541 and latest promotion 37177847779 both succeeded. Independent anonymous raw manifest/header/config and actual pulls prove 2.0.1/latest share manifest 0b67446e and config 99b11b45. No version overwrite, visibility change or production deployment. Future fresh-version OCI transport has real local registry evidence, GHCR branch unrun. Publication worktree archived at user request; main retained. On 2026-10-04 user authorized local task commit/archive/journal without further push, excluding CONTEXT.md and the Compose planning task. See publication.md, digest-diagnosis.md and validation.md.",
   "meta": {
     "depends_on": []
   }
