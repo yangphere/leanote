@@ -8,7 +8,8 @@ APP=leanote-container-smoke-app
 GOTENBERG=leanote-container-smoke-gotenberg
 NETWORK=leanote-container-smoke
 PDF_NETWORK=leanote-container-smoke-pdf
-# Same pinned image and hardening flags as docker-compose.yml.
+# Same pinned image and hardening flags as the production docker-compose.yml;
+# docker-compose.dev.yml inherits this shared service unchanged.
 GOTENBERG_IMAGE=docker.io/gotenberg/gotenberg:8.37.0@sha256:f29984bd1e226bf1b93ba90af06000afa8b315853e99d27b9aaa41b93f15c769
 TMP_HEALTH=$(mktemp)
 TMP_CONFIG=$(mktemp)

@@ -34,6 +34,18 @@ export function assertImageTag(tag, version) {
   if (tag !== version) throw new Error('image tag does not match package version');
 }
 
+export function compareImageVersions(left, right) {
+  assertImageTagFormat(left);
+  assertImageTagFormat(right);
+  const leftParts = left.split('.').map((part) => BigInt(part));
+  const rightParts = right.split('.').map((part) => BigInt(part));
+  for (let index = 0; index < leftParts.length; index += 1) {
+    if (leftParts[index] > rightParts[index]) return 1;
+    if (leftParts[index] < rightParts[index]) return -1;
+  }
+  return 0;
+}
+
 export function assertPackageTag(tag, version) {
   if (typeof tag === 'string' && tag.startsWith('v')) {
     assertReleaseTag(tag, version);

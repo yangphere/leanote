@@ -5,7 +5,8 @@ publishes only a Linux/amd64 GHCR image after the complete quality gate and an
 exact-candidate container smoke. The protected release workflow publishes the
 tarball and GitHub Release only after its additional browser, delivery and
 approval gates. In the lightweight path, a strict Git tag `X.Y.Z` maps to
-`ghcr.io/yangphere/leanote:X.Y.Z` and its `latest` alias; neither path deploys production.
+`ghcr.io/yangphere/leanote:X.Y.Z`; the highest successfully promoted numeric
+version owns its `latest` alias. Neither path deploys production.
 
 ## Lightweight GHCR image delivery
 
@@ -18,8 +19,9 @@ protected release. One Buildx invocation exports both the loaded smoke image
 and an OCI archive. Before smoke, the archive's exact manifest hash/config
 must match Buildx metadata, and config must match loaded image Id. Skopeo
 copies the same archive with `--preserve-digests` to the immutable version;
-raw registry manifest/config read-back must match. It then updates `latest`
-from that archive and verifies the same identities. There are no other
+raw registry manifest/config read-back must match. It updates `latest` from
+that archive only when the candidate is numerically newer than the current
+latest version, then verifies the same identities. There are no other
 short-version aliases. Docker Engine load/push can reserialize manifests;
 its push digest cannot be compared directly to the Buildx export digest.
 
@@ -28,14 +30,13 @@ GitHub's [Container registry documentation](https://docs.github.com/en/packages/
 states that a repository workflow can publish an associated package with
 `GITHUB_TOKEN`, and that the first publication creates a private package. The
 Dockerfile's `org.opencontainers.image.source` label identifies this repository.
-No empty package must be created in advance. Initial creation is nevertheless
-an explicit workflow policy: authenticated queries to the exact
-`yangphere/leanote` tag-list endpoint must return structured 404 `NAME_UNKNOWN`,
-and the manifest endpoint structured 404 `NAME_UNKNOWN` or `MANIFEST_UNKNOWN`;
-a returned `detail.name` must also match that image.
-Existing packages require `MANIFEST_UNKNOWN` plus a successful, identity-bound
-tag listing. Authentication, authorization, transport, malformed JSON and all
-other registry states block the push.
+The initial `2.0.1` package bootstrap is complete, so the workflow no longer
+sets `ALLOW_INITIAL_PACKAGE_CREATE`. A missing package now fails closed through
+the registry helper's default policy. Its explicit bootstrap capability remains
+covered for a separately reviewed first publication, but this workflow does not
+enable it. Existing packages require `MANIFEST_UNKNOWN` plus a successful,
+identity-bound tag listing. Authentication, authorization, transport, malformed
+JSON and all other registry states block the push.
 
 Recovery preserves the original tag. Dispatch supplies `tag`, `expected_commit`,
 `source_run_id`, and `source_run_attempt`. The main executor verifies the
@@ -46,17 +47,43 @@ The original run may have an overall failure from the publish step; executor
 quality success is not a substitute for candidate evidence. Executor quality
 still runs in full. Build, revision, epoch and smoke use the original candidate;
 registry preflight uses the repaired executor helper. Push and recovery share
-the shared `docker-image-latest` lock across all versions. Version tags are
-never overwritten; latest is a mutable alias for the successful version.
+the `docker-image-latest` lock across all versions, with running jobs preserved
+and `queue: max` retaining up to 100 pending runs. GitHub does not guarantee
+version order in that queue; the registry version guard prevents rollback.
+Runs submitted after the queue is full are canceled and must be manually rerun
+after capacity is available. Version tags are never overwritten; latest is a
+mutable alias for the highest successfully promoted numeric version.
+
+Before either latest copy, pinned Skopeo must successfully list tags and bind
+`Repository` to `ghcr.io/yangphere/leanote`. If `latest` exists, Skopeo reads
+its config and the guard requires a strict
+`org.opencontainers.image.version=X.Y.Z` label. Version components are compared
+numerically without fixed integer limits. A same or older candidate logs an
+explicit skip and leaves latest unchanged; its missing immutable version may
+still be published and verified. A confirmed identity-bound listing without
+latest permits alias initialization. Listing, config, JSON, identity, label or
+version errors fail before any latest write.
+
+GitHub [selects the workflow from the event's commit SHA or Git ref](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflows).
+A tag push therefore uses the workflow in the tagged commit. Updating main
+does not retrofit historical workflow files: the version guard, pending queue
+and package-creation policy apply only to workflows containing this hardening.
+Do not backfill version tags on older commits without these changes. Merge the
+fixes into main before creating new release tags or running recovery dispatches
+from main. Enforcing this against historical workflows would require separately
+reviewed remote tag rules or a trusted fixed publishing entry point; this change
+does not alter remote rules or existing tags.
 
 Dispatch `operation=recover_version` handles an absent version.
 `operation=update_latest` handles an already published version without
 rebuilding or repushing it. It requires `expected_registry_digest` and
 `expected_config_digest`, verifies the version's raw manifest, pulls the exact
 digest, checks config Id/platform/version/revision/source and runs candidate
-smoke. Only then does it copy that registry digest to latest and verify exact
-raw manifest/config equality. If latest fails after version success, recover
-only the alias; multi-tag publication is not atomic.
+smoke. Only then does it run the same highest-version guard. A newer candidate
+is copied to latest and verified for exact raw manifest/config equality; a same
+or older candidate exits successfully without writing the alias. If latest
+fails after version success, recover only the alias; multi-tag publication is
+not atomic.
 
 After the first successful run, an administrator must open the `leanote`
 package settings and change visibility to public. GitHub documents that new
@@ -66,7 +93,7 @@ reversible. Public visibility must then be verified by an anonymous
 anonymous-pull evidence.
 
 Also pull `ghcr.io/yangphere/leanote:latest` anonymously and confirm its
-RepoDigest equals the version tag's digest.
+RepoDigest equals the highest promoted version tag's digest.
 
 `docker-image.yml` uses unprefixed version tags; `release.yml` retains its
 `v*.*.*` trigger and `vX.Y.Z` image tags. Pushing `2.0.1` therefore triggers only
@@ -75,7 +102,8 @@ and summary; its protected `release-inputs` handoff remains limited to `v` tags.
 Image-only delivery does not authorize a protected GitHub Release, which still
 requires every additional protected gate.
 
-First publication checklist:
+The one-time `2.0.1` bootstrap used this checklist before initial-package
+permission was removed from the workflow:
 
 - [ ] Merge the reviewed `dev` commit into `main`.
 - [ ] Confirm `docker-image.yml` is the only intended publishing path for this tag.
@@ -83,6 +111,43 @@ First publication checklist:
 - [ ] Confirm the workflow's registry digest read-back succeeds.
 - [ ] Change the new `leanote` package visibility to public in GitHub package settings.
 - [ ] From an unauthenticated client, pull `ghcr.io/yangphere/leanote:2.0.1` and record the digest.
+
+## Production Compose consumption
+
+The base `docker-compose.yml` is the production definition. It requires an
+unprefixed, immutable `LEANOTE_IMAGE_TAG` and resolves Leanote to
+`ghcr.io/yangphere/leanote:${LEANOTE_IMAGE_TAG}` without a local build. The
+published `2.0.1` tag is the initial example in `.env.example`; production
+operators must select an exact published version and must not use `latest`.
+The repository's `mongodb_backup/leanote_install_data` directory must remain
+beside the Compose file because `mongo-seed` mounts it when initializing an
+empty database.
+
+Validate and start production with:
+
+```sh
+docker compose config --quiet
+docker compose pull
+docker compose up -d --force-recreate
+```
+
+To upgrade, change `LEANOTE_IMAGE_TAG` in `.env`, then run
+`docker compose pull leanote` followed by
+`docker compose up -d --no-deps --force-recreate leanote`. Do not remove the
+named volumes during routine updates.
+
+Local source builds use the explicit `docker-compose.dev.yml` override:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build --force-recreate
+```
+
+Compose interpolates each file before merging, so dev environments also need
+`LEANOTE_IMAGE_TAG`; the merged service still uses `leanote:local` and the
+override's required `LEANOTE_VERSION` build argument. MongoDB, seed,
+Gotenberg, networks and named volumes remain defined only in the production
+base file.
 
 ## Protected delivery gates and authorization
 
@@ -146,9 +211,9 @@ Protected publication rejects any existing image or Release. A typed GHCR
 MANIFEST_UNKNOWN is trusted only after a successful authenticated listing
 of that exact package. NAME_UNKNOWN, denied access, rate limits, transport
 and JSON errors block writes. This protected workflow therefore requires an
-existing readable package and does not use the lightweight workflow's explicit
-first-package exception. Check this constraint before the first protected
-release.
+existing readable package. Neither current workflow enables the helper's
+explicit first-package exception. Check this constraint before the first
+protected release.
 
 ## Recovering an interrupted release
 

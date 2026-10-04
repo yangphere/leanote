@@ -8,14 +8,17 @@ Leanote 是一个开源的个人知识管理和笔记应用，支持富文本、
 - `app/httpserver`：HTTP 服务、路由、会话和 `/healthz`。
 - `app/controllers`、`app/service`、`app/application`：请求适配器和业务服务。
 - `app/views`、`public`、`messages`：模板、浏览器资源和语言包。
-- `docker-compose.yml`、`Dockerfile`：本地 Docker Compose 部署。
+- `docker-compose.yml`：使用已发布镜像的生产 Compose 基础文件。
+- `docker-compose.dev.yml`、`Dockerfile`：从当前源码构建本地开发镜像。
 - `docs/`：CI/CD、生产配置和交付约定。
 
 生产镜像使用 Go 1.26 和 Node.js 24 构建，当前 Compose 部署目标为 `linux/amd64`。MongoDB 使用 Compose 中固定版本的 MongoDB 8.0 镜像。
 
 ## 使用 Docker Compose 部署
 
-### 首次部署
+### 生产首次部署
+
+生产 Compose 会拉取 `ghcr.io/yangphere/leanote:<精确版本>`，不会从当前源码构建应用镜像。部署目录必须保留本仓库的 `mongodb_backup/leanote_install_data`，供首次启动的 `mongo-seed` 初始化空数据库。
 
 在仓库根目录执行：
 
@@ -25,6 +28,7 @@ Copy-Item .env.example .env
 
 编辑 `.env`，至少替换以下值：
 
+- `LEANOTE_IMAGE_TAG`：不带 `v` 的已发布三段版本号，例如 `2.0.1`；不要使用 `latest`。
 - `LEANOTE_APP_SECRET`：至少 32 字节的 ASCII 密钥，例如 `openssl rand -base64 48` 的输出。
 - `LEANOTE_ADMIN_EMAIL`：首次初始化管理员邮箱。
 - `LEANOTE_ADMIN_INITIAL_PASSWORD`：管理员初始密码。
@@ -35,36 +39,49 @@ Copy-Item .env.example .env
 
 ```powershell
 docker compose config --quiet
-docker compose up -d --build --force-recreate
+docker compose pull
+docker compose up -d --force-recreate
 docker compose ps
 Invoke-WebRequest http://127.0.0.1:9000/healthz
 ```
 
-这个项目是从当前源码重新构建本地镜像，镜像名固定为 `leanote:local`。修改程序后，在仓库根目录执行：
+升级时，先把 `.env` 中的 `LEANOTE_IMAGE_TAG` 改为另一个已发布的精确版本，再只拉取和重建应用服务：
+
+```powershell
+docker compose config --quiet
+docker compose pull leanote
+docker compose up -d --no-deps --force-recreate leanote
+docker compose ps
+Invoke-WebRequest http://127.0.0.1:9000/healthz
+```
+
+不要仅修改 `LEANOTE_IMAGE_TAG` 后执行 `restart`；Compose 必须重新创建容器才能应用新镜像。
+
+### 从当前源码运行 dev Compose
+
+dev 使用显式 override 构建 `leanote:local`。Compose 会先分别插值两个文件再合并，因此 `.env` 仍须包含 `LEANOTE_IMAGE_TAG`；合并后的 `leanote` 服务不会拉取该生产镜像。首次启动执行：
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build --force-recreate
+docker compose -f docker-compose.yml -f docker-compose.dev.yml ps
+Invoke-WebRequest http://127.0.0.1:9000/healthz
+```
+
+修改 Go、模板或前端代码后执行：
 
 ```powershell
 git pull
 
-docker compose config --quiet
-docker compose build leanote
-docker compose up -d --no-deps --force-recreate leanote
+docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
+docker compose -f docker-compose.yml -f docker-compose.dev.yml build leanote
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --no-deps --force-recreate leanote
 
-docker compose ps
+docker compose -f docker-compose.yml -f docker-compose.dev.yml ps
 Invoke-WebRequest http://127.0.0.1:9000/healthz
 ```
 
-也可以合并为：
-
-```powershell
-docker compose up -d --build --force-recreate leanote
-```
-
-如果基础镜像也需要更新：
-
-```powershell
-docker compose build --pull leanote
-docker compose up -d --no-deps --force-recreate leanote
-```
+需要更新构建所用基础镜像时，将构建命令改为 `docker compose -f docker-compose.yml -f docker-compose.dev.yml build --pull leanote`。
 
 启动后默认通过 <http://127.0.0.1:9000> 访问。`/healthz` 在 HTTP 服务和 MongoDB 都就绪时返回 HTTP 200 及 `{"status":"ready"}`；初始化或 MongoDB 暂不可用时会返回 HTTP 503 及 `{"status":"not_ready"}`。
 
@@ -75,20 +92,29 @@ docker compose up -d --no-deps --force-recreate leanote
 - `mongo-data`：MongoDB 数据库、用户和笔记数据。
 - `leanote-data`：Leanote 的私有文件、公开上传、备份和临时目录。
 
-重新构建和重建 `leanote` 容器不会删除已有用户和笔记数据。`mongo-seed` 只在内置 MongoDB 还没有集合时恢复 `mongodb_backup/leanote_install_data`，不会在每次启动时覆盖已有数据。
+拉取或重新构建并重建 `leanote` 容器不会删除已有用户和笔记数据。`mongo-seed` 只在内置 MongoDB 还没有集合时恢复 `mongodb_backup/leanote_install_data`，不会在每次启动时覆盖已有数据；生产部署也必须保留这个仓库目录。
 
 注意：
 
 - 不要执行 `docker compose down -v`，否则会删除 MongoDB 和 Leanote 数据卷。
 - 修改 `.env` 后必须重新创建容器，单纯 `restart` 不会更新环境变量。
-- 修改 Go、模板或前端代码后必须重新 `build`，旧容器不会自动使用新代码。
-- 查看启动日志：
+- dev 修改 Go、模板或前端代码后必须重新 `build`，旧容器不会自动使用新代码。
+- 生产 Compose 查看启动日志：
 
   ```powershell
   docker compose logs -f leanote
   ```
 
-如需停止服务，可以使用 `docker compose stop`；再次执行 `docker compose up -d` 即可启动已有容器和数据卷。
+  dev Compose 使用 `docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f leanote`。
+
+生产 Compose 可以使用 `docker compose stop` 停止，并用 `docker compose up -d` 再次启动。dev 必须始终显式带上两个文件：
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.dev.yml stop
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
+
+这些命令都会复用已有 named volumes。
 
 ### Compose 服务
 
@@ -96,7 +122,8 @@ docker compose up -d --no-deps --force-recreate leanote
 | --- | --- |
 | `mongo` | MongoDB 8.0，数据写入 `mongo-data`，不向宿主机发布端口。 |
 | `mongo-seed` | 等待 MongoDB 健康后执行一次性安装数据恢复。 |
-| `leanote` | 从当前 `Dockerfile` 构建 `leanote:local`，容器内监听 9000。 |
+| `leanote` | 生产基础文件拉取 `ghcr.io/yangphere/leanote:${LEANOTE_IMAGE_TAG}`；dev override 从当前 `Dockerfile` 构建 `leanote:local`。容器内监听 9000。 |
+| `gotenberg` | 在内部 `pdf` 网络提供 PDF 渲染，不向宿主机发布端口。 |
 
 宿主机端口由 `LEANOTE_HTTP_PORT` 控制，默认是 `9000`；容器内部端口始终为 `9000`。如果修改了宿主机端口，访问健康端点时也要同步修改 URL。
 

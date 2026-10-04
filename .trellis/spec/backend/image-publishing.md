@@ -16,6 +16,8 @@ main workflow_dispatch(operation, tag, expected_commit,
 RELEASE_TAG=2.0.1 node scripts/check-version.mjs --image-tag
 node scripts/version.mjs --package-tag <X.Y.Z-or-vX.Y.Z>
 node scripts/check-ghcr-tag-absent.mjs
+node scripts/check-latest-promotion.mjs --has-latest <tags.json> <repository>
+node scripts/check-latest-promotion.mjs --should-promote <tags.json> <config.json> <repository> <candidate-version>
 scripts/container-smoke.sh <candidate-image>
 skopeo copy --preserve-digests oci-archive:<one-build-archive> docker://<version-or-latest>
 IMAGE_MANIFEST_PATH=<raw-json-file> EXPECTED_MANIFEST_DIGEST=sha256:<hex>
@@ -33,15 +35,32 @@ exact-byte SHA256, supported single-platform schema-2 image media type and
 matching config identity. `verifyImageManifestFile` adds a nonempty 1 MiB file
 limit. Its CLI prints the config digest and exits nonzero on any mismatch.
 
+`compareImageVersions(left, right)` validates both through `assertImageTagFormat`
+and compares numeric components with BigInt, returning -1/0/1.
+`shouldPromoteLatest({ candidateVersion, listing, expectedRepository, latestConfig })`
+returns a boolean using the validated Skopeo listing and OCI version label.
+The file CLI requires nonempty regular JSON files at most 1 MiB, prints
+true/false for normal decisions and exits nonzero on errors. A missing latest
+tag confirmed by a valid listing requires no config file; an existing latest
+tag requires readable config and a valid version label.
+
 ## 3. Contracts
 
-- Git tag `X.Y.Z` publishes `ghcr.io/yangphere/leanote:X.Y.Z` and updates
-  `ghcr.io/yangphere/leanote:latest` to the same manifest digest, on
+- Git tag `X.Y.Z` publishes `ghcr.io/yangphere/leanote:X.Y.Z` and, when it
+  advances the current version, updates `ghcr.io/yangphere/leanote:latest` to the same manifest digest, on
   `linux/amd64`. First publication uses Git tag and image tag `2.0.1`.
   Use `scripts/version.mjs` as the sole version/tag rule; registry absence
   checks and push must use the same unprefixed image tag.
-  Version tags are immutable. Latest is a mutable alias updated only after
-  version read-back succeeds; do not generate other short-version aliases.
+  Version tags are immutable. Latest identifies the highest successfully
+  promoted strict `X.Y.Z`, updated only after version read-back succeeds.
+  Skip latest writes for older/equal versions; do not generate other short-version aliases.
+- GitHub selects the workflow from the event's commit SHA/ref; tag push uses
+  the tagged commit's workflow. These guard/queue/package policies do not
+  retrofit old workflow files. Do not backfill version tags on commits lacking
+  this hardening. New release tags must include the fixes, and recovery must
+  run from a main executor containing them. Enforcing historical workflows
+  needs separately reviewed remote tag rules or a trusted fixed entry point;
+  do not claim this local change provides that enforcement.
 - `assertImageTag(tag, version)` accepts only strict unprefixed `X.Y.Z` equal
   to the package version. `check-version.mjs --image-tag` selects that rule;
   its default and `assertReleaseTag` retain the protected `vX.Y.Z` contract.
@@ -70,11 +89,17 @@ limit. Its CLI prints the config digest and exits nonzero on any mismatch.
   `update_latest` instead requires explicit expected registry/config digests,
   validates the existing version manifest, pulls its exact digest, verifies
   config Id, Linux/amd64, version, revision and source labels, and smokes it.
-  Copy that exact registry digest only to latest, preserving bytes; do not
+  Apply the same latest version guard as fresh publication, then copy that
+  exact registry digest only to latest when it advances the alias, preserving bytes; do not
   rebuild or repush the immutable version. Reject unknown operations or
   irrelevant digest inputs. Both paths retain candidate/source evidence gates.
-- The workflow lock is `docker-image-latest` for all versions/entries, with cancellation
-  disabled. Sharing the protected Release workflow's whole-run lock would
+- The workflow lock is `docker-image-latest` for all versions/entries, with
+  `cancel-in-progress: false` and `queue: max`. Up to 100 runs can wait; default
+  single-pending replacement cancellation is disabled, but queue overflow can
+  still cancel new runs. Waiting order is not semantic version order. Re-run
+  canceled work only after checking immutable-version presence; published
+  versions require guarded latest recovery, never a duplicate version push.
+  Sharing the protected Release workflow's whole-run lock would
   block this path while its unprovisioned delivery runner waits.
 - Default permissions are `contents: read`; source verification adds
   `actions: read` only in validate; only publish adds
@@ -86,8 +111,19 @@ limit. Its CLI prints the config digest and exits nonzero on any mismatch.
   `--preserve-digests`; do not install that incompatible package or drop the
   preservation requirement to make it pass.
 - The CLI uses `GHCR_IMAGE`, `RELEASE_TAG`, `GITHUB_ACTOR`, `GH_TOKEN`, and the
-  explicit policy `ALLOW_INITIAL_PACKAGE_CREATE=true`. The function defaults
-  to disallowing first-package creation.
+  optional explicit policy `ALLOW_INITIAL_PACKAGE_CREATE=true`. The function
+  defaults to disallowing first-package creation. First publication is already
+  complete: the ordinary workflow must not enable that option. Package absence
+  is an error requiring separate authorization, never an automatic re-create.
+- Before either latest copy, use the pinned Skopeo tool to read a successful
+  package `list-tags` result and bind `Repository` to `IMAGE_REPOSITORY`.
+  If `Tags` contains latest, read its raw OCI config and require
+  `config.Labels["org.opencontainers.image.version"]` to be strict `X.Y.Z`.
+  Share the version-format rule and compare each numeric component without
+  floating-point precision loss. Only greater candidates promote; older/equal
+  candidates skip with a clear message. A valid listing without latest permits
+  initialization. Failed requests, bad listing/config, missing labels or
+  malformed versions are errors, never evidence that latest is absent.
 - Registry queries use authenticated GHCR token scope for the exact image,
   reject redirects, bound JSON responses to 64 KiB, and time out requests.
   For an existing package, require `MANIFEST_UNKNOWN` and a successful
@@ -102,7 +138,8 @@ limit. Its CLI prints the config digest and exits nonzero on any mismatch.
   bind its config descriptor to Buildx `containerimage.config.digest` and the
   loaded image Id. Smoke that exact loaded candidate. Publish the same archive
   with `skopeo copy --preserve-digests` to the version, verify exact raw registry
-  manifest/config, then copy the archive to latest and verify the same identities.
+  manifest/config, then apply the latest guard and, if permitted, copy the
+  archive to latest and verify the same identities.
   A Docker image/config Id is not a manifest digest. Do not use Docker Engine
   push for this artifact: load/push reserializes the manifest and changes its
   digest, even when `oci-mediatypes=false`; config stays stable. This boundary
@@ -134,13 +171,20 @@ limit. Its CLI prints the config digest and exits nonzero on any mismatch.
 | Registry exact-byte digest/config differs from OCI artifact | Fail; do not update latest or retry immutable version writes |
 | Latest copy/read-back failure after version success | Version remains published; retry only explicit latest promotion after verification |
 | Promotion expected digest/config/platform/version/revision/source mismatch | Stop before latest write |
+| Candidate version older than/equal to latest | Skip latest copy/read-back, retain current alias |
+| Valid bound package listing confirms no latest | Permit alias initialization after candidate validation |
+| Latest listing/config/label unreadable or malformed | Fail; no latest copy and no absence fallback |
+| Ordinary workflow sees confirmed absent package | Reject initial package creation |
+| Multiple pending runs, queue below 100 | Retain waiting runs with queue:max |
+| Queue has 100 pending runs | New run can be canceled; check publication state before recovery |
 
 ## 5. Good / Base / Bad Cases
 
 - Good: a fresh main tag passes all gates, the exact candidate passes smoke,
   absence is confirmed, and version/latest raw manifest read-back matches the
-  one-build OCI artifact. Existing version promotion verifies/pulls/smokes
-  the expected digest and writes only latest.
+  one-build OCI artifact when the version advances latest. Existing version
+  promotion verifies/pulls/smokes the expected digest and applies the same
+  version guard before writing only latest. Older publications preserve latest.
 - Base: injected `fetchImpl` proves all preflight branches without credentials
   or remote writes. Static checks verify job ordering and action pins.
 - Bad: infer absence from any failed `imagetools inspect`, compare an image ID
@@ -154,7 +198,10 @@ limit. Its CLI prints the config digest and exits nonzero on any mismatch.
   and recovery source execution/summary provenance and candidate separation.
   Cover raw-byte/config mismatch, one build/two exports, byte-preserving copy,
   latest ordering/shared lock, no version write during promotion, and required
-  PDF smoke environment for both operation paths.
+  PDF smoke environment for both operation paths. Cover numeric comparison,
+  equal/older skips, multi-digit/large components, missing latest initialization,
+  invalid listing/config/version rejection, both guards before latest copy,
+  queue:max with cancellation disabled and ordinary first-package rejection.
 - `tests/js/release-contract.test.js`: packaging under numeric/v tag contexts
   succeeds; malformed or mismatched tags fail, while branch names never enter
   tag validation. The protected release version contract remains prefixed.
@@ -175,8 +222,102 @@ Correct: preserve the one-build OCI archive manifest through registry copy;
          compare its exact raw digest, and bind loaded image Id to config digest.
 
 Wrong: overwrite existing 2.0.1 just to add latest, or rebuild latest separately.
-Correct: validate and smoke immutable 2.0.1@digest, then copy that digest to latest.
+Correct: validate and smoke immutable 2.0.1@digest, then apply the version guard;
+         copy that digest only when it advances or initializes latest.
 
 Wrong: check registry v2.0.1, then push registry 2.0.1.
 Correct: accept canonical Git tag 2.0.1 and check/push registry 2.0.1.
+
+Wrong: backfill 1.9.9 and unconditionally overwrite latest 2.0.1.
+Correct: publish missing 1.9.9, but skip latest because its numeric version is newer.
+
+Wrong: cancel-in-progress:false means every pending run is kept.
+Correct: set queue:max; document its 100-pending limit and state-aware recovery.
+
+Wrong: leave first-package creation enabled after successful initial publication.
+Correct: keep the normal workflow on the helper's default false policy.
+
+Wrong: merge the guard into main, then tag an old unpatched commit and expect protection.
+Correct: tag only commits containing the hardening; recovery uses repaired main.
+```
+
+## Scenario: Production and dev Compose consumers
+
+### 1. Scope / Trigger
+
+Use this contract when changing `docker-compose.yml`, its explicit dev
+override, environment examples or deployment instructions.
+
+### 2. Signatures
+
+```text
+docker compose config --quiet
+docker compose pull
+docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
+docker compose -f docker-compose.yml -f docker-compose.dev.yml build leanote
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
+
+### 3. Contracts
+
+- Base Compose uses `ghcr.io/yangphere/leanote:${LEANOTE_IMAGE_TAG:?LEANOTE_IMAGE_TAG must be set}`
+  without build. Select a published strict unprefixed `X.Y.Z`; no implicit
+  version, `v` prefix, latest fallback or repository override.
+- Dev override contains only `services.leanote.image=leanote:local` and build
+  context/Dockerfile/`VERSION=${LEANOTE_VERSION:?LEANOTE_VERSION must be set}`.
+  `LEANOTE_VERSION=0.0.0` denotes a local build; production does not consume it.
+- Compose interpolates each file before merging. Both combinations require
+  `LEANOTE_IMAGE_TAG`, even though dev ultimately uses the local image.
+  Compose's required-value expression rejects missing/empty values; it does
+  not validate semantic version syntax. Publication owns strict version rules.
+- Shared services, networks, named volumes, Linux/amd64 and required runtime
+  environment fields exist only in the base file. Gotenberg retains its pinned
+  digest, hardening arguments and internal-only PDF network.
+- Production still requires the repository's
+  `mongodb_backup/leanote_install_data` seed directory. Do not describe this
+  layout as a standalone single-file deployment.
+- Production upgrades pull the selected version then recreate leanote; dev
+  source updates build then recreate with both explicit `-f` arguments.
+  Preserve data volumes and do not edit an operator's credentials for tests.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|---|---|
+| Published image tag, runtime env, no dev version | Base renders a GHCR image with no build |
+| Both files, image tag and dev version | Local image and VERSION build argument |
+| Missing/empty image tag, either combination | Required-value interpolation failure |
+| Missing dev version, both files | Required-value interpolation failure |
+| Registry pull failure | Surface the failure; do not build or fall back to latest |
+
+### 5. Good / Base / Bad Cases
+
+- Good: production selects a published `2.0.1`; dev explicitly combines the
+  two files while sharing one service topology.
+- Base: fixture-only configuration rendering verifies image/build separation.
+- Bad: automatically load dev overrides, duplicate Mongo/PDF/volume settings,
+  or assume dev avoids required base-file interpolation.
+
+### 6. Tests Required
+
+- Release-contract assertions cover base image/required variable/no build,
+  and dev image/build-only scope. Review the environment template and
+  documentation for distinct production/dev commands.
+- Actual Compose rendering must verify both combinations, missing/empty image
+  tag rejection, missing dev version rejection, and production independence
+  from the dev version. Use non-sensitive fixture values.
+- Real registry pull and container health/persistence evidence remain separate
+  from static tests. Run runtime checks in a separate project with new volumes
+  and port; do not replace the current stack or remove its volumes.
+
+### 7. Wrong vs Correct
+
+```text
+Wrong: docker compose build leanote                  # base has no build
+Correct: docker compose pull leanote                # production upgrade
+Correct: docker compose -f docker-compose.yml -f docker-compose.dev.yml build leanote
+
+Wrong: dev image override means LEANOTE_IMAGE_TAG can be omitted.
+Correct: supply LEANOTE_IMAGE_TAG for base interpolation; dev uses leanote:local.
 ```
