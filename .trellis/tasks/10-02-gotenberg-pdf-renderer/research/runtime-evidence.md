@@ -17,7 +17,13 @@
   PyMuPDF 抽取出完整中文文本并渲染出可见中文与表格。
 - 夹具笔记原文含已失效的远程图片域名，应用资源加载器拒绝并返回 `sysError`——这是既有行为，不属于 Gotenberg 回归。
 
+## container-smoke 整脚本（已通过，Linux 容器替代 CI）
+- 审核发现首版脚本生成非法 `app.conf`（字面量 `
+`，`CONFIG_KEY_INVALID`），已在 `5014a008` 修复，并新增会真实执行配置生成块的契约测试
+  （对旧脚本失败：`invalid generated config line: n`）。
+- 在 `docker:cli`（Alpine，挂载 Docker socket、`--network host`）中完整运行 `scripts/container-smoke.sh`，退出码 0：
+  健康就绪、旧 `/note/toPdf` 仍为存根、经 Gotenberg 的真实 `/api/note/exportPdf`、Gotenberg 无外网出口、重启后卷数据保留，且无残留容器。
+
 ## 未运行
-- `scripts/container-smoke.sh` 整体：Windows/Git Bash 的绑定挂载与路径转换使其无法在本机运行（Linux CI 脚本），
-  其新增的登录/导出/出口检查已按相同命令在一次性 Compose 项目上手工执行；整脚本与 `container-smoke` CI 作业仍为 `unrun`。
-- 用户真实账号在浏览器中导出普通笔记与 Markdown 笔记（中文）的人工验收：待用户执行。
+- GitHub Actions 的 `container-smoke` 作业（Linux runner）：本机只用 Linux 容器替代，CI 本身仍为 `unrun`。
+- 用户真实账号在浏览器中导出普通笔记与 Markdown 笔记（中文）的人工验收：未执行；用户要求先提交并归档。
