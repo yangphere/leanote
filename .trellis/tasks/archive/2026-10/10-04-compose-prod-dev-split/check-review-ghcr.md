@@ -7,7 +7,7 @@
 - File: `.trellis/spec/backend/image-publishing.md`
   - Issue: 旧示例仍无条件要求把已存在的 `2.0.1` 复制到 latest，与新增的旧版/同版跳过契约不一致。
   - Fix: 示例改为先执行版本 guard，仅在候选推进或初始化 latest 时复制。
-- File: `.trellis/tasks/10-04-compose-prod-dev-split/validation.md`
+- File: `validation.md`（本任务目录）
   - Issue: Compose 阶段的旧证据仍称发布工作流未修改，追加 GHCR 授权后已不再准确。
   - Fix: 区分初始 Compose 阶段与追加修复，明确仅修改 `docker-image.yml` 且未触发远端运行。
 

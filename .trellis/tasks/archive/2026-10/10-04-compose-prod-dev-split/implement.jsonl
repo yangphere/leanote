@@ -2,4 +2,4 @@
 {"file":".trellis/spec/backend/image-publishing.md","reason":"Consume the completed unprefixed version publication contract"}
 {"file":".trellis/spec/backend/quality-guidelines.md","reason":"Preserve configuration boundaries and runtime evidence distinctions"}
 {"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Keep shared Compose topology in one source of truth"}
-{"file":".trellis/tasks/10-04-compose-prod-dev-split/research/ghcr-review.md","reason":"Official queue:max semantics and verified GHCR review findings"}
+{"file":".trellis/tasks/archive/2026-10/10-04-compose-prod-dev-split/research/ghcr-review.md","reason":"Official queue:max semantics and verified GHCR review findings"}

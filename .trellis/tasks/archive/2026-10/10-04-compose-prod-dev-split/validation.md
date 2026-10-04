@@ -108,3 +108,5 @@ ADR/spec/交付文档已同步到最高成功晋升版本语义、100 pending �
 2026-10-04 用户要求“提交并归档”，授权按工作提交 → 任务归档 → session journal 顺序完成本地收尾，不推送。前文“不提交、归档”是实施/检查阶段的边界。本轮复核已有四层检查和完整 npm test 证据，代码未新增变动；`git diff --check` 和 implement/check 各 5 个上下文引用校验再次通过。`trellis-update-spec` 核对确认 Compose 消费、版本晋升、队列上限、默认禁建包和历史 tag 工作流边界均已同步，无需新增规格改动。用户 `CONTEXT.md` 的 8 行新增排除在提交之外。
 
 真实 GitHub 排队、新 guard 远端晋升、actionlint、新 dev override build/up 等未运行项继续保留，不以本地提交或归档推断通过。
+
+工作提交：`9322cfeb37fde8c2055d039603ada6d618339285`，24 个任务相关文件，提交后仅 `CONTEXT.md` 保持未提交。归档目标为 `.trellis/tasks/archive/2026-10/10-04-compose-prod-dev-split`；implement/check 中任务内 research 引用同步到归档目标，归档后重新执行 `task.py validate` 核对有效性。
