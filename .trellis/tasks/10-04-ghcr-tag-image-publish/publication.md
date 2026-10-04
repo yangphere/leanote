@@ -45,3 +45,24 @@ must be recorded separately; initial GHCR package visibility defaults to private
 
 Recent repository CI runs failed. Read their real job diagnostics before the
 publication tag; do not bypass the full reusable quality gate.
+
+## Main integration and remote execution
+
+- Work commit: `41ffaebd6a5f7ae81c4c3e20daf2ed6622009ea0`.
+- Main merge: `dc323d9ef3b4f744735fb4665ab41d7009403e58`, preserving
+  master `5bc6bd43` as first parent and reviewed dev `41ffaebd` as second.
+- Main merge tree `31bac3ab3ead2bfa896ef82761dfd6d21d984ae2` equals the
+  reviewed dev tree. No conflicts or extra content changes were introduced.
+  A whitespace scan against historical master reports pre-existing archive
+  logs/source whitespace; the scoped work diff passes and the merge has zero
+  diff against the reviewed dev content. Historical whitespace was preserved.
+- Pushed explicitly as `main:main`, tracking `origin/main`. GitHub default
+  branch and local `origin/HEAD` are confirmed as `main`; master is retained.
+- Main CI: [37172547373](https://github.com/yangphere/leanote/actions/runs/37172547373),
+  candidate `dc323d9e`, failed only Chromium and its dependent summary.
+  Node, Mongo, both Go versions, package smoke and container smoke passed.
+  Chromium now requests `/tinymce/plugins/leaui_image/index.html`, but Go's
+  static handler still returns its canonical index redirect (301). The
+  manifest must use the corresponding directory URL for direct 200. This
+  follow-up is being repaired before any tag creation.
+- Existing user `CONTEXT.md` / Compose task were excluded and remain intact.
