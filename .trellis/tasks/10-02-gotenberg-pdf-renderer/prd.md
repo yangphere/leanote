@@ -12,13 +12,14 @@
 - 当前唯一实现是 `app/service/contentpdf.ConfiguredBackend`，从管理配置 `exportPdfBinPath` 读取可执行文件；在 `app/service/content_runtime.go:135` 装配。
 - 自包含文档只保留内置脚本 `window.status = "done"`，wkhtmltopdf 以 `--window-status done` 等待它。
 - 发布形态有两种：Docker 镜像（Compose）与 Linux tar 包（`sh/package.sh` + `scripts/package-smoke.sh`，CI 安装 wkhtmltopdf）。
+- 已确认 Docker 镜像移除 wkhtmltopdf、只使用 Gotenberg；Linux tar 包继续保留 wkhtmltopdf（2026-10-02）。
 
 ## Requirements
 
 1. 新增 Gotenberg 渲染后端，实现现有 `PDFBackend` 契约；只用 Go 标准库 `net/http` 与 `mime/multipart`，不引入第三方 Gotenberg 客户端。
 2. 渲染器选择由启动配置显式决定（`ProductionConfig` 为唯一交接）：`pdf.renderer=gotenberg` 时必须配置合法的 `pdf.gotenberg.url`；未配置 `pdf.renderer` 时保持现有 wkhtmltopdf 管理配置行为；未知值启动失败。Gotenberg 不可用时返回依赖错误，不回退到 wkhtmltopdf，也不探测选择。
 3. Gotenberg 地址只来自部署配置，不允许通过管理后台或请求参数修改，避免 SSRF。
-4. Compose 新增按 digest 固定的 `gotenberg` 服务：不发布宿主机端口；只接入 `internal: true` 的内部网络，没有外网出口；禁用 LibreOffice、PDF engines 与 webhook 路由；Chromium 拒绝除 Gotenberg 自身临时文件以外的所有 URL；配置健康检查，`leanote` 依赖其健康状态。
+4. Compose 新增按 digest 固定的 `gotenberg` 服务：不发布宿主机端口；只接入 `internal: true` 的内部网络，没有外网出口；禁用 LibreOffice、PDF engines 与 webhook 路由；Chromium 只允许 Gotenberg 自身临时文件（`file:///tmp/`）与文档内联 `data:` 资源，拒绝其他所有 URL；配置健康检查，`leanote` 依赖其健康状态。
 5. Docker 镜像移除 wkhtmltopdf 包和符号链接，`conf/app.conf-docker` 启用 Gotenberg 渲染器；tar 包发布形态继续使用 wkhtmltopdf，相关 CI 与 package smoke 不变。
 6. 管理后台“Export PDF”页面在 Gotenberg 模式下显示当前渲染器为只读状态，并拒绝提交 wkhtmltopdf 路径；进程模式下保持现有行为。
 7. `scripts/container-smoke.sh` 与 CI `container-smoke` 作业改为与 Gotenberg 容器一起运行，并通过真实导出路由证明能生成合法 PDF；保留失败诊断（应用日志、Gotenberg 日志、响应头）。
@@ -43,6 +44,10 @@
 - [ ] 镜像中不再包含 wkhtmltopdf；`container-smoke` 通过；tar 包 `package-smoke` 不受影响。
 - [ ] `go test`（相关包）、`gofmt -l app cmd`、`go build ./...`、`go vet ./...`、`npm test`、`git diff --check`、Trellis validate 全部通过；未运行的真实环境项明确标为 `unrun`。
 
-## Open questions
+## Open questions and blocking gates
 
-- None blocking。已确认（2026-10-02）：Docker 镜像彻底移除 wkhtmltopdf，只使用 Gotenberg；tar 包保留 wkhtmltopdf。
+- **R1（blocking）**：2026-10-03 的 Gotenberg 探针已经确认 API、等待表达式、内联 `data:` 资源和传统 PDF 输出可用，但真实输出尚未通过 Leanote 现有 `PDFRenderer` 的 `validatePDFArtifact`。实现后必须在切换 Compose/CI 前完成该调用链验证；`qpdf --check` 或 `%PDF-` 不能替代它。
+- **R2（已解决）**：`waitForExpression=window.status === "done"` 已在 2026-10-03 的真实容器探针中生效；页面约 2 秒设置状态时总耗时约 5.3 秒，不会一直等待到超时。
+- **R3（已解决）**：deny-list 不能只放行 `file:///tmp/`，因为 Leanote 的自包含文档使用 `data:` 资源。采用并保留实测通过的 `^(?!file:///tmp/|data:).*`。
+- **R4（实施风险）**：CI `container-smoke` 需要在同一 Docker 网络启动 Gotenberg，CI 运行时间与镜像拉取会增加。
+- **最终运行证据（unrun）**：最终 Compose 拓扑/健康依赖、真实已登录普通与 Markdown 笔记下载、中文可见性、后台只读和拒绝 POST、CI `container-smoke`、镜像内容检查及 tar 包 `package-smoke` 尚未执行，不得在规划阶段宣称验收通过。

@@ -147,7 +147,7 @@ func main() {
 			log.Printf("global configuration unavailable: %v; not ready, retrying in background", err)
 		}
 	}
-	if err := initContentRuntime(runtimeCfg.ContentRoots); err != nil {
+	if err := initContentRuntime(service.ContentRuntimeConfig{ContentRoots: runtimeCfg.ContentRoots, PDFRenderer: runtimeCfg.PDFRenderer}); err != nil {
 		log.Fatalf("initialize content runtime: %v", err)
 	}
 	controllers.InitService()

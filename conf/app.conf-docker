@@ -15,3 +15,5 @@ content.public.data=/var/lib/leanote/public/upload
 content.public.quarantine=/var/lib/leanote/public/quarantine
 content.temporary=/var/lib/leanote/tmp
 admin.backup.root=/var/lib/leanote/backup
+pdf.renderer=gotenberg
+pdf.gotenberg.url=http://gotenberg:3000

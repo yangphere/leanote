@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
@@ -104,12 +105,68 @@ type ContentRoots struct {
 	ServedRoots  []string
 }
 
+// PDFRendererKind 标识由部署配置选择的 PDF 渲染后端。
+type PDFRendererKind string
+
+const (
+	// PDFRendererProcess 使用管理后台配置的本地可执行文件（缺省，保持原行为）。
+	PDFRendererProcess PDFRendererKind = "process"
+	// PDFRendererGotenberg 使用部署配置给出的 Gotenberg HTTP 服务。
+	PDFRendererGotenberg PDFRendererKind = "gotenberg"
+)
+
+// PDFRendererConfig 是启动配置对渲染器的唯一交接。GotenbergURL 只来自部署配置，
+// 管理后台与请求参数都不能修改它。
+type PDFRendererConfig struct {
+	Kind         PDFRendererKind
+	GotenbergURL *url.URL
+}
+
+// ContentRuntimeConfig 组合内容根目录与渲染器选择，由 cmd/leanote 原样交给
+// InitContentRuntime。
+type ContentRuntimeConfig struct {
+	ContentRoots
+	PDFRenderer PDFRendererConfig
+}
+
+var configuredPDFRendererKind = PDFRendererProcess
+
+// ConfiguredPDFRendererKind 返回当前运行时选择的渲染器类型，供管理后台只读展示。
+func ConfiguredPDFRendererKind() PDFRendererKind { return configuredPDFRendererKind }
+
+// newContentPDFBackend 按显式配置选择后端：不探测、不回退。
+func newContentPDFBackend(config PDFRendererConfig, temporaryRoot string) (applicationcontent.PDFBackend, PDFRendererKind, error) {
+	switch config.Kind {
+	case "", PDFRendererProcess:
+		return contentpdf.NewConfiguredBackend(func() string {
+			if ConfigS == nil {
+				return ""
+			}
+			return ConfigS.GetGlobalStringConfig("exportPdfBinPath")
+		}, temporaryRoot, contentPDFPolicyID), PDFRendererProcess, nil
+	case PDFRendererGotenberg:
+		backend, err := contentpdf.NewGotenbergBackend(config.GotenbergURL, contentPDFPolicyID)
+		if err != nil {
+			return nil, "", err
+		}
+		return backend, PDFRendererGotenberg, nil
+	default:
+		return nil, "", fmt.Errorf("content PDF renderer: unknown kind %q", config.Kind)
+	}
+}
+
 // InitContentRuntime establishes the one filesystem and PDF runtime used by
 // every Web/API adapter. It is called after global administrator settings are
 // loaded so renderer configuration has a single source of truth.
-func InitContentRuntime(config ContentRoots) error {
+func InitContentRuntime(runtime ContentRuntimeConfig) error {
+	config := runtime.ContentRoots
 	store, manifests, lifecycle, temporaryRoot, err := initializeContentStorage(config)
 	if err != nil {
+		return err
+	}
+	backend, rendererKind, err := newContentPDFBackend(runtime.PDFRenderer, temporaryRoot)
+	if err != nil {
+		_ = closeContentRuntime(store, manifests, lifecycle)
 		return err
 	}
 	createRepair := &applicationcontent.CreateRepairService{
@@ -132,12 +189,6 @@ func InitContentRuntime(config ContentRoots) error {
 		maintenance.DeleteTerminalGC.Truncated || maintenance.CreateTerminalGC.Truncated,
 		maintenance.CreateRecovery.Scanned, maintenance.CreateRecovery.Committed, maintenance.CreateRecovery.Discarded, maintenance.CreateRecovery.Pending, maintenance.CreateRecovery.Truncated,
 		maintenance.APIPreNoteRecovery.Scanned, maintenance.APIPreNoteRecovery.Committed, maintenance.APIPreNoteRecovery.Discarded, maintenance.APIPreNoteRecovery.Pending, maintenance.APIPreNoteRecovery.Truncated)
-	backend := contentpdf.NewConfiguredBackend(func() string {
-		if ConfigS == nil {
-			return ""
-		}
-		return ConfigS.GetGlobalStringConfig("exportPdfBinPath")
-	}, temporaryRoot, contentPDFPolicyID)
 	repository := contentpdf.MongoPDFRepository{}
 	remoteFetcher := contentremote.New(nil, nil)
 	exporter := &applicationcontent.PDFExportService{
@@ -164,6 +215,7 @@ func InitContentRuntime(config ContentRoots) error {
 	contentLifecycle = lifecycle
 	contentCreateRepair = createRepair
 	ContentPDF = exporter
+	configuredPDFRendererKind = rendererKind
 	configuredContentRoots = ContentRoots{
 		PrivateFiles: config.PrivateFiles,
 		PublicUpload: config.PublicUpload,

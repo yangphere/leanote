@@ -25,6 +25,7 @@ type ProductionConfig struct {
 	DatabaseIdentityDigest     string
 	CredentialProviderRef      service.CredentialProviderRef
 	ContentRoots               service.ContentRoots
+	PDFRenderer                service.PDFRendererConfig
 	BackupRoot                 string
 }
 
@@ -49,6 +50,10 @@ func ValidateProductionRuntimeConfig(cfg *Config, publicStaticRoots ...string) (
 	if cfg == nil {
 		return nil, configError("CONFIG_KEY_INVALID", "prod")
 	}
+	pdfRenderer, err := parsePDFRendererConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
 	publicStaticRoot := ""
 	if len(publicStaticRoots) > 0 {
 		publicStaticRoot = publicStaticRoots[0]
@@ -71,7 +76,7 @@ func ValidateProductionRuntimeConfig(cfg *Config, publicStaticRoots ...string) (
 		values[key] = filepath.Clean(value)
 	}
 	servedRoots := runtimeServedRoots(values["content.public.data"], publicStaticRoot)
-	_, err := contentfs.ValidateContentRoots(contentfs.ContentRootsConfig{
+	_, err = contentfs.ValidateContentRoots(contentfs.ContentRootsConfig{
 		PrivateFiles: contentfs.DurableRootConfig{Data: values["content.private.data"], Quarantine: values["content.private.quarantine"]},
 		PublicUpload: contentfs.DurableRootConfig{Data: values["content.public.data"], Quarantine: values["content.public.quarantine"]},
 		Temporary:    values["content.temporary"],
@@ -155,7 +160,8 @@ func ValidateProductionRuntimeConfig(cfg *Config, publicStaticRoots ...string) (
 			PublicUpload: service.ContentRootPair{Data: values["content.public.data"], Quarantine: values["content.public.quarantine"]},
 			Temporary:    values["content.temporary"], ServedRoots: servedRoots,
 		},
-		BackupRoot: backup,
+		BackupRoot:  backup,
+		PDFRenderer: pdfRenderer,
 	}, nil
 }
 

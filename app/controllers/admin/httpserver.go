@@ -34,6 +34,10 @@ type server struct{ deps HTTPDeps }
 
 var userPageSize = 10
 
+// pdfRendererKind 是 PDF 渲染器类型的只读来源（来自部署配置）。管理后台只用它展示
+// 状态并拒绝写入 wkhtmltopdf 路径，不能读取或修改 Gotenberg 地址。
+var pdfRendererKind = service.ConfiguredPDFRendererKind
+
 func allowedAdminTemplate(name string) bool {
 	name = strings.TrimSpace(name)
 	if name == "" || strings.ContainsAny(name, "\\\x00\r\n") || strings.Contains(name, "..") || strings.HasPrefix(name, "/") {
@@ -136,6 +140,7 @@ func (s *server) viewArgs(c *httpserver.Context) map[string]interface{} {
 	}
 	args["currentLocale"] = c.Locale
 	args["locale"] = c.Locale
+	args["pdfRendererGotenberg"] = pdfRendererKind() == service.PDFRendererGotenberg
 	return args
 }
 
@@ -752,6 +757,9 @@ func (s *server) settingWrite(c *httpserver.Context) httpserver.Result {
 				"blackCustomDomains": splitCSVParams(c.Params.Strings("blackCustomDomains")),
 			})
 	case "ExportPdf":
+		if pdfRendererKind() == service.PDFRendererGotenberg {
+			return c.RenderJSON(info.Re{Ok: false, Msg: "admin.validation"})
+		}
 		path := strings.TrimSpace(c.Params.String("path"))
 		descriptor, err := service.BuildExecutableDescriptor(path, []string{path}, "admin-pdf")
 		if err != nil {

@@ -19,6 +19,10 @@ func ValidateLocalRuntimeConfig(cfg *Config, runMode, appBase string, publicStat
 	if cfg == nil || (runMode != "dev" && runMode != "test") {
 		return nil, configError("CONFIG_RUN_MODE_INVALID", runMode)
 	}
+	pdfRenderer, err := parsePDFRendererConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
 	databaseName := cfg.StringDefault("db.dbname", "")
 	if runMode == "test" && databaseName != "leanote_test" {
 		return nil, configError("CONFIG_TEST_DATABASE_INVALID", "db.dbname")
@@ -114,7 +118,7 @@ func ValidateLocalRuntimeConfig(cfg *Config, runMode, appBase string, publicStat
 			PrivateFiles: service.ContentRootPair{Data: canonicalValues["content.private.data"], Quarantine: canonicalValues["content.private.quarantine"]},
 			PublicUpload: service.ContentRootPair{Data: canonicalValues["content.public.data"], Quarantine: canonicalValues["content.public.quarantine"]},
 			Temporary:    canonicalValues["content.temporary"], ServedRoots: servedRoots,
-		}, BackupRoot: backup,
+		}, BackupRoot: backup, PDFRenderer: pdfRenderer,
 	}, nil
 }
 

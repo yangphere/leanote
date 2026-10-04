@@ -25,9 +25,8 @@ LABEL org.opencontainers.image.version="$VERSION" \
       org.opencontainers.image.created="$OCI_CREATED" \
       org.opencontainers.image.source="https://github.com/yangphere/leanote"
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates fontconfig fonts-dejavu wkhtmltopdf=0.12.6-2+b1 \
+    && apt-get install -y --no-install-recommends ca-certificates fontconfig fonts-dejavu \
     && rm -rf /var/lib/apt/lists/* \
-    && ln -s /usr/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf \
     && groupadd --gid 10001 leanote \
     && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin leanote \
     && mkdir -p /app/bin /app/app /app/messages /app/public /etc/leanote \

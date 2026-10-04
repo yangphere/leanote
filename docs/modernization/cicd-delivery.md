@@ -235,7 +235,10 @@ sudo cp -a /app/public/upload/. /var/lib/leanote/public/upload/
 sudo chown -R 10001:10001 /var/lib/leanote/private /var/lib/leanote/public
 ```
 
-The image includes the pinned `wkhtmltopdf` runtime used by PDF export. arm64
+The image no longer bundles a PDF binary: `docker-compose.yml` runs a pinned
+Gotenberg service on an internal-only `pdf` network and `conf/app.conf-docker`
+selects it (`pdf.renderer=gotenberg`, `pdf.gotenberg.url=http://gotenberg:3000`).
+The tar package still uses the pinned `wkhtmltopdf` process backend. arm64
 support and platform-specific PDF work remain tracked as MOD-002 in the
 [modernization backlog](../modernization-backlog.md#mod-002).
 

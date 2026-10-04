@@ -247,9 +247,15 @@ test('container smoke keeps the retired PDF callback a stub and renders a real d
   assert.match(script, /legacy \/note\/toPdf route/);
   assert.match(script, /test "\$\(cat "\$TMP_HEALTH\.pdf\.html"\)" = 'no note'/);
   assert.match(script, /if grep -Eiq 'About Leanote\|not just a notepad' "\$TMP_HEALTH\.pdf\.html"; then[^\n]*exit 1; fi/);
-  assert.match(script, /wkhtmltopdf --quiet \/var\/lib\/leanote\/tmp\/smoke-render\.html/);
-  assert.doesNotMatch(script, /wkhtmltopdf --quiet about:blank/);
-  assert.doesNotMatch(script, /wkhtmltopdf --quiet "\$CONTAINER_SMOKE_PDF_URL"/);
+  // The container image renders through the pinned Gotenberg service over an
+  // internal network; the smoke performs a real application export.
+  assert.match(script, /gotenberg\/gotenberg:8\.37\.0@sha256:f29984bd1e226bf1b93ba90af06000afa8b315853e99d27b9aaa41b93f15c769/);
+  assert.match(script, /docker network create --internal "\$PDF_NETWORK"/);
+  assert.match(script, /pdf\.renderer=gotenberg/);
+  assert.match(script, /\/api\/note\/exportPdf/);
+  assert.match(script, /%PDF-/);
+  assert.match(script, /gotenberg unexpectedly reached the internet/);
+  assert.doesNotMatch(script, /wkhtmltopdf/);
 });
 
 test('quality gate fallback summaries preserve GitHub provenance', async () => {
@@ -406,11 +412,22 @@ test('browser precheck entry is isolated from any publishing side effects', asyn
   assert.match(workflow, /test-results\/provenance\.json/);
 });
 
-test('runtime image exposes the PDF binary at the application contract path', async () => {
+test('runtime image delegates PDF rendering to the isolated Gotenberg service', async () => {
   const dockerfile = await fs.readFile(path.join(process.cwd(), 'Dockerfile'), 'utf8');
-  assert.match(dockerfile, /wkhtmltopdf=0\.12\.6-2\+b1/);
-  assert.match(dockerfile, /ln -s \/usr\/bin\/wkhtmltopdf \/usr\/local\/bin\/wkhtmltopdf/);
+  const compose = await fs.readFile(path.join(process.cwd(), 'docker-compose.yml'), 'utf8');
+  const dockerConf = await fs.readFile(path.join(process.cwd(), 'conf/app.conf-docker'), 'utf8');
+  assert.doesNotMatch(dockerfile, /wkhtmltopdf/);
   assert.match(dockerfile, /COPY conf\/routes \/app\/conf\/routes/);
+  assert.match(dockerConf, /^pdf\.renderer=gotenberg$/m);
+  assert.match(dockerConf, /^pdf\.gotenberg\.url=http:\/\/gotenberg:3000$/m);
+  assert.match(compose, /gotenberg\/gotenberg:8\.37\.0@sha256:f29984bd1e226bf1b93ba90af06000afa8b315853e99d27b9aaa41b93f15c769/);
+  assert.match(compose, /--chromium-deny-list=\^\(\?!file:\/\/\/tmp\/\|data:\)\.\*/);
+  assert.match(compose, /pdf:\n\s+internal: true/);
+  assert.match(compose, /gotenberg:\n\s+condition: service_healthy/);
+  // Gotenberg is reachable only through the internal pdf network: no host port.
+  const gotenberg = compose.slice(compose.indexOf('  gotenberg:'), compose.indexOf('  leanote:'));
+  assert.doesNotMatch(gotenberg, /ports:/);
+  assert.doesNotMatch(gotenberg, /- default/);
 });
 
 test('package layout carries the runtime route table', async () => {

@@ -375,6 +375,22 @@ result, err := repair.FinalizePreNote(ctx, identity)
   validation, direct-argv timeout/cancel, stderr/output bounds, PDF magic, and
   cleanup. Linux delivery additionally proves local-file denial and zero
   outbound traffic with real `wkhtmltopdf`.
+- Renderer selection (`pdf.renderer`, `pdf.gotenberg.url`) is parsed once by
+  `httpserver.parsePDFRendererConfig` for prod/dev/test and handed over inside
+  `ProductionConfig`; omitted means the `wkhtmltopdf` process backend, an unknown
+  value or a missing/invalid Gotenberg URL fails startup, and only deployment
+  config (never the admin UI or request parameters) can choose Gotenberg.
+- Gotenberg backend tests run against `httptest.Server`/`RoundTripper`. The
+  real-container gate (`TestGotenbergBackendRealOutputPassesPDFRenderer`, enabled
+  by `LEANOTE_GOTENBERG_URL`) must push Chromium output through
+  `application.PDFRenderer.Render`; `qpdf --check` or a `%PDF-` prefix alone is
+  not evidence. Docker delivery pins Gotenberg by multi-arch index digest, keeps
+  it on an `internal` network with no host port (egress must fail), and uses
+  `--chromium-deny-list=^(?!file:///tmp/|data:).*` so inlined `data:` resources
+  render while any other URL is blocked.
+- Docker prod disables the `demo` account; a container smoke that logs in as the
+  fixture user must use a config without the Docker admin bootstrap, and the
+  fixture note's remote image host is dead, so seed self-contained content first.
 - Pre-note tests cover committed-parent finalization, absent-parent delete then
   discard, row/file conflict refusal, and independent generic/API scan limits.
 
