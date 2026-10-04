@@ -66,3 +66,35 @@ publication tag; do not bypass the full reusable quality gate.
   manifest must use the corresponding directory URL for direct 200. This
   follow-up is being repaired before any tag creation.
 - Existing user `CONTEXT.md` / Compose task were excluded and remain intact.
+
+## Reviewed follow-up and version tag
+
+- Follow-up work commit `9cca58c0dc549882186f355c5d2aca4ebe00cdfb`; main
+  merge candidate `dea2306c32f27e648d9438cbc8b67cec6151b6cc`.
+- [Main CI 37173341933](https://github.com/yangphere/leanote/actions/runs/37173341933)
+  passed all seven primary jobs and summary. The protected handoff was skipped
+  by its original v-tag rule. Real Chromium now passed.
+- Created and pushed annotated Git tag `2.0.1` without force. Tag object
+  `887a424375187212c6ee31b4fc904361cfac58e8` peels to the confirmed main
+  candidate `dea2306c32f27e648d9438cbc8b67cec6151b6cc`.
+- Only [Docker image 37173559882](https://github.com/yangphere/leanote/actions/runs/37173559882)
+  was triggered by this numeric tag. Seven quality jobs, summary, image build
+  and candidate smoke passed. Registry preflight failed before docker push:
+  manifest returned structured `MANIFEST_UNKNOWN`, then listing returned 404.
+  The old helper did not parse/print the listing error code, so `NAME_UNKNOWN`
+  is not yet an observed remote result. No push/digest read-back is confirmed.
+
+## Recovery without moving the version tag
+
+- Preserve remote tag `2.0.1` and its peeled candidate SHA exactly.
+- Repair initial-package classification and introduce a main dispatch that
+  validates the original candidate evidence before rebuilding that candidate.
+- Fixed recovery inputs: `tag=2.0.1`,
+  `expected_commit=dea2306c32f27e648d9438cbc8b67cec6151b6cc`,
+  `source_run_id=37173559882`, `source_run_attempt=1`.
+- Source run's overall failure is accepted only with successful identity-bound
+  primary quality jobs, summary and build/smoke; source summaries are also
+  schema/provenance checked. Executor quality remains required separately.
+- Recovery implementation and independent full-scope review passed. Integrated
+  executor CI, dispatch and GHCR push/read-back are pending. Package public
+  visibility and anonymous pull remain `unrun`.

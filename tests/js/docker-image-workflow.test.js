@@ -5,14 +5,18 @@ const test = require('node:test');
 
 const workflowPath = path.join(process.cwd(), '.github/workflows/docker-image.yml');
 
-test('docker image workflow is tag-only, self-serialized, and minimally privileged', async () => {
+test('docker image workflow keeps numeric pushes and a controlled same-tag recovery serialized', async () => {
   const workflow = await fs.readFile(workflowPath, 'utf8');
   assert.match(workflow, /push:\s*\n\s+tags: \['\[0-9\]\+\.\[0-9\]\+\.\[0-9\]\+'\]/);
   assert.doesNotMatch(workflow, /tags: \['v/);
-  assert.doesNotMatch(workflow, /workflow_dispatch:|branches:/);
-  assert.match(workflow, /group: docker-image-\$\{\{ github\.ref \}\}/);
+  assert.match(workflow, /workflow_dispatch:/);
+  for (const input of ['tag', 'expected_commit', 'source_run_id', 'source_run_attempt']) {
+    assert.match(workflow, new RegExp(`\\n      ${input}:`));
+  }
+  assert.doesNotMatch(workflow, /branches:/);
+  assert.match(workflow, /group: docker-image-\$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.tag \|\| github\.ref_name \}\}/);
   assert.doesNotMatch(workflow, /group: release-\$\{\{ github\.ref \}\}/);
-  assert.match(workflow, /permissions:\s*\n\s+contents: read/);
+  assert.match(workflow, /permissions:\s*\n\s+actions: read\s*\n\s+contents: read/);
   assert.match(workflow, /publish:[\s\S]*?permissions:\s*\n\s+contents: read\s*\n\s+packages: write/);
   assert.doesNotMatch(workflow, /contents: write/);
   const externalActions = [...workflow.matchAll(/^\s*- uses: ([^\s]+)$/gm)]
@@ -22,9 +26,23 @@ test('docker image workflow is tag-only, self-serialized, and minimally privileg
   assert.ok(externalActions.every((value) => /@[0-9a-f]{40}$/.test(value)));
 });
 
+test('manual recovery binds main executor, original evidence, and immutable candidate inputs', async () => {
+  const workflow = await fs.readFile(workflowPath, 'utf8');
+  assert.match(workflow, /test "\$GITHUB_REF" = refs\/heads\/main/);
+  assert.match(workflow, /node scripts\/verify-image-source-run\.mjs/);
+  assert.match(workflow, /run-id: \$\{\{ inputs\.source_run_id \}\}/);
+  assert.match(workflow, /pattern: ci-summary-\*/);
+  assert.match(workflow, /--include-summary --source-execution/);
+  assert.match(workflow, /ref: '\$\{\{ needs\.validate\.outputs\.candidate_sha \}\}'.*path: candidate/);
+  assert.match(workflow, /RELEASE_TAG: \$\{\{ needs\.validate\.outputs\.tag \}\}/);
+  assert.match(workflow, /CANDIDATE_SHA: \$\{\{ needs\.validate\.outputs\.candidate_sha \}\}/);
+  assert.match(workflow, /--build-arg REVISION="\$CANDIDATE_SHA"/);
+  assert.match(workflow, /node "\$GITHUB_WORKSPACE\/executor\/scripts\/check-ghcr-tag-absent\.mjs"/);
+});
+
 test('docker image workflow validates the canonical version and immutable main tag twice', async () => {
   const workflow = await fs.readFile(workflowPath, 'utf8');
-  assert.match(workflow, /node scripts\/check-version\.mjs --image-tag/);
+  assert.match(workflow, /node "\$GITHUB_WORKSPACE\/executor\/scripts\/check-version\.mjs" --image-tag/);
   assert.match(workflow, /github\.event\.forced/);
   assert.ok((workflow.match(/refs\/remotes\/origin\/tags\/\$\{TAG\}\^\{\}/g) ?? []).length >= 1);
   assert.ok((workflow.match(/merge-base --is-ancestor/g) ?? []).length >= 2);
@@ -42,12 +60,61 @@ test('ordinary CI follows dev and the default main branch', async () => {
 });
 
 test('image and protected release tags keep distinct strict version contracts', async () => {
-  const { assertImageTag, assertReleaseTag } = await import('../../scripts/version.mjs');
+  const { assertImageTag, assertImageTagFormat, assertReleaseTag } = await import('../../scripts/version.mjs');
+  assert.doesNotThrow(() => assertImageTagFormat('2.0.1'));
+  assert.throws(() => assertImageTagFormat('v2.0.1'), /image tag must match X\.Y\.Z/);
   assert.doesNotThrow(() => assertImageTag('2.0.1', '2.0.1'));
   assert.throws(() => assertImageTag('v2.0.1', '2.0.1'), /image tag must match X\.Y\.Z/);
   assert.throws(() => assertImageTag('2.0.2', '2.0.1'), /does not match package version/);
   assert.doesNotThrow(() => assertReleaseTag('v2.0.1', '2.0.1'));
   assert.throws(() => assertReleaseTag('2.0.1', '2.0.1'), /release tag must match vX\.Y\.Z/);
+});
+
+test('manual recovery verifier binds the latest explicit attempt, candidate gates, and failed publish step', async () => {
+  const { verifyImageSourceRun } = await import('../../scripts/verify-image-source-run.mjs');
+  const { qualityJobs } = await import('../../scripts/ci/quality-contract.mjs');
+  const repository = 'yangphere/leanote';
+  const tag = '2.0.1';
+  const commit = 'd'.repeat(40);
+  const runId = '37173559882';
+  const runAttempt = '1';
+  const repo = { id: 42, full_name: repository };
+  const run = {
+    id: Number(runId), run_attempt: 1, event: 'push', status: 'completed', conclusion: 'failure',
+    name: 'Docker image', path: `${repository}/.github/workflows/docker-image.yml@refs/tags/${tag}`,
+    head_sha: commit, head_branch: tag, workflow_id: 99,
+    repository: repo, head_repository: repo,
+  };
+  const successful = ['validate', ...qualityJobs.map((job) => `quality-gate / ${job}`), 'quality-gate / summary']
+    .map((name) => ({ name, status: 'completed', conclusion: 'success', run_id: Number(runId), run_attempt: 1, head_sha: commit }));
+  const publish = {
+    name: 'publish', status: 'completed', conclusion: 'failure', run_id: Number(runId), run_attempt: 1, head_sha: commit,
+    steps: [
+      { name: 'Build the immutable candidate', status: 'completed', conclusion: 'success' },
+      { name: 'Smoke the exact candidate', status: 'completed', conclusion: 'success' },
+      { name: 'Push once and verify registry manifest digest', status: 'completed', conclusion: 'failure' },
+    ],
+  };
+  const route = (url) => {
+    const endpoint = url.replace(`https://api.github.com/repos/${repository}`, '');
+    if (endpoint === '') return repo;
+    if (endpoint === `/actions/runs/${runId}` || endpoint === `/actions/runs/${runId}/attempts/1`) return run;
+    if (endpoint === '/actions/workflows/99') return { id: 99, path: '.github/workflows/docker-image.yml', state: 'active' };
+    if (endpoint.includes('/jobs?')) return { total_count: successful.length + 1, jobs: [...successful, publish] };
+    throw new Error(`unexpected endpoint ${endpoint}`);
+  };
+  const fetchImpl = async (url) => json(200, route(url));
+  const input = { repository, tag, commit, runId, runAttempt, token: 'token', fetchImpl };
+  assert.deepEqual(await verifyImageSourceRun(input), { repository, tag, commit, run: { id: runId, attempt: 1 } });
+
+  run.run_attempt = 2;
+  await assert.rejects(() => verifyImageSourceRun(input), /latest artifact-bearing attempt/);
+  run.run_attempt = 1;
+  successful[1].conclusion = 'failure';
+  await assert.rejects(() => verifyImageSourceRun(input), /required gate/);
+  successful[1].conclusion = 'success';
+  publish.steps[1].conclusion = 'failure';
+  await assert.rejects(() => verifyImageSourceRun(input), /publish step mismatch/);
 });
 
 test('docker image workflow smokes the exact deterministic candidate before the only push', async () => {
@@ -60,7 +127,7 @@ test('docker image workflow smokes the exact deterministic candidate before the 
   assert.match(workflow, /--provenance=false --sbom=false/);
   assert.match(workflow, /\['containerimage\.digest'\]/);
   const smoke = workflow.indexOf('scripts/container-smoke.sh "$IMAGE"');
-  const absence = workflow.indexOf('node scripts/check-ghcr-tag-absent.mjs');
+  const absence = workflow.indexOf('check-ghcr-tag-absent.mjs');
   const finalSourceCheck = workflow.lastIndexOf('git fetch --force --no-tags origin');
   const pushes = [...workflow.matchAll(/docker push "\$IMAGE"/g)];
   assert.notEqual(smoke, -1);
@@ -158,6 +225,34 @@ test('GHCR absence check permits explicit first-package creation only on two bou
     () => checkGhcrTagAbsent(options(registry.fetchImpl, { allowInitialPackageCreate: true })),
     /absence response unknown/,
   );
+});
+
+test('GHCR absence check permits the observed first-package response pair only under explicit policy', async () => {
+  const { checkGhcrTagAbsent } = await import('../../scripts/check-ghcr-tag-absent.mjs');
+  const base = 'https://ghcr.io/v2/yangphere/leanote';
+  const routes = (manifest = manifestUnknown, listing = nameUnknown()) => new Map([
+    [`${base}/manifests/2.0.1`, json(404, manifest)],
+    [`${base}/tags/list?n=100`, json(404, listing)],
+  ]);
+  let registry = registryFetch(routes());
+  await assert.rejects(() => checkGhcrTagAbsent(options(registry.fetchImpl)), /initial package creation is disabled/);
+  registry = registryFetch(routes());
+  assert.deepEqual(await checkGhcrTagAbsent(options(registry.fetchImpl, { allowInitialPackageCreate: true })), { initialPackage: true });
+
+  registry = registryFetch(routes(
+    { errors: [{ code: 'MANIFEST_UNKNOWN', message: 'manifest unknown', detail: { name: 'another/package' } }] },
+    nameUnknown(),
+  ));
+  await assert.rejects(() => checkGhcrTagAbsent(options(registry.fetchImpl, { allowInitialPackageCreate: true })), /manifest absence response unknown/);
+
+  registry = registryFetch(routes(manifestUnknown, nameUnknown('another/package')));
+  await assert.rejects(() => checkGhcrTagAbsent(options(registry.fetchImpl, { allowInitialPackageCreate: true })), /package absence response unknown/);
+
+  registry = registryFetch(new Map([
+    [`${base}/manifests/2.0.1`, json(404, manifestUnknown)],
+    [`${base}/tags/list?n=100`, json(404, { message: 'Not Found' })],
+  ]));
+  await assert.rejects(() => checkGhcrTagAbsent(options(registry.fetchImpl, { allowInitialPackageCreate: true })), /package absence response unknown/);
 });
 
 test('GHCR absence check blocks existing tags and uncertain remote states', async () => {

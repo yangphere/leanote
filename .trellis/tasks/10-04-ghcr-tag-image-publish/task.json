@@ -23,6 +23,8 @@
   "relatedFiles": [
     ".github/workflows/docker-image.yml",
     "scripts/check-ghcr-tag-absent.mjs",
+    "scripts/verify-image-source-run.mjs",
+    "scripts/ci/validate-summaries.mjs",
     "tests/js/docker-image-workflow.test.js",
     "docs/adr/0005-publish-ghcr-image-with-lightweight-gate.md",
     "docs/adr/0004-publish-versioned-artifacts-without-production-deploy.md",
@@ -41,7 +43,7 @@
     "scripts/build/manifest.mjs",
     "tests/js/build-pipeline.test.js"
   ],
-  "notes": "The user authorized real GHCR publication and main as default/source branch; latest selected Git tag and image tag are both 2.0.1, avoiding the protected v-tag Release trigger. Repairing four blockers reproduced in actual remote CI before dev-to-main integration and tag push. See publication.md and remote-ci-preflight.md; prior local evidence is historical until the revised candidate passes review and real CI.",
+  "notes": "The user authorized real GHCR publication and main as default/source branch. Main CI passed and immutable tag 2.0.1 points to dea2306c32f27e648d9438cbc8b67cec6151b6cc. Source Docker image run 37173559882 attempt 1 passed quality/build/smoke but failed registry preflight before push. Recovery preserves the tag and verifies original source evidence from a repaired main executor; real push/read-back/public/anonymous evidence remains pending. See publication.md and validation.md.",
   "meta": {
     "depends_on": []
   }

@@ -9,7 +9,8 @@ approval gates. In the lightweight path, a strict Git tag `X.Y.Z` maps to
 
 ## Lightweight GHCR image delivery
 
-`.github/workflows/docker-image.yml` responds only to pushed unprefixed `X.Y.Z` tags. It
+`.github/workflows/docker-image.yml` responds to pushed unprefixed `X.Y.Z` tags
+and explicit recovery dispatches from main. It
 rejects forced updates, requires the peeled tag commit to be an ancestor of
 `origin/main`, reuses `quality-gate.yml`, and builds one `linux/amd64`
 candidate with the same version, revision, epoch and OCI-created inputs as the
@@ -25,11 +26,23 @@ states that a repository workflow can publish an associated package with
 Dockerfile's `org.opencontainers.image.source` label identifies this repository.
 No empty package must be created in advance. Initial creation is nevertheless
 an explicit workflow policy: authenticated queries to the exact
-`yangphere/leanote` manifest and tag-list endpoints must both return structured
-`NAME_UNKNOWN` errors; a returned `detail.name` must also match that image.
+`yangphere/leanote` tag-list endpoint must return structured 404 `NAME_UNKNOWN`,
+and the manifest endpoint structured 404 `NAME_UNKNOWN` or `MANIFEST_UNKNOWN`;
+a returned `detail.name` must also match that image.
 Existing packages require `MANIFEST_UNKNOWN` plus a successful, identity-bound
 tag listing. Authentication, authorization, transport, malformed JSON and all
 other registry states block the push.
+
+Recovery preserves the original tag. Dispatch supplies `tag`, `expected_commit`,
+`source_run_id`, and `source_run_attempt`. The main executor verifies the
+original Docker image push run's repository/workflow/tag/SHA/attempt, successful
+seven quality jobs and summary, and candidate build/smoke. It downloads original
+summaries and uses the shared schema validator with explicit source provenance.
+The original run may have an overall failure from the publish step; executor
+quality success is not a substitute for candidate evidence. Executor quality
+still runs in full. Build, revision, epoch and smoke use the original candidate;
+registry preflight uses the repaired executor helper. Push and recovery share
+the same target-tag lock and never overwrite an existing registry tag.
 
 After the first successful run, an administrator must open the `leanote`
 package settings and change visibility to public. GitHub documents that new

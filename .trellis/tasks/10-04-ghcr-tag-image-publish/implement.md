@@ -13,6 +13,9 @@
 - [x] 同步版本 `2.0.1`，Git tag 和镜像 tag 都使用 `2.0.1`，严格校验无前缀 tag，并使 registry 查询与 push 一致。
 - [x] 修复 `sh/package.sh` 的真实 tag 校验，让 numeric tag 与 protected v tag 各自按共享严格规则通过；新增 tag context 回归，不放宽受保护 Release 校验。
 - [x] 修复 `remote-ci-preflight.md` 中四个真实质量门禁阻塞；保留共享权限和正确响应契约，按 manifest 正规生成构建产物。
-- [ ] 独立复核后合入 main，设置默认分支，等待真实 main CI 全绿。
-- [ ] 推送 2.0.1，确认 Docker image 工作流 push/read-back 成功，分别记录 public 与匿名拉取证据。
+- [x] 独立复核后合入 main，设置默认分支，真实 main CI `37173341933` 全绿。
+- [x] 推送 2.0.1；原 Docker image run `37173559882` 的质量门、构建和 smoke 成功，但在 push 前 registry preflight 失败。
+- [x] 修复首包响应分类，增加固定候选/来源 run 的 main dispatch 恢复入口，复用 summary validator 并覆盖 provenance 负例；独立全范围复核通过，见 `check-review-recovery.md`。
+- [ ] 对恢复改动独立全范围复核，合入 main，验证执行器完整 CI。
+- [ ] dispatch `tag=2.0.1`、原候选 SHA、`source_run_id=37173559882`、`source_run_attempt=1`；确认真实 push/read-back，分别记录 public 与匿名拉取证据。
 - 回滚点：仅新增文件与文档追加，可整体 revert。

@@ -575,6 +575,51 @@ test('summary validator rejects placeholder provenance', async () => {
   }
 });
 
+test('summary validator binds all seven gates plus summary to an explicit source execution', async () => {
+  const { qualityJobs } = await import('../../scripts/ci/quality-contract.mjs');
+  const { execFile } = require('node:child_process');
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-source-summaries-'));
+  const commit = 'd'.repeat(40);
+  const env = {
+    ...process.env,
+    SOURCE_COMMIT: commit,
+    SOURCE_REF: 'refs/tags/2.0.1',
+    SOURCE_WORKFLOW: 'Docker image',
+    SOURCE_RUN_ID: '37173559882',
+    SOURCE_RUN_ATTEMPT: '1',
+  };
+  const run = () => new Promise((resolve) => {
+    execFile(process.execPath, ['scripts/ci/validate-summaries.mjs', root, '--include-summary', '--source-execution'], { cwd: process.cwd(), env }, (error, stdout, stderr) => resolve({ error, stdout, stderr }));
+  });
+  const record = (job) => ({
+    schema_version: 'leanote.ci.failure-summary.v1', workflow: 'Docker image', job,
+    run: { id: '37173559882', attempt: 1 }, commit, ref: 'refs/tags/2.0.1', status: 'passed', stage: 'complete',
+    toolchain: { go: null, node: null, npm: null, mongo: null, playwright: null },
+    failure: { category: 'none', message: '', exit_code: 0 },
+    service: { health_path: null, readiness: 'not_run', http_status: null, exit_code: 0 },
+    tests: { discovery: 'passed', discovered_count: 1, executed_count: 1 },
+    page_paths: [], resource_paths: [], status_codes: [], generated_at: new Date().toISOString(),
+  });
+  try {
+    for (const job of [...qualityJobs, 'summary']) {
+      await fs.writeFile(path.join(root, `${job}.json`), JSON.stringify(record(job)));
+    }
+    let result = await run();
+    assert.equal(result.error, null, result.stderr);
+    assert.match(result.stdout, /validated 8 quality-gate summaries/);
+
+    const summaryPath = path.join(root, 'summary.json');
+    const mismatched = record('summary');
+    mismatched.run.attempt = 2;
+    await fs.writeFile(summaryPath, JSON.stringify(mismatched));
+    result = await run();
+    assert.notEqual(result.error, null);
+    assert.match(result.stderr, /does not match trusted execution provenance/);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test('browser evidence provenance names the protected producer workflow and carries coverage summaries', async () => {
   const { buildBrowserEvidence } = await import('../../scripts/browser-release-evidence.mjs');
   const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-browser-contract-'));

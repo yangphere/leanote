@@ -23,10 +23,14 @@ export function assertReleaseTag(tag, version) {
   if (tag.slice(1) !== version) throw new Error('release tag does not match package version');
 }
 
-export function assertImageTag(tag, version) {
+export function assertImageTagFormat(tag) {
   if (typeof tag !== 'string' || !semver.test(tag)) {
     throw new Error(`image tag must match X.Y.Z: ${tag ?? ''}`);
   }
+}
+
+export function assertImageTag(tag, version) {
+  assertImageTagFormat(tag);
   if (tag !== version) throw new Error('image tag does not match package version');
 }
 
