@@ -10,11 +10,11 @@ test('docker image workflow keeps numeric pushes and a controlled same-tag recov
   assert.match(workflow, /push:\s*\n\s+tags: \['\[0-9\]\+\.\[0-9\]\+\.\[0-9\]\+'\]/);
   assert.doesNotMatch(workflow, /tags: \['v/);
   assert.match(workflow, /workflow_dispatch:/);
-  for (const input of ['tag', 'expected_commit', 'source_run_id', 'source_run_attempt']) {
+  for (const input of ['operation', 'tag', 'expected_commit', 'expected_registry_digest', 'expected_config_digest', 'source_run_id', 'source_run_attempt']) {
     assert.match(workflow, new RegExp(`\\n      ${input}:`));
   }
   assert.doesNotMatch(workflow, /branches:/);
-  assert.match(workflow, /group: docker-image-\$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.tag \|\| github\.ref_name \}\}/);
+  assert.match(workflow, /group: docker-image-latest/);
   assert.doesNotMatch(workflow, /group: release-\$\{\{ github\.ref \}\}/);
   assert.match(workflow, /permissions:\s*\n\s+actions: read\s*\n\s+contents: read/);
   assert.match(workflow, /publish:[\s\S]*?permissions:\s*\n\s+contents: read\s*\n\s+packages: write/);
@@ -117,26 +117,88 @@ test('manual recovery verifier binds the latest explicit attempt, candidate gate
   await assert.rejects(() => verifyImageSourceRun(input), /publish step mismatch/);
 });
 
-test('docker image workflow smokes the exact deterministic candidate before the only push', async () => {
+test('docker image workflow smokes one dual-exported candidate before byte-preserving version and latest publication', async () => {
   const workflow = await fs.readFile(workflowPath, 'utf8');
   assert.match(workflow, /docker\/setup-buildx-action@[0-9a-f]{40}/);
-  assert.match(workflow, /docker buildx build --platform linux\/amd64 --load --metadata-file/);
+  assert.match(workflow, /docker buildx build --platform linux\/amd64 --load --output type=oci,dest="\$RUNNER_TEMP\/candidate\.oci\.tar" --metadata-file/);
   for (const arg of ['VERSION', 'REVISION', 'SOURCE_DATE_EPOCH', 'OCI_CREATED']) {
     assert.match(workflow, new RegExp(`--build-arg ${arg}=`));
   }
   assert.match(workflow, /--provenance=false --sbom=false/);
   assert.match(workflow, /\['containerimage\.digest'\]/);
+  assert.match(workflow, /\['containerimage\.config\.digest'\]/);
   const smoke = workflow.indexOf('scripts/container-smoke.sh "$IMAGE"');
   const absence = workflow.indexOf('check-ghcr-tag-absent.mjs');
-  const finalSourceCheck = workflow.lastIndexOf('git fetch --force --no-tags origin');
-  const pushes = [...workflow.matchAll(/docker push "\$IMAGE"/g)];
+  const finalSourceCheck = workflow.indexOf('git fetch --force --no-tags origin', absence);
+  const configBinding = workflow.indexOf('test "$archive_config" = "$local_config"');
+  const versionCopy = workflow.indexOf('oci-archive:/work/candidate.oci.tar docker://"$IMAGE"');
+  const latestCopy = workflow.indexOf('oci-archive:/work/candidate.oci.tar docker://"$LATEST_IMAGE"');
   assert.notEqual(smoke, -1);
+  assert.ok(configBinding < smoke);
   assert.ok(absence > smoke);
   assert.ok(finalSourceCheck > absence);
-  assert.equal(pushes.length, 1);
-  assert.ok(pushes[0].index > finalSourceCheck);
-  assert.match(workflow, /imagetools inspect "\$IMAGE" --format '\{\{\.Manifest\.Digest\}\}'/);
-  assert.doesNotMatch(workflow, /(?:^|[^A-Za-z])latest(?:[^A-Za-z]|$)/);
+  assert.ok(versionCopy > finalSourceCheck);
+  assert.ok(latestCopy > versionCopy);
+  assert.doesNotMatch(workflow, /docker push/);
+  assert.equal([...workflow.matchAll(/docker buildx build /g)].length, 1);
+  assert.match(workflow, /skopeo copy --preserve-digests/);
+  assert.match(workflow, /SKOPEO_IMAGE: quay\.io\/skopeo\/stable@sha256:[0-9a-f]{64}/);
+  assert.match(workflow, /--mount "type=bind,source=\$HOME\/\.docker,target=\/root\/\.docker,readonly"/);
+  assert.match(workflow, /--dest-authfile \/root\/\.docker\/config\.json/);
+  assert.match(workflow, /inspect --authfile \/root\/\.docker\/config\.json --raw/);
+  assert.doesNotMatch(workflow, /apt-get install[^\n]*skopeo/);
+  assert.match(workflow, /LATEST_IMAGE=\$\{IMAGE_REPOSITORY\}:latest/);
+});
+
+test('latest-only recovery verifies and smokes the immutable version digest before promotion', async () => {
+  const workflow = await fs.readFile(workflowPath, 'utf8');
+  assert.match(workflow, /update_latest/);
+  assert.match(workflow, /EXPECTED_REGISTRY_DIGEST/);
+  assert.match(workflow, /EXPECTED_CONFIG_DIGEST/);
+  assert.match(workflow, /docker pull "\$VERSION_SOURCE"/);
+  const updateLatest = workflow.slice(workflow.indexOf('- name: Verify immutable version and update latest'));
+  assert.match(updateLatest, /CONTAINER_SMOKE_PDF_URL: http:\/\/127\.0\.0\.1:9000\/note\/toPdf\?noteId=/);
+  assert.match(workflow, /scripts\/container-smoke\.sh "\$VERSION_SOURCE"/);
+  assert.match(workflow, /skopeo copy --preserve-digests --src-authfile \/root\/\.docker\/config\.json --dest-authfile \/root\/\.docker\/config\.json docker:\/\/"\$VERSION_SOURCE" docker:\/\/"\$LATEST_IMAGE"/);
+  assert.doesNotMatch(updateLatest, /docker buildx build|oci-archive:|check-ghcr-tag-absent/);
+  assert.equal([...updateLatest.matchAll(/skopeo copy /g)].length, 1);
+  const sourceCheck = updateLatest.indexOf('git fetch --force --no-tags origin');
+  const latestCopy = updateLatest.indexOf('skopeo copy --preserve-digests');
+  assert.ok(sourceCheck >= 0 && latestCopy > sourceCheck);
+});
+
+test('image manifest verifier binds raw bytes, media type, and candidate config before publication', async () => {
+  const { verifyImageManifest } = await import('../../scripts/verify-image-manifest.mjs');
+  const manifest = Buffer.from(JSON.stringify({
+    schemaVersion: 2,
+    mediaType: 'application/vnd.oci.image.manifest.v1+json',
+    config: { digest: `sha256:${'a'.repeat(64)}` },
+    layers: [],
+  }));
+  const { createHash } = await import('node:crypto');
+  const manifestDigest = `sha256:${createHash('sha256').update(manifest).digest('hex')}`;
+  assert.deepEqual(
+    verifyImageManifest({ manifestBytes: manifest, expectedManifestDigest: manifestDigest, expectedConfigDigest: `sha256:${'a'.repeat(64)}` }),
+    { manifestDigest, configDigest: `sha256:${'a'.repeat(64)}` },
+  );
+  assert.throws(
+    () => verifyImageManifest({ manifestBytes: manifest, expectedManifestDigest: manifestDigest, expectedConfigDigest: `sha256:${'b'.repeat(64)}` }),
+    /config digest mismatch/,
+  );
+  assert.throws(
+    () => verifyImageManifest({ manifestBytes: manifest, expectedManifestDigest: `sha256:${'0'.repeat(64)}`, expectedConfigDigest: `sha256:${'a'.repeat(64)}` }),
+    /manifest digest mismatch/,
+  );
+  const index = Buffer.from(JSON.stringify({
+    schemaVersion: 2,
+    mediaType: 'application/vnd.oci.image.index.v1+json',
+    manifests: [],
+  }));
+  const indexDigest = `sha256:${createHash('sha256').update(index).digest('hex')}`;
+  assert.throws(
+    () => verifyImageManifest({ manifestBytes: index, expectedManifestDigest: indexDigest }),
+    /supported single-platform schema 2 image manifest/,
+  );
 });
 
 test('docker image workflow makes first-package creation explicit', async () => {

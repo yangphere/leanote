@@ -5,7 +5,7 @@ publishes only a Linux/amd64 GHCR image after the complete quality gate and an
 exact-candidate container smoke. The protected release workflow publishes the
 tarball and GitHub Release only after its additional browser, delivery and
 approval gates. In the lightweight path, a strict Git tag `X.Y.Z` maps to
-`ghcr.io/yangphere/leanote:X.Y.Z`; neither path deploys production.
+`ghcr.io/yangphere/leanote:X.Y.Z` and its `latest` alias; neither path deploys production.
 
 ## Lightweight GHCR image delivery
 
@@ -14,10 +14,14 @@ and explicit recovery dispatches from main. It
 rejects forced updates, requires the peeled tag commit to be an ancestor of
 `origin/main`, reuses `quality-gate.yml`, and builds one `linux/amd64`
 candidate with the same version, revision, epoch and OCI-created inputs as the
-protected release. It smokes that exact local image before the only registry
-push and compares the pushed manifest digest with Buildx's
-`containerimage.digest`. It publishes the exact version tag only; it does not
-publish `latest`, major or major/minor aliases.
+protected release. One Buildx invocation exports both the loaded smoke image
+and an OCI archive. Before smoke, the archive's exact manifest hash/config
+must match Buildx metadata, and config must match loaded image Id. Skopeo
+copies the same archive with `--preserve-digests` to the immutable version;
+raw registry manifest/config read-back must match. It then updates `latest`
+from that archive and verifies the same identities. There are no other
+short-version aliases. Docker Engine load/push can reserialize manifests;
+its push digest cannot be compared directly to the Buildx export digest.
 
 The workflow uses `GITHUB_TOKEN` with `packages: write` only in the publish job.
 GitHub's [Container registry documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
@@ -42,7 +46,17 @@ The original run may have an overall failure from the publish step; executor
 quality success is not a substitute for candidate evidence. Executor quality
 still runs in full. Build, revision, epoch and smoke use the original candidate;
 registry preflight uses the repaired executor helper. Push and recovery share
-the same target-tag lock and never overwrite an existing registry tag.
+the shared `docker-image-latest` lock across all versions. Version tags are
+never overwritten; latest is a mutable alias for the successful version.
+
+Dispatch `operation=recover_version` handles an absent version.
+`operation=update_latest` handles an already published version without
+rebuilding or repushing it. It requires `expected_registry_digest` and
+`expected_config_digest`, verifies the version's raw manifest, pulls the exact
+digest, checks config Id/platform/version/revision/source and runs candidate
+smoke. Only then does it copy that registry digest to latest and verify exact
+raw manifest/config equality. If latest fails after version success, recover
+only the alias; multi-tag publication is not atomic.
 
 After the first successful run, an administrator must open the `leanote`
 package settings and change visibility to public. GitHub documents that new
@@ -50,6 +64,9 @@ packages are private by default and that changing a package to public is not
 reversible. Public visibility must then be verified by an anonymous
 `docker pull ghcr.io/yangphere/leanote:2.0.1`; workflow success alone is not
 anonymous-pull evidence.
+
+Also pull `ghcr.io/yangphere/leanote:latest` anonymously and confirm its
+RepoDigest equals the version tag's digest.
 
 `docker-image.yml` uses unprefixed version tags; `release.yml` retains its
 `v*.*.*` trigger and `vX.Y.Z` image tags. Pushing `2.0.1` therefore triggers only

@@ -7,6 +7,10 @@
   candidate integration and the selected version tag push. No production deployment is
   included.
 - Latest user-selected target: Git tag `2.0.1`, image `ghcr.io/yangphere/leanote:2.0.1`, `linux/amd64`.
+- The user subsequently requested a `latest` image alias in addition to the
+  build version. This authorizes updating latest to the verified 2.0.1 digest,
+  and doing the same after future successful version publications. Preserve
+  immutable version tags; no new version or Git tag is needed for this alias.
 - `gh` is authenticated as repository administrator `yangphere`.
 - Initial package/lock version was `1.0.0`; the latest user instruction requires `2.0.1`. Recheck remote `2.0.1` before tag creation.
 - Remote master starts at `5bc6bd439b55c88f2aeb42477cc99dd38fc860be`.
@@ -98,3 +102,46 @@ publication tag; do not bypass the full reusable quality gate.
 - Recovery implementation and independent full-scope review passed. Integrated
   executor CI, dispatch and GHCR push/read-back are pending. Package public
   visibility and anonymous pull remain `unrun`.
+
+## Integrated recovery executor
+
+- Reviewed work commit `213b3bc8a6a09a5a259a1ef49ab121c3753b9089`.
+- Main merge `30bf11451d96db9b0b4c178870a0d9b1918b0605` was conflict-free;
+  its tree `971310cc09b81aab00585f3cebadb9dcb208f2b9` exactly matches reviewed
+  dev content. Scoped merge diff whitespace check passed.
+- Pushed `main:main`; remote default remains main. Remote `2.0.1` tag object
+  and peeled candidate remain unchanged.
+- [Executor CI 37175199730](https://github.com/yangphere/leanote/actions/runs/37175199730)
+  passed all seven primary jobs and summary; protected handoff skipped under
+  the original rule. Real Chromium, package and container smoke passed.
+- Main SHA and version tag were rechecked immediately before dispatch.
+  [Recovery 37175408129](https://github.com/yangphere/leanote/actions/runs/37175408129)
+  was dispatched from reviewed main with the fixed recovery inputs above.
+  Publication is in progress; no registry write/read-back is yet confirmed.
+
+## Published image and independent read-back
+
+- Recovery run `37175408129` passed validate, all seven quality jobs, summary,
+  candidate build and smoke. Job `111357415300` accepted explicit initial
+  package absence, then **actually pushed** `ghcr.io/yangphere/leanote:2.0.1`.
+- Docker push printed registry manifest digest
+  `sha256:0b67446ea183a69aea3a35ede6dc187d85b5bb1e3e031ecd9cc0612c02a46c9a`.
+  The subsequent test failed because Buildx export manifest digest was
+  `sha256:1550df70ffaf933b1c6c5c7b87313654d5e2fc2e44ef34a64e48faec2b45a026`.
+  This run's overall conclusion remains failure; do not relabel it success or
+  retry writing the existing tag. The digest boundary is under investigation.
+- Independent anonymous registry read hashed the exact 2622-byte manifest.
+  Hash, `Docker-Content-Digest` header, Docker push digest and anonymous pull
+  RepoDigest all equal `sha256:0b67446ea183a69aea3a35ede6dc187d85b5bb1e3e031ecd9cc0612c02a46c9a`.
+- Remote Docker v2 manifest config digest and anonymously pulled image Id both
+  equal the exact Buildx-exported candidate config:
+  `sha256:99b11b4586b2ea0549b2264bd80bc736fd57216ea2b0a7a4e7cca5661b9ee6a8`.
+  Its config includes the rootfs identity. Image metadata confirms Linux/amd64,
+  version `2.0.1`, revision `dea2306c32f27e648d9438cbc8b67cec6151b6cc`,
+  and source `https://github.com/yangphere/leanote`.
+- `docker --config <empty isolated directory> pull
+  ghcr.io/yangphere/leanote:2.0.1` succeeded, downloaded and checksum-verified
+  all 11 layers. Public accessibility and anonymous pull are verified. The
+  agent did not change package visibility; who/when made it public is unknown.
+- Existing version tag and remote image are preserved. Correct future
+  build/load/push manifest verification before finishing implementation.

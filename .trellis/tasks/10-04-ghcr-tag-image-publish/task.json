@@ -2,7 +2,7 @@
   "id": "ghcr-tag-image-publish",
   "name": "ghcr-tag-image-publish",
   "title": "GHCR 版本 tag 镜像发布工作流",
-  "description": "新增轻量 docker-image.yml:推送无前缀 X.Y.Z tag 时经 quality-gate 与 smoke 后把同名版本镜像发布到 GHCR,main 为默认与来源分支",
+  "description": "轻量 docker-image.yml:无前缀 X.Y.Z 版本镜像和同 digest latest 经完整 quality-gate/smoke 发布到 GHCR,main 为默认与来源分支",
   "status": "in_progress",
   "dev_type": null,
   "scope": null,
@@ -24,6 +24,7 @@
     ".github/workflows/docker-image.yml",
     "scripts/check-ghcr-tag-absent.mjs",
     "scripts/verify-image-source-run.mjs",
+    "scripts/verify-image-manifest.mjs",
     "scripts/ci/validate-summaries.mjs",
     "tests/js/docker-image-workflow.test.js",
     "docs/adr/0005-publish-ghcr-image-with-lightweight-gate.md",
@@ -43,7 +44,7 @@
     "scripts/build/manifest.mjs",
     "tests/js/build-pipeline.test.js"
   ],
-  "notes": "The user authorized real GHCR publication and main as default/source branch. Main CI passed and immutable tag 2.0.1 points to dea2306c32f27e648d9438cbc8b67cec6151b6cc. Source Docker image run 37173559882 attempt 1 passed quality/build/smoke but failed registry preflight before push. Recovery preserves the tag and verifies original source evidence from a repaired main executor; real push/read-back/public/anonymous evidence remains pending. See publication.md and validation.md.",
+  "notes": "Main is the confirmed default/source branch; immutable Git tag 2.0.1 remains at dea2306c. Recovery 37175408129 actually pushed image 2.0.1; independent manifest/config verification and anonymous pull succeeded despite old Buildx/Engine digest comparison failure. The user then authorized a same-digest latest alias. Preserve existing version and add explicit latest promotion, while repairing future publication with one-build OCI artifact and byte-preserving copy. See publication.md, digest-diagnosis.md and validation.md.",
   "meta": {
     "depends_on": []
   }
