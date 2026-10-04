@@ -20,5 +20,5 @@
 - [x] dispatch `tag=2.0.1`、原候选 SHA、`source_run_id=37173559882`、`source_run_attempt=1`；确认真实 push，并用独立证据完成 digest/config/public 与匿名拉取验证。
 - [x] 上述 dispatch 已实际发布 `2.0.1`；独立匿名 raw manifest hash/header、config 绑定与真实 pull 通过。运行最后的 Buildx/daemon manifest 比较失败，不能将运行标为全绿。
 - [x] 根据真实本地 registry 复现修复 BuildKit export/Engine push manifest 序列化边界，保留一次构建、同一候选 smoke 和不可覆盖版本；固定 Skopeo 工具与最终独立审查通过。
-- [ ] 按用户最新要求增加 latest 同 digest 别名、跨版本发布串行化与已存在版本的显式晋升；真实给现有 `2.0.1` 补 latest，不改版本 tag/manifest。
+- [x] 按用户最新要求增加 latest 同 digest 别名、跨版本发布串行化与已存在版本的显式晋升；真实给现有 `2.0.1` 补 latest，不改版本 tag/manifest。main CI `37177660541` 与晋升 `37177847779` 均全绿；两个标签匿名 raw manifest/header/config 与实际 pull 完全一致。
 - 回滚点：仅新增文件与文档追加，可整体 revert。

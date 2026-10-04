@@ -176,4 +176,25 @@ is separately authorized by the user's subsequent request.
 - Latest focused/lint checks and final independent review passed; see
   `check-review-latest.md`. Main-session publication/Release regressions passed
   47/47 with no skips. Trellis validation and scoped diff checks passed.
-  Integrated main CI and actual GHCR latest promotion remain pending.
+  Integrated main CI and actual GHCR latest promotion subsequently passed
+  as recorded below.
+
+## Final real latest evidence
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Reviewed integration | passed | Work `a4e402d3`, main merge `5e4452a8`; identical reviewed/merged content tree `fed03fdc333ce9a557fd8aa840d503fb9a4393e0` |
+| Main executor CI | passed | [37177660541](https://github.com/yangphere/leanote/actions/runs/37177660541): seven primary jobs and summary, including actual Chromium and smoke |
+| Latest operation | passed | [37177847779](https://github.com/yangphere/leanote/actions/runs/37177847779), main dispatch attempt 1; overall success |
+| Original candidate/source gates | passed | Validate verified original numeric push run `37173559882`, attempt 1 and downloaded summary provenance; executor quality also passed separately |
+| Exact existing version smoke | passed | Publish job `111364690701`: digest pull, config/platform/version/revision/source validation and full candidate smoke succeeded |
+| No immutable version write | passed | Publish Buildx build and version push steps skipped; one registry-to-registry copy wrote only latest |
+| Runner copy tool/raw read-back | passed | Pinned Skopeo 1.22.3 confirmed; latest raw manifest/config matches expected existing-version digests |
+| Anonymous registry bytes | passed | Both tags return 200 and 2622 bytes; raw SHA/header `sha256:0b67446ea183a69aea3a35ede6dc187d85b5bb1e3e031ecd9cc0612c02a46c9a`, config `sha256:99b11b4586b2ea0549b2264bd80bc736fd57216ea2b0a7a4e7cca5661b9ee6a8` |
+| Anonymous actual pulls | passed | Empty isolated Docker auth configuration; latest and 2.0.1 pulled successfully, same Id/RepoDigest and original metadata; cached verified layers reused |
+| Git/default branch preservation | passed | Remote annotated 2.0.1 object/peeled SHA unchanged; default main confirmed after latest publication |
+| Future fresh-version GHCR dual-export branch | unrun | Actual dual-export and digest-preserving version/latest transfer passed against a real local registry; current GHCR run exercised existing-version promotion only |
+
+Earlier failed Actions remain failed historical evidence. The task stays active;
+no archive or production deployment was requested. User edits in `CONTEXT.md`
+and the Compose planning task remain excluded from all publication commits.
