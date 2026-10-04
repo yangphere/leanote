@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 34
-- **Last Active**: 2026-10-02
+- **Total Sessions**: 37
+- **Last Active**: 2026-10-04
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~905 | Active |
+| `journal-1.md` | ~1027 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,9 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 37 | 2026-10-04 | GHCR 真实补充验证证据收尾 | `1bf01768b64ed17a394bd23cb32fb84485065d4a` | `dev` |
+| 36 | 2026-10-04 | 生产与开发 Compose 拆分及 GHCR 审查修复收尾 | `9322cfeb37fde8c2055d039603ada6d618339285` | `dev` |
+| 35 | 2026-10-04 | GHCR 2.0.1/latest 真实发布与任务归档 | `e1b18995`, `41ffaebd`, `9cca58c0`, `213b3bc8`, `a4e402d3`, `bcc35812`, `3cda6b5e` | `dev` |
 | 34 | 2026-10-02 | 完成管理后台与个人中心响应式样式修复 | `8a491c1e` | `dev` |
 | 33 | 2026-10-02 | 修复账号下拉菜单缓存 | `7cf21120` | `dev` |
 | 32 | 2026-10-02 | Docker 运行时博客与笔记修复 | `f8cfd6b1` | `dev` |

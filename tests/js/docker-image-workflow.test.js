@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { execFileSync, spawnSync } = require('node:child_process');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const test = require('node:test');
@@ -15,6 +16,8 @@ test('docker image workflow keeps numeric pushes and a controlled same-tag recov
   }
   assert.doesNotMatch(workflow, /branches:/);
   assert.match(workflow, /group: docker-image-latest/);
+  assert.match(workflow, /queue: max/);
+  assert.match(workflow, /cancel-in-progress: false/);
   assert.doesNotMatch(workflow, /group: release-\$\{\{ github\.ref \}\}/);
   assert.match(workflow, /permissions:\s*\n\s+actions: read\s*\n\s+contents: read/);
   assert.match(workflow, /publish:[\s\S]*?permissions:\s*\n\s+contents: read\s*\n\s+packages: write/);
@@ -60,7 +63,7 @@ test('ordinary CI follows dev and the default main branch', async () => {
 });
 
 test('image and protected release tags keep distinct strict version contracts', async () => {
-  const { assertImageTag, assertImageTagFormat, assertReleaseTag } = await import('../../scripts/version.mjs');
+  const { assertImageTag, assertImageTagFormat, assertReleaseTag, compareImageVersions } = await import('../../scripts/version.mjs');
   assert.doesNotThrow(() => assertImageTagFormat('2.0.1'));
   assert.throws(() => assertImageTagFormat('v2.0.1'), /image tag must match X\.Y\.Z/);
   assert.doesNotThrow(() => assertImageTag('2.0.1', '2.0.1'));
@@ -68,6 +71,63 @@ test('image and protected release tags keep distinct strict version contracts', 
   assert.throws(() => assertImageTag('2.0.2', '2.0.1'), /does not match package version/);
   assert.doesNotThrow(() => assertReleaseTag('v2.0.1', '2.0.1'));
   assert.throws(() => assertReleaseTag('2.0.1', '2.0.1'), /release tag must match vX\.Y\.Z/);
+  assert.equal(compareImageVersions('10.0.0', '9.999.999'), 1);
+  assert.equal(compareImageVersions('2.10.0', '2.9.999'), 1);
+  assert.equal(compareImageVersions('2.0.10', '2.0.9'), 1);
+  assert.equal(compareImageVersions('2.0.1', '2.0.1'), 0);
+  assert.equal(compareImageVersions('1.999.999', '2.0.0'), -1);
+  assert.equal(compareImageVersions('999999999999999999999999.0.0', '999999999999999999999998.999.999'), 1);
+  assert.throws(() => compareImageVersions('02.0.1', '2.0.1'), /image tag must match X\.Y\.Z/);
+});
+
+test('latest promotion validates Skopeo listing identity and compares strict numeric versions', async () => {
+  const { hasLatestTag, shouldPromoteLatest } = await import('../../scripts/check-latest-promotion.mjs');
+  const repository = 'ghcr.io/yangphere/leanote';
+  const withoutLatest = { Repository: repository, Tags: ['2.0.1'] };
+  const withLatest = { Repository: repository, Tags: ['2.0.1', 'latest'] };
+  const config = (version) => ({ config: { Labels: { 'org.opencontainers.image.version': version } } });
+
+  assert.equal(hasLatestTag(withoutLatest, repository), false);
+  assert.equal(shouldPromoteLatest({ candidateVersion: '1.0.0', listing: withoutLatest, expectedRepository: repository }), true);
+  assert.equal(hasLatestTag(withLatest, repository), true);
+  assert.equal(shouldPromoteLatest({ candidateVersion: '2.0.2', listing: withLatest, expectedRepository: repository, latestConfig: config('2.0.1') }), true);
+  assert.equal(shouldPromoteLatest({ candidateVersion: '2.0.1', listing: withLatest, expectedRepository: repository, latestConfig: config('2.0.1') }), false);
+  assert.equal(shouldPromoteLatest({ candidateVersion: '1.99.99', listing: withLatest, expectedRepository: repository, latestConfig: config('2.0.1') }), false);
+  assert.equal(shouldPromoteLatest({ candidateVersion: '1000000000000000000000000.0.0', listing: withLatest, expectedRepository: repository, latestConfig: config('999999999999999999999999.999.999') }), true);
+
+  assert.throws(() => hasLatestTag({ Repository: 'another/package', Tags: ['latest'] }, repository), /repository identity mismatch/);
+  assert.throws(() => hasLatestTag({ Repository: repository, Tags: 'latest' }, repository), /Tags must be an array/);
+  assert.throws(() => hasLatestTag({ Repository: repository, Tags: ['latest', 2] }, repository), /Tags must contain only strings/);
+  assert.throws(() => shouldPromoteLatest({ candidateVersion: '2.0.2', listing: withLatest, expectedRepository: repository }), /latest config is required/);
+  assert.throws(() => shouldPromoteLatest({ candidateVersion: '2.0.2', listing: withLatest, expectedRepository: repository, latestConfig: {} }), /config\.config must be an object/);
+  assert.throws(() => shouldPromoteLatest({ candidateVersion: '2.0.2', listing: withLatest, expectedRepository: repository, latestConfig: { config: {} } }), /Labels must be an object/);
+  assert.throws(() => shouldPromoteLatest({ candidateVersion: '2.0.2', listing: withLatest, expectedRepository: repository, latestConfig: config('') }), /version label is missing/);
+  assert.throws(() => shouldPromoteLatest({ candidateVersion: '2.0.2', listing: withLatest, expectedRepository: repository, latestConfig: config('latest') }), /image tag must match X\.Y\.Z/);
+});
+
+test('latest promotion file CLI prints booleans and fails closed on invalid JSON', async () => {
+  const root = await fs.mkdtemp(path.join(process.cwd(), 'tmp-latest-promotion-'));
+  const listingPath = path.join(root, 'tags.json');
+  const configPath = path.join(root, 'config.json');
+  const repository = 'ghcr.io/yangphere/leanote';
+  try {
+    await fs.writeFile(listingPath, JSON.stringify({ Repository: repository, Tags: ['2.0.1', 'latest'] }));
+    await fs.writeFile(configPath, JSON.stringify({ config: { Labels: { 'org.opencontainers.image.version': '2.0.1' } } }));
+    const run = (...args) => execFileSync(process.execPath, ['scripts/check-latest-promotion.mjs', ...args], { encoding: 'utf8' }).trim();
+    assert.equal(run('--has-latest', listingPath, repository), 'true');
+    assert.equal(run('--should-promote', listingPath, configPath, repository, '2.0.2'), 'true');
+    assert.equal(run('--should-promote', listingPath, configPath, repository, '2.0.1'), 'false');
+    await fs.writeFile(listingPath, JSON.stringify({ Repository: repository, Tags: ['2.0.1'] }));
+    await fs.rm(configPath);
+    assert.equal(run('--has-latest', listingPath, repository), 'false');
+    assert.equal(run('--should-promote', listingPath, configPath, repository, '1.0.0'), 'true');
+    await fs.writeFile(listingPath, '{');
+    const invalid = spawnSync(process.execPath, ['scripts/check-latest-promotion.mjs', '--has-latest', listingPath, repository], { encoding: 'utf8' });
+    assert.notEqual(invalid.status, 0);
+    assert.match(invalid.stderr, /contains invalid JSON/);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
 });
 
 test('manual recovery verifier binds the latest explicit attempt, candidate gates, and failed publish step', async () => {
@@ -133,12 +193,17 @@ test('docker image workflow smokes one dual-exported candidate before byte-prese
   const configBinding = workflow.indexOf('test "$archive_config" = "$local_config"');
   const versionCopy = workflow.indexOf('oci-archive:/work/candidate.oci.tar docker://"$IMAGE"');
   const latestCopy = workflow.indexOf('oci-archive:/work/candidate.oci.tar docker://"$LATEST_IMAGE"');
+  const latestListing = workflow.indexOf('skopeo list-tags', versionCopy);
+  const latestGuard = workflow.indexOf('check-latest-promotion.mjs" --should-promote', versionCopy);
   assert.notEqual(smoke, -1);
   assert.ok(configBinding < smoke);
   assert.ok(absence > smoke);
   assert.ok(finalSourceCheck > absence);
   assert.ok(versionCopy > finalSourceCheck);
+  assert.ok(latestListing > versionCopy);
+  assert.ok(latestGuard > latestListing);
   assert.ok(latestCopy > versionCopy);
+  assert.ok(latestCopy > latestGuard);
   assert.doesNotMatch(workflow, /docker push/);
   assert.equal([...workflow.matchAll(/docker buildx build /g)].length, 1);
   assert.match(workflow, /skopeo copy --preserve-digests/);
@@ -163,8 +228,13 @@ test('latest-only recovery verifies and smokes the immutable version digest befo
   assert.doesNotMatch(updateLatest, /docker buildx build|oci-archive:|check-ghcr-tag-absent/);
   assert.equal([...updateLatest.matchAll(/skopeo copy /g)].length, 1);
   const sourceCheck = updateLatest.indexOf('git fetch --force --no-tags origin');
+  const latestListing = updateLatest.indexOf('skopeo list-tags');
+  const latestGuard = updateLatest.indexOf('check-latest-promotion.mjs" --should-promote');
   const latestCopy = updateLatest.indexOf('skopeo copy --preserve-digests');
-  assert.ok(sourceCheck >= 0 && latestCopy > sourceCheck);
+  assert.ok(sourceCheck >= 0 && latestListing > sourceCheck);
+  assert.ok(latestGuard > latestListing);
+  assert.ok(latestCopy > latestGuard);
+  assert.match(updateLatest, /Skipping latest promotion: candidate .* is not newer than the current latest version/);
 });
 
 test('image manifest verifier binds raw bytes, media type, and candidate config before publication', async () => {
@@ -201,9 +271,9 @@ test('image manifest verifier binds raw bytes, media type, and candidate config 
   );
 });
 
-test('docker image workflow makes first-package creation explicit', async () => {
+test('docker image workflow refuses implicit first-package creation', async () => {
   const workflow = await fs.readFile(workflowPath, 'utf8');
-  assert.match(workflow, /ALLOW_INITIAL_PACKAGE_CREATE: 'true'/);
+  assert.doesNotMatch(workflow, /ALLOW_INITIAL_PACKAGE_CREATE/);
   assert.match(workflow, /IMAGE_REPOSITORY: ghcr\.io\/yangphere\/leanote/);
   assert.match(workflow, /GHCR_IMAGE: yangphere\/leanote/);
   assert.match(workflow, /IMAGE=\$\{IMAGE_REPOSITORY\}:\$\{RELEASE_TAG\}/);

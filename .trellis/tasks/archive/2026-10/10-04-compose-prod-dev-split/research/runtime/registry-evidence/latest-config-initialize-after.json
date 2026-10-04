@@ -1,0 +1,46 @@
+{
+    "created": "2026-10-04T07:04:03.68758132Z",
+    "architecture": "amd64",
+    "os": "linux",
+    "config": {
+        "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        ],
+        "WorkingDir": "/",
+        "Labels": {
+            "org.opencontainers.image.source": "https://github.com/yangphere/leanote",
+            "org.opencontainers.image.version": "2.0.1"
+        }
+    },
+    "rootfs": {
+        "type": "layers",
+        "diff_ids": [
+            "sha256:9c7dfdaeca171d7ffe75c8bf9ac2502bfe29a3754f9d6a886bf2bd6fe75141ed"
+        ]
+    },
+    "history": [
+        {
+            "created": "2026-10-04T07:04:03.68758132Z",
+            "created_by": "ARG VERSION=2.0.1",
+            "comment": "buildkit.dockerfile.v0",
+            "empty_layer": true
+        },
+        {
+            "created": "2026-10-04T07:04:03.68758132Z",
+            "created_by": "LABEL org.opencontainers.image.version=2.0.1",
+            "comment": "buildkit.dockerfile.v0",
+            "empty_layer": true
+        },
+        {
+            "created": "2026-10-04T07:04:03.68758132Z",
+            "created_by": "LABEL org.opencontainers.image.source=https://github.com/yangphere/leanote",
+            "comment": "buildkit.dockerfile.v0",
+            "empty_layer": true
+        },
+        {
+            "created": "2026-10-04T07:04:03.68758132Z",
+            "created_by": "COPY stamp /validation-stamp # buildkit",
+            "comment": "buildkit.dockerfile.v0"
+        }
+    ]
+}

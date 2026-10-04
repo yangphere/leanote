@@ -38,6 +38,7 @@ on:
 
 concurrency:
   group: docker-image-latest
+  queue: max
   cancel-in-progress: false
 
 permissions:
@@ -223,7 +224,6 @@ jobs:
         env:
           GH_TOKEN: '${{ github.token }}'
           TAG: ${{ needs.validate.outputs.tag }}
-          ALLOW_INITIAL_PACKAGE_CREATE: 'true'
         run: |
           set -eu
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
@@ -239,6 +239,17 @@ jobs:
           skopeo copy --preserve-digests --dest-authfile /root/.docker/config.json oci-archive:/work/candidate.oci.tar docker://"$IMAGE"
           skopeo inspect --authfile /root/.docker/config.json --raw docker://"$IMAGE" > "$RUNNER_TEMP/version-manifest.json"
           IMAGE_MANIFEST_PATH="$RUNNER_TEMP/version-manifest.json" EXPECTED_MANIFEST_DIGEST="$expected_manifest" EXPECTED_CONFIG_DIGEST="$expected_config" node "$GITHUB_WORKSPACE/executor/scripts/verify-image-manifest.mjs"
+          skopeo list-tags --authfile /root/.docker/config.json docker://"$IMAGE_REPOSITORY" > "$RUNNER_TEMP/latest-tags.json"
+          has_latest=$(node "$GITHUB_WORKSPACE/executor/scripts/check-latest-promotion.mjs" --has-latest "$RUNNER_TEMP/latest-tags.json" "$IMAGE_REPOSITORY")
+          if [ "$has_latest" = true ]; then
+            skopeo inspect --authfile /root/.docker/config.json --config docker://"$LATEST_IMAGE" > "$RUNNER_TEMP/latest-config.json"
+          fi
+          promote_latest=$(node "$GITHUB_WORKSPACE/executor/scripts/check-latest-promotion.mjs" --should-promote "$RUNNER_TEMP/latest-tags.json" "$RUNNER_TEMP/latest-config.json" "$IMAGE_REPOSITORY" "$RELEASE_TAG")
+          if [ "$promote_latest" = false ]; then
+            echo "Skipping latest promotion: candidate $RELEASE_TAG is not newer than the current latest version"
+            exit 0
+          fi
+          echo "Promoting candidate $RELEASE_TAG to latest after registry version guard"
           skopeo copy --preserve-digests --dest-authfile /root/.docker/config.json oci-archive:/work/candidate.oci.tar docker://"$LATEST_IMAGE"
           skopeo inspect --authfile /root/.docker/config.json --raw docker://"$LATEST_IMAGE" > "$RUNNER_TEMP/latest-manifest.json"
           IMAGE_MANIFEST_PATH="$RUNNER_TEMP/latest-manifest.json" EXPECTED_MANIFEST_DIGEST="$expected_manifest" EXPECTED_CONFIG_DIGEST="$expected_config" node "$GITHUB_WORKSPACE/executor/scripts/verify-image-manifest.mjs"
@@ -268,6 +279,17 @@ jobs:
             "refs/heads/main:refs/remotes/origin/main"
           test "$(git rev-parse "refs/remotes/origin/tags/${TAG}^{}")" = "$CANDIDATE_SHA"
           git merge-base --is-ancestor "$CANDIDATE_SHA" refs/remotes/origin/main
+          skopeo list-tags --authfile /root/.docker/config.json docker://"$IMAGE_REPOSITORY" > "$RUNNER_TEMP/latest-tags.json"
+          has_latest=$(node "$GITHUB_WORKSPACE/executor/scripts/check-latest-promotion.mjs" --has-latest "$RUNNER_TEMP/latest-tags.json" "$IMAGE_REPOSITORY")
+          if [ "$has_latest" = true ]; then
+            skopeo inspect --authfile /root/.docker/config.json --config docker://"$LATEST_IMAGE" > "$RUNNER_TEMP/latest-config.json"
+          fi
+          promote_latest=$(node "$GITHUB_WORKSPACE/executor/scripts/check-latest-promotion.mjs" --should-promote "$RUNNER_TEMP/latest-tags.json" "$RUNNER_TEMP/latest-config.json" "$IMAGE_REPOSITORY" "$RELEASE_TAG")
+          if [ "$promote_latest" = false ]; then
+            echo "Skipping latest promotion: candidate $RELEASE_TAG is not newer than the current latest version"
+            exit 0
+          fi
+          echo "Promoting candidate $RELEASE_TAG to latest after registry version guard"
           skopeo copy --preserve-digests --src-authfile /root/.docker/config.json --dest-authfile /root/.docker/config.json docker://"$VERSION_SOURCE" docker://"$LATEST_IMAGE"
           skopeo inspect --authfile /root/.docker/config.json --raw docker://"$LATEST_IMAGE" > "$RUNNER_TEMP/latest-manifest.json"
           IMAGE_MANIFEST_PATH="$RUNNER_TEMP/latest-manifest.json" EXPECTED_MANIFEST_DIGEST="$EXPECTED_REGISTRY_DIGEST" EXPECTED_CONFIG_DIGEST="$EXPECTED_CONFIG_DIGEST" node "$GITHUB_WORKSPACE/executor/scripts/verify-image-manifest.mjs"

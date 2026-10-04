@@ -192,3 +192,14 @@ publication tag; do not bypass the full reusable quality gate.
 - Fresh-version dual-export publication was verified against a real local
   registry; a new-version GHCR execution of that branch remains `unrun`.
   No additional version/tag was created merely to exercise it.
+
+## Local closeout authorization
+
+- At the user's cleanup request, the managed GHCR publication worktree was
+  verified clean and equal to remote main `d525be93`, then archived with the
+  native worktree tool. Only the primary dev workspace remains registered;
+  main is retained and no user changes were removed.
+- On 2026-10-04 the user requested local commit and Trellis task archive.
+  Existing code/publication work is already committed through `bcc35812`;
+  local archive and journal exclude `CONTEXT.md` and
+  `10-04-compose-prod-dev-split`, and perform no additional remote push.

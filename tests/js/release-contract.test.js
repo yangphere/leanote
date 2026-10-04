@@ -496,6 +496,32 @@ test('browser precheck entry is isolated from any publishing side effects', asyn
   assert.match(workflow, /test-results\/provenance\.json/);
 });
 
+test('Compose separates immutable production images from local development builds', async () => {
+  const productionCompose = await fs.readFile(path.join(process.cwd(), 'docker-compose.yml'), 'utf8');
+  const developmentCompose = await fs.readFile(path.join(process.cwd(), 'docker-compose.dev.yml'), 'utf8');
+  const productionLeanote = productionCompose.slice(
+    productionCompose.indexOf('  leanote:'),
+    productionCompose.indexOf('\nnetworks:'),
+  );
+
+  assert.match(
+    productionLeanote,
+    /image: ghcr\.io\/yangphere\/leanote:\$\{LEANOTE_IMAGE_TAG:\?LEANOTE_IMAGE_TAG must be set\}/,
+  );
+  assert.doesNotMatch(productionLeanote, /\n\s+build:/);
+  assert.doesNotMatch(productionLeanote, /LEANOTE_VERSION/);
+
+  assert.match(developmentCompose, /^services:\n  leanote:\n/m);
+  assert.match(developmentCompose, /\n\s+build:\n\s+context: \.\n\s+dockerfile: Dockerfile/);
+  assert.match(
+    developmentCompose,
+    /VERSION: \$\{LEANOTE_VERSION:\?LEANOTE_VERSION must be set\}/,
+  );
+  assert.match(developmentCompose, /\n\s+image: leanote:local\s*$/);
+  assert.doesNotMatch(developmentCompose, /^\s{2}(?:mongo|mongo-seed|gotenberg):/m);
+  assert.doesNotMatch(developmentCompose, /^(?:networks|volumes):/m);
+});
+
 test('runtime image delegates PDF rendering to the isolated Gotenberg service', async () => {
   const dockerfile = await fs.readFile(path.join(process.cwd(), 'Dockerfile'), 'utf8');
   const compose = await fs.readFile(path.join(process.cwd(), 'docker-compose.yml'), 'utf8');

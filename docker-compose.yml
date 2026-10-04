@@ -44,12 +44,7 @@ services:
 
   leanote:
     platform: linux/amd64
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        VERSION: ${LEANOTE_VERSION:?LEANOTE_VERSION must be set}
-    image: leanote:local
+    image: ghcr.io/yangphere/leanote:${LEANOTE_IMAGE_TAG:?LEANOTE_IMAGE_TAG must be set}
     restart: unless-stopped
     depends_on:
       mongo-seed:

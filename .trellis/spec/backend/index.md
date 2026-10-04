@@ -18,7 +18,7 @@ Go 1.26 first-party HTTP stack + MongoDB monolith (Revel runtime removed). Guide
 | [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | Filled |
 | [Error Handling](./error-handling.md) | Error types, handling strategies | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Filled |
-| [GHCR Image Publishing](./image-publishing.md) | Versioned image delivery, registry absence and evidence gates | Filled |
+| [GHCR Image Publishing](./image-publishing.md) | Versioned image delivery, production/dev Compose and evidence gates | Filled |
 | [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | Filled |
 
 ---

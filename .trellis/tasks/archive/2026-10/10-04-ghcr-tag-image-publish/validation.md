@@ -195,6 +195,8 @@ is separately authorized by the user's subsequent request.
 | Git/default branch preservation | passed | Remote annotated 2.0.1 object/peeled SHA unchanged; default main confirmed after latest publication |
 | Future fresh-version GHCR dual-export branch | unrun | Actual dual-export and digest-preserving version/latest transfer passed against a real local registry; current GHCR run exercised existing-version promotion only |
 
-Earlier failed Actions remain failed historical evidence. The task stays active;
-no archive or production deployment was requested. User edits in `CONTEXT.md`
-and the Compose planning task remain excluded from all publication commits.
+Earlier failed Actions remain failed historical evidence. At publication time
+the task remained active and no archive had been requested. The user subsequently
+requested worktree cleanup and local task commit/archive/journal on 2026-10-04.
+User edits in `CONTEXT.md` and the Compose planning task remain excluded;
+closeout does not authorize another remote push or production deployment.

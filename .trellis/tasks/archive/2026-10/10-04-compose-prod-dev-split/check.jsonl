@@ -1,0 +1,5 @@
+{"file":".trellis/spec/backend/index.md","reason":"Discover deployment quality contracts"}
+{"file":".trellis/spec/backend/image-publishing.md","reason":"Verify version naming and registry evidence boundaries"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Check focused changes and truthful runtime evidence"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Verify shared topology is not duplicated"}
+{"file":".trellis/tasks/archive/2026-10/10-04-compose-prod-dev-split/research/ghcr-review.md","reason":"Check queue limits and shared latest promotion invariants"}
