@@ -6,7 +6,7 @@
 - Issue: The workflow regression tests did not prove that the `update_latest` recovery path avoids rebuilding or rewriting the immutable version tag, nor that promotion occurs only after the final Git tag and `origin/main` recheck. The manifest verifier tests also covered config binding but not raw manifest digest mismatch or rejection of an OCI index.
 - Fix: Added assertions that the latest-only branch contains no Buildx build, OCI archive, or version-tag absence check; performs exactly one Skopeo copy; and copies `latest` only after the source recheck. Added verifier regressions for a mismatched raw manifest digest and an OCI index presented where a single-platform manifest is required.
 
-## Findings (not fixed)
+## External gates at review time
 
 - The repaired workflow has not yet run end to end on a GitHub-hosted executor. Local workflow tests, Actionlint, and the implementation-stage registry exercise cover the deterministic logic, but do not substitute for the real Actions environment.
 - The real `ghcr.io/yangphere/leanote:latest` promotion and its registry read-back have not run. This is intentionally left to the main flow after integration; this review performed no remote writes.
@@ -23,3 +23,15 @@
 - Prior broad suite: implementation handoff records 238 passed and 1 Windows-specific skip; the recovery review records 45/45 focused checks passing.
 
 Conclusion: ready to integrate, with no local blocker. The main flow should run the complete GitHub CI and then dispatch the guarded `update_latest` operation using the verified immutable version manifest/config digests.
+
+## Main-flow evidence after review
+
+- Integrated main CI `37177660541` passed all seven primary jobs and summary.
+- Latest promotion `37177847779` passed overall; existing-version digest
+  pull/metadata/smoke and latest-only copy/read-back succeeded. Build/version
+  push steps were skipped.
+- Independent anonymous raw manifest/header/config verification and real
+  Docker pulls prove version/latest identity; see `publication.md` and
+  `validation.md`. No visibility change was needed or performed.
+- The fresh-version OCI archive branch has real local registry evidence but
+  remains `unrun` on GHCR; no extra version was created for verification.

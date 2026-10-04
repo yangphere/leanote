@@ -41,7 +41,7 @@ The user subsequently removed the `v` from the Git tag as well: both tags are
 `2.0.1`, so this publication avoids the existing protected `v*.*.*` Release
 trigger. No superseded tag was created or pushed.
 
-## Execution state
+## Initial execution state (historical)
 
 Preparing a reviewed candidate. Real Actions execution, GHCR push/digest
 read-back and anonymous pull are not yet verified. Any public-visibility change
@@ -145,3 +145,50 @@ publication tag; do not bypass the full reusable quality gate.
   agent did not change package visibility; who/when made it public is unknown.
 - Existing version tag and remote image are preserved. Correct future
   build/load/push manifest verification before finishing implementation.
+
+## Latest executor integration
+
+- Work commit `a4e402d3` adds byte-preserving OCI archive transport and
+  the latest-only promotion operation. Final independent review passed.
+- Main merge `5e4452a8ef3d288b02807dc4af6b8f853c66d9f7` is conflict-free;
+  content tree `fed03fdc333ce9a557fd8aa840d503fb9a4393e0` equals the
+  reviewed dev tree. Scoped merge diff checks passed.
+- Pushed explicitly as `main:main`. Default branch remains main; remote
+  Git tag object `887a424375187212c6ee31b4fc904361cfac58e8` and its peeled
+  candidate `dea2306c32f27e648d9438cbc8b67cec6151b6cc` remain unchanged.
+- [Latest executor CI 37177660541](https://github.com/yangphere/leanote/actions/runs/37177660541)
+  passed all seven primary jobs and summary, including real Chromium,
+  package smoke and container smoke. Protected handoff skipped as intended.
+
+## Successful latest promotion and anonymous verification
+
+- [Latest promotion 37177847779](https://github.com/yangphere/leanote/actions/runs/37177847779)
+  attempt `1`, `workflow_dispatch` from main executor `5e4452a8`, completed
+  with overall **success**. Validate, all seven quality jobs, summary and
+  publish passed. Original source evidence remains run `37173559882` attempt `1`.
+- Exact dispatch inputs: `operation=update_latest`, `tag=2.0.1`,
+  `expected_commit=dea2306c32f27e648d9438cbc8b67cec6151b6cc`,
+  `expected_registry_digest=sha256:0b67446ea183a69aea3a35ede6dc187d85b5bb1e3e031ecd9cc0612c02a46c9a`,
+  `expected_config_digest=sha256:99b11b4586b2ea0549b2264bd80bc736fd57216ea2b0a7a4e7cca5661b9ee6a8`,
+  `source_run_id=37173559882`, `source_run_attempt=1`.
+- Publish job `111364690701` verified and pulled the existing registry digest,
+  checked metadata, ran the complete candidate smoke, and copied that digest
+  only to latest. Candidate Buildx build and immutable version push steps
+  were **skipped**. Pinned Skopeo 1.22.3 was confirmed on the real runner;
+  latest manifest/config read-back passed. Job completed at `2026-10-04T04:49:28Z`.
+- Independent anonymous HTTP verification at `2026-10-04T04:50:21Z` returned
+  200 for both `2.0.1` and `latest`. Both raw manifests are 2622 bytes;
+  exact-byte SHA256 and `Docker-Content-Digest` headers equal the manifest
+  digest above. Both config descriptors equal the expected config above.
+- Actual anonymous Docker pulls of both tags succeeded with an isolated
+  configuration directory containing no `config.json` or registry credentials.
+  Previously validated layers were reused; latest was newly resolved from GHCR.
+  Both tags resolve to the same pulled Id/RepoDigest, Linux/amd64, version `2.0.1`,
+  original revision `dea2306c` and repository source label.
+- After promotion, remote Git tag object and peeled SHA remain unchanged;
+  GitHub default remains main. No package visibility change or deployment was
+  performed. The earlier recovery `37175408129` remains a failed run despite
+  its real version push; this successful alias operation does not rewrite it.
+- Fresh-version dual-export publication was verified against a real local
+  registry; a new-version GHCR execution of that branch remains `unrun`.
+  No additional version/tag was created merely to exercise it.
