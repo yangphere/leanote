@@ -447,7 +447,11 @@ Production configuration must provide `db.dbname`,
 `db.urlEnv=${MONGODB_URL}`, `app.secret=${LEANOTE_APP_SECRET}`,
 `content.private.data`, `content.private.quarantine`,
 `content.public.data`, `content.public.quarantine`, `content.temporary`,
-and `admin.backup.root`. `ProductionConfig` exposes only the address,
+and `admin.backup.root`. It must also provide an explicit `[prod] site.url`
+whose value is either a literal `http`/`https` origin or exactly
+`${LEANOTE_SITE_URL}`. The origin may include a valid port, but no path, query,
+fragment, user info, or surrounding whitespace; its host must pass
+`domain.CanonicalizeBlogHost`. `ProductionConfig` exposes only the address,
 shutdown timeout, database identity/digest, credential-provider reference,
 validated content roots, and backup root; it never carries raw credentials or
 the source `Config`.
@@ -473,6 +477,9 @@ the source `Config`.
 | Condition | Required result |
 |---|---|
 | Non-canonical/missing/unreadable production config | stable `ConfigError`; process exits 78 before listener or database bind |
+| Missing `[prod] site.url` | `CONFIG_KEY_INVALID` with key `site.url` |
+| Missing/empty `LEANOTE_SITE_URL` for `${LEANOTE_SITE_URL}` | `CONFIG_VALUE_MISSING` / `CONFIG_VALUE_EMPTY` with key `LEANOTE_SITE_URL` |
+| Invalid site origin or non-target `${...}` placeholder | `CONFIG_SITE_URL_INVALID` / `CONFIG_SOURCE_CONFLICT`; error text contains no URL value |
 | Missing/relative root | `CONFIG_CONTENT_ROOT_MISSING` or `CONFIG_CONTENT_ROOT_RELATIVE` |
 | Unwritable or cross-device data/quarantine pair | `CONFIG_CONTENT_ROOT_UNWRITABLE` or `CONFIG_CONTENT_ROOT_CROSS_DEVICE` |
 | Quarantine under a served root / any root overlap | `CONFIG_CONTENT_ROOT_PUBLIC` or `CONFIG_CONTENT_ROOT_OVERLAP` |
@@ -493,7 +500,8 @@ the source `Config`.
 
 - Unit tests assert every stable root/config error code, canonical identity and
   digest, locale precedence, `ViewArgs`, session commit behavior, static
-  upload routing, and the identity 405/`Allow` matrix.
+  upload routing, the site URL/source/error matrix, and the identity 405/`Allow`
+  matrix.
 - Run `go build ./...`, focused `go test`, `go vet`, `gofmt -l`, task context
   validation, and `git diff --check` before committing.
 - Real listener requests, Mongo/Golden replay, process-level exit 78, and

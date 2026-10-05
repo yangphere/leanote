@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 37
-- **Last Active**: 2026-10-04
+- **Total Sessions**: 38
+- **Last Active**: 2026-10-05
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1027 | Active |
+| `journal-1.md` | ~1049 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 38 | 2026-10-05 | Docker 通过 LEANOTE_SITE_URL 提供对外站点地址 | `6bd4235c` | `dev` |
 | 37 | 2026-10-04 | GHCR 真实补充验证证据收尾 | `1bf01768b64ed17a394bd23cb32fb84485065d4a` | `dev` |
 | 36 | 2026-10-04 | 生产与开发 Compose 拆分及 GHCR 审查修复收尾 | `9322cfeb37fde8c2055d039603ada6d618339285` | `dev` |
 | 35 | 2026-10-04 | GHCR 2.0.1/latest 真实发布与任务归档 | `e1b18995`, `41ffaebd`, `9cca58c0`, `213b3bc8`, `a4e402d3`, `bcc35812`, `3cda6b5e` | `dev` |

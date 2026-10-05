@@ -3,12 +3,15 @@ package httpserver
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 
+	"github.com/yangphere/leanote/app/domain"
 	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/connstring"
 )
 
@@ -86,7 +89,7 @@ func ValidateProductionConfig(path string) (*Config, error) {
 	// Sensitive production keys cannot be inherited from DEFAULT. Keeping a
 	// second source there would make the effective config depend on override
 	// order and could silently retain a literal or undeclared environment key.
-	for _, key := range []string{"app.secret", "db.urlEnv"} {
+	for _, key := range []string{"app.secret", "db.urlEnv", "site.url"} {
 		if _, inherited := sections["DEFAULT"][key]; inherited {
 			if _, overridden := prod[key]; !overridden {
 				continue // the required-key check below reports the missing prod key
@@ -131,11 +134,85 @@ func ValidateProductionConfig(path string) (*Config, error) {
 	if err := validateMongoURL(mongoURL, dbName); err != nil {
 		return nil, err
 	}
+	if err := validateProductionSiteURL(prod); err != nil {
+		return nil, err
+	}
 	cfg, err := ParseConfig(data, "prod")
 	if err != nil {
 		return nil, configError("CONFIG_KEY_INVALID", "prod")
 	}
 	return cfg, nil
+}
+
+func validateProductionSiteURL(prod map[string]string) error {
+	rawSiteURL, siteURLPresent := prod["site.url"]
+	if !siteURLPresent {
+		return configError("CONFIG_KEY_INVALID", "site.url")
+	}
+	siteURL := stripQuotes(rawSiteURL)
+	siteURLKey := "site.url"
+	candidate := siteURL
+	if siteURL == "${LEANOTE_SITE_URL}" {
+		siteURLKey = "LEANOTE_SITE_URL"
+		envSiteURL, present := os.LookupEnv("LEANOTE_SITE_URL")
+		if !present {
+			return configError("CONFIG_VALUE_MISSING", "LEANOTE_SITE_URL")
+		}
+		if strings.TrimSpace(envSiteURL) == "" {
+			return configError("CONFIG_VALUE_EMPTY", "LEANOTE_SITE_URL")
+		}
+		candidate = envSiteURL
+	} else if strings.Contains(siteURL, "${") {
+		return configError("CONFIG_SOURCE_CONFLICT", "site.url")
+	}
+	if err := validateSiteURL(candidate); err != nil {
+		return configError("CONFIG_SITE_URL_INVALID", siteURLKey)
+	}
+	return nil
+}
+
+// validateSiteURL accepts only the origin URL used to build absolute links and
+// derive the default blog host. It deliberately rejects path/query/fragment
+// components because those values cannot be represented by the existing URL
+// consumers without changing their behavior.
+func validateSiteURL(candidate string) error {
+	if candidate == "" || candidate != strings.TrimSpace(candidate) {
+		return fmt.Errorf("site url must not contain surrounding whitespace")
+	}
+	if strings.HasSuffix(candidate, "?") || strings.HasSuffix(candidate, "#") {
+		return fmt.Errorf("site url must not end with query or fragment marker")
+	}
+	colon := strings.IndexByte(candidate, ':')
+	if colon <= 0 {
+		return fmt.Errorf("site url must include a scheme")
+	}
+	scheme := candidate[:colon]
+	if scheme != "http" && scheme != "https" {
+		return fmt.Errorf("site url scheme must be http or https")
+	}
+	u, err := url.Parse(candidate)
+	if err != nil || u.Opaque != "" {
+		return fmt.Errorf("site url is not an absolute URL")
+	}
+	if u.Scheme != scheme || (u.Scheme != "http" && u.Scheme != "https") {
+		return fmt.Errorf("site url scheme must be lowercase http or https")
+	}
+	if u.User != nil || u.Path != "" || u.RawPath != "" || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" {
+		return fmt.Errorf("site url must contain only a host")
+	}
+	if u.Host == "" || u.Hostname() == "" {
+		return fmt.Errorf("site url host is required")
+	}
+	if port := u.Port(); port != "" {
+		parsed, parseErr := strconv.Atoi(port)
+		if parseErr != nil || parsed < 1 || parsed > 65535 {
+			return fmt.Errorf("site url port is invalid")
+		}
+	}
+	if _, err := domain.CanonicalizeBlogHost(u.Host); err != nil {
+		return fmt.Errorf("site url host is invalid")
+	}
+	return nil
 }
 
 func validateProductionContentRootKeys(prod map[string]string) error {
