@@ -64,7 +64,7 @@ while [ "$(docker inspect -f '{{.State.Health.Status}}' "$GOTENBERG")" != health
 done
 docker cp "$ROOT/mongodb_backup/leanote_install_data" "$MONGO:/leanote_install_data"
 docker exec "$MONGO" mongorestore --db leanote --dir /leanote_install_data --drop >/dev/null
-printf '%s\n' '[prod]' 'db.urlEnv=${MONGODB_URL}' 'db.dbname=leanote' 'app.secret=${LEANOTE_APP_SECRET}' 'http.addr=0.0.0.0' 'http.port=9000' \
+printf '%s\n' '[prod]' 'db.urlEnv=${MONGODB_URL}' 'db.dbname=leanote' 'app.secret=${LEANOTE_APP_SECRET}' 'site.url=http://127.0.0.1:9000' 'http.addr=0.0.0.0' 'http.port=9000' \
   'content.private.data=/var/lib/leanote/private/files' \
   'content.private.quarantine=/var/lib/leanote/private/quarantine' \
   'content.public.data=/var/lib/leanote/public/upload' \

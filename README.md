@@ -31,6 +31,7 @@ Copy-Item .env.example .env
 
 - `LEANOTE_IMAGE_TAG`：不带 `v` 的已发布三段版本号，例如 `2.0.1`；不要使用 `latest`。
 - `LEANOTE_APP_SECRET`：至少 32 字节的 ASCII 密钥，例如 `openssl rand -base64 48` 的输出。
+- `LEANOTE_SITE_URL`：用户浏览器实际访问的完整地址，例如反向代理后的 `https://note.example.com`，或直连的 `http://localhost:9000`；不能带路径、查询参数或末尾斜杠。
 - `LEANOTE_ADMIN_EMAIL`：首次初始化管理员邮箱。
 - `LEANOTE_ADMIN_INITIAL_PASSWORD`：管理员初始密码。
 
@@ -57,6 +58,8 @@ Invoke-WebRequest http://127.0.0.1:9000/healthz
 ```
 
 不要仅修改 `LEANOTE_IMAGE_TAG` 后执行 `restart`；Compose 必须重新创建容器才能应用新镜像。
+
+`LEANOTE_SITE_URL` 用于生成编辑器图片、附件、API 和邮件中的绝对链接，也用于默认博客域名。修改对外地址后必须重新创建 `leanote` 容器；此前已写入笔记的绝对地址不会自动改写。使用 Caddy、Nginx 等反向代理时，请转发原始 `Host`（以及 HTTPS 时的原始协议），并在 Nginx 配置中设置足够大的 `client_max_body_size` 以允许附件上传。
 
 ### 从当前源码运行 dev Compose
 

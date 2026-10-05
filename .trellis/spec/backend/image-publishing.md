@@ -259,6 +259,13 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml build leanote
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
 
+The production application also validates `site.url` from the container
+configuration before binding the listener or opening MongoDB:
+
+```go
+cfg, err := httpserver.ValidateProductionConfig("/etc/leanote/app.conf")
+```
+
 ### 3. Contracts
 
 - Base Compose uses `ghcr.io/yangphere/leanote:${LEANOTE_IMAGE_TAG:?LEANOTE_IMAGE_TAG must be set}`
@@ -271,6 +278,11 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
   `LEANOTE_IMAGE_TAG`, even though dev ultimately uses the local image.
   Compose's required-value expression rejects missing/empty values; it does
   not validate semantic version syntax. Publication owns strict version rules.
+- `LEANOTE_SITE_URL` is required in the base service environment and is
+  expanded by `conf/app.conf-docker` as `[prod] site.url`. It must be the
+  browser-facing `http`/`https` origin, with an optional port and no path,
+  query, fragment, user info, or surrounding whitespace. This value drives
+  absolute image/attachment/API/mail links and the default blog host.
 - Shared services, networks, named volumes, Linux/amd64 and required runtime
   environment fields exist only in the base file. Gotenberg retains its pinned
   digest, hardening arguments and internal-only PDF network.
@@ -289,24 +301,34 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 | Both files, image tag and dev version | Local image and VERSION build argument |
 | Missing/empty image tag, either combination | Required-value interpolation failure |
 | Missing dev version, both files | Required-value interpolation failure |
+| Missing/empty `LEANOTE_SITE_URL` | Required-value interpolation failure with `LEANOTE_SITE_URL must be set` |
+| Invalid production `site.url` or non-target placeholder | Redacted `ConfigError` (`CONFIG_SITE_URL_INVALID` or `CONFIG_SOURCE_CONFLICT`); exit 78 before listener/database |
 | Registry pull failure | Surface the failure; do not build or fall back to latest |
 
 ### 5. Good / Base / Bad Cases
 
 - Good: production selects a published `2.0.1`; dev explicitly combines the
   two files while sharing one service topology.
+- Good: `.env` sets `LEANOTE_SITE_URL=https://note.example.com`; the container
+  expands the same value and blog/default links use `note.example.com`.
 - Base: fixture-only configuration rendering verifies image/build separation.
 - Bad: automatically load dev overrides, duplicate Mongo/PDF/volume settings,
-  or assume dev avoids required base-file interpolation.
+  assume dev avoids required base-file interpolation, or leave `site.url`
+  empty so the app guesses its public host.
 
 ### 6. Tests Required
 
 - Release-contract assertions cover base image/required variable/no build,
   and dev image/build-only scope. Review the environment template and
   documentation for distinct production/dev commands.
+- Assert the `.env.example`, Compose interpolation, and Docker config all
+  carry `LEANOTE_SITE_URL`; unit-test valid/invalid origins, placeholder
+  source errors, and redacted `ConfigError{Code,Key}` values.
 - Actual Compose rendering must verify both combinations, missing/empty image
   tag rejection, missing dev version rejection, and production independence
-  from the dev version. Use non-sensitive fixture values.
+  from the dev version. Also render with a non-sensitive site URL and verify
+  missing/empty `LEANOTE_SITE_URL` is rejected. Use non-sensitive fixture
+  values.
 - Real registry pull and container health/persistence evidence remain separate
   from static tests. Run runtime checks in a separate project with new volumes
   and port; do not replace the current stack or remove its volumes.
@@ -320,4 +342,8 @@ Correct: docker compose -f docker-compose.yml -f docker-compose.dev.yml build le
 
 Wrong: dev image override means LEANOTE_IMAGE_TAG can be omitted.
 Correct: supply LEANOTE_IMAGE_TAG for base interpolation; dev uses leanote:local.
+
+Wrong: site.url=http://127.0.0.1:9000 in a reverse-proxied deployment.
+Correct: set LEANOTE_SITE_URL to the public origin and recreate the leanote
+container so generated absolute links and blog host matching use that origin.
 ```

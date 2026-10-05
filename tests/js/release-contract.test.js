@@ -540,6 +540,15 @@ test('runtime image delegates PDF rendering to the isolated Gotenberg service', 
   assert.doesNotMatch(gotenberg, /- default/);
 });
 
+test('Docker deployment takes the public site URL from the required environment variable', async () => {
+  const envExample = await fs.readFile(path.join(process.cwd(), '.env.example'), 'utf8');
+  const compose = await fs.readFile(path.join(process.cwd(), 'docker-compose.yml'), 'utf8');
+  const dockerConf = await fs.readFile(path.join(process.cwd(), 'conf/app.conf-docker'), 'utf8');
+  assert.match(envExample, /^LEANOTE_SITE_URL=.+$/m);
+  assert.match(compose, /LEANOTE_SITE_URL: \$\{LEANOTE_SITE_URL:\?LEANOTE_SITE_URL must be set\}/);
+  assert.match(dockerConf, /^site\.url=\$\{LEANOTE_SITE_URL\}$/m);
+});
+
 test('package layout carries the runtime route table', async () => {
   const script = await fs.readFile(path.join(process.cwd(), 'sh/package.sh'), 'utf8');
   assert.match(script, /conf\/routes/);

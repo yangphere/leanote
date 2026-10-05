@@ -81,7 +81,7 @@ mkdir -p "$DATA_ROOT/private/files" "$DATA_ROOT/private/quarantine" \
   "$DATA_ROOT/public/upload" "$DATA_ROOT/public/quarantine" \
   "$DATA_ROOT/backup" "$DATA_ROOT/tmp"
 chmod -R 0750 "$DATA_ROOT"
-printf '%s\n' '[prod]' 'db.urlEnv=${MONGODB_URL}' 'db.dbname=leanote' 'app.secret=${LEANOTE_APP_SECRET}' 'http.addr=127.0.0.1' 'http.port=19090' \
+printf '%s\n' '[prod]' 'db.urlEnv=${MONGODB_URL}' 'db.dbname=leanote' 'app.secret=${LEANOTE_APP_SECRET}' 'site.url=http://127.0.0.1:19090' 'http.addr=127.0.0.1' 'http.port=19090' \
   "content.private.data=$DATA_ROOT/private/files" \
   "content.private.quarantine=$DATA_ROOT/private/quarantine" \
   "content.public.data=$DATA_ROOT/public/upload" \
