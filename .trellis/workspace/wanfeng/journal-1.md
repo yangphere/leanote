@@ -1025,3 +1025,25 @@ Compose 新增管理员邮箱/初始密码/ENV 恢复开关配置；启动 boots
 ### Next Steps
 
 - 临时验证分支和测试包保留供复核；main 尚未合入加固，完整生产发布链仍需后续单独授权执行。
+
+
+## Session 38: Docker 通过 LEANOTE_SITE_URL 提供对外站点地址
+<!-- trellis-session: v=2 fp=3f953325ee9dee07 -->
+
+**Date**: 2026-10-05
+**Task**: Docker 通过 LEANOTE_SITE_URL 提供对外站点地址
+**Branch**: `dev`
+
+### Summary
+
+排查反向代理加域名访问时图片显示问题：插图对话框与附件以 site.url 生成绝对地址，Docker 配置写死 127.0.0.1:9000，同时影响 API 图片改写与博客默认域名解析（404）。规划并落地 LEANOTE_SITE_URL：.env/Compose 必填注入，app.conf-docker 展开为 site.url，生产启动严格校验 http/https 源地址并以脱敏 ConfigError 退出；同步 smoke 脚本、release-contract 断言、README 与后端规格。两轮 diff-review 后可合并。真实容器、smoke 与反向代理验证 unrun；本地 .env 需自行补充 LEANOTE_SITE_URL。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6bd4235c` | feat(docker): 通过 LEANOTE_SITE_URL 提供对外站点地址 |
+
+### Status
+
+[OK] **Completed**
