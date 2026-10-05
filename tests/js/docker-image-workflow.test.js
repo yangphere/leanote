@@ -313,7 +313,7 @@ function registryFetch(routes) {
 
 const options = (fetchImpl, extra = {}) => ({
   image: 'yangphere/leanote',
-  tag: '2.0.1',
+  tag: '2.0.2',
   actor: 'release-bot',
   token: 'secret-token',
   allowInitialPackageCreate: false,
@@ -325,14 +325,14 @@ test('GHCR absence check accepts a missing tag only after package identity is li
   const { checkGhcrTagAbsent } = await import('../../scripts/check-ghcr-tag-absent.mjs');
   const base = 'https://ghcr.io/v2/yangphere/leanote';
   const registry = registryFetch(new Map([
-    [`${base}/manifests/2.0.1`, json(404, manifestUnknown)],
+    [`${base}/manifests/2.0.2`, json(404, manifestUnknown)],
     [`${base}/tags/list?n=100`, json(200, { name: 'yangphere/leanote', tags: ['v0.9.0'] })],
   ]));
   assert.deepEqual(await checkGhcrTagAbsent(options(registry.fetchImpl)), { initialPackage: false });
   assert.ok(registry.calls.every((call) => call.requestOptions.redirect === 'error'));
-  const manifestCall = registry.calls.find((call) => call.url.endsWith('/manifests/2.0.1'));
+  const manifestCall = registry.calls.find((call) => call.url.endsWith('/manifests/2.0.2'));
   assert.ok(manifestCall);
-  assert.ok(!registry.calls.some((call) => call.url.endsWith('/manifests/v2.0.1')));
+  assert.ok(!registry.calls.some((call) => call.url.endsWith('/manifests/v2.0.2')));
   assert.match(manifestCall.requestOptions.headers.Accept, /application\/vnd\.oci\.image\.index\.v1\+json/);
   assert.match(manifestCall.requestOptions.headers.Accept, /application\/vnd\.docker\.distribution\.manifest\.list\.v2\+json/);
 });
@@ -341,7 +341,7 @@ test('GHCR absence check permits explicit first-package creation only on two bou
   const { checkGhcrTagAbsent } = await import('../../scripts/check-ghcr-tag-absent.mjs');
   const base = 'https://ghcr.io/v2/yangphere/leanote';
   const routes = () => new Map([
-    [`${base}/manifests/2.0.1`, json(404, nameUnknown())],
+    [`${base}/manifests/2.0.2`, json(404, nameUnknown())],
     [`${base}/tags/list?n=100`, json(404, nameUnknown())],
   ]);
   let registry = registryFetch(routes());
@@ -350,7 +350,7 @@ test('GHCR absence check permits explicit first-package creation only on two bou
   assert.deepEqual(await checkGhcrTagAbsent(options(registry.fetchImpl, { allowInitialPackageCreate: true })), { initialPackage: true });
 
   registry = registryFetch(new Map([
-    [`${base}/manifests/2.0.1`, json(404, nameUnknown('another/package'))],
+    [`${base}/manifests/2.0.2`, json(404, nameUnknown('another/package'))],
     [`${base}/tags/list?n=100`, json(404, nameUnknown('another/package'))],
   ]));
   await assert.rejects(
@@ -363,7 +363,7 @@ test('GHCR absence check permits the observed first-package response pair only u
   const { checkGhcrTagAbsent } = await import('../../scripts/check-ghcr-tag-absent.mjs');
   const base = 'https://ghcr.io/v2/yangphere/leanote';
   const routes = (manifest = manifestUnknown, listing = nameUnknown()) => new Map([
-    [`${base}/manifests/2.0.1`, json(404, manifest)],
+    [`${base}/manifests/2.0.2`, json(404, manifest)],
     [`${base}/tags/list?n=100`, json(404, listing)],
   ]);
   let registry = registryFetch(routes());
@@ -381,7 +381,7 @@ test('GHCR absence check permits the observed first-package response pair only u
   await assert.rejects(() => checkGhcrTagAbsent(options(registry.fetchImpl, { allowInitialPackageCreate: true })), /package absence response unknown/);
 
   registry = registryFetch(new Map([
-    [`${base}/manifests/2.0.1`, json(404, manifestUnknown)],
+    [`${base}/manifests/2.0.2`, json(404, manifestUnknown)],
     [`${base}/tags/list?n=100`, json(404, { message: 'Not Found' })],
   ]));
   await assert.rejects(() => checkGhcrTagAbsent(options(registry.fetchImpl, { allowInitialPackageCreate: true })), /package absence response unknown/);
@@ -391,13 +391,13 @@ test('GHCR absence check blocks existing tags and uncertain remote states', asyn
   const { checkGhcrTagAbsent } = await import('../../scripts/check-ghcr-tag-absent.mjs');
   const base = 'https://ghcr.io/v2/yangphere/leanote';
   let registry = registryFetch(new Map([
-    [`${base}/manifests/2.0.1`, json(200, { schemaVersion: 2 })],
-    [`${base}/tags/list?n=100`, json(200, { name: 'yangphere/leanote', tags: ['2.0.1'] })],
+    [`${base}/manifests/2.0.2`, json(200, { schemaVersion: 2 })],
+    [`${base}/tags/list?n=100`, json(200, { name: 'yangphere/leanote', tags: ['2.0.2'] })],
   ]));
   await assert.rejects(() => checkGhcrTagAbsent(options(registry.fetchImpl)), /already exists/);
 
   registry = registryFetch(new Map([
-    [`${base}/manifests/2.0.1`, new Response('{', { status: 404 })],
+    [`${base}/manifests/2.0.2`, new Response('{', { status: 404 })],
     [`${base}/tags/list?n=100`, json(200, { name: 'yangphere/leanote', tags: [] })],
   ]));
   await assert.rejects(() => checkGhcrTagAbsent(options(registry.fetchImpl)), /invalid JSON/);
@@ -419,24 +419,24 @@ test('GHCR absence check rejects permission, rate-limit, listing, identity, and 
   await assert.rejects(() => checkGhcrTagAbsent(options(tokenFailure)), /authorization failed with status 401/);
 
   let registry = registryFetch(new Map([
-    [`${base}/manifests/2.0.1`, json(403, { errors: [{ code: 'DENIED', message: 'denied' }] })],
+    [`${base}/manifests/2.0.2`, json(403, { errors: [{ code: 'DENIED', message: 'denied' }] })],
   ]));
   await assert.rejects(() => checkGhcrTagAbsent(options(registry.fetchImpl)), /manifest query failed with status 403/);
 
   registry = registryFetch(new Map([
-    [`${base}/manifests/2.0.1`, json(404, manifestUnknown)],
+    [`${base}/manifests/2.0.2`, json(404, manifestUnknown)],
     [`${base}/tags/list?n=100`, json(429, { errors: [{ code: 'TOOMANYREQUESTS', message: 'limited' }] })],
   ]));
   await assert.rejects(() => checkGhcrTagAbsent(options(registry.fetchImpl)), /package listing failed with status 429/);
 
   registry = registryFetch(new Map([
-    [`${base}/manifests/2.0.1`, json(404, manifestUnknown)],
+    [`${base}/manifests/2.0.2`, json(404, manifestUnknown)],
     [`${base}/tags/list?n=100`, json(200, { name: 'another/package', tags: [] })],
   ]));
   await assert.rejects(() => checkGhcrTagAbsent(options(registry.fetchImpl)), /package identity unconfirmed/);
 
   registry = registryFetch(new Map([
-    [`${base}/manifests/2.0.1`, new Response(JSON.stringify({ errors: [{ code: 'MANIFEST_UNKNOWN', message: 'x'.repeat(70 * 1024) }] }), { status: 404 })],
+    [`${base}/manifests/2.0.2`, new Response(JSON.stringify({ errors: [{ code: 'MANIFEST_UNKNOWN', message: 'x'.repeat(70 * 1024) }] }), { status: 404 })],
     [`${base}/tags/list?n=100`, json(200, { name: 'yangphere/leanote', tags: [] })],
   ]));
   await assert.rejects(() => checkGhcrTagAbsent(options(registry.fetchImpl)), /response exceeds budget/);
@@ -446,7 +446,7 @@ test('GHCR first-package path rejects one-sided absence and missing credentials'
   const { checkGhcrTagAbsent } = await import('../../scripts/check-ghcr-tag-absent.mjs');
   const base = 'https://ghcr.io/v2/yangphere/leanote';
   const registry = registryFetch(new Map([
-    [`${base}/manifests/2.0.1`, json(404, nameUnknown())],
+    [`${base}/manifests/2.0.2`, json(404, nameUnknown())],
     [`${base}/tags/list?n=100`, json(200, { name: 'yangphere/leanote', tags: [] })],
   ]));
   await assert.rejects(
