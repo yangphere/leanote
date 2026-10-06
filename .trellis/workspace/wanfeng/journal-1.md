@@ -1047,3 +1047,25 @@ Compose 新增管理员邮箱/初始密码/ENV 恢复开关配置；启动 boots
 ### Status
 
 [OK] **Completed**
+
+
+## Session 39: 生产会话 cookie Secure 推导与有效期配置
+<!-- trellis-session: v=2 fp=86642371910ebc21 -->
+
+**Date**: 2026-10-06
+**Task**: 生产会话 cookie Secure 推导与有效期配置
+**Branch**: `dev`
+
+### Summary
+
+完成生产 cookie Secure 按 site.url 协议推导；新增可选 LEANOTE_SESSION_EXPIRES，默认 168h，范围 5m 至 8760h，非法配置启动失败且错误脱敏。运行时设置驱动 cookie 和签名载荷有效期，dev/test 维持原行为。Docker、README、后端规范及回归测试已同步。Go build/vet/相关测试通过；Node 全套 245 通过、0 失败、1 跳过；Compose 6 种渲染通过。修复相关契约测试 CRLF 兼容性，测试进程使用 Git shell。5 个既有 gofmt 问题未改动；真实容器/浏览器 HTTPS、Mongo/Golden 和新错误的进程退出码验证为 unrun。任务已归档到 .trellis/tasks/archive/2026-10/10-06-docker-cookie-secure，详见 validation.md。用户批准本地提交及归档。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d03156484c308b4d56d7557ff48e43512619f366` | feat(auth): 推导生产 cookie Secure 并配置会话有效期 |
+
+### Status
+
+[OK] **Completed**
