@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Production configuration startup contract (ValidateProductionConfig) and Docker env contract"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "ConfigError{Code,Key} stable redacted error conventions"}
+{"file": ".trellis/spec/backend/image-publishing.md", "reason": "Compose / .env consumer contract and release-contract test conventions"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Production /etc/leanote/app.conf placeholder and forbidden-key rules"}

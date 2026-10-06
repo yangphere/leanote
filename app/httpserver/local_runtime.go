@@ -112,6 +112,8 @@ func ValidateLocalRuntimeConfig(cfg *Config, runMode, appBase string, publicStat
 	return &ProductionConfig{
 		Addr:            fmt.Sprintf("%s:%d", cfg.StringDefault("http.addr", "127.0.0.1"), cfg.IntDefault("http.port", 9000)),
 		ShutdownTimeout: ShutdownTimeout(cfg), DatabaseName: databaseName,
+		CookieSecure:               cfg.BoolDefault("cookie.secure", false),
+		SessionTTL:                 sessionTTLFromConfig(cfg),
 		ConfiguredDatabaseIdentity: identity, DatabaseIdentityDigest: digest,
 		CredentialProviderRef: service.CredentialProviderRef{ProviderKind: "config", OpaqueHandle: "local", Owner: "interface-http"},
 		ContentRoots: service.ContentRoots{

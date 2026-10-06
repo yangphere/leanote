@@ -21,7 +21,7 @@ type SessionCodec struct {
 	Secret  []byte        // raw app.secret; a derived key is used internally
 	Prefix  string        // cookie.prefix
 	Domain  string        // cookie.domain (empty = host-only)
-	Secure  bool          // cookie.secure
+	Secure  bool          // production site.url scheme; local cookie.secure
 	TTL     time.Duration // session.expires
 	NowFunc func() time.Time
 	// EncodeFunc is an optional seam for adapter tests; production codecs use
@@ -112,15 +112,19 @@ func NewSessionCodec(cfg *Config) *SessionCodec {
 	secret, _ := cfg.String("app.secret")
 	prefix, _ := cfg.String("cookie.prefix")
 	domain, _ := cfg.String("cookie.domain")
-	ttl, err := time.ParseDuration(cfg.StringDefault("session.expires", "3h"))
-	if err != nil || ttl <= 0 {
-		ttl = 3 * time.Hour
-	}
 	return &SessionCodec{
 		Secret: []byte(secret),
 		Prefix: prefix,
 		Domain: domain,
 		Secure: cfg.BoolDefault("cookie.secure", false),
-		TTL:    ttl,
+		TTL:    sessionTTLFromConfig(cfg),
 	}
+}
+
+func sessionTTLFromConfig(cfg *Config) time.Duration {
+	ttl, err := time.ParseDuration(cfg.StringDefault("session.expires", "3h"))
+	if err != nil || ttl <= 0 {
+		return 3 * time.Hour
+	}
+	return ttl
 }

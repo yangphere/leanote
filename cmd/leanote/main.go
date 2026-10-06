@@ -163,7 +163,7 @@ func main() {
 	app := &httpserver.App{
 		Routes:          httpserver.CompileRoutes(routes),
 		Registry:        registry,
-		Sessions:        httpserver.NewSessionCodec(cfg),
+		Sessions:        sessionCodecForRuntime(cfg, runtimeCfg),
 		PrincipalPolicy: api.PrincipalPolicyFromConfig(),
 		SessionReaderFactory: func(session map[string]string) httpserver.SessionReader {
 			return sessionReader{values: session}
@@ -208,6 +208,13 @@ func main() {
 		log.Fatalf("shutdown: %v", runErr)
 	}
 	log.Printf("leanote stopped cleanly")
+}
+
+func sessionCodecForRuntime(cfg *httpserver.Config, runtimeCfg *httpserver.ProductionConfig) *httpserver.SessionCodec {
+	codec := httpserver.NewSessionCodec(cfg)
+	codec.Secure = runtimeCfg.CookieSecure
+	codec.TTL = runtimeCfg.SessionTTL
+	return codec
 }
 
 func logOutboxDeliveryError(error) {

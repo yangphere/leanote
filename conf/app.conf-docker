@@ -9,6 +9,7 @@ i18n.default_language=${LEANOTE_LANGUAGE}
 http.addr=0.0.0.0
 http.port=9000
 site.url=${LEANOTE_SITE_URL}
+session.expires=${LEANOTE_SESSION_EXPIRES}
 content.private.data=/var/lib/leanote/private/files
 content.private.quarantine=/var/lib/leanote/private/quarantine
 content.public.data=/var/lib/leanote/public/upload

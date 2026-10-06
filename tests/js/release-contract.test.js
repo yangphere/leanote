@@ -244,7 +244,7 @@ test('package smoke verifies reproducible archive output', async () => {
 
 test('container smoke generates a parseable app.conf that selects Gotenberg', async () => {
   const { execFileSync } = require('node:child_process');
-  const script = await fs.readFile(path.join(process.cwd(), 'scripts/container-smoke.sh'), 'utf8');
+  const script = (await fs.readFile(path.join(process.cwd(), 'scripts/container-smoke.sh'), 'utf8')).replace(/\r\n/g, '\n');
   // Execute the real generation block (not a text match): a stray word such as a
   // literal "\n" argument becomes a bare line and the app exits CONFIG_KEY_INVALID.
   const block = script.match(/^printf '%s\\n' '\[prod\]'[\s\S]*?> "\$TMP_CONFIG"$/m);
@@ -497,8 +497,9 @@ test('browser precheck entry is isolated from any publishing side effects', asyn
 });
 
 test('Compose separates immutable production images from local development builds', async () => {
-  const productionCompose = await fs.readFile(path.join(process.cwd(), 'docker-compose.yml'), 'utf8');
-  const developmentCompose = await fs.readFile(path.join(process.cwd(), 'docker-compose.dev.yml'), 'utf8');
+  // Contract checks accept both LF and Windows CRLF checkouts.
+  const productionCompose = (await fs.readFile(path.join(process.cwd(), 'docker-compose.yml'), 'utf8')).replace(/\r\n/g, '\n');
+  const developmentCompose = (await fs.readFile(path.join(process.cwd(), 'docker-compose.dev.yml'), 'utf8')).replace(/\r\n/g, '\n');
   const productionLeanote = productionCompose.slice(
     productionCompose.indexOf('  leanote:'),
     productionCompose.indexOf('\nnetworks:'),
@@ -524,7 +525,7 @@ test('Compose separates immutable production images from local development build
 
 test('runtime image delegates PDF rendering to the isolated Gotenberg service', async () => {
   const dockerfile = await fs.readFile(path.join(process.cwd(), 'Dockerfile'), 'utf8');
-  const compose = await fs.readFile(path.join(process.cwd(), 'docker-compose.yml'), 'utf8');
+  const compose = (await fs.readFile(path.join(process.cwd(), 'docker-compose.yml'), 'utf8')).replace(/\r\n/g, '\n');
   const dockerConf = await fs.readFile(path.join(process.cwd(), 'conf/app.conf-docker'), 'utf8');
   assert.doesNotMatch(dockerfile, /wkhtmltopdf/);
   assert.match(dockerfile, /COPY conf\/routes \/app\/conf\/routes/);
@@ -736,4 +737,18 @@ test('browser artifact validator enforces the final and precheck phases', async 
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
+});
+
+test('Docker session expiry is optional and cookie security follows the site URL', async () => {
+  const [envExample, compose, dockerConf] = await Promise.all([
+    fs.readFile(path.join(process.cwd(), '.env.example'), 'utf8'),
+    fs.readFile(path.join(process.cwd(), 'docker-compose.yml'), 'utf8'),
+    fs.readFile(path.join(process.cwd(), 'conf/app.conf-docker'), 'utf8'),
+  ]);
+  assert.match(envExample, /^LEANOTE_SESSION_EXPIRES=168h$/m);
+  assert.match(compose, /LEANOTE_SESSION_EXPIRES: \$\{LEANOTE_SESSION_EXPIRES:-168h\}/);
+  assert.doesNotMatch(compose, /LEANOTE_SESSION_EXPIRES:\?/);
+  assert.match(dockerConf, /^session\.expires=\$\{LEANOTE_SESSION_EXPIRES\}$/m);
+  assert.doesNotMatch(dockerConf, /^cookie\.secure\s*=/m);
+  assert.doesNotMatch(envExample + compose, /LEANOTE_COOKIE_SECURE/);
 });

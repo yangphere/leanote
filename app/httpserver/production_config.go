@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/yangphere/leanote/app/domain"
@@ -71,15 +72,8 @@ func ValidateProductionConfig(path string) (*Config, error) {
 	if !ok {
 		return nil, configError("CONFIG_SECTION_MISSING", "prod")
 	}
-	for _, key := range sortedKeys(prod) {
-		if forbiddenProductionKey(key) {
-			return nil, configError("CONFIG_KEY_INVALID", key)
-		}
-	}
-	for _, key := range sortedKeys(sections["DEFAULT"]) {
-		if forbiddenProductionKey(key) {
-			return nil, configError("CONFIG_KEY_INVALID", key)
-		}
+	if err := validateProductionKeys(sections); err != nil {
+		return nil, err
 	}
 	for _, value := range prod {
 		if strings.Contains(value, "${MONGO_URL}") || strings.Contains(value, "${MONGODB_URI}") {
@@ -137,11 +131,64 @@ func ValidateProductionConfig(path string) (*Config, error) {
 	if err := validateProductionSiteURL(prod); err != nil {
 		return nil, err
 	}
+	if err := validateProductionSessionExpires(sections); err != nil {
+		return nil, err
+	}
 	cfg, err := ParseConfig(data, "prod")
 	if err != nil {
 		return nil, configError("CONFIG_KEY_INVALID", "prod")
 	}
 	return cfg, nil
+}
+
+func validateProductionKeys(sections map[string]map[string]string) error {
+	for _, section := range []string{"prod", "DEFAULT"} {
+		for _, key := range sortedKeys(sections[section]) {
+			if forbiddenProductionKey(key) {
+				return configError("CONFIG_KEY_INVALID", key)
+			}
+		}
+	}
+	return nil
+}
+
+const defaultProductionSessionTTL = 168 * time.Hour
+
+func validateProductionSessionExpires(sections map[string]map[string]string) error {
+	_, err := parseProductionSessionExpires(sections)
+	return err
+}
+
+func productionSessionTTL(cfg *Config) (time.Duration, error) {
+	// Keep source validation and the typed handoff on the same parser, including
+	// optional environment values and the error key identifying their source.
+	return parseProductionSessionExpires(cfg.data)
+}
+
+func parseProductionSessionExpires(sections map[string]map[string]string) (time.Duration, error) {
+	raw, present := sections["prod"]["session.expires"]
+	if !present {
+		raw, present = sections["DEFAULT"]["session.expires"]
+	}
+	if !present {
+		return defaultProductionSessionTTL, nil
+	}
+	candidate := stripQuotes(raw)
+	key := "session.expires"
+	if candidate == "${LEANOTE_SESSION_EXPIRES}" {
+		key = "LEANOTE_SESSION_EXPIRES"
+		candidate = os.Getenv(key)
+		if strings.TrimSpace(candidate) == "" {
+			return defaultProductionSessionTTL, nil
+		}
+	} else if strings.Contains(candidate, "${") {
+		return 0, configError("CONFIG_SOURCE_CONFLICT", key)
+	}
+	ttl, err := time.ParseDuration(strings.TrimSpace(candidate))
+	if err != nil || ttl < 5*time.Minute || ttl > 8760*time.Hour {
+		return 0, configError("CONFIG_SESSION_EXPIRES_INVALID", key)
+	}
+	return ttl, nil
 }
 
 func validateProductionSiteURL(prod map[string]string) error {
@@ -274,7 +321,7 @@ func sortedKeys(values map[string]string) []string {
 }
 
 func forbiddenProductionKey(key string) bool {
-	for _, forbidden := range []string{"db.url", "db.host", "db.port", "db.username", "db.password"} {
+	for _, forbidden := range []string{"db.url", "db.host", "db.port", "db.username", "db.password", "cookie.secure"} {
 		if key == forbidden {
 			return true
 		}

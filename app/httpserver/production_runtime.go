@@ -20,6 +20,8 @@ import (
 type ProductionConfig struct {
 	Addr                       string
 	ShutdownTimeout            time.Duration
+	CookieSecure               bool
+	SessionTTL                 time.Duration
 	DatabaseName               string
 	ConfiguredDatabaseIdentity service.ConfiguredDatabaseIdentity
 	DatabaseIdentityDigest     string
@@ -51,6 +53,10 @@ func ValidateProductionRuntimeConfig(cfg *Config, publicStaticRoots ...string) (
 		return nil, configError("CONFIG_KEY_INVALID", "prod")
 	}
 	pdfRenderer, err := parsePDFRendererConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	sessionTTL, err := productionSessionTTL(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -151,6 +157,8 @@ func ValidateProductionRuntimeConfig(cfg *Config, publicStaticRoots ...string) (
 	return &ProductionConfig{
 		Addr:                       fmt.Sprintf("%s:%d", cfg.StringDefault("http.addr", "0.0.0.0"), cfg.IntDefault("http.port", 9000)),
 		ShutdownTimeout:            ShutdownTimeout(cfg),
+		CookieSecure:               strings.HasPrefix(cfg.StringDefault("site.url", ""), "https://"),
+		SessionTTL:                 sessionTTL,
 		DatabaseName:               cfg.StringDefault("db.dbname", ""),
 		ConfiguredDatabaseIdentity: identity,
 		DatabaseIdentityDigest:     digest,

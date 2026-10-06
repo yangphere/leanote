@@ -436,6 +436,8 @@ content storage, database access, and the listener.
 ```go
 cfg, err := httpserver.ValidateProductionConfig("/etc/leanote/app.conf")
 runtime, err := httpserver.ValidateProductionRuntimeConfig(cfg, publicStaticRoot)
+codec := httpserver.NewSessionCodec(cfg)
+codec.Secure, codec.TTL = runtime.CookieSecure, runtime.SessionTTL
 registry.RegisterMethods("ApiAuth", "Register", []string{"POST"}, befores, handler)
 ```
 
@@ -452,9 +454,9 @@ whose value is either a literal `http`/`https` origin or exactly
 `${LEANOTE_SITE_URL}`. The origin may include a valid port, but no path, query,
 fragment, user info, or surrounding whitespace; its host must pass
 `domain.CanonicalizeBlogHost`. `ProductionConfig` exposes only the address,
-shutdown timeout, database identity/digest, credential-provider reference,
-validated content roots, and backup root; it never carries raw credentials or
-the source `Config`.
+shutdown timeout, cookie Secure flag/session TTL, database identity/digest,
+credential-provider reference, validated content roots/PDF renderer, and backup
+root; it never carries raw credentials or the source `Config`.
 
 ### 3. Contracts
 
@@ -468,6 +470,21 @@ the source `Config`.
 - The production app installs the locale resolver (configured cookie, first
   `Accept-Language`, then default), session reader/writer, and `ViewArgs` keys
   `currentLocale` and `locale` before an action runs.
+- Production session `Secure` is true exactly when validated `site.url` uses
+  `https://`. Neither a separate env switch nor request/TLS/proxy headers select
+  it; `[prod]` and DEFAULT must not declare `cookie.secure`.
+- Production `session.expires` is optional and accepts a literal Go duration or
+  exactly `${LEANOTE_SESSION_EXPIRES}`, with prod-over-DEFAULT precedence.
+  Absent keys and unset/blank target env values mean `168h`; explicit literals
+  must parse within inclusive `[5m, 8760h]`. Startup and runtime handoff share
+  `parseProductionSessionExpires`, retaining source-aware errors.
+- `cmd/leanote.sessionCodecForRuntime` transfers `CookieSecure` and `SessionTTL`
+  to the codec. TTL drives both cookie `Expires`/`MaxAge` and the signed `exp`.
+  Expiry is absolute from the last session write, without renewal on reads;
+  already-issued cookies retain their embedded expiry after a config change.
+- Dev/test preserve `cookie.secure` (default false) and the shared local TTL
+  parser (default/invalid/non-positive duration falls back to `3h`); production
+  duration bounds do not apply to local modes.
 - Explicit routes keep their route-table method behavior. Catch-all identity
   actions with an `AllowedMethods` list return `405` and an `Allow` header;
   `HEAD` follows `GET`.
@@ -480,6 +497,11 @@ the source `Config`.
 | Missing `[prod] site.url` | `CONFIG_KEY_INVALID` with key `site.url` |
 | Missing/empty `LEANOTE_SITE_URL` for `${LEANOTE_SITE_URL}` | `CONFIG_VALUE_MISSING` / `CONFIG_VALUE_EMPTY` with key `LEANOTE_SITE_URL` |
 | Invalid site origin or non-target `${...}` placeholder | `CONFIG_SITE_URL_INVALID` / `CONFIG_SOURCE_CONFLICT`; error text contains no URL value |
+| `cookie.secure` in `[prod]` or DEFAULT | `CONFIG_KEY_INVALID` / `cookie.secure`; no value in the error |
+| Production expiry absent or target env unset/blank | typed `SessionTTL=168h` |
+| Production expiry at `5m` or `8760h` | accepted inclusive boundary |
+| Invalid/out-of-range production expiry | `CONFIG_SESSION_EXPIRES_INVALID`; key `LEANOTE_SESSION_EXPIRES` for env, `session.expires` for literal |
+| Non-target or embedded `${...}` expiry reference | `CONFIG_SOURCE_CONFLICT` / `session.expires` |
 | Missing/relative root | `CONFIG_CONTENT_ROOT_MISSING` or `CONFIG_CONTENT_ROOT_RELATIVE` |
 | Unwritable or cross-device data/quarantine pair | `CONFIG_CONTENT_ROOT_UNWRITABLE` or `CONFIG_CONTENT_ROOT_CROSS_DEVICE` |
 | Quarantine under a served root / any root overlap | `CONFIG_CONTENT_ROOT_PUBLIC` or `CONFIG_CONTENT_ROOT_OVERLAP` |
@@ -492,6 +514,10 @@ the source `Config`.
   to `service.InitContentRuntime`, then construct the `httpserver.App`.
 - Base: a unit test supplies temporary directories and a loopback static root
   to `ValidateProductionRuntimeConfig` and asserts the complete handoff.
+- Good: hand validated cookie settings to the codec; use one source-aware TTL
+  parser for production startup and runtime, and keep local fallback semantics.
+- Base: HTTPS origins issue Secure cookies; HTTP origins remain usable for
+  HTTP deployment, with the default `168h` production TTL.
 - Bad: derive `/app/files` or `/app/public/upload` from the executable,
   forward `*Config` to admin code, or silently fall back to another Mongo
   URL/root when validation fails.
@@ -502,6 +528,10 @@ the source `Config`.
   digest, locale precedence, `ViewArgs`, session commit behavior, static
   upload routing, the site URL/source/error matrix, and the identity 405/`Allow`
   matrix.
+- Session regressions cover literal/env HTTPS and HTTP, forbidden keys in
+  prod/DEFAULT, absent/unset/blank expiry, inclusive bounds and invalid values,
+  source/error redaction, dev/test compatibility, cookie attributes and signed
+  payload validity immediately before and exactly at configured expiry.
 - Run `go build ./...`, focused `go test`, `go vet`, `gofmt -l`, task context
   validation, and `git diff --check` before committing.
 - Real listener requests, Mongo/Golden replay, process-level exit 78, and
@@ -521,6 +551,15 @@ if err != nil {
 	return err
 }
 service.InitContentRuntime(runtime.ContentRoots)
+```
+
+```go
+// Wrong: production cookies retain local defaults from raw configuration.
+codec := httpserver.NewSessionCodec(cfg)
+
+// Correct: entrypoint assembly consumes the validated typed session settings.
+codec := httpserver.NewSessionCodec(cfg)
+codec.Secure, codec.TTL = runtime.CookieSecure, runtime.SessionTTL
 ```
 
 ## Scenario: First-party content download adapters

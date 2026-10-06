@@ -61,6 +61,10 @@ Invoke-WebRequest http://127.0.0.1:9000/healthz
 
 `LEANOTE_SITE_URL` 用于生成编辑器图片、附件、API 和邮件中的绝对链接，也用于默认博客域名。修改对外地址后必须重新创建 `leanote` 容器；此前已写入笔记的绝对地址不会自动改写。使用 Caddy、Nginx 等反向代理时，请转发原始 `Host`（以及 HTTPS 时的原始协议），并在 Nginx 配置中设置足够大的 `client_max_body_size` 以允许附件上传。
 
+生产会话 cookie 的 `Secure` 自动按 `LEANOTE_SITE_URL` 的协议决定：`https://` 地址只通过 HTTPS 发送登录 cookie，绕过反向代理用 `http://` 直连将无法保持登录；HTTP 部署应填写实际的 `http://` 地址。生产配置不接受手动设置 `cookie.secure`。
+
+登录会话有效期通过可选的 `LEANOTE_SESSION_EXPIRES` 配置，未设置或为空时默认 `168h`（7 天）。使用 Go 时长格式，例如 `30m`、`24h`、`168h`，推荐用 `m`（分钟）或 `h`（小时），不支持 `d`（天）；允许范围为 `5m` 至 `8760h`（含边界），格式错误或超出范围会导致启动失败。有效期是自上次写入会话（通常为登录）起算的固定时长，普通浏览操作不会续期。修改后必须重新创建 `leanote` 容器；已签发的会话仍按原到期时间失效，新设置在下次签发会话时生效。
+
 ### 从当前源码运行 dev Compose
 
 dev 使用 `docker-compose.yml` 和 `docker-compose.dev.yml` 构建、运行当前源码的 `leanote:local` 镜像。

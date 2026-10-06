@@ -283,6 +283,16 @@ cfg, err := httpserver.ValidateProductionConfig("/etc/leanote/app.conf")
   browser-facing `http`/`https` origin, with an optional port and no path,
   query, fragment, user info, or surrounding whitespace. This value drives
   absolute image/attachment/API/mail links and the default blog host.
+- The same origin determines production session-cookie `Secure`: HTTPS means
+  HTTPS-only login cookies; bypassing the proxy with HTTP cannot retain login.
+  Do not add `LEANOTE_COOKIE_SECURE` or `cookie.secure` to production config.
+- `LEANOTE_SESSION_EXPIRES` is optional. Base Compose passes
+  `${LEANOTE_SESSION_EXPIRES:-168h}` and Docker config declares
+  `session.expires=${LEANOTE_SESSION_EXPIRES}`. The application validates a Go
+  duration in `[5m, 8760h]` (no `d` unit), defaulting absent/blank input to `168h`.
+  Dev Compose inherits this env mapping. The duration is absolute from the
+  last session write; recreate the container after changing it, and retain
+  existing cookies' embedded expiry until reissue.
 - Shared services, networks, named volumes, Linux/amd64 and required runtime
   environment fields exist only in the base file. Gotenberg retains its pinned
   digest, hardening arguments and internal-only PDF network.
@@ -303,6 +313,9 @@ cfg, err := httpserver.ValidateProductionConfig("/etc/leanote/app.conf")
 | Missing dev version, both files | Required-value interpolation failure |
 | Missing/empty `LEANOTE_SITE_URL` | Required-value interpolation failure with `LEANOTE_SITE_URL must be set` |
 | Invalid production `site.url` or non-target placeholder | Redacted `ConfigError` (`CONFIG_SITE_URL_INVALID` or `CONFIG_SOURCE_CONFLICT`); exit 78 before listener/database |
+| Session expiry unset/empty in either Compose combination | container env `LEANOTE_SESSION_EXPIRES=168h` |
+| Custom session expiry in either combination | supplied duration passed unchanged; application enforces bounds |
+| Invalid/out-of-range production session expiry | redacted `CONFIG_SESSION_EXPIRES_INVALID`; startup exits 78 |
 | Registry pull failure | Surface the failure; do not build or fall back to latest |
 
 ### 5. Good / Base / Bad Cases
@@ -324,6 +337,12 @@ cfg, err := httpserver.ValidateProductionConfig("/etc/leanote/app.conf")
 - Assert the `.env.example`, Compose interpolation, and Docker config all
   carry `LEANOTE_SITE_URL`; unit-test valid/invalid origins, placeholder
   source errors, and redacted `ConfigError{Code,Key}` values.
+- Assert expiry's optional `:-168h` interpolation, Docker placeholder and
+  `.env.example` default, and absence of a production cookie-security override.
+  Render prod/dev with expiry unset, empty and custom to verify env inheritance.
+- Windows release-contract checks normalize source CRLF before multiline
+  matching or running extracted shell snippets. Put Git's `usr/bin` on the
+  verification process PATH for shell-dependent tests; retain the assertions.
 - Actual Compose rendering must verify both combinations, missing/empty image
   tag rejection, missing dev version rejection, and production independence
   from the dev version. Also render with a non-sensitive site URL and verify
@@ -346,4 +365,8 @@ Correct: supply LEANOTE_IMAGE_TAG for base interpolation; dev uses leanote:local
 Wrong: site.url=http://127.0.0.1:9000 in a reverse-proxied deployment.
 Correct: set LEANOTE_SITE_URL to the public origin and recreate the leanote
 container so generated absolute links and blog host matching use that origin.
+
+Wrong: LEANOTE_SESSION_EXPIRES=7d or making the Compose variable required.
+Correct: accept optional LEANOTE_SESSION_EXPIRES=168h; reject malformed or
+out-of-range values at the application's production configuration boundary.
 ```
